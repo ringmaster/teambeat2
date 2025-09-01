@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { createBoard, findBoardsByUser } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
 import { z } from 'zod';
 
 const createBoardSchema = z.object({
@@ -40,13 +40,12 @@ export const POST: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const data = createBoardSchema.parse(body);
 		
-		// Check if user has permission to create boards in this series
-		const userRole = await getUserRoleInSeries(user.userId, data.seriesId);
+		// Check if user has access to this series, auto-add if not
+		let userRole = await getUserRoleInSeries(user.userId, data.seriesId);
 		if (!userRole) {
-			return json(
-				{ success: false, error: 'Access denied' },
-				{ status: 403 }
-			);
+			// Auto-add user as member when they create a board in a series
+			await addUserToSeries(data.seriesId, user.userId, 'member');
+			userRole = 'member';
 		}
 		
 		const board = await createBoard(data);

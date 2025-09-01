@@ -157,3 +157,4 @@ export const timerExtensionVotes = sqliteTable('timer_extension_votes', {
 }, (table) => ({
 	pk: primaryKey({ columns: [table.boardId, table.userId] })
 }));
+

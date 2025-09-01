@@ -78,3 +78,14 @@ export function broadcastTimerUpdate(boardId: string, timer: any) {
 	
 	wsManager.broadcastToBoard(boardId, message);
 }
+
+export function broadcastBoardUpdated(boardId: string, board: any) {
+	const message: WebSocketMessage = {
+		type: 'board_updated',
+		board_id: boardId,
+		board,
+		timestamp: Date.now()
+	};
+	
+	wsManager.broadcastToBoard(boardId, message);
+}

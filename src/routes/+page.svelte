@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	import UserManagement from '$lib/components/UserManagement.svelte';
 	
 	let user: any = $state(null);
 	let series: any[] = $state([]);
-	let recentBoards: any[] = $state([]);
 	let loading = $state(true);
 	let scrollY = $state(0);
 	let newSeriesName = $state('');
@@ -13,9 +15,11 @@
 	let boardNames = $state({} as Record<string, string>); // seriesId -> board name
 	let boardErrors = $state({} as Record<string, string>); // seriesId -> error message
 	let creatingBoards = $state({} as Record<string, boolean>); // seriesId -> creating status
-	let expandedSeries = $state({} as Record<string, boolean>); // seriesId -> expanded status
 	let showDeleteModal = $state(false);
 	let seriesToDelete: any = $state(null);
+	let showUserManagementModal = $state(false);
+	let seriesToManage: any = $state(null);
+	let currentSeriesUsers = $state([]);
 	
 	onMount(async () => {
 		window.addEventListener('scroll', () => scrollY = window.scrollY);
@@ -25,11 +29,8 @@
 				const userData = await userResponse.json();
 				user = userData.user;
 				
-				// Load user's series and recent boards
-				const [seriesResponse, boardsResponse] = await Promise.all([
-					fetch('/api/series'),
-					fetch('/api/boards')
-				]);
+				// Load user's series
+				const seriesResponse = await fetch('/api/series');
 				
 				if (seriesResponse.ok) {
 					const seriesData = await seriesResponse.json();
@@ -39,11 +40,6 @@
 					series.forEach(s => {
 						initializeBoardName(s.id, s.name);
 					});
-				}
-				
-				if (boardsResponse.ok) {
-					const boardsData = await boardsResponse.json();
-					recentBoards = boardsData.boards;
 				}
 			}
 		} catch (error) {
@@ -141,9 +137,6 @@
 		}
 	}
 	
-	function toggleSeriesExpanded(seriesId: string) {
-		expandedSeries = { ...expandedSeries, [seriesId]: !expandedSeries[seriesId] };
-	}
 	
 	function confirmDeleteSeries(seriesItem: any) {
 		seriesToDelete = seriesItem;
@@ -177,6 +170,92 @@
 			}
 		} catch (error) {
 			alert('Network error. Please try again.');
+		}
+	}
+
+	async function openSeriesUserManagement(seriesItem: any) {
+		seriesToManage = seriesItem;
+		showUserManagementModal = true;
+		
+		// Load users for this series
+		try {
+			const response = await fetch(`/api/series/${seriesItem.id}/users`);
+			if (response.ok) {
+				const data = await response.json();
+				currentSeriesUsers = data.users;
+			}
+		} catch (error) {
+			console.error('Failed to load users:', error);
+		}
+	}
+
+	function closeUserManagementModal() {
+		showUserManagementModal = false;
+		seriesToManage = null;
+		currentSeriesUsers = [];
+	}
+
+	async function handleUserAdded(email: string) {
+		try {
+			const response = await fetch(`/api/series/${seriesToManage.id}/users`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email, role: 'member' })
+			});
+
+			if (response.ok) {
+				// Reload users list
+				const usersResponse = await fetch(`/api/series/${seriesToManage.id}/users`);
+				if (usersResponse.ok) {
+					const data = await usersResponse.json();
+					currentSeriesUsers = data.users;
+				}
+			} else {
+				const data = await response.json();
+				throw new Error(data.error || 'Failed to add user');
+			}
+		} catch (error) {
+			throw error;
+		}
+	}
+
+	async function handleUserRemoved(userId: string) {
+		try {
+			const response = await fetch(`/api/series/${seriesToManage.id}/users?userId=${userId}`, {
+				method: 'DELETE'
+			});
+
+			if (response.ok) {
+				// Remove user from local state
+				currentSeriesUsers = currentSeriesUsers.filter(u => u.userId !== userId);
+			} else {
+				const data = await response.json();
+				console.error('Failed to remove user:', data.error);
+			}
+		} catch (error) {
+			console.error('Failed to remove user:', error);
+		}
+	}
+
+	async function handleUserRoleChanged(userId: string, newRole: string) {
+		try {
+			const response = await fetch(`/api/series/${seriesToManage.id}/users`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ userId, role: newRole })
+			});
+
+			if (response.ok) {
+				// Update user role in local state
+				currentSeriesUsers = currentSeriesUsers.map(u => 
+					u.userId === userId ? { ...u, role: newRole } : u
+				);
+			} else {
+				const data = await response.json();
+				console.error('Failed to update user role:', data.error);
+			}
+		} catch (error) {
+			console.error('Failed to update user role:', error);
 		}
 	}
 </script>
@@ -350,38 +429,6 @@
 			{/if}
 		</div>
 		
-		<!-- Recent Boards -->
-		{#if recentBoards.length > 0}
-			<div>
-				<h2 class="text-xl font-bold text-gray-900 mb-4">Recent Boards</h2>
-				<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{#each recentBoards as board}
-						<a href="/board/{board.id}" class="block">
-							<div class="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 border border-gray-100">
-								<div class="flex items-start justify-between mb-3">
-									<div>
-										<h3 class="font-bold text-gray-900 text-lg">{board.name}</h3>
-										<div class="flex items-center text-xs text-gray-500 mt-1">
-											<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-											</svg>
-											{new Date(board.createdAt).toLocaleDateString()}
-										</div>
-									</div>
-									<span class="px-2 py-1 text-xs font-medium rounded-full bg-gradient-to-r 
-										{board.status === 'active' ? 'from-green-400/20 to-emerald-400/20 text-green-700' : 
-										 board.status === 'draft' ? 'from-yellow-400/20 to-amber-400/20 text-yellow-700' : 
-										 'from-gray-400/20 to-slate-400/20 text-gray-700'}">
-										{board.status}
-									</span>
-								</div>
-								<p class="text-gray-600 mb-4">{board.seriesName}</p>
-							</div>
-						</a>
-					{/each}
-				</div>
-			</div>
-		{/if}
 		
 		<!-- Board Series -->
 		<div>
@@ -450,6 +497,15 @@
 										</div>
 										{#if s.role === 'admin'}
 											<button
+												onclick={() => openSeriesUserManagement(s)}
+												class="btn btn-ghost btn-sm text-blue-500 hover:bg-blue-50"
+												title="Manage users"
+											>
+												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+												</svg>
+											</button>
+											<button
 												onclick={() => confirmDeleteSeries(s)}
 												class="btn btn-ghost btn-sm text-red-500 hover:bg-red-50"
 												title="Delete series"
@@ -463,67 +519,62 @@
 								</div>
 								
 								<div class="space-y-3">
-								<!-- Existing Boards -->
-								{#if s.boards && s.boards.length > 0}
+								<!-- Active and Draft Boards -->
+								{#if s.boards && s.boards.filter(b => ['active', 'draft'].includes(b.status)).length > 0}
 									<div class="bg-base-200 rounded-lg p-3 space-y-2">
-										<h4 class="text-sm font-semibold text-base-content mb-2">Boards:</h4>
+										<h4 class="text-sm font-semibold text-base-content mb-2">Active & Draft Boards:</h4>
 										
-										<!-- Most recent board (always visible) -->
-										<div class="flex items-center justify-between">
-											<a 
-												href="/board/{s.boards[0].id}" 
-												class="link link-primary font-medium text-sm truncate"
-											>
-												{s.boards[0].name}
-											</a>
-											<div class="badge badge-sm 
-												{s.boards[0].status === 'active' ? 'badge-success' : 
-												 s.boards[0].status === 'draft' ? 'badge-warning' : 
-												 s.boards[0].status === 'completed' ? 'badge-info' : 
-												 'badge-neutral'}">
-												{s.boards[0].status}
-											</div>
-										</div>
-										
-										<!-- Show more boards button if multiple boards exist -->
-										{#if s.boards.length > 1}
-											<button 
-												onclick={() => toggleSeriesExpanded(s.id)}
-												class="btn btn-ghost btn-sm text-primary"
-											>
-												<span>{expandedSeries[s.id] ? 'Hide' : 'Show'} {s.boards.length - 1} more board{s.boards.length > 2 ? 's' : ''}</span>
-												<svg class="w-4 h-4 transform transition-transform {expandedSeries[s.id] ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-												</svg>
-											</button>
-											
-											<!-- Additional boards (collapsible) -->
-											{#if expandedSeries[s.id]}
-												<div class="space-y-2 pl-4 border-l-2 border-indigo-200">
-													{#each s.boards.slice(1) as board}
-														<div class="flex items-center justify-between">
-															<a 
-																href="/board/{board.id}" 
-																class="text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline truncate"
-															>
-																{board.name}
-															</a>
-															<span class="px-2 py-1 text-xs font-medium rounded-full 
-																{board.status === 'active' ? 'bg-green-100 text-green-700' : 
-																 board.status === 'draft' ? 'bg-yellow-100 text-yellow-700' : 
-																 board.status === 'completed' ? 'bg-blue-100 text-blue-700' : 
-																 'bg-gray-100 text-gray-700'}">
-																{board.status}
-															</span>
-														</div>
-													{/each}
+										{#each s.boards.filter(b => ['active', 'draft'].includes(b.status)) as board}
+											<div class="flex items-center justify-between">
+												<div class="flex-1 min-w-0">
+													<a 
+														href="/board/{board.id}" 
+														class="link link-primary font-medium text-sm truncate block"
+													>
+														{board.name}
+													</a>
+													<div class="text-xs text-gray-500">
+														{new Date(board.createdAt).toLocaleDateString()}
+													</div>
 												</div>
-											{/if}
-										{/if}
+												<div class="badge badge-sm 
+													{board.status === 'active' ? 'badge-success' : 
+													 board.status === 'draft' ? 'badge-warning' : 
+													 'badge-neutral'}">
+													{board.status}
+												</div>
+											</div>
+										{/each}
 									</div>
 								{:else}
 									<div class="alert">
-										<p class="text-sm text-base-content/70">No boards exist for this series</p>
+										<p class="text-sm text-base-content/70">No active or draft boards for this series</p>
+									</div>
+								{/if}
+
+								<!-- Completed Boards -->
+								{#if s.boards && s.boards.filter(b => b.status === 'completed').length > 0}
+									<div class="bg-base-200 rounded-lg p-3 space-y-2">
+										<h4 class="text-sm font-semibold text-base-content mb-2">Completed Boards:</h4>
+										
+										{#each s.boards.filter(b => b.status === 'completed').slice(0, 5) as board}
+											<div class="flex items-center justify-between">
+												<div class="flex-1 min-w-0">
+													<a 
+														href="/board/{board.id}" 
+														class="text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline truncate block"
+													>
+														{board.name}
+													</a>
+													<div class="text-xs text-gray-500">
+														{new Date(board.createdAt).toLocaleDateString()}
+													</div>
+												</div>
+												<span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+													completed
+												</span>
+											</div>
+										{/each}
 									</div>
 								{/if}
 								
@@ -622,6 +673,49 @@
 				>
 					Delete Series
 				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- User Management Modal -->
+{#if showUserManagementModal && seriesToManage}
+	<div 
+		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+		onclick={closeUserManagementModal}
+		transition:fade={{ duration: 300 }}
+	>
+		<div 
+			class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4"
+			onclick={(e) => e.stopPropagation()}
+			transition:fly={{ y: -10, duration: 300, easing: cubicOut }}
+		>
+			<!-- Header -->
+			<div class="flex justify-between items-center p-6 border-b border-gray-200">
+				<div>
+					<h2 class="text-xl font-bold text-gray-900">Manage Users</h2>
+					<p class="text-sm text-gray-600">Series: {seriesToManage.name}</p>
+				</div>
+				<button
+					onclick={closeUserManagementModal}
+					class="text-gray-400 hover:text-gray-600 transition-colors"
+				>
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Content -->
+			<div class="p-6 overflow-y-auto max-h-[70vh]">
+				<UserManagement 
+					seriesId={seriesToManage.id}
+					currentUserRole="admin"
+					bind:users={currentSeriesUsers}
+					onUserAdded={handleUserAdded}
+					onUserRemoved={handleUserRemoved}
+					onUserRoleChanged={handleUserRoleChanged}
+				/>
 			</div>
 		</div>
 	</div>

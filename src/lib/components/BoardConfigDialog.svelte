@@ -3,6 +3,7 @@
     import { cubicOut } from 'svelte/easing';
     import ConfigColumnsTable from './ConfigColumnsTable.svelte';
     import ConfigScenesTable from './ConfigScenesTable.svelte';
+    import UserManagement from './UserManagement.svelte';
     
     interface Props {
         showBoardConfig: boolean;
@@ -58,6 +59,88 @@
         onEndDrop,
         dragState
     }: Props = $props();
+
+    // User management state
+    let seriesUsers = $state([]);
+
+    // Load users when the users tab is opened
+    $effect(async () => {
+        if (configActiveTab === 'users' && board?.seriesId) {
+            try {
+                const response = await fetch(`/api/series/${board.seriesId}/users`);
+                if (response.ok) {
+                    const data = await response.json();
+                    seriesUsers = data.users;
+                }
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+    });
+
+    async function handleUserAdded(email: string) {
+        try {
+            const response = await fetch(`/api/series/${board.seriesId}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, role: 'member' })
+            });
+
+            if (response.ok) {
+                // Reload users list
+                const usersResponse = await fetch(`/api/series/${board.seriesId}/users`);
+                if (usersResponse.ok) {
+                    const data = await usersResponse.json();
+                    seriesUsers = data.users;
+                }
+            } else {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to add user');
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async function handleUserRemoved(userId: string) {
+        try {
+            const response = await fetch(`/api/series/${board.seriesId}/users?userId=${userId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Remove user from local state
+                seriesUsers = seriesUsers.filter(u => u.userId !== userId);
+            } else {
+                const data = await response.json();
+                console.error('Failed to remove user:', data.error);
+            }
+        } catch (error) {
+            console.error('Failed to remove user:', error);
+        }
+    }
+
+    async function handleUserRoleChanged(userId: string, newRole: string) {
+        try {
+            const response = await fetch(`/api/series/${board.seriesId}/users`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, role: newRole })
+            });
+
+            if (response.ok) {
+                // Update user role in local state
+                seriesUsers = seriesUsers.map(u => 
+                    u.userId === userId ? { ...u, role: newRole } : u
+                );
+            } else {
+                const data = await response.json();
+                console.error('Failed to update user role:', data.error);
+            }
+        } catch (error) {
+            console.error('Failed to update user role:', error);
+        }
+    }
 </script>
 
 <!-- Board Configuration Modal -->
@@ -116,6 +199,16 @@
                     >
                         General
                     </button>
+                    {#if ["admin", "facilitator"].includes(userRole)}
+                        <button
+                            onclick={() => onTabChange("users")}
+                            class="py-3 px-4 text-sm font-medium border-b-2 transition-colors {configActiveTab === 'users'
+                                ? 'border-teal-500 text-teal-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+                        >
+                            Users
+                        </button>
+                    {/if}
                 </nav>
             </div>
 
@@ -189,7 +282,42 @@
                                     Hide user names on cards to encourage open feedback
                                 </p>
                             </div>
+
+                            <div>
+                                <label
+                                    for="board-status-select"
+                                    class="block text-sm font-medium text-gray-700 mb-2"
+                                    >Board Status</label
+                                >
+                                <select
+                                    id="board-status-select"
+                                    bind:value={configForm.status}
+                                    onchange={() => onUpdateBoardConfig({ status: configForm.status })}
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="draft">Draft</option>
+                                    <option value="active">Active</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="archived">Archived</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Controls board visibility and accessibility
+                                </p>
+                            </div>
                         </div>
+                    </div>
+                {/if}
+
+                {#if configActiveTab === "users"}
+                    <div class="space-y-6 animate-in fade-in duration-200 ease-out">
+                        <UserManagement 
+                            seriesId={board.seriesId}
+                            currentUserRole={userRole}
+                            bind:users={seriesUsers}
+                            onUserAdded={handleUserAdded}
+                            onUserRemoved={handleUserRemoved}
+                            onUserRoleChanged={handleUserRoleChanged}
+                        />
                     </div>
                 {/if}
             </div>

@@ -13,7 +13,7 @@ export interface CreateCardData {
 export async function createCard(data: CreateCardData) {
 	const id = uuidv4();
 	
-	const [card] = await db
+	await db
 		.insert(cards)
 		.values({
 			id,
@@ -21,8 +21,24 @@ export async function createCard(data: CreateCardData) {
 			userId: data.userId,
 			content: data.content,
 			groupId: data.groupId
+		});
+	
+	// Return the card with user name included
+	const [card] = await db
+		.select({
+			id: cards.id,
+			columnId: cards.columnId,
+			userId: cards.userId,
+			userName: users.name,
+			content: cards.content,
+			groupId: cards.groupId,
+			createdAt: cards.createdAt,
+			updatedAt: cards.updatedAt
 		})
-		.returning();
+		.from(cards)
+		.innerJoin(users, eq(users.id, cards.userId))
+		.where(eq(cards.id, id))
+		.limit(1);
 	
 	return card;
 }

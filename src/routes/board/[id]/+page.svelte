@@ -43,6 +43,7 @@
         name: "",
         blameFreeMode: false,
         votingAllocation: 3,
+        status: "draft",
     });
 
     // Templates
@@ -93,6 +94,7 @@
             configForm.name = board.name || "";
             configForm.blameFreeMode = board.blameFreeMode || false;
             configForm.votingAllocation = board.votingAllocation || 3;
+            configForm.status = board.status || "draft";
 
             if (cardsResponse.ok) {
                 const cardsData = await cardsResponse.json();
@@ -116,12 +118,21 @@
 
     function setupWebSocket() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/api/boards/${boardId}/presence`;
+        // Connect to WebSocket server on port 8080 with session parameter
+        const wsUrl = `${wsProtocol}//${window.location.hostname}:8080?session=${encodeURIComponent(document.cookie.split('session=')[1]?.split(';')[0] || '')}`;
         
         ws = new WebSocket(wsUrl);
         
         ws.onopen = () => {
             console.log('WebSocket connected');
+            // Join the board to receive updates
+            if (ws && user) {
+                ws.send(JSON.stringify({
+                    type: 'join_board',
+                    board_id: boardId,
+                    user_id: user.id
+                }));
+            }
         };
         
         ws.onmessage = (event) => {
@@ -141,7 +152,7 @@
 
     function handleWebSocketMessage(data: any) {
         switch (data.type) {
-            case 'card_added':
+            case 'card_created':
                 cards = [...cards, data.card];
                 break;
             case 'card_updated':
@@ -153,6 +164,24 @@
             case 'scene_changed':
                 if (board) {
                     board.currentSceneId = data.sceneId;
+                }
+                break;
+            case 'board_updated':
+                if (board && data.board) {
+                    // Update board metadata while preserving reactive state
+                    board.name = data.board.name;
+                    board.blameFreeMode = data.board.blameFreeMode;
+                    board.votingAllocation = data.board.votingAllocation;
+                    board.status = data.board.status;
+                    board.updatedAt = data.board.updatedAt;
+                    
+                    // Update config form if it exists
+                    if (configForm) {
+                        configForm.name = data.board.name || "";
+                        configForm.blameFreeMode = data.board.blameFreeMode || false;
+                        configForm.votingAllocation = data.board.votingAllocation || 3;
+                        configForm.status = data.board.status || "draft";
+                    }
                 }
                 break;
         }
@@ -212,8 +241,6 @@
             });
 
             if (response.ok) {
-                const data = await response.json();
-                cards = [...cards, data.card];
                 newCardContentByColumn.set(columnId, "");
             }
         } catch (error) {
@@ -750,6 +777,22 @@
         }
     }
 
+    async function handleShareBoard() {
+        try {
+            // Simply copy the current board URL
+            const shareUrl = window.location.href;
+            
+            // Copy to clipboard
+            await navigator.clipboard.writeText(shareUrl);
+            
+            // Show success message
+            alert('Board URL copied to clipboard! Anyone with this link can access the board.');
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            alert('Error copying link. Please try again.');
+        }
+    }
+
     // Computed values for drag state
     let dragState = $derived({
         draggedColumnId,
@@ -803,6 +846,7 @@
         {userRole} 
         bind:showSceneDropdown
         onConfigureClick={() => showBoardConfig = true}
+        onShareClick={handleShareBoard}
         onSceneChange={changeScene}
         onShowSceneDropdown={(show) => showSceneDropdown = show}
     />

@@ -2,7 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardStatus, updateBoardSettings } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
+import { broadcastBoardUpdated } from '$lib/server/websockets/broadcast.js';
 import { z } from 'zod';
 
 const updateBoardSchema = z.object({
@@ -27,11 +28,18 @@ export const GET: RequestHandler = async (event) => {
 		}
 		
 		// Check if user has access to this board
-		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+		let userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole) {
+			// Auto-add user as member when they visit a shared board
+			await addUserToSeries(board.seriesId, user.userId, 'member');
+			userRole = 'member';
+		}
+		
+		// Non-admin/facilitator users cannot access draft boards
+		if (board.status === 'draft' && !['admin', 'facilitator'].includes(userRole)) {
 			return json(
-				{ success: false, error: 'Access denied' },
-				{ status: 403 }
+				{ success: false, error: 'Board not found' },
+				{ status: 404 }
 			);
 		}
 		
@@ -97,8 +105,15 @@ export const PUT: RequestHandler = async (event) => {
 			await updateBoardSettings(boardId, filteredSettingsData);
 		}
 		
+		// Get updated board data and broadcast to all connected clients
+		const updatedBoard = await getBoardWithDetails(boardId);
+		if (updatedBoard) {
+			broadcastBoardUpdated(boardId, updatedBoard);
+		}
+		
 		return json({
-			success: true
+			success: true,
+			board: updatedBoard
 		});
 	} catch (error) {
 		if (error instanceof Response) {
