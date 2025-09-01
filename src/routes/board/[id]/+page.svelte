@@ -1,0 +1,860 @@
+<script lang="ts">
+    import { onMount, onDestroy } from "svelte";
+    import { page } from "$app/stores";
+    import { goto } from "$app/navigation";
+    
+    import BoardHeader from '$lib/components/BoardHeader.svelte';
+    import BoardSetup from '$lib/components/BoardSetup.svelte';
+    import BoardColumns from '$lib/components/BoardColumns.svelte';
+    import BoardConfigDialog from '$lib/components/BoardConfigDialog.svelte';
+
+    let board: any = $state(null);
+    let cards: any[] = $state([]);
+    let user: any = $state(null);
+    let userRole = $state("");
+    let loading = $state(true);
+    let ws: WebSocket | null = null;
+    let boardId = "";
+
+    // UI State
+    let newCardContentByColumn = $state(new Map<string, string>());
+    let showSceneDropdown = $state(false);
+    let showBoardConfig = $state(false);
+    let configActiveTab = $state("columns");
+    let showTemplateSelector = $state(false);
+
+    // Drag and Drop State
+    let draggedCardId = $state("");
+    let draggedSceneId = $state("");
+    let draggedColumnId = $state("");
+    let dragOverSceneId = $state("");
+    let sceneDropPosition = $state(""); 
+    let dragOverSceneEnd = $state(false);
+    let dragOverColumnId = $state("");
+    let columnDropPosition = $state(""); 
+    let dragOverColumnEnd = $state(false);
+
+    // Grouping State
+    let groupingMode = $state(false);
+    let selectedCards = $state(new Set<string>());
+
+    // Config Form State
+    let configForm = $state({
+        name: "",
+        blameFreeMode: false,
+        votingAllocation: 3,
+    });
+
+    // Templates
+    const templates = [
+        {
+            name: "Sprint Retrospective",
+            description: "What went well, what didn't, action items",
+        },
+        {
+            name: "Team Health Check",
+            description: "Assess team dynamics and collaboration",
+        },
+        {
+            name: "Project Planning",
+            description: "Ideas, concerns, next steps",
+        },
+    ];
+
+    onMount(async () => {
+        boardId = $page.params.id!;
+
+        try {
+            // Load user info
+            const userResponse = await fetch("/api/auth/me");
+            if (!userResponse.ok) {
+                goto("/login");
+                return;
+            }
+            const userData = await userResponse.json();
+            user = userData.user;
+
+            // Load board data
+            const [boardResponse, cardsResponse] = await Promise.all([
+                fetch(`/api/boards/${boardId}`),
+                fetch(`/api/boards/${boardId}/cards`),
+            ]);
+
+            if (!boardResponse.ok) {
+                loading = false;
+                return;
+            }
+
+            const boardData = await boardResponse.json();
+            board = boardData.board;
+            userRole = boardData.userRole;
+
+            // Update config form with board data
+            configForm.name = board.name || "";
+            configForm.blameFreeMode = board.blameFreeMode || false;
+            configForm.votingAllocation = board.votingAllocation || 3;
+
+            if (cardsResponse.ok) {
+                const cardsData = await cardsResponse.json();
+                cards = cardsData.cards || [];
+            }
+
+            // Set up WebSocket connection
+            setupWebSocket();
+            loading = false;
+        } catch (error) {
+            console.error("Error loading board:", error);
+            loading = false;
+        }
+    });
+
+    onDestroy(() => {
+        if (ws) {
+            ws.close();
+        }
+    });
+
+    function setupWebSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/api/boards/${boardId}/presence`;
+        
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+        };
+        
+        ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            setTimeout(setupWebSocket, 5000);
+        };
+        
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    function handleWebSocketMessage(data: any) {
+        switch (data.type) {
+            case 'card_added':
+                cards = [...cards, data.card];
+                break;
+            case 'card_updated':
+                cards = cards.map(c => c.id === data.card.id ? data.card : c);
+                break;
+            case 'card_deleted':
+                cards = cards.filter(c => c.id !== data.cardId);
+                break;
+            case 'scene_changed':
+                if (board) {
+                    board.currentSceneId = data.sceneId;
+                }
+                break;
+        }
+    }
+
+    function getCurrentScene() {
+        return board?.scenes?.find((s: any) => s.id === board.currentSceneId);
+    }
+
+    async function changeScene(sceneId: string) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}/scene`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sceneId })
+            });
+            
+            if (response.ok) {
+                board.currentSceneId = sceneId;
+                showSceneDropdown = false;
+            }
+        } catch (error) {
+            console.error('Failed to change scene:', error);
+        }
+    }
+
+    async function setupTemplate(template: any) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}/setup-template`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ templateName: template.name })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                board = result.board;
+                showTemplateSelector = false;
+            }
+        } catch (error) {
+            console.error('Failed to setup template:', error);
+        }
+    }
+
+    async function addCardToColumn(columnId: string) {
+        const content = newCardContentByColumn.get(columnId) || "";
+        if (!content.trim() || !getCurrentScene()?.allowAddCards) return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/cards`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: content.trim(),
+                    columnId: columnId
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                cards = [...cards, data.card];
+                newCardContentByColumn.set(columnId, "");
+            }
+        } catch (error) {
+            console.error('Failed to add card:', error);
+        }
+    }
+
+    function getColumnContent(columnId: string): string {
+        return newCardContentByColumn.get(columnId) || "";
+    }
+
+    function setColumnContent(columnId: string, content: string) {
+        newCardContentByColumn.set(columnId, content);
+    }
+
+    function toggleCardSelection(cardId: string) {
+        if (selectedCards.has(cardId)) {
+            selectedCards.delete(cardId);
+        } else {
+            selectedCards.add(cardId);
+        }
+        selectedCards = new Set(selectedCards);
+    }
+
+    async function voteCard(cardId: string) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}/cards/${cardId}/vote`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                cards = cards.map(c => c.id === cardId ? data.card : c);
+            }
+        } catch (error) {
+            console.error('Failed to vote:', error);
+        }
+    }
+
+    async function commentCard(cardId: string) {
+        console.log('Comment on card:', cardId);
+    }
+
+    function handleDragStart(event: DragEvent, cardId: string) {
+        draggedCardId = cardId;
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+        }
+    }
+
+    function handleDragOver(event: DragEvent) {
+        event.preventDefault();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+        }
+    }
+
+    async function handleDrop(event: DragEvent, targetColumnId: string) {
+        event.preventDefault();
+
+        if (!draggedCardId || !getCurrentScene()?.allowEditCards) {
+            draggedCardId = "";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/cards/${draggedCardId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ columnId: targetColumnId })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                cards = cards.map(c => c.id === draggedCardId ? data.card : c);
+            }
+        } catch (error) {
+            console.error('Failed to move card:', error);
+        }
+
+        draggedCardId = "";
+    }
+
+    async function groupCards(cardsToGroup: any[]) {
+        if (cardsToGroup.length < 2) return;
+
+        const groupId = crypto.randomUUID();
+        
+        try {
+            const response = await fetch(`/api/boards/${boardId}/cards/group`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cardIds: cardsToGroup.map(c => c.id),
+                    groupId: groupId
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                cards = cards.map(card => {
+                    const updatedCard = data.cards.find((c: any) => c.id === card.id);
+                    return updatedCard || card;
+                });
+            }
+        } catch (error) {
+            console.error('Failed to group cards:', error);
+        }
+    }
+
+    // Configuration Dialog Functions
+    async function updateBoardConfigImmediate(config: any) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                board = { ...board, ...data.board };
+            }
+        } catch (error) {
+            console.error('Failed to update board config:', error);
+        }
+    }
+
+    // Column Management Functions
+    async function createColumn(formData: any = null) {
+        if (!["admin", "facilitator"].includes(userRole)) return;
+        const columnData = formData || {
+            title: "New Column",
+            description: "",
+            defaultAppearance: "shown"
+        };
+        if (!columnData.title.trim()) {
+            alert("Column title is required");
+            return;
+        }
+        try {
+            const response = await fetch(`/api/boards/${board.id}/columns`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(columnData),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                board.columns = [...(board.columns || []), data.column];
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to create column:', errorData);
+                alert(`Failed to create column: ${errorData.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to create column:', error);
+            alert('Failed to create column');
+        }
+    }
+    
+    async function addNewColumnRow() {
+        const newColumn = {
+            title: "New Column",
+            description: "",
+            defaultAppearance: "shown"
+        };
+        await createColumn(newColumn);
+    }
+
+    async function updateColumn(columnId: string, data: any) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}/columns/${columnId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                const responseData = await response.json();
+                const columnIndex = board.columns.findIndex((c: any) => c.id === columnId);
+                if (columnIndex !== -1) {
+                    board.columns[columnIndex] = responseData.column;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to update column:', error);
+        }
+    }
+
+    async function deleteColumn(columnId: string) {
+        if (!confirm('Are you sure you want to delete this column? All cards in this column will be deleted.')) return;
+        
+        try {
+            const response = await fetch(`/api/boards/${boardId}/columns/${columnId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                board.columns = board.columns.filter((c: any) => c.id !== columnId);
+            }
+        } catch (error) {
+            console.error('Failed to delete column:', error);
+        }
+    }
+
+    // Scene Management Functions  
+    async function createScene(formData: any = null) {
+        if (!["admin", "facilitator"].includes(userRole)) return;
+
+        const sceneData = formData || {
+            title: "New Scene",
+            description: "",
+            mode: "columns",
+            allowAddCards: true,
+            allowEditCards: true,
+            allowComments: true,
+            allowVoting: false,
+            multipleVotesPerCard: false,
+        };
+
+        if (!sceneData.title.trim()) {
+            alert("Scene title is required");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/boards/${board.id}/scenes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(sceneData),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                board.scenes = [...(board.scenes || []), data.scene];
+                return true;
+            } else {
+                const data = await response.json();
+                alert(data.error || "Failed to create scene");
+                return false;
+            }
+        } catch (error) {
+            alert("Failed to create scene");
+            return false;
+        }
+    }
+
+    async function addNewSceneRow() {
+        const newScene = {
+            title: "New Scene",
+            description: "",
+            mode: "columns",
+            allowAddCards: true,
+            allowEditCards: true,
+            allowComments: true,
+            allowVoting: false,
+            multipleVotesPerCard: false,
+        };
+
+        await createScene(newScene);
+    }
+
+    async function updateScene(sceneId: string, data: any) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}/scenes/${sceneId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                const responseData = await response.json();
+                const sceneIndex = board.scenes.findIndex((s: any) => s.id === sceneId);
+                if (sceneIndex !== -1) {
+                    board.scenes[sceneIndex] = responseData.scene;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to update scene:', error);
+        }
+    }
+
+    async function deleteScene(sceneId: string) {
+        if (!confirm('Are you sure you want to delete this scene?')) return;
+        
+        try {
+            const response = await fetch(`/api/boards/${boardId}/scenes/${sceneId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                board.scenes = board.scenes.filter((s: any) => s.id !== sceneId);
+            }
+        } catch (error) {
+            console.error('Failed to delete scene:', error);
+        }
+    }
+
+    // Drag and Drop Handlers
+    function handleConfigDragStart(type: 'column' | 'scene', event: DragEvent, id: string) {
+        if (type === 'column') {
+            draggedColumnId = id;
+        } else {
+            draggedSceneId = id;
+        }
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+        }
+    }
+
+    function handleConfigDragOver(type: 'column' | 'scene', event: DragEvent, id: string) {
+        event.preventDefault();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+        }
+        
+        if (type === 'column' && draggedColumnId && draggedColumnId !== id) {
+            dragOverColumnId = id;
+            const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect();
+            if (rect) {
+                const midpoint = rect.top + rect.height / 2;
+                columnDropPosition = event.clientY < midpoint ? "above" : "below";
+            }
+        } else if (type === 'scene' && draggedSceneId && draggedSceneId !== id) {
+            dragOverSceneId = id;
+            const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect();
+            if (rect) {
+                const midpoint = rect.top + rect.height / 2;
+                sceneDropPosition = event.clientY < midpoint ? "above" : "below";
+            }
+        }
+    }
+
+    function handleConfigDragLeave(type: 'column' | 'scene', event: DragEvent) {
+        const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect();
+        if (!rect) return;
+        const x = event.clientX;
+        const y = event.clientY;
+        
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            if (type === 'column') {
+                dragOverColumnId = "";
+                columnDropPosition = "";
+            } else {
+                dragOverSceneId = "";
+                sceneDropPosition = "";
+            }
+        }
+    }
+
+    async function handleConfigDrop(type: 'column' | 'scene', event: DragEvent, targetId: string) {
+        event.preventDefault();
+        
+        if (type === 'column') {
+            const dragPosition = columnDropPosition;
+            dragOverColumnId = "";
+            columnDropPosition = "";
+            
+            if (!draggedColumnId || draggedColumnId === targetId) {
+                draggedColumnId = "";
+                return;
+            }
+
+            await reorderColumns(draggedColumnId, targetId, dragPosition);
+            draggedColumnId = "";
+        } else {
+            const dragPosition = sceneDropPosition;
+            dragOverSceneId = "";
+            sceneDropPosition = "";
+            
+            if (!draggedSceneId || draggedSceneId === targetId) {
+                draggedSceneId = "";
+                return;
+            }
+
+            await reorderScenes(draggedSceneId, targetId, dragPosition);
+            draggedSceneId = "";
+        }
+    }
+
+    async function reorderColumns(draggedId: string, targetId: string, position: string) {
+        try {
+            const columns = [...board.columns];
+            const draggedIndex = columns.findIndex(c => c.id === draggedId);
+            const targetIndex = columns.findIndex(c => c.id === targetId);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+            
+            // Remove the dragged item
+            const [draggedItem] = columns.splice(draggedIndex, 1);
+            
+            // Calculate new position
+            let insertIndex = targetIndex;
+            if (draggedIndex < targetIndex) insertIndex -= 1;
+            if (position === 'below') insertIndex += 1;
+            
+            // Insert at new position
+            columns.splice(insertIndex, 0, draggedItem);
+            
+            // Create reorder payload
+            const columnOrders = columns.map((column, index) => ({
+                id: column.id,
+                seq: index
+            }));
+            
+            const response = await fetch(`/api/boards/${boardId}/columns/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ columnOrders })
+            });
+            
+            if (response.ok) {
+                board.columns = columns;
+            }
+        } catch (error) {
+            console.error('Failed to reorder columns:', error);
+        }
+    }
+
+    async function reorderScenes(draggedId: string, targetId: string, position: string) {
+        try {
+            const scenes = [...board.scenes];
+            const draggedIndex = scenes.findIndex(s => s.id === draggedId);
+            const targetIndex = scenes.findIndex(s => s.id === targetId);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+            
+            // Remove the dragged item
+            const [draggedItem] = scenes.splice(draggedIndex, 1);
+            
+            // Calculate new position
+            let insertIndex = targetIndex;
+            if (draggedIndex < targetIndex) insertIndex -= 1;
+            if (position === 'below') insertIndex += 1;
+            
+            // Insert at new position
+            scenes.splice(insertIndex, 0, draggedItem);
+            
+            // Create reorder payload
+            const sceneOrders = scenes.map((scene, index) => ({
+                id: scene.id,
+                seq: index
+            }));
+            
+            const response = await fetch(`/api/boards/${boardId}/scenes/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sceneOrders })
+            });
+            
+            if (response.ok) {
+                board.scenes = scenes;
+            }
+        } catch (error) {
+            console.error('Failed to reorder scenes:', error);
+        }
+    }
+
+    async function handleConfigEndDrop(type: 'column' | 'scene', event: DragEvent) {
+        event.preventDefault();
+        
+        if (type === 'column') {
+            dragOverColumnEnd = false;
+            if (!draggedColumnId) return;
+            await moveColumnToEnd(draggedColumnId);
+            draggedColumnId = "";
+        } else {
+            dragOverSceneEnd = false;
+            if (!draggedSceneId) return;
+            await moveSceneToEnd(draggedSceneId);
+            draggedSceneId = "";
+        }
+    }
+
+    async function moveColumnToEnd(draggedId: string) {
+        try {
+            const columns = [...board.columns];
+            const draggedIndex = columns.findIndex(c => c.id === draggedId);
+            
+            if (draggedIndex === -1) return;
+            
+            // Remove the dragged item and add to end
+            const [draggedItem] = columns.splice(draggedIndex, 1);
+            columns.push(draggedItem);
+            
+            // Create reorder payload
+            const columnOrders = columns.map((column, index) => ({
+                id: column.id,
+                seq: index
+            }));
+            
+            const response = await fetch(`/api/boards/${boardId}/columns/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ columnOrders })
+            });
+            
+            if (response.ok) {
+                board.columns = columns;
+            }
+        } catch (error) {
+            console.error('Failed to move column to end:', error);
+        }
+    }
+
+    async function moveSceneToEnd(draggedId: string) {
+        try {
+            const scenes = [...board.scenes];
+            const draggedIndex = scenes.findIndex(s => s.id === draggedId);
+            
+            if (draggedIndex === -1) return;
+            
+            // Remove the dragged item and add to end
+            const [draggedItem] = scenes.splice(draggedIndex, 1);
+            scenes.push(draggedItem);
+            
+            // Create reorder payload
+            const sceneOrders = scenes.map((scene, index) => ({
+                id: scene.id,
+                seq: index
+            }));
+            
+            const response = await fetch(`/api/boards/${boardId}/scenes/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sceneOrders })
+            });
+            
+            if (response.ok) {
+                board.scenes = scenes;
+            }
+        } catch (error) {
+            console.error('Failed to move scene to end:', error);
+        }
+    }
+
+    // Computed values for drag state
+    let dragState = $derived({
+        draggedColumnId,
+        draggedSceneId,
+        dragOverColumnId,
+        dragOverSceneId,
+        columnDropPosition,
+        sceneDropPosition,
+        dragOverColumnEnd,
+        dragOverSceneEnd
+    });
+</script>
+
+{#if loading}
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+    </div>
+{:else if !board}
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <div
+                class="w-20 h-20 bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+                <svg
+                    class="w-10 h-10 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                </svg>
+            </div>
+            <p class="text-xl font-semibold text-gray-900 mb-2">
+                Board not found
+            </p>
+            <p class="text-gray-600 mb-4">
+                The board you're looking for doesn't exist or you don't have
+                access.
+            </p>
+            <a href="/" class="btn-primary">Go to Dashboard</a>
+        </div>
+    </div>
+{:else}
+    <BoardHeader 
+        {board} 
+        {userRole} 
+        bind:showSceneDropdown
+        onConfigureClick={() => showBoardConfig = true}
+        onSceneChange={changeScene}
+        onShowSceneDropdown={(show) => showSceneDropdown = show}
+    />
+
+    {#if (!board.columns || board.columns.length === 0) && (!board.scenes || board.scenes.length === 0)}
+        <BoardSetup 
+            bind:showTemplateSelector
+            {templates}
+            onToggleTemplateSelector={() => showTemplateSelector = !showTemplateSelector}
+            onSetupTemplate={setupTemplate}
+            onConfigureClick={() => showBoardConfig = true}
+        />
+    {:else}
+        <BoardColumns 
+            {board}
+            {cards}
+            currentScene={getCurrentScene()}
+            {groupingMode}
+            {selectedCards}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragStart={handleDragStart}
+            onToggleCardSelection={toggleCardSelection}
+            onVoteCard={voteCard}
+            onCommentCard={commentCard}
+            onAddCard={addCardToColumn}
+            onGroupCards={groupCards}
+            onGetColumnContent={getColumnContent}
+            onSetColumnContent={setColumnContent}
+        />
+    {/if}
+
+    <BoardConfigDialog 
+        {showBoardConfig}
+        {userRole}
+        bind:configActiveTab
+        {board}
+        bind:configForm
+        onClose={() => showBoardConfig = false}
+        onTabChange={(tab) => configActiveTab = tab}
+        onUpdateBoardConfig={updateBoardConfigImmediate}
+        onAddNewColumn={addNewColumnRow}
+        onAddNewScene={addNewSceneRow}
+        onUpdateColumn={updateColumn}
+        onDeleteColumn={deleteColumn}
+        onUpdateScene={updateScene}
+        onDeleteScene={deleteScene}
+        onDragStart={handleConfigDragStart}
+        onDragOver={handleConfigDragOver}
+        onDragLeave={handleConfigDragLeave}
+        onDrop={handleConfigDrop}
+        onEndDrop={handleConfigEndDrop}
+        {dragState}
+    />
+{/if}

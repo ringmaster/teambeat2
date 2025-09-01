@@ -1,0 +1,118 @@
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { requireUser } from '$lib/server/auth/index.js';
+import { createCard, getCardsForBoard } from '$lib/server/repositories/card.js';
+import { getBoardWithDetails } from '$lib/server/repositories/board.js';
+import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { broadcastCardCreated } from '$lib/server/websockets/broadcast.js';
+import { z } from 'zod';
+
+const createCardSchema = z.object({
+	columnId: z.string().uuid(),
+	content: z.string().min(1).max(1000),
+	groupId: z.string().uuid().optional()
+});
+
+export const GET: RequestHandler = async (event) => {
+	try {
+		const user = requireUser(event);
+		const boardId = event.params.id;
+		
+		const board = await getBoardWithDetails(boardId);
+		if (!board) {
+			return json(
+				{ success: false, error: 'Board not found' },
+				{ status: 404 }
+			);
+		}
+		
+		// Check if user has access to this board
+		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+		if (!userRole) {
+			return json(
+				{ success: false, error: 'Access denied' },
+				{ status: 403 }
+			);
+		}
+		
+		const cards = await getCardsForBoard(boardId);
+		
+		return json({
+			success: true,
+			cards
+		});
+	} catch (error) {
+		if (error instanceof Response) {
+			throw error;
+		}
+		
+		return json(
+			{ success: false, error: 'Failed to fetch cards' },
+			{ status: 500 }
+		);
+	}
+};
+
+export const POST: RequestHandler = async (event) => {
+	try {
+		const user = requireUser(event);
+		const boardId = event.params.id;
+		const body = await event.request.json();
+		const data = createCardSchema.parse(body);
+		
+		const board = await getBoardWithDetails(boardId);
+		if (!board) {
+			return json(
+				{ success: false, error: 'Board not found' },
+				{ status: 404 }
+			);
+		}
+		
+		// Check if user has access to this board
+		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+		if (!userRole) {
+			return json(
+				{ success: false, error: 'Access denied' },
+				{ status: 403 }
+			);
+		}
+		
+		// Check if current scene allows adding cards
+		const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
+		if (!currentScene || !currentScene.allowAddCards) {
+			return json(
+				{ success: false, error: 'Adding cards not allowed in current scene' },
+				{ status: 403 }
+			);
+		}
+		
+		const card = await createCard({
+			...data,
+			userId: user.userId
+		});
+		
+		// Broadcast the new card to all clients
+		broadcastCardCreated(boardId, card);
+		
+		return json({
+			success: true,
+			card
+		});
+	} catch (error) {
+		if (error instanceof Response) {
+			throw error;
+		}
+		
+		if (error instanceof z.ZodError) {
+			return json(
+				{ success: false, error: 'Invalid input', details: error.errors },
+				{ status: 400 }
+			);
+		}
+		
+		return json(
+			{ success: false, error: 'Failed to create card' },
+			{ status: 500 }
+		);
+	}
+};
