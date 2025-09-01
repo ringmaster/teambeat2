@@ -25,3 +25,8 @@ vite.config.ts.timestamp-*
 # Claude
 /.claude
 /.claude/*
+
+# Databases
+/*.db
+/*.db-shm
+/*.db-wal
