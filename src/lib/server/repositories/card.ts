@@ -65,11 +65,27 @@ export async function updateCard(cardId: string, data: UpdateCardData) {
 		...data
 	};
 	
-	const [card] = await db
+	await db
 		.update(cards)
 		.set(updateData)
+		.where(eq(cards.id, cardId));
+	
+	// Return the card with user name included
+	const [card] = await db
+		.select({
+			id: cards.id,
+			columnId: cards.columnId,
+			userId: cards.userId,
+			userName: users.name,
+			content: cards.content,
+			groupId: cards.groupId,
+			createdAt: cards.createdAt,
+			updatedAt: cards.updatedAt
+		})
+		.from(cards)
+		.innerJoin(users, eq(users.id, cards.userId))
 		.where(eq(cards.id, cardId))
-		.returning();
+		.limit(1);
 	
 	return card;
 }
@@ -164,14 +180,30 @@ export async function getCardVoteCount(cardId: string) {
 }
 
 export async function moveCardToColumn(cardId: string, newColumnId: string) {
-	const [card] = await db
+	await db
 		.update(cards)
 		.set({
 			columnId: newColumnId,
 			updatedAt: new Date().toISOString()
 		})
+		.where(eq(cards.id, cardId));
+	
+	// Return the card with user name included
+	const [card] = await db
+		.select({
+			id: cards.id,
+			columnId: cards.columnId,
+			userId: cards.userId,
+			userName: users.name,
+			content: cards.content,
+			groupId: cards.groupId,
+			createdAt: cards.createdAt,
+			updatedAt: cards.updatedAt
+		})
+		.from(cards)
+		.innerJoin(users, eq(users.id, cards.userId))
 		.where(eq(cards.id, cardId))
-		.returning();
+		.limit(1);
 	
 	return card;
 }

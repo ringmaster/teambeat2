@@ -15,8 +15,13 @@ const updateSceneSchema = z.object({
 	mode: z.enum(['columns', 'present', 'review']).optional(),
 	allowAddCards: z.boolean().optional(),
 	allowEditCards: z.boolean().optional(),
-	allowComments: z.boolean().optional(),
-	allowVoting: z.boolean().optional()
+	allowObscureCards: z.boolean().optional(),
+	allowMoveCards: z.boolean().optional(),
+	allowGroupCards: z.boolean().optional(),
+	showVotes: z.boolean().optional(),
+	allowVoting: z.boolean().optional(),
+	showComments: z.boolean().optional(),
+	allowComments: z.boolean().optional()
 });
 
 export const PATCH: RequestHandler = async (event) => {

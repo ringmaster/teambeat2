@@ -15,6 +15,13 @@
       "when": 1756744853397,
       "tag": "0001_purple_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1756776334834,
+      "tag": "0002_simple_nocturne",
+      "breakpoints": true
     }
   ]
 }

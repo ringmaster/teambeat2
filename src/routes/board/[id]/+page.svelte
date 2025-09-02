@@ -20,7 +20,7 @@
     let newCardContentByColumn = $state(new Map<string, string>());
     let showSceneDropdown = $state(false);
     let showBoardConfig = $state(false);
-    let configActiveTab = $state("columns");
+    let configActiveTab = $state("general");
     let showTemplateSelector = $state(false);
 
     // Drag and Drop State
@@ -33,6 +33,7 @@
     let dragOverColumnId = $state("");
     let columnDropPosition = $state(""); 
     let dragOverColumnEnd = $state(false);
+    let cardDropTargetColumnId = $state("");
 
     // Grouping State
     let groupingMode = $state(false);
@@ -156,8 +157,15 @@
                 cards = cards.filter(c => c.id !== data.cardId);
                 break;
             case 'scene_changed':
-                if (board) {
-                    board.currentSceneId = data.sceneId;
+                if (board && data.scene) {
+                    board.currentSceneId = data.scene.id;
+                    // Update the scene data in the board's scenes array if it exists
+                    if (board.scenes) {
+                        const sceneIndex = board.scenes.findIndex((s: any) => s.id === data.scene.id);
+                        if (sceneIndex !== -1) {
+                            board.scenes[sceneIndex] = data.scene;
+                        }
+                    }
                 }
                 break;
             case 'board_updated':
@@ -176,6 +184,11 @@
                         configForm.votingAllocation = data.board.votingAllocation || 3;
                         configForm.status = data.board.status || "draft";
                     }
+                }
+                break;
+            case 'columns_updated':
+                if (board && data.columns) {
+                    board.columns = data.columns;
                 }
                 break;
         }
@@ -231,6 +244,41 @@
             }
         } catch (error) {
             console.error('Failed to setup template:', error);
+        }
+    }
+
+    async function cloneBoard(sourceId: string) {
+        try {
+            const response = await fetch(`/api/boards/${boardId}/clone`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceId })
+            });
+            
+            if (response.ok) {
+                // Reload the board data to reflect the changes
+                const boardResponse = await fetch(`/api/boards/${boardId}`);
+                if (boardResponse.ok) {
+                    const boardData = await boardResponse.json();
+                    board = boardData.board;
+                    userRole = boardData.userRole;
+                    
+                    // Also reload cards
+                    const cardsResponse = await fetch(`/api/boards/${boardId}/cards`);
+                    if (cardsResponse.ok) {
+                        const cardsData = await cardsResponse.json();
+                        cards = cardsData.cards || [];
+                    }
+                }
+                showTemplateSelector = false;
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to clone board:', errorData);
+                alert(`Failed to clone board: ${errorData.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to clone board:', error);
+            alert('Failed to clone board. Please try again.');
         }
     }
 
@@ -299,10 +347,32 @@
         }
     }
 
-    function handleDragOver(event: DragEvent) {
+    function handleDragOver(event: DragEvent, columnId: string) {
         event.preventDefault();
         if (event.dataTransfer) {
             event.dataTransfer.dropEffect = "move";
+        }
+        if (draggedCardId && cardDropTargetColumnId !== columnId) {
+            cardDropTargetColumnId = columnId;
+        }
+    }
+
+    function handleDragEnter(event: DragEvent, columnId: string) {
+        event.preventDefault();
+        if (draggedCardId) {
+            cardDropTargetColumnId = columnId;
+        }
+    }
+
+    function handleDragLeave(event: DragEvent, columnId: string) {
+        event.preventDefault();
+        // Only clear if we're leaving the column entirely, not just moving to a child element
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX;
+        const y = event.clientY;
+        
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            cardDropTargetColumnId = "";
         }
     }
 
@@ -315,8 +385,8 @@
         }
 
         try {
-            const response = await fetch(`/api/boards/${boardId}/cards/${draggedCardId}`, {
-                method: 'PATCH',
+            const response = await fetch(`/api/cards/${draggedCardId}/move`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ columnId: targetColumnId })
             });
@@ -330,6 +400,7 @@
         }
 
         draggedCardId = "";
+        cardDropTargetColumnId = "";
     }
 
     async function groupCards(cardsToGroup: any[]) {
@@ -863,9 +934,11 @@
         <BoardSetup 
             bind:showTemplateSelector
             {templates}
+            {boardId}
             onToggleTemplateSelector={() => showTemplateSelector = !showTemplateSelector}
             onSetupTemplate={setupTemplate}
             onConfigureClick={() => showBoardConfig = true}
+            onCloneBoard={cloneBoard}
         />
     {:else}
         <BoardColumns 
@@ -874,7 +947,10 @@
             currentScene={getCurrentScene()}
             {groupingMode}
             {selectedCards}
+            dragTargetColumnId={cardDropTargetColumnId}
             onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onDragStart={handleDragStart}
             onToggleCardSelection={toggleCardSelection}

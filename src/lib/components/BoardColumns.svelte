@@ -7,7 +7,10 @@
         currentScene: any;
         groupingMode: boolean;
         selectedCards: Set<string>;
-        onDragOver: (e: DragEvent) => void;
+        dragTargetColumnId: string;
+        onDragOver: (e: DragEvent, columnId: string) => void;
+        onDragEnter: (e: DragEvent, columnId: string) => void;
+        onDragLeave: (e: DragEvent, columnId: string) => void;
         onDrop: (e: DragEvent, columnId: string) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
@@ -25,7 +28,10 @@
         currentScene,
         groupingMode,
         selectedCards,
+        dragTargetColumnId,
         onDragOver,
+        onDragEnter,
+        onDragLeave,
         onDrop,
         onDragStart,
         onToggleCardSelection,
@@ -55,7 +61,10 @@
                 {groupingMode}
                 {selectedCards}
                 {board}
+                {dragTargetColumnId}
                 {onDragOver}
+                {onDragEnter}
+                {onDragLeave}
                 {onDrop}
                 {onDragStart}
                 {onToggleCardSelection}

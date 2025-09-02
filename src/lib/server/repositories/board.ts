@@ -48,6 +48,18 @@ export async function findBoardById(boardId: string) {
 	return board;
 }
 
+export async function findBoardByColumnId(columnId: string) {
+	const [result] = await db
+		.select({ 
+			boardId: columns.boardId 
+		})
+		.from(columns)
+		.where(eq(columns.id, columnId))
+		.limit(1);
+	
+	return result?.boardId || null;
+}
+
 export async function findBoardsByUser(userId: string) {
 	const userBoards = await db
 		.select({

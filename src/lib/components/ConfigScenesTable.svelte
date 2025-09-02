@@ -25,6 +25,11 @@
         dragState
     }: Props = $props();
     
+    // Inline editing state
+    let editingMode = $state(""); // "permissions", "display", or ""
+    let activeSceneId = $state("");
+    let activeSceneName = $state("");
+    
     function updateSceneTitle(sceneId: string, title: string) {
         onUpdateScene(sceneId, { title });
     }
@@ -32,36 +37,105 @@
     function updateSceneMode(sceneId: string, mode: string) {
         onUpdateScene(sceneId, { mode });
     }
+    
+    function showOptionsForScene(sceneId: string) {
+        const scene = board.scenes.find((s: any) => s.id === sceneId);
+        if (!scene) return;
+        
+        activeSceneId = sceneId;
+        activeSceneName = scene.title;
+        editingMode = "permissions";
+    }
+    
+    function showColumnsForScene(sceneId: string) {
+        const scene = board.scenes.find((s: any) => s.id === sceneId);
+        if (!scene) return;
+        
+        activeSceneId = sceneId;
+        activeSceneName = scene.title;
+        editingMode = "display";
+    }
+    
+    function togglePermission(sceneId: string, permission: string) {
+        const scene = board.scenes.find((s: any) => s.id === sceneId);
+        if (!scene) return;
+        
+        const updates = { [permission]: !scene[permission] };
+        onUpdateScene(sceneId, updates);
+    }
+    
+    function exitEditingMode() {
+        editingMode = "";
+        activeSceneId = "";
+        activeSceneName = "";
+    }
+    
+    async function updateColumnDisplay(sceneId: string, columnId: string, display: string) {
+        try {
+            const response = await fetch(`/api/boards/${board.id}/scenes/${sceneId}/columns`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ columnId, display })
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to update column display:', await response.json());
+            }
+        } catch (error) {
+            console.error('Failed to update column display:', error);
+        }
+    }
+    
 </script>
 
-<div class="flex justify-between items-center mb-6">
-    <h3 class="text-lg font-medium text-gray-900">
-        Board Scenes
-    </h3>
-    <button
-        onclick={onAddNewScene}
-        class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center"
-    >
-        <svg
-            class="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+<div class="mb-6">
+    <div class="flex justify-between items-center">
+        <h3 class="text-lg font-medium text-gray-900">
+            {#if editingMode}
+                Board Scenes - {editingMode === 'permissions' ? 'Permissions' : 'Display'} for {activeSceneName}
+            {:else}
+                Board Scenes
+            {/if}
+        </h3>
+        {#if !editingMode}
+            <button
+                onclick={onAddNewScene}
+                class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center"
+            >
+                <svg
+                    class="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4v16m8-8H4"
+                    />
+                </svg>
+                + Add
+            </button>
+        {/if}
+    </div>
+    {#if editingMode}
+        <button
+            onclick={exitEditingMode}
+            class="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center"
         >
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-            />
-        </svg>
-        + Add
-    </button>
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+        </button>
+    {/if}
 </div>
 
-<!-- Scenes Table -->
-<div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
+{#if !editingMode}
+    <!-- Scenes Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
             <tr>
                 <th
@@ -71,6 +145,10 @@
                 <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >Permissions</th
+                >
+                <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >Display</th
                 >
                 <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -103,58 +181,18 @@
                         />
                     </td>
                     <td class="px-6 py-4">
-                        <div
-                            class="flex flex-wrap gap-1"
+                        <button
+                            onclick={() => showOptionsForScene(scene.id)}
+                            class="text-gray-600 hover:text-gray-800 text-sm px-3 py-1 border border-gray-300 rounded hover:border-gray-400 transition-colors"
+                            >Options</button
                         >
-                            {#if scene.allowAddCards}
-                                <span
-                                    class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded flex items-center"
-                                >
-                                    Add Cards
-                                    <button
-                                        class="ml-1 text-gray-400 hover:text-gray-600"
-                                        >×</button
-                                    >
-                                </span>
-                            {/if}
-                            {#if scene.allowEditCards}
-                                <span
-                                    class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded flex items-center"
-                                >
-                                    Edit Cards
-                                    <button
-                                        class="ml-1 text-gray-400 hover:text-gray-600"
-                                        >×</button
-                                    >
-                                </span>
-                            {/if}
-                            {#if scene.allowVoting}
-                                <span
-                                    class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded flex items-center"
-                                >
-                                    Voting
-                                    <button
-                                        class="ml-1 text-gray-400 hover:text-gray-600"
-                                        >×</button
-                                    >
-                                </span>
-                            {/if}
-                            {#if scene.allowComments}
-                                <span
-                                    class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded flex items-center"
-                                >
-                                    Comments
-                                    <button
-                                        class="ml-1 text-gray-400 hover:text-gray-600"
-                                        >×</button
-                                    >
-                                </span>
-                            {/if}
-                            <button
-                                class="text-gray-400 hover:text-gray-600 text-xs px-2 py-1 border border-dashed border-gray-300 rounded"
-                                >+ Options</button
-                            >
-                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button
+                            onclick={() => showColumnsForScene(scene.id)}
+                            class="text-gray-600 hover:text-gray-800 text-sm px-3 py-1 border border-gray-300 rounded hover:border-gray-400 transition-colors"
+                            >Columns</button
+                        >
                     </td>
                     <td class="px-6 py-4">
                         <select
@@ -184,10 +222,171 @@
                 ondrop={onEndDrop}
                 class="h-4 {dragState.dragOverSceneEnd ? 'bg-blue-100 border-2 border-dashed border-blue-400' : 'hover:bg-gray-25'}"
             >
-                <td colspan="4" class="px-6 py-2 text-center text-xs text-gray-400">
+                <td colspan="5" class="px-6 py-2 text-center text-xs text-gray-400">
                     {dragState.dragOverSceneEnd ? "Drop here to move to end" : ""}
                 </td>
             </tr>
         </tbody>
     </table>
 </div>
+{:else}
+    <!-- Inline Editing Content -->
+    <div class="max-h-96 overflow-y-auto">
+        {#if editingMode === 'permissions'}
+            {@const activeScene = board.scenes.find((s: any) => s.id === activeSceneId)}
+            {#if activeScene}
+            <div class="space-y-3">
+                <h4 class="text-sm font-medium text-gray-900 mb-4">Scene Permissions</h4>
+                <div class="grid grid-cols-3 gap-3">
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowAddCards')}
+                        class="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors {activeScene.allowAddCards ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Add Cards</span>
+                            {#if activeScene.allowAddCards}
+                                <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowEditCards')}
+                        class="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors {activeScene.allowEditCards ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Edit Cards</span>
+                            {#if activeScene.allowEditCards}
+                                <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowObscureCards')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowObscureCards ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Obscure Cards</span>
+                            {#if activeScene.allowObscureCards}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowMoveCards')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowMoveCards ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Move Cards</span>
+                            {#if activeScene.allowMoveCards}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowGroupCards')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowGroupCards ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Group Cards</span>
+                            {#if activeScene.allowGroupCards}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'showVotes')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.showVotes ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Show Votes</span>
+                            {#if activeScene.showVotes}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowVoting')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowVoting ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Enable Votes</span>
+                            {#if activeScene.allowVoting}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'showComments')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.showComments ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Show Comments</span>
+                            {#if activeScene.showComments}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                    
+                    <button
+                        onclick={() => togglePermission(activeSceneId, 'allowComments')}
+                        class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowComments ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                    >
+                        <div class="flex items-center justify-between">
+                            <span>Enable Comments</span>
+                            {#if activeScene.allowComments}
+                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            {/if}
+                        </div>
+                    </button>
+                </div>
+            </div>
+            {/if}
+        {:else if editingMode === 'display'}
+            <div class="space-y-3">
+                <h4 class="text-sm font-medium text-gray-900 mb-4">Column Display Settings</h4>
+                <div class="space-y-3">
+                    {#each board.columns || [] as column}
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <span class="text-sm text-gray-700 font-medium flex-1 mr-4">{column.title}</span>
+                            <select
+                                value="show"
+                                onchange={(e) => updateColumnDisplay(activeSceneId, column.id, e.currentTarget.value)}
+                                class="text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            >
+                                <option value="show">Show</option>
+                                <option value="hide">Hide</option>
+                                <option value="solo">Solo</option>
+                            </select>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+    </div>
+{/if}
+

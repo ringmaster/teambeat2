@@ -58,10 +58,17 @@ export const scenes = sqliteTable('scenes', {
 	description: text('description'),
 	mode: text('mode').notNull().$type<'columns' | 'present' | 'review'>(),
 	seq: integer('seq').notNull(),
+	// Permission fields
 	allowAddCards: integer('allow_add_cards', { mode: 'boolean' }).default(true),
 	allowEditCards: integer('allow_edit_cards', { mode: 'boolean' }).default(true),
-	allowComments: integer('allow_comments', { mode: 'boolean' }).default(true),
+	allowObscureCards: integer('allow_obscure_cards', { mode: 'boolean' }).default(false),
+	allowMoveCards: integer('allow_move_cards', { mode: 'boolean' }).default(true),
+	allowGroupCards: integer('allow_group_cards', { mode: 'boolean' }).default(false),
+	showVotes: integer('show_votes', { mode: 'boolean' }).default(true),
 	allowVoting: integer('allow_voting', { mode: 'boolean' }).default(false),
+	showComments: integer('show_comments', { mode: 'boolean' }).default(true),
+	allowComments: integer('allow_comments', { mode: 'boolean' }).default(true),
+	// Legacy field for backward compatibility
 	multipleVotesPerCard: integer('multiple_votes_per_card', { mode: 'boolean' }).default(false),
 	createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
@@ -69,7 +76,7 @@ export const scenes = sqliteTable('scenes', {
 export const sceneColumnSettings = sqliteTable('scene_column_settings', {
 	sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
 	columnId: text('column_id').notNull().references(() => columns.id, { onDelete: 'cascade' }),
-	appearance: text('appearance').notNull().$type<'shown' | 'hidden' | 'fixed'>()
+	display: text('display').notNull().$type<'show' | 'hide' | 'solo'>().default('show')
 }, (table) => ({
 	pk: primaryKey({ columns: [table.sceneId, table.columnId] })
 }));

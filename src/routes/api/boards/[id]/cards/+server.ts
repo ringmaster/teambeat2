@@ -5,6 +5,7 @@ import { createCard, getCardsForBoard } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardCreated } from '$lib/server/websockets/broadcast.js';
+import { handleApiError } from '$lib/server/api-utils.js';
 import { z } from 'zod';
 
 const createCardSchema = z.object({
@@ -42,14 +43,7 @@ export const GET: RequestHandler = async (event) => {
 			cards
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
-		
-		return json(
-			{ success: false, error: 'Failed to fetch cards' },
-			{ status: 500 }
-		);
+		return handleApiError(error, 'Failed to fetch cards');
 	}
 };
 
@@ -99,20 +93,6 @@ export const POST: RequestHandler = async (event) => {
 			card
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
-		
-		if (error instanceof z.ZodError) {
-			return json(
-				{ success: false, error: 'Invalid input', details: error.errors },
-				{ status: 400 }
-			);
-		}
-		
-		return json(
-			{ success: false, error: 'Failed to create card' },
-			{ status: 500 }
-		);
+		return handleApiError(error, 'Failed to create card');
 	}
 };

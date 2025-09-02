@@ -8,7 +8,10 @@
         groupingMode: boolean;
         selectedCards: Set<string>;
         board: any;
-        onDragOver: (e: DragEvent) => void;
+        dragTargetColumnId: string;
+        onDragOver: (e: DragEvent, columnId: string) => void;
+        onDragEnter: (e: DragEvent, columnId: string) => void;
+        onDragLeave: (e: DragEvent, columnId: string) => void;
         onDrop: (e: DragEvent, columnId: string) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
@@ -27,7 +30,10 @@
         groupingMode,
         selectedCards,
         board,
+        dragTargetColumnId,
         onDragOver,
+        onDragEnter,
+        onDragLeave,
         onDrop,
         onDragStart,
         onToggleCardSelection,
@@ -96,8 +102,12 @@
     <!-- Cards Section -->
     <div
         id="column-cards-{column.id}"
-        class="p-4 space-y-3 min-h-32 max-h-96 overflow-y-auto"
-        ondragover={onDragOver}
+        class="p-4 space-y-3 min-h-32 max-h-96 overflow-y-auto transition-colors {dragTargetColumnId === column.id ? 'bg-blue-50 border border-blue-200 border-dashed' : ''}"
+        role="region"
+        aria-label="Column {column.title} - Drop zone for cards"
+        ondragover={(e) => onDragOver(e, column.id)}
+        ondragenter={(e) => onDragEnter(e, column.id)}
+        ondragleave={(e) => onDragLeave(e, column.id)}
         ondrop={(e) => onDrop(e, column.id)}
     >
         <!-- Grouped cards -->

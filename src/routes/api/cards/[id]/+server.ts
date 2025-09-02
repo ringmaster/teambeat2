@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById, updateCard, deleteCard } from '$lib/server/repositories/card.js';
-import { getBoardWithDetails } from '$lib/server/repositories/board.js';
+import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated, broadcastCardDeleted } from '$lib/server/websockets/broadcast.js';
 import { z } from 'zod';
@@ -27,7 +27,15 @@ export const PUT: RequestHandler = async (event) => {
 		}
 		
 		// Get board information through column relationship
-		const board = await getBoardWithDetails(card.columnId);
+		const boardId = await findBoardByColumnId(card.columnId);
+		if (!boardId) {
+			return json(
+				{ success: false, error: 'Column not found' },
+				{ status: 404 }
+			);
+		}
+		
+		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
 				{ success: false, error: 'Board not found' },
@@ -61,7 +69,7 @@ export const PUT: RequestHandler = async (event) => {
 			);
 		}
 		
-		const updatedCard = await updateCard(cardId, data.content);
+		const updatedCard = await updateCard(cardId, { content: data.content });
 		
 		// Broadcast the updated card to all clients
 		broadcastCardUpdated(board.id, updatedCard);
@@ -103,7 +111,15 @@ export const DELETE: RequestHandler = async (event) => {
 		}
 		
 		// Get board information through column relationship
-		const board = await getBoardWithDetails(card.columnId);
+		const boardId = await findBoardByColumnId(card.columnId);
+		if (!boardId) {
+			return json(
+				{ success: false, error: 'Column not found' },
+				{ status: 404 }
+			);
+		}
+		
+		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
 				{ success: false, error: 'Board not found' },

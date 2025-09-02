@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById } from '$lib/server/repositories/card.js';
-import { getBoardWithDetails } from '$lib/server/repositories/board.js';
+import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { castVote, checkVotingAllocation, getCardVotes } from '$lib/server/repositories/vote.js';
 import { broadcastVoteChanged } from '$lib/server/websockets/broadcast.js';
@@ -21,7 +21,15 @@ export const POST: RequestHandler = async (event) => {
 		}
 		
 		// Get board information
-		const board = await getBoardWithDetails(card.columnId);
+		const boardId = await findBoardByColumnId(card.columnId);
+		if (!boardId) {
+			return json(
+				{ success: false, error: 'Column not found' },
+				{ status: 404 }
+			);
+		}
+		
+		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
 				{ success: false, error: 'Board not found' },
