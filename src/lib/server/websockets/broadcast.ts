@@ -46,16 +46,6 @@ export function broadcastVoteChanged(boardId: string, cardId: string, voteCount:
 	wsManager.broadcastToBoard(boardId, message);
 }
 
-export function broadcastSceneChanged(boardId: string, sceneId: string) {
-	const message: WebSocketMessage = {
-		type: 'scene_changed',
-		board_id: boardId,
-		scene_id: sceneId,
-		timestamp: Date.now()
-	};
-	
-	wsManager.broadcastToBoard(boardId, message);
-}
 
 export function broadcastCommentAdded(boardId: string, comment: any) {
 	const message: WebSocketMessage = {
@@ -84,6 +74,28 @@ export function broadcastBoardUpdated(boardId: string, board: any) {
 		type: 'board_updated',
 		board_id: boardId,
 		board,
+		timestamp: Date.now()
+	};
+	
+	wsManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastColumnsUpdated(boardId: string, columns: any[]) {
+	const message: WebSocketMessage = {
+		type: 'columns_updated',
+		board_id: boardId,
+		columns,
+		timestamp: Date.now()
+	};
+	
+	wsManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastSceneChanged(boardId: string, sceneData: any) {
+	const message: WebSocketMessage = {
+		type: 'scene_changed',
+		board_id: boardId,
+		scene: sceneData,
 		timestamp: Date.now()
 	};
 	

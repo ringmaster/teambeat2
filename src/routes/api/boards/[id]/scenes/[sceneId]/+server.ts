@@ -4,6 +4,10 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { updateScene, deleteScene } from '$lib/server/repositories/scene.js';
+import { broadcastSceneChanged } from '$lib/server/websockets/broadcast.js';
+import { db } from '$lib/server/db/index.js';
+import { boards } from '$lib/server/db/schema.js';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 const updateSceneSchema = z.object({
@@ -41,6 +45,11 @@ export const PATCH: RequestHandler = async (event) => {
 		}
 		
 		const updatedScene = await updateScene(sceneId, data);
+		
+		// If this is the current scene for the board, broadcast the change
+		if (board.currentSceneId === sceneId) {
+			broadcastSceneChanged(boardId, updatedScene);
+		}
 		
 		return json({
 			success: true,
@@ -93,7 +102,35 @@ export const DELETE: RequestHandler = async (event) => {
 			);
 		}
 		
+		// If this is the current scene, we need to switch to another one first
+		const wasCurrentScene = board.currentSceneId === sceneId;
+		let newCurrentScene = null;
+		
+		if (wasCurrentScene) {
+			// Find another scene to switch to
+			const remainingScenes = board.scenes.filter(s => s.id !== sceneId);
+			if (remainingScenes.length > 0) {
+				newCurrentScene = remainingScenes[0];
+				// Update the board's current scene
+				await db
+					.update(boards)
+					.set({ currentSceneId: newCurrentScene.id })
+					.where(eq(boards.id, boardId));
+			} else {
+				// No scenes left, clear current scene
+				await db
+					.update(boards)
+					.set({ currentSceneId: null })
+					.where(eq(boards.id, boardId));
+			}
+		}
+		
 		await deleteScene(sceneId);
+		
+		// If we switched to a new scene, broadcast the change
+		if (newCurrentScene) {
+			broadcastSceneChanged(boardId, newCurrentScene);
+		}
 		
 		return json({
 			success: true

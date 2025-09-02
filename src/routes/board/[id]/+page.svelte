@@ -47,20 +47,7 @@
     });
 
     // Templates
-    const templates = [
-        {
-            name: "Sprint Retrospective",
-            description: "What went well, what didn't, action items",
-        },
-        {
-            name: "Team Health Check",
-            description: "Assess team dynamics and collaboration",
-        },
-        {
-            name: "Project Planning",
-            description: "Ideas, concerns, next steps",
-        },
-    ];
+    let templates: any[] = $state([]);
 
     onMount(async () => {
         boardId = $page.params.id!;
@@ -75,11 +62,18 @@
             const userData = await userResponse.json();
             user = userData.user;
 
-            // Load board data
-            const [boardResponse, cardsResponse] = await Promise.all([
+            // Load templates and board data
+            const [templatesResponse, boardResponse, cardsResponse] = await Promise.all([
+                fetch(`/api/templates`),
                 fetch(`/api/boards/${boardId}`),
                 fetch(`/api/boards/${boardId}/cards`),
             ]);
+
+            // Load templates
+            if (templatesResponse.ok) {
+                const templatesData = await templatesResponse.json();
+                templates = templatesData.templates || [];
+            }
 
             if (!boardResponse.ok) {
                 loading = false;
@@ -213,13 +207,27 @@
             const response = await fetch(`/api/boards/${boardId}/setup-template`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ templateName: template.name })
+                body: JSON.stringify({ template: template.id })
             });
             
             if (response.ok) {
-                const result = await response.json();
-                board = result.board;
+                // Reload the board data to reflect the changes
+                const boardResponse = await fetch(`/api/boards/${boardId}`);
+                if (boardResponse.ok) {
+                    const boardData = await boardResponse.json();
+                    board = boardData.board;
+                    userRole = boardData.userRole;
+                    
+                    // Also reload cards
+                    const cardsResponse = await fetch(`/api/boards/${boardId}/cards`);
+                    if (cardsResponse.ok) {
+                        const cardsData = await cardsResponse.json();
+                        cards = cardsData.cards || [];
+                    }
+                }
                 showTemplateSelector = false;
+            } else {
+                console.error('Failed to setup template:', await response.json());
             }
         } catch (error) {
             console.error('Failed to setup template:', error);

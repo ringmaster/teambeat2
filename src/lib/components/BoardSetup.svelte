@@ -41,14 +41,30 @@
                         {#each templates as template}
                             <button
                                 onclick={() => onSetupTemplate(template)}
-                                class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                                class="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
                             >
-                                <h4 class="font-medium text-gray-900 mb-1">
+                                <h4 class="font-medium text-gray-900 mb-2">
                                     {template.name}
                                 </h4>
-                                <p class="text-sm text-gray-600">
+                                <p class="text-sm text-gray-600 mb-3">
                                     {template.description}
                                 </p>
+                                <div class="text-xs text-gray-500">
+                                    {template.columns.length} columns • {template.scenes} scenes
+                                </div>
+                                <!-- Show column previews -->
+                                <div class="mt-2 text-xs text-gray-400">
+                                    {#each template.columns.slice(0, 2) as column}
+                                        <span class="inline-block bg-gray-100 rounded px-2 py-1 mr-1 mb-1">
+                                            {column.length > 20 ? column.substring(0, 20) + '...' : column}
+                                        </span>
+                                    {/each}
+                                    {#if template.columns.length > 2}
+                                        <span class="inline-block text-gray-400">
+                                            +{template.columns.length - 2} more
+                                        </span>
+                                    {/if}
+                                </div>
                             </button>
                         {/each}
                     </div>

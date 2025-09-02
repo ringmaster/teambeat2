@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { findBoardById } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { broadcastColumnsUpdated } from '$lib/server/websockets/broadcast.js';
 import { db } from '$lib/server/db/index.js';
 import { columns, boards } from '$lib/server/db/schema.js';
 import { eq, desc } from 'drizzle-orm';
@@ -70,6 +71,16 @@ export const POST: RequestHandler = async (event) => {
 			.from(columns)
 			.where(eq(columns.id, columnId))
 			.get();
+		
+		// Get all columns for broadcast
+		const allColumns = await db
+			.select()
+			.from(columns)
+			.where(eq(columns.boardId, boardId))
+			.orderBy(columns.seq);
+		
+		// Broadcast the updated columns
+		broadcastColumnsUpdated(boardId, allColumns);
 		
 		return json({
 			success: true,

@@ -46,8 +46,8 @@ export const PUT: RequestHandler = async (event) => {
 		// Update the board's current scene
 		await updateBoardScene(boardId, data.sceneId);
 		
-		// Broadcast the scene change to all clients
-		broadcastSceneChanged(boardId, data.sceneId);
+		// Broadcast the scene change to all clients with full scene data
+		broadcastSceneChanged(boardId, scene);
 		
 		return json({
 			success: true,

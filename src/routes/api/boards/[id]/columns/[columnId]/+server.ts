@@ -3,6 +3,10 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateColumn, deleteColumn } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { broadcastColumnsUpdated } from '$lib/server/websockets/broadcast.js';
+import { db } from '$lib/server/db/index.js';
+import { columns } from '$lib/server/db/schema.js';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 const updateColumnSchema = z.object({
@@ -37,6 +41,16 @@ export const PATCH: RequestHandler = async (event) => {
 		}
 		
 		const updatedColumn = await updateColumn(columnId, data);
+		
+		// Get all columns for broadcast
+		const allColumns = await db
+			.select()
+			.from(columns)
+			.where(eq(columns.boardId, boardId))
+			.orderBy(columns.seq);
+		
+		// Broadcast the updated columns
+		broadcastColumnsUpdated(boardId, allColumns);
 		
 		return json({
 			success: true,
@@ -90,6 +104,16 @@ export const DELETE: RequestHandler = async (event) => {
 		}
 		
 		await deleteColumn(columnId);
+		
+		// Get all remaining columns for broadcast
+		const allColumns = await db
+			.select()
+			.from(columns)
+			.where(eq(columns.boardId, boardId))
+			.orderBy(columns.seq);
+		
+		// Broadcast the updated columns
+		broadcastColumnsUpdated(boardId, allColumns);
 		
 		return json({
 			success: true

@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { findBoardById } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { broadcastSceneChanged } from '$lib/server/websockets/broadcast.js';
 import { db } from '$lib/server/db/index.js';
 import { scenes, boards } from '$lib/server/db/schema.js';
 import { eq, desc } from 'drizzle-orm';
@@ -82,6 +83,18 @@ export const POST: RequestHandler = async (event) => {
 			.from(scenes)
 			.where(eq(scenes.id, sceneId))
 			.get();
+		
+		// If this is the first scene and board doesn't have a current scene, make it current
+		const boardWithCurrentScene = await findBoardById(boardId);
+		if (!boardWithCurrentScene.currentSceneId) {
+			await db
+				.update(boards)
+				.set({ currentSceneId: sceneId })
+				.where(eq(boards.id, boardId));
+			
+			// Broadcast the scene change
+			broadcastSceneChanged(boardId, newScene);
+		}
 		
 		return json({
 			success: true,
