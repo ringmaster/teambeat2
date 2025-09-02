@@ -15,6 +15,14 @@
     let loading = $state(true);
     let ws: WebSocket | null = null;
     let boardId = "";
+    
+    // WebSocket Health Monitoring
+    let wsConnectionState = $state<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+    let wsReconnectAttempts = $state(0);
+    let wsMaxReconnectAttempts = 5;
+    let wsPingInterval: number | null = null;
+    let wsReconnectTimeout: number | null = null;
+    let wsLastPongTime = 0;
 
     // UI State
     let newCardContentByColumn = $state(new Map<string, string>());
@@ -106,43 +114,118 @@
     });
 
     onDestroy(() => {
+        clearWebSocketTimers();
         if (ws) {
             ws.close();
         }
     });
 
     function setupWebSocket() {
+        // Clear any existing timers
+        clearWebSocketTimers();
+        
+        // Set connecting state
+        wsConnectionState = 'connecting';
+        
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Connect to WebSocket server on port 8080 with session parameter
         const wsUrl = `${wsProtocol}//${window.location.hostname}:8080?session=${encodeURIComponent(document.cookie.split('session=')[1]?.split(';')[0] || '')}`;
         
-        ws = new WebSocket(wsUrl);
-        
-        ws.onopen = () => {
-            console.log('WebSocket connected');
-            // Join the board to receive updates
-            if (ws && user) {
-                ws.send(JSON.stringify({
-                    type: 'join_board',
-                    board_id: boardId,
-                    user_id: user.id
-                }));
+        try {
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                wsConnectionState = 'connected';
+                wsReconnectAttempts = 0;
+                wsLastPongTime = Date.now();
+                
+                // Join the board to receive updates
+                if (ws && user) {
+                    ws.send(JSON.stringify({
+                        type: 'join_board',
+                        board_id: boardId,
+                        user_id: user.id
+                    }));
+                }
+                
+                // Start ping/pong health checks
+                startWebSocketHealthCheck();
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error('Failed to parse WebSocket message:', error);
+                }
+            };
+            
+            ws.onclose = (event) => {
+                console.log('WebSocket disconnected', { code: event.code, reason: event.reason });
+                wsConnectionState = 'disconnected';
+                clearWebSocketTimers();
+                
+                // Attempt reconnection with exponential backoff
+                attemptReconnection();
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                wsConnectionState = 'error';
+            };
+            
+        } catch (error) {
+            console.error('Failed to create WebSocket:', error);
+            wsConnectionState = 'error';
+            attemptReconnection();
+        }
+    }
+    
+    function clearWebSocketTimers() {
+        if (wsPingInterval) {
+            clearInterval(wsPingInterval);
+            wsPingInterval = null;
+        }
+        if (wsReconnectTimeout) {
+            clearTimeout(wsReconnectTimeout);
+            wsReconnectTimeout = null;
+        }
+    }
+    
+    function startWebSocketHealthCheck() {
+        // Send ping every 30 seconds
+        wsPingInterval = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+                
+                // Check if we haven't received a pong in the last 60 seconds
+                if (Date.now() - wsLastPongTime > 60000) {
+                    console.warn('WebSocket health check failed - no pong received');
+                    ws.close();
+                }
             }
-        };
+        }, 30000);
+    }
+    
+    function attemptReconnection() {
+        if (wsReconnectAttempts >= wsMaxReconnectAttempts) {
+            console.error('Max WebSocket reconnection attempts reached, reloading page');
+            wsConnectionState = 'error';
+            // Reload the page as final fallback
+            window.location.reload();
+            return;
+        }
         
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            handleWebSocketMessage(data);
-        };
+        wsReconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts - 1), 30000); // Exponential backoff, max 30s
         
-        ws.onclose = () => {
-            console.log('WebSocket disconnected');
-            setTimeout(setupWebSocket, 5000);
-        };
+        console.log(`WebSocket reconnection attempt ${wsReconnectAttempts}/${wsMaxReconnectAttempts} in ${delay}ms`);
         
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
+        wsReconnectTimeout = setTimeout(() => {
+            setupWebSocket();
+        }, delay);
     }
 
     function handleWebSocketMessage(data: any) {
@@ -190,6 +273,10 @@
                 if (board && data.columns) {
                     board.columns = data.columns;
                 }
+                break;
+            case 'pong':
+                // Update last pong time for health monitoring
+                wsLastPongTime = Date.now();
                 break;
         }
     }
@@ -929,6 +1016,28 @@
         onSceneChange={changeScene}
         onShowSceneDropdown={(show) => showSceneDropdown = show}
     />
+    
+    <!-- Connection Status Indicator -->
+    {#if wsConnectionState !== 'connected'}
+        <div class="fixed top-4 right-4 z-50 px-3 py-2 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 {
+            wsConnectionState === 'connecting' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+            wsConnectionState === 'disconnected' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+            'bg-red-100 text-red-800 border border-red-200'
+        }">
+            <div class="flex items-center space-x-2">
+                {#if wsConnectionState === 'connecting'}
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                    <span>Connecting...</span>
+                {:else if wsConnectionState === 'disconnected'}
+                    <div class="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                    <span>Reconnecting... (Attempt {wsReconnectAttempts}/{wsMaxReconnectAttempts})</span>
+                {:else}
+                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span>Connection failed - reloading...</span>
+                {/if}
+            </div>
+        </div>
+    {/if}
 
     {#if (!board.columns || board.columns.length === 0) && (!board.scenes || board.scenes.length === 0)}
         <BoardSetup 

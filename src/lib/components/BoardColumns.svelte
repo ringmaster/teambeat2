@@ -1,6 +1,6 @@
 <script lang="ts">
-    import BoardColumn from './BoardColumn.svelte';
-    
+    import BoardColumn from "./BoardColumn.svelte";
+
     interface Props {
         board: any;
         cards: any[];
@@ -21,8 +21,8 @@
         onGetColumnContent: (columnId: string) => string;
         onSetColumnContent: (columnId: string, content: string) => void;
     }
-    
-    let { 
+
+    let {
         board,
         cards,
         currentScene,
@@ -40,15 +40,9 @@
         onAddCard,
         onGroupCards,
         onGetColumnContent,
-        onSetColumnContent
+        onSetColumnContent,
     }: Props = $props();
 </script>
-
-<style>
-    #board-columns-flex {
-        margin-left: calc((100vw - var(--board-header-width)) / 2);
-    }
-</style>
 
 <!-- Board Columns for configured board (full-width with horizontal scroll) -->
 <div id="board-columns-container" class="w-full overflow-x-auto py-8">
@@ -78,3 +72,10 @@
         {/each}
     </div>
 </div>
+
+<style>
+    #board-columns-flex {
+        margin-left: calc((100vw - var(--board-header-width)) / 2);
+        margin-right: calc((100vw - var(--board-header-width)) / 2);
+    }
+</style>
