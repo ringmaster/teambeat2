@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 const CONFIG = {
   TARGET_CONNECTIONS: 45,
   BASE_URL: 'http://localhost:5173',
-  WS_URL: 'ws://localhost:5173/ws',
+  WS_URL: 'ws://localhost:8080',
   TEST_BOARD_ID: 'load-test-board',
   ACTIVITY_INTERVAL: 2000, // ms between actions
   TEST_DURATION: 300000, // 5 minutes
@@ -15,7 +15,9 @@ const CONFIG = {
 class LoadTestUser {
   constructor(userId) {
     this.userId = userId;
-    this.username = `testuser${userId}`;
+    // Add timestamp to make users unique across test runs
+    const timestamp = Date.now().toString().slice(-6);
+    this.username = `testuser${userId}_${timestamp}`;
     this.ws = null;
     this.sessionCookie = null;
     this.isConnected = false;
@@ -25,37 +27,57 @@ class LoadTestUser {
 
   async authenticate() {
     try {
-      // Register/login user
-      const response = await fetch(`${CONFIG.BASE_URL}/api/auth/login`, {
+      // Try to register user first (registration will set cookie if successful)
+      const registerResponse = await fetch(`${CONFIG.BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: this.username,
+          email: `${this.username}@test.com`,
+          name: this.username,
           password: 'testpass123'
         })
       });
 
-      if (response.status === 401) {
-        // User doesn't exist, register
-        await fetch(`${CONFIG.BASE_URL}/api/auth/register`, {
+      console.log(`User ${this.userId} register response status: ${registerResponse.status}`);
+
+      if (registerResponse.ok) {
+        // Registration successful, extract session cookie
+        const cookies = registerResponse.headers.get('set-cookie');
+        if (cookies) {
+          this.sessionCookie = cookies.split(';')[0];
+        }
+        console.log(`✓ User ${this.userId} registered and authenticated`);
+        return true;
+      } else {
+        const registerError = await registerResponse.text();
+        console.log(`User ${this.userId} registration failed: ${registerError}`);
+        console.log(`Attempting login for existing user...`);
+        // User might already exist, try login
+        const loginResponse = await fetch(`${CONFIG.BASE_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: this.username,
-            password: 'testpass123',
-            email: `${this.username}@test.com`
+            email: `${this.username}@test.com`,
+            password: 'testpass123'
           })
         });
-      }
 
-      // Extract session cookie
-      const cookies = response.headers.get('set-cookie');
-      if (cookies) {
-        this.sessionCookie = cookies.split(';')[0];
-      }
+        console.log(`User ${this.userId} login response status: ${loginResponse.status}`);
 
-      console.log(`✓ User ${this.userId} authenticated`);
-      return true;
+        if (loginResponse.ok) {
+          // Login successful, extract session cookie
+          const cookies = loginResponse.headers.get('set-cookie');
+          if (cookies) {
+            this.sessionCookie = cookies.split(';')[0];
+          }
+          console.log(`✓ User ${this.userId} logged in and authenticated`);
+          return true;
+        } else {
+          const loginError = await loginResponse.text();
+          console.error(`✗ User ${this.userId} login failed:`, loginError);
+          return false;
+        }
+      }
     } catch (error) {
       console.error(`✗ User ${this.userId} auth failed:`, error.message);
       return false;
@@ -64,29 +86,35 @@ class LoadTestUser {
 
   async connectWebSocket() {
     return new Promise((resolve, reject) => {
-      const headers = {};
+      // Extract session ID from cookie for WebSocket authentication
+      let sessionId = null;
       if (this.sessionCookie) {
-        headers.Cookie = this.sessionCookie;
+        const match = this.sessionCookie.match(/session=([^;]+)/);
+        if (match) {
+          sessionId = match[1];
+        }
       }
 
-      this.ws = new WebSocket(CONFIG.WS_URL, { headers });
+      const wsUrl = sessionId ? `${CONFIG.WS_URL}?session=${sessionId}` : CONFIG.WS_URL;
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.on('open', () => {
         console.log(`✓ User ${this.userId} WebSocket connected`);
         this.isConnected = true;
-        
+
         // Join the test board
         this.ws.send(JSON.stringify({
           type: 'join_board',
-          board_id: CONFIG.TEST_BOARD_ID
+          board_id: CONFIG.TEST_BOARD_ID,
+          user_id: this.username
         }));
-        
+
         resolve();
       });
 
       this.ws.on('message', (data) => {
         try {
-          const message = JSON.parse(data);
+          const message = JSON.parse(data.toString());
           this.handleMessage(message);
         } catch (error) {
           console.error(`User ${this.userId} message parse error:`, error.message);
@@ -116,8 +144,8 @@ class LoadTestUser {
     switch (message.type) {
       case 'card_created':
         // Track cards created by others
-        if (message.card && message.card.user_id !== this.userId) {
-          console.log(`User ${this.userId} saw card created by ${message.card.user_id}`);
+        if (message.card && message.card.userId !== this.username) {
+          console.log(`User ${this.userId} saw card created by ${message.card.userId}`);
         }
         break;
       case 'card_moved':
@@ -143,17 +171,21 @@ class LoadTestUser {
           'Cookie': this.sessionCookie
         },
         body: JSON.stringify({
-          column_id: randomColumn,
+          columnId: randomColumn,
           content: cardContent
         })
       });
 
+      console.log(`User ${this.userId} create card response: ${response.status}`);
+
       if (response.ok) {
-        const card = await response.json();
+        const cardData = await response.json();
+        const card = cardData.card || cardData;
         this.cardIds.push(card.id);
         console.log(`✓ User ${this.userId} created card ${card.id}`);
       } else {
-        console.error(`✗ User ${this.userId} failed to create card: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`✗ User ${this.userId} failed to create card: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error(`✗ User ${this.userId} create card error:`, error.message);
@@ -168,16 +200,17 @@ class LoadTestUser {
       const randomColumn = this.columnIds[Math.floor(Math.random() * this.columnIds.length)];
 
       const response = await fetch(`${CONFIG.BASE_URL}/api/cards/${randomCardId}/move`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Cookie': this.sessionCookie
         },
         body: JSON.stringify({
-          column_id: randomColumn,
-          position: 0
+          columnId: randomColumn
         })
       });
+
+      console.log(`User ${this.userId} move card response: ${response.status}`);
 
       if (response.ok) {
         console.log(`✓ User ${this.userId} moved card ${randomCardId} to column ${randomColumn}`);
@@ -199,9 +232,10 @@ class LoadTestUser {
       });
 
       if (response.ok) {
-        const board = await response.json();
+        const boardResponse = await response.json();
+        const board = boardResponse.board || boardResponse;
         const allCards = [];
-        
+
         // Collect all cards from all columns
         if (board.columns) {
           board.columns.forEach(column => {
@@ -210,10 +244,10 @@ class LoadTestUser {
             }
           });
         }
-        
+
         if (allCards.length > 0) {
           const randomCard = allCards[Math.floor(Math.random() * allCards.length)];
-          
+
           const voteResponse = await fetch(`${CONFIG.BASE_URL}/api/cards/${randomCard.id}/vote`, {
             method: 'POST',
             headers: {
@@ -222,6 +256,8 @@ class LoadTestUser {
             },
             body: JSON.stringify({})
           });
+
+          console.log(`User ${this.userId} vote response: ${voteResponse.status}`);
 
           if (voteResponse.ok) {
             console.log(`✓ User ${this.userId} voted on card ${randomCard.id}`);
@@ -263,6 +299,7 @@ class LoadTestUser {
       this.ws.send(JSON.stringify({
         type: 'presence_update',
         board_id: CONFIG.TEST_BOARD_ID,
+        user_id: this.username,
         activity: `editing_card_${Math.random().toString(36).substr(2, 9)}`
       }));
     } catch (error) {
@@ -293,12 +330,19 @@ class LoadTester {
 
   async setupTestBoard() {
     console.log('Setting up test board...');
-    
+
     // Create a test user and board if needed
     try {
       const testUser = new LoadTestUser(0);
-      await testUser.authenticate();
-      
+      const authResult = await testUser.authenticate();
+      if (!authResult) {
+        throw new Error('Failed to authenticate test user');
+      }
+
+      // Create a unique series name for this test run
+      const timestamp = Date.now().toString().slice(-6);
+      const seriesName = `Load Test Series ${timestamp}`;
+
       // First check if series exists or create it
       const seriesResponse = await fetch(`${CONFIG.BASE_URL}/api/series`, {
         method: 'POST',
@@ -307,25 +351,37 @@ class LoadTester {
           'Cookie': testUser.sessionCookie
         },
         body: JSON.stringify({
-          name: 'Load Test Series',
+          name: seriesName,
           description: 'Series for load testing'
         })
       });
 
+      console.log(`Series creation response: ${seriesResponse.status}`);
+
       let seriesId;
       if (seriesResponse.ok) {
-        const series = await seriesResponse.json();
-        seriesId = series.id;
+        const seriesData = await seriesResponse.json();
+        seriesId = seriesData.series?.id || seriesData.id;
+        console.log(`✓ Created series with ID: ${seriesId}`);
       } else {
+        const errorText = await seriesResponse.text();
+        console.log(`Series creation error (${seriesResponse.status}): ${errorText}`);
+        console.log(`Cookies being sent: ${testUser.sessionCookie}`);
+        console.log(`Request body was:`, JSON.stringify({ name: seriesName, description: 'Series for load testing' }));
+
         // Try to get existing series
         const getSeriesResponse = await fetch(`${CONFIG.BASE_URL}/api/series`, {
           headers: { 'Cookie': testUser.sessionCookie }
         });
+        console.log(`Get series response: ${getSeriesResponse.status}`);
+
         if (getSeriesResponse.ok) {
-          const seriesList = await getSeriesResponse.json();
-          const existingSeries = seriesList.find(s => s.name === 'Load Test Series');
-          if (existingSeries) {
-            seriesId = existingSeries.id;
+          const seriesListData = await getSeriesResponse.json();
+          const seriesList = seriesListData.series || seriesListData;
+          // Just use the first available series if creation failed
+          if (seriesList && seriesList.length > 0) {
+            seriesId = seriesList[0].id;
+            console.log(`Using existing series: ${seriesId}`);
           }
         }
       }
@@ -339,49 +395,106 @@ class LoadTester {
             'Cookie': testUser.sessionCookie
           },
           body: JSON.stringify({
-            name: 'Load Test Board',
-            series_id: seriesId
+            name: `Load Test Board ${timestamp}`,
+            seriesId: seriesId
           })
         });
 
+        console.log(`Board creation response: ${boardResponse.status}`);
+
         if (boardResponse.ok) {
-          const board = await boardResponse.json();
+          const boardData = await boardResponse.json();
+          const board = boardData.board || boardData;
+          console.log(`Created board:`, board.id);
           CONFIG.TEST_BOARD_ID = board.id;
-          // Update column IDs from actual board
-          if (board.columns && board.columns.length > 0) {
-            this.columnIds = board.columns.map(col => col.id);
+
+          // Set up board with basic template
+          const templateResponse = await fetch(`${CONFIG.BASE_URL}/api/boards/${board.id}/setup-template`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cookie': testUser.sessionCookie
+            },
+            body: JSON.stringify({
+              template: 'basic'
+            })
+          });
+
+          console.log(`Template setup response: ${templateResponse.status}`);
+
+          if (templateResponse.ok) {
+            console.log('✓ Board template setup successful');
+
+            // Get updated board data with columns
+            const updatedBoardResponse = await fetch(`${CONFIG.BASE_URL}/api/boards/${board.id}`, {
+              headers: { 'Cookie': testUser.sessionCookie }
+            });
+
+            console.log(`Updated board fetch response: ${updatedBoardResponse.status}`);
+
+            if (updatedBoardResponse.ok) {
+              const updatedBoardData = await updatedBoardResponse.json();
+              const updatedBoard = updatedBoardData.board || updatedBoardData;
+              if (updatedBoard.columns && updatedBoard.columns.length > 0) {
+                this.columnIds = updatedBoard.columns.map(col => col.id);
+                console.log(`✓ Found ${this.columnIds.length} columns for testing`);
+              } else {
+                console.log(`⚠ No columns found in updated board`);
+              }
+            } else {
+              console.log(`⚠ Failed to fetch updated board data`);
+            }
+          } else {
+            console.log(`⚠ Template setup failed`);
           }
+
           console.log('✓ Test board ready with ID:', CONFIG.TEST_BOARD_ID);
+          console.log('✓ Available columns:', this.columnIds.length);
         } else {
-          console.log('⚠ Test board setup unclear, proceeding anyway');
+          console.log('⚠ Board creation failed, proceeding anyway');
         }
+      } else {
+        console.log('⚠ No series ID available, cannot create board');
+        console.log('⚠ Will attempt to use existing boards or create dummy columns');
+        // Set some default column IDs for basic testing if setup fails
+        this.columnIds = ['default-col-1', 'default-col-2', 'default-col-3'];
       }
     } catch (error) {
       console.log('⚠ Test board setup failed, proceeding anyway:', error.message);
+      console.log('⚠ Error stack:', error.stack);
+      // Set some default column IDs for basic testing if setup fails
+      this.columnIds = ['default-col-1', 'default-col-2', 'default-col-3'];
     }
   }
 
   async spawnUsers() {
     console.log(`\nSpawning ${CONFIG.TARGET_CONNECTIONS} users...`);
-    
+
     for (let i = 1; i <= CONFIG.TARGET_CONNECTIONS; i++) {
       const user = new LoadTestUser(i);
       // Share column IDs with all users
       user.columnIds = this.columnIds;
-      
+
       try {
-        await user.authenticate();
+        const authSuccess = await user.authenticate();
+        if (!authSuccess) {
+          console.error(`Failed to authenticate user ${i}`);
+          this.stats.errors++;
+          continue;
+        }
+
         await user.connectWebSocket();
         this.users.push(user);
         this.stats.connected++;
-        
+
         // Start activity simulation for this user
         user.activityInterval = setInterval(() => {
           user.simulateActivity();
         }, CONFIG.ACTIVITY_INTERVAL + (Math.random() * 1000)); // Stagger activities
-        
+
       } catch (error) {
         console.error(`Failed to setup user ${i}:`, error.message);
+        console.error(`Error details:`, error);
         this.stats.errors++;
       }
 
@@ -399,13 +512,13 @@ class LoadTester {
 
   startMonitoring() {
     console.log('\n🔍 Starting monitoring...\n');
-    
+
     this.monitoringInterval = setInterval(() => {
       const uptime = Math.round((Date.now() - this.startTime) / 1000);
       const activeConnections = this.users.filter(u => u.isConnected).length;
-      
+
       console.log(`[${uptime}s] Active: ${activeConnections}/${CONFIG.TARGET_CONNECTIONS} | Errors: ${this.stats.errors}`);
-      
+
     }, 10000); // Every 10 seconds
   }
 
