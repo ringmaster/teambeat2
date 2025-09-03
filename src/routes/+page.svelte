@@ -500,6 +500,7 @@
 												onclick={() => openSeriesUserManagement(s)}
 												class="btn btn-ghost btn-sm text-blue-500 hover:bg-blue-50"
 												title="Manage users"
+												aria-label="Manage users"
 											>
 												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
@@ -509,6 +510,7 @@
 												onclick={() => confirmDeleteSeries(s)}
 												class="btn btn-ghost btn-sm text-red-500 hover:bg-red-50"
 												title="Delete series"
+												aria-label="Delete series"
 											>
 												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -625,8 +627,8 @@
 
 <!-- Delete Series Confirmation Modal -->
 {#if showDeleteModal && seriesToDelete}
-	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick={cancelDelete}>
-		<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6" onclick={(e) => e.stopPropagation()}>
+	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" onclick={cancelDelete} onkeydown={(e) => e.key === 'Escape' && cancelDelete()}>
+		<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6" role="document" onclick={(e) => e.stopPropagation()}>
 			<div class="flex items-center space-x-3 mb-4">
 				<div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
 					<svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -682,11 +684,15 @@
 {#if showUserManagementModal && seriesToManage}
 	<div 
 		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+		role="dialog"
+		aria-modal="true"
 		onclick={closeUserManagementModal}
+		onkeydown={(e) => e.key === 'Escape' && closeUserManagementModal()}
 		transition:fade={{ duration: 300 }}
 	>
 		<div 
 			class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4"
+			role="document"
 			onclick={(e) => e.stopPropagation()}
 			transition:fly={{ y: -10, duration: 300, easing: cubicOut }}
 		>
@@ -699,6 +705,7 @@
 				<button
 					onclick={closeUserManagementModal}
 					class="text-gray-400 hover:text-gray-600 transition-colors"
+					aria-label="Close user management"
 				>
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

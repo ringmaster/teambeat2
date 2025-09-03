@@ -8,10 +8,13 @@
         isSelected: boolean;
         currentScene: any;
         board: any;
+        userRole: string;
+        currentUserId: string;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleSelection: (cardId: string) => void;
         onVote: (cardId: string) => void;
         onComment: (cardId: string) => void;
+        onDelete: (cardId: string) => void;
     }
     
     let { 
@@ -21,11 +24,24 @@
         isSelected,
         currentScene,
         board,
+        userRole,
+        currentUserId,
         onDragStart,
         onToggleSelection,
         onVote,
-        onComment 
+        onComment,
+        onDelete
     }: Props = $props();
+    
+    // Check if user can delete this card
+    let canDelete = $derived(() => {
+        // Author can always delete (if scene allows editing for members)
+        if (card.userId === currentUserId) {
+            return userRole !== 'member' || currentScene?.allowEditCards;
+        }
+        // Admin and facilitator can always delete
+        return ['admin', 'facilitator'].includes(userRole);
+    });
 </script>
 
 <div
@@ -51,6 +67,22 @@
     
     <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
+            {#if canDelete}
+                <button
+                    onclick={(e) => {
+                        e.stopPropagation();
+                        onDelete(card.id);
+                    }}
+                    class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                    title="Delete card"
+                    aria-label="Delete card"
+                >
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            {/if}
+            
             {#if currentScene?.allowVoting}
                 <button
                     onclick={(e) => {

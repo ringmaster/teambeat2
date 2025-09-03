@@ -73,10 +73,10 @@ export const scenes = sqliteTable('scenes', {
 	createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
-export const sceneColumnSettings = sqliteTable('scene_column_settings', {
+export const scenesColumns = sqliteTable('scenes_columns', {
 	sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
 	columnId: text('column_id').notNull().references(() => columns.id, { onDelete: 'cascade' }),
-	display: text('display').notNull().$type<'show' | 'hide' | 'solo'>().default('show')
+	state: text('state').notNull().$type<'visible' | 'hidden'>().default('visible')
 }, (table) => ({
 	pk: primaryKey({ columns: [table.sceneId, table.columnId] })
 }));

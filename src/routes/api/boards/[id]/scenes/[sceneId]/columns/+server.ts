@@ -4,13 +4,14 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { db } from '$lib/server/db/index.js';
-import { sceneColumnSettings } from '$lib/server/db/schema.js';
+import { scenesColumns, scenes } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
+import { broadcastSceneChanged } from '$lib/server/websockets/broadcast.js';
 
 const updateColumnDisplaySchema = z.object({
 	columnId: z.string().uuid(),
-	display: z.enum(['show', 'hide', 'solo'])
+	state: z.enum(['visible', 'hidden'])
 });
 
 export const PUT: RequestHandler = async (event) => {
@@ -38,20 +39,43 @@ export const PUT: RequestHandler = async (event) => {
 			);
 		}
 		
-		// Upsert the scene column setting
-		await db
-			.insert(sceneColumnSettings)
-			.values({
-				sceneId,
-				columnId: data.columnId,
-				display: data.display
-			})
-			.onConflictDoUpdate({
-				target: [sceneColumnSettings.sceneId, sceneColumnSettings.columnId],
-				set: {
-					display: data.display
-				}
-			});
+		// If visible, delete the row; if hidden, create/update it
+		if (data.state === 'visible') {
+			// Delete the row to indicate visible state (default)
+			await db
+				.delete(scenesColumns)
+				.where(and(
+					eq(scenesColumns.sceneId, sceneId),
+					eq(scenesColumns.columnId, data.columnId)
+				));
+		} else {
+			// Insert or update to hidden state
+			await db
+				.insert(scenesColumns)
+				.values({
+					sceneId,
+					columnId: data.columnId,
+					state: 'hidden'
+				})
+				.onConflictDoUpdate({
+					target: [scenesColumns.sceneId, scenesColumns.columnId],
+					set: {
+						state: 'hidden'
+					}
+				});
+		}
+		
+		// Get the updated scene data to broadcast
+		const [scene] = await db
+			.select()
+			.from(scenes)
+			.where(eq(scenes.id, sceneId))
+			.limit(1);
+		
+		// Broadcast scene change to all connected clients
+		if (scene) {
+			broadcastSceneChanged(boardId, scene);
+		}
 		
 		return json({
 			success: true

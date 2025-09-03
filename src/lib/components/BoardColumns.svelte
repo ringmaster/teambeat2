@@ -20,6 +20,9 @@
         onGroupCards: (cards: any[]) => void;
         onGetColumnContent: (columnId: string) => string;
         onSetColumnContent: (columnId: string, content: string) => void;
+        onDeleteCard: (cardId: string) => void;
+        userRole: string;
+        currentUserId: string;
     }
 
     let {
@@ -41,12 +44,23 @@
         onGroupCards,
         onGetColumnContent,
         onSetColumnContent,
+        onDeleteCard,
+        userRole,
+        currentUserId,
     }: Props = $props();
 </script>
 
 <!-- Board Columns for configured board (full-width with horizontal scroll) -->
-<div id="board-columns-container" class="w-full overflow-x-auto py-8">
-    <div id="board-columns-flex" class="flex space-x-4 min-w-max">
+<div
+    id="board-columns-container"
+    class="w-full overflow-x-auto py-8 flex-1 flex flex-col"
+>
+    <div
+        id="board-columns-flex"
+        class="flex space-x-4 flex-1 h-full {board.columns?.length === 1
+            ? 'justify-center'
+            : 'min-w-max'} h-full"
+    >
         {#each board.columns as column}
             <BoardColumn
                 {column}
@@ -68,6 +82,10 @@
                 {onGroupCards}
                 {onGetColumnContent}
                 {onSetColumnContent}
+                {onDeleteCard}
+                {userRole}
+                {currentUserId}
+                isSingleColumn={board.columns?.length === 1}
             />
         {/each}
     </div>

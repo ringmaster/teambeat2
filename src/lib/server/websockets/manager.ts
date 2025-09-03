@@ -131,6 +131,10 @@ class WebSocketManager {
 			.filter(client => client.userId !== null).length;
 	}
 	
+	getClient(clientId: string): ConnectedClient | undefined {
+		return this.clients.get(clientId);
+	}
+	
 	cleanupStaleConnections() {
 		const staleThreshold = Date.now() - (5 * 60 * 1000); // 5 minutes
 		

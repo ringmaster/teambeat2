@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "38b83207-d4ba-4ac1-a326-2b2594716489",
+  "id": "a3aff4e5-f680-4b17-9e2c-ea590d1bc1bb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "action_item_assignments": {
@@ -798,72 +798,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "scene_column_settings": {
-      "name": "scene_column_settings",
-      "columns": {
-        "scene_id": {
-          "name": "scene_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "column_id": {
-          "name": "column_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "appearance": {
-          "name": "appearance",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "scene_column_settings_scene_id_scenes_id_fk": {
-          "name": "scene_column_settings_scene_id_scenes_id_fk",
-          "tableFrom": "scene_column_settings",
-          "tableTo": "scenes",
-          "columnsFrom": [
-            "scene_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "scene_column_settings_column_id_columns_id_fk": {
-          "name": "scene_column_settings_column_id_columns_id_fk",
-          "tableFrom": "scene_column_settings",
-          "tableTo": "columns",
-          "columnsFrom": [
-            "column_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "scene_column_settings_scene_id_column_id_pk": {
-          "columns": [
-            "scene_id",
-            "column_id"
-          ],
-          "name": "scene_column_settings_scene_id_column_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "scenes": {
       "name": "scenes",
       "columns": {
@@ -925,8 +859,32 @@
           "autoincrement": false,
           "default": true
         },
-        "allow_comments": {
-          "name": "allow_comments",
+        "allow_obscure_cards": {
+          "name": "allow_obscure_cards",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "allow_move_cards": {
+          "name": "allow_move_cards",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": true
+        },
+        "allow_group_cards": {
+          "name": "allow_group_cards",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "show_votes": {
+          "name": "show_votes",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -940,6 +898,22 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
+        },
+        "show_comments": {
+          "name": "show_comments",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": true
+        },
+        "allow_comments": {
+          "name": "allow_comments",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": true
         },
         "multiple_votes_per_card": {
           "name": "multiple_votes_per_card",
@@ -975,6 +949,73 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "scenes_columns": {
+      "name": "scenes_columns",
+      "columns": {
+        "scene_id": {
+          "name": "scene_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "column_id": {
+          "name": "column_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'visible'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "scenes_columns_scene_id_scenes_id_fk": {
+          "name": "scenes_columns_scene_id_scenes_id_fk",
+          "tableFrom": "scenes_columns",
+          "tableTo": "scenes",
+          "columnsFrom": [
+            "scene_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "scenes_columns_column_id_columns_id_fk": {
+          "name": "scenes_columns_column_id_columns_id_fk",
+          "tableFrom": "scenes_columns",
+          "tableTo": "columns",
+          "columnsFrom": [
+            "column_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "scenes_columns_scene_id_column_id_pk": {
+          "columns": [
+            "scene_id",
+            "column_id"
+          ],
+          "name": "scenes_columns_scene_id_column_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -1136,18 +1177,11 @@
           "notNull": true,
           "autoincrement": false
         },
-        "username": {
-          "name": "username",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "email": {
           "name": "email",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "name": {
@@ -1182,10 +1216,10 @@
         }
       },
       "indexes": {
-        "users_username_unique": {
-          "name": "users_username_unique",
+        "users_email_unique": {
+          "name": "users_email_unique",
           "columns": [
-            "username"
+            "email"
           ],
           "isUnique": true
         }

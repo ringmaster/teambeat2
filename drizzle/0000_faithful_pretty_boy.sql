@@ -111,15 +111,6 @@ CREATE TABLE `presence` (
 	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `scene_column_settings` (
-	`scene_id` text NOT NULL,
-	`column_id` text NOT NULL,
-	`appearance` text NOT NULL,
-	PRIMARY KEY(`scene_id`, `column_id`),
-	FOREIGN KEY (`scene_id`) REFERENCES `scenes`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`column_id`) REFERENCES `columns`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
 CREATE TABLE `scenes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`board_id` text NOT NULL,
@@ -129,11 +120,25 @@ CREATE TABLE `scenes` (
 	`seq` integer NOT NULL,
 	`allow_add_cards` integer DEFAULT true,
 	`allow_edit_cards` integer DEFAULT true,
-	`allow_comments` integer DEFAULT true,
+	`allow_obscure_cards` integer DEFAULT false,
+	`allow_move_cards` integer DEFAULT true,
+	`allow_group_cards` integer DEFAULT false,
+	`show_votes` integer DEFAULT true,
 	`allow_voting` integer DEFAULT false,
+	`show_comments` integer DEFAULT true,
+	`allow_comments` integer DEFAULT true,
 	`multiple_votes_per_card` integer DEFAULT false,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `scenes_columns` (
+	`scene_id` text NOT NULL,
+	`column_id` text NOT NULL,
+	`state` text DEFAULT 'visible' NOT NULL,
+	PRIMARY KEY(`scene_id`, `column_id`),
+	FOREIGN KEY (`scene_id`) REFERENCES `scenes`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`column_id`) REFERENCES `columns`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `series_members` (
@@ -158,15 +163,14 @@ CREATE TABLE `timer_extension_votes` (
 --> statement-breakpoint
 CREATE TABLE `users` (
 	`id` text PRIMARY KEY NOT NULL,
-	`username` text NOT NULL,
-	`email` text,
+	`email` text NOT NULL,
 	`name` text,
 	`password_hash` text NOT NULL,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
 CREATE TABLE `votes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`card_id` text NOT NULL,

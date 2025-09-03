@@ -33,9 +33,6 @@
         onUpdateColumn(columnId, { description: description || null });
     }
     
-    function updateColumnAppearance(columnId: string, defaultAppearance: string) {
-        onUpdateColumn(columnId, { defaultAppearance });
-    }
 </script>
 
 <div class="flex justify-between items-center mb-6">
@@ -78,10 +75,6 @@
                 >
                 <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Display</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >Delete</th
                 >
             </tr>
@@ -116,23 +109,6 @@
                         />
                     </td>
                     <td class="px-6 py-4">
-                        <select
-                            value={column.defaultAppearance || "shown"}
-                            onchange={(e) => updateColumnAppearance(column.id, e.currentTarget.value)}
-                            class="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-150 ease-in-out"
-                        >
-                            <option value="shown"
-                                >Shown</option
-                            >
-                            <option value="hidden"
-                                >Hidden</option
-                            >
-                            <option value="fixed"
-                                >Fixed</option
-                            >
-                        </select>
-                    </td>
-                    <td class="px-6 py-4">
                         <button
                             onclick={() => onDeleteColumn(column.id)}
                             class="text-red-600 hover:text-red-700 text-sm font-medium"
@@ -149,7 +125,7 @@
                 ondrop={onEndDrop}
                 class="h-4 {dragState.dragOverColumnEnd ? 'bg-blue-100 border-2 border-dashed border-blue-400' : 'hover:bg-gray-25'}"
             >
-                <td colspan="4" class="px-6 py-2 text-center text-xs text-gray-400">
+                <td colspan="3" class="px-6 py-2 text-center text-xs text-gray-400">
                     {dragState.dragOverColumnEnd ? "Drop here to move to end" : ""}
                 </td>
             </tr>

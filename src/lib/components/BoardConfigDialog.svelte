@@ -1,8 +1,8 @@
 <script lang="ts">
     import { fade, fly } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
-    import ConfigColumnsTable from './ConfigColumnsTable.svelte';
     import ConfigScenesTable from './ConfigScenesTable.svelte';
+    import ConfigColumnsTable from './ConfigColumnsTable.svelte';
     import UserManagement from './UserManagement.svelte';
     
     interface Props {
@@ -165,6 +165,7 @@
                 <button
                     onclick={onClose}
                     class="text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Close dialog"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -214,22 +215,7 @@
 
             <!-- Tab Content -->
             <div class="px-6 py-6 overflow-y-auto max-h-[60vh]">
-                {#if configActiveTab === "columns"}
-                    <div class="space-y-4 animate-in fade-in duration-200 ease-out">
-                        <ConfigColumnsTable 
-                            {board}
-                            {onAddNewColumn}
-                            {onUpdateColumn}
-                            {onDeleteColumn}
-                            onDragStart={(e, id) => onDragStart('column', e, id)}
-                            onDragOver={(e, id) => onDragOver('column', e, id)}
-                            onDragLeave={(e) => onDragLeave('column', e)}
-                            onDrop={(e, id) => onDrop('column', e, id)}
-                            onEndDrop={(e) => onEndDrop('column', e)}
-                            {dragState}
-                        />
-                    </div>
-                {:else if configActiveTab === "scenes"}
+                {#if configActiveTab === "scenes"}
                     <div class="space-y-4 animate-in fade-in duration-200 ease-out">
                         <ConfigScenesTable 
                             {board}
@@ -317,6 +303,20 @@
                             onUserAdded={handleUserAdded}
                             onUserRemoved={handleUserRemoved}
                             onUserRoleChanged={handleUserRoleChanged}
+                        />
+                    </div>
+                {:else if configActiveTab === "columns"}
+                    <div class="space-y-4 animate-in fade-in duration-200 ease-out">
+                        <ConfigColumnsTable 
+                            {board}
+                            {onAddNewColumn}
+                            {onUpdateColumn}
+                            {onDeleteColumn}
+                            onDragStart={(e, id) => onDragStart('column', e, id)}
+                            onDragOver={(e, id) => onDragOver('column', e, id)}
+                            onDragLeave={(e) => onDragLeave('column', e)}
+                            onDrop={(e, id) => onDrop('column', e, id)}
+                            {dragState}
                         />
                     </div>
                 {/if}

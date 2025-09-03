@@ -25,7 +25,8 @@
 			const data = await response.json();
 			
 			if (response.ok) {
-				goto('/');
+				// Force a full page reload to update the authentication state
+				window.location.href = '/';
 			} else {
 				error = data.error || 'Login failed';
 			}

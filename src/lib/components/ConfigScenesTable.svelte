@@ -47,13 +47,29 @@
         editingMode = "permissions";
     }
     
-    function showColumnsForScene(sceneId: string) {
+    async function showColumnsForScene(sceneId: string) {
         const scene = board.scenes.find((s: any) => s.id === sceneId);
         if (!scene) return;
         
         activeSceneId = sceneId;
         activeSceneName = scene.title;
         editingMode = "display";
+        
+        // Initialize column states from board data
+        if (!columnStates[sceneId]) {
+            columnStates[sceneId] = {};
+        }
+        // Set all columns to visible by default
+        const columnsToUse = board.allColumns || board.columns;
+        columnsToUse?.forEach((col: any) => {
+            columnStates[sceneId][col.id] = 'visible';
+        });
+        // Mark hidden columns if they exist in the board data
+        if (board.hiddenColumnsByScene && board.hiddenColumnsByScene[sceneId]) {
+            board.hiddenColumnsByScene[sceneId].forEach((colId: string) => {
+                columnStates[sceneId][colId] = 'hidden';
+            });
+        }
     }
     
     function togglePermission(sceneId: string, permission: string) {
@@ -70,21 +86,30 @@
         activeSceneName = "";
     }
     
-    async function updateColumnDisplay(sceneId: string, columnId: string, display: string) {
+    async function updateColumnDisplay(sceneId: string, columnId: string, state: string) {
         try {
             const response = await fetch(`/api/boards/${board.id}/scenes/${sceneId}/columns`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ columnId, display })
+                body: JSON.stringify({ columnId, state })
             });
             
-            if (!response.ok) {
+            if (response.ok) {
+                // Update local state
+                if (!columnStates[sceneId]) {
+                    columnStates[sceneId] = {};
+                }
+                columnStates[sceneId][columnId] = state;
+            } else {
                 console.error('Failed to update column display:', await response.json());
             }
         } catch (error) {
             console.error('Failed to update column display:', error);
         }
     }
+    
+    // Track column states per scene
+    let columnStates = $state<Record<string, Record<string, string>>>({});
     
 </script>
 
@@ -370,18 +395,36 @@
             <div class="space-y-3">
                 <h4 class="text-sm font-medium text-gray-900 mb-4">Column Display Settings</h4>
                 <div class="space-y-3">
-                    {#each board.columns || [] as column}
-                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                            <span class="text-sm text-gray-700 font-medium flex-1 mr-4">{column.title}</span>
-                            <select
-                                value="show"
-                                onchange={(e) => updateColumnDisplay(activeSceneId, column.id, e.currentTarget.value)}
-                                class="text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                            >
-                                <option value="show">Show</option>
-                                <option value="hide">Hide</option>
-                                <option value="solo">Solo</option>
-                            </select>
+                    {#each (board.allColumns || board.columns || []) as column}
+                        {@const currentState = columnStates[activeSceneId]?.[column.id] || 'visible'}
+                        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-sm text-gray-700 font-medium">{column.title}</span>
+                            </div>
+                            <div class="flex gap-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="column-{column.id}"
+                                        value="visible"
+                                        checked={currentState === 'visible'}
+                                        onchange={() => updateColumnDisplay(activeSceneId, column.id, 'visible')}
+                                        class="mr-2 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span class="text-sm text-gray-600">Visible</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="column-{column.id}"
+                                        value="hidden"
+                                        checked={currentState === 'hidden'}
+                                        onchange={() => updateColumnDisplay(activeSceneId, column.id, 'hidden')}
+                                        class="mr-2 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span class="text-sm text-gray-600">Hidden</span>
+                                </label>
+                            </div>
                         </div>
                     {/each}
                 </div>

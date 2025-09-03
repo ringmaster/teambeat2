@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { boards, columns, scenes, cards, votes, comments } from '../db/schema.js';
+import { boards, columns, scenes, cards, votes, comments, scenesColumns } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -106,11 +106,42 @@ export async function getBoardWithDetails(boardId: string) {
 		})
 		.from(cards);
 	
+	// Get hidden columns for all scenes
+	const hiddenColumnsByScene: Record<string, string[]> = {};
+	if (boardScenes.length > 0) {
+		const hiddenColumns = await db
+			.select({
+				sceneId: scenesColumns.sceneId,
+				columnId: scenesColumns.columnId
+			})
+			.from(scenesColumns)
+			.where(and(
+				eq(scenesColumns.state, 'hidden')
+			));
+		
+		// Group by scene
+		for (const row of hiddenColumns) {
+			if (!hiddenColumnsByScene[row.sceneId]) {
+				hiddenColumnsByScene[row.sceneId] = [];
+			}
+			hiddenColumnsByScene[row.sceneId].push(row.columnId);
+		}
+	}
+	
+	// Filter columns based on current scene
+	let visibleColumns = boardColumns;
+	if (board.currentSceneId && hiddenColumnsByScene[board.currentSceneId]) {
+		const hiddenIds = hiddenColumnsByScene[board.currentSceneId];
+		visibleColumns = boardColumns.filter(col => !hiddenIds.includes(col.id));
+	}
+	
 	return {
 		...board,
-		columns: boardColumns,
+		columns: visibleColumns,
+		allColumns: boardColumns, // Keep all columns for configuration
 		scenes: boardScenes,
-		cards: boardCards
+		cards: boardCards,
+		hiddenColumnsByScene
 	};
 }
 

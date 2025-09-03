@@ -26,7 +26,7 @@
 	<title>TeamBeat - Collaborative Retrospectives</title>
 </svelte:head>
 
-<div class="min-h-screen gradient-bg">
+<div class="min-h-screen gradient-bg flex flex-col">
 	<!-- Navigation -->
 	<nav class="glass-effect sticky top-0 z-50 border-b border-white/10">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -127,7 +127,7 @@
 		{/if}
 	</nav>
 	
-	<main>
+	<main class="flex-grow flex flex-col h-full">
 		{@render children?.()}
 	</main>
 	

@@ -21,6 +21,10 @@
         onGroupCards: (cards: any[]) => void;
         onGetColumnContent: (columnId: string) => string;
         onSetColumnContent: (columnId: string, content: string) => void;
+        onDeleteCard: (cardId: string) => void;
+        userRole: string;
+        currentUserId: string;
+        isSingleColumn?: boolean;
     }
     
     let { 
@@ -42,7 +46,11 @@
         onAddCard,
         onGroupCards,
         onGetColumnContent,
-        onSetColumnContent
+        onSetColumnContent,
+        onDeleteCard,
+        userRole,
+        currentUserId,
+        isSingleColumn = false
     }: Props = $props();
     
     // Filter cards for this column
@@ -62,7 +70,13 @@
 
 <div
     id="column-{column.id}"
-    class="bg-white border border-gray-200 rounded-lg overflow-hidden w-80 flex-shrink-0"
+    class="bg-white border border-gray-200 rounded-lg overflow-hidden {isSingleColumn ? 'w-full max-w-4xl' : 'w-80 flex-shrink-0'} {dragTargetColumnId === column.id ? 'ring-2 ring-blue-300' : ''} h-full flex flex-col"
+    role="region"
+    aria-label="Column: {column.title}"
+    ondragover={(e) => onDragOver(e, column.id)}
+    ondragenter={(e) => onDragEnter(e, column.id)}
+    ondragleave={(e) => onDragLeave(e, column.id)}
+    ondrop={(e) => onDrop(e, column.id)}
 >
     <div
         id="column-header-{column.id}"
@@ -102,13 +116,9 @@
     <!-- Cards Section -->
     <div
         id="column-cards-{column.id}"
-        class="p-4 space-y-3 min-h-32 max-h-96 overflow-y-auto transition-colors {dragTargetColumnId === column.id ? 'bg-blue-50 border border-blue-200 border-dashed' : ''}"
+        class="p-4 space-y-3 min-h-32 flex-1 overflow-y-auto"
         role="region"
         aria-label="Column {column.title} - Drop zone for cards"
-        ondragover={(e) => onDragOver(e, column.id)}
-        ondragenter={(e) => onDragEnter(e, column.id)}
-        ondragleave={(e) => onDragLeave(e, column.id)}
-        ondrop={(e) => onDrop(e, column.id)}
     >
         <!-- Grouped cards -->
         {#each Object.entries(grouped) as [groupId, groupCards]}
@@ -135,10 +145,13 @@
                             isSelected={selectedCards.has(card.id)}
                             {currentScene}
                             {board}
+                            {userRole}
+                            {currentUserId}
                             onDragStart={onDragStart}
                             onToggleSelection={onToggleCardSelection}
                             onVote={onVoteCard}
                             onComment={onCommentCard}
+                            onDelete={onDeleteCard}
                         />
                     {/each}
                 </div>
@@ -153,10 +166,13 @@
                 isSelected={selectedCards.has(card.id)}
                 {currentScene}
                 {board}
+                {userRole}
+                {currentUserId}
                 onDragStart={onDragStart}
                 onToggleSelection={onToggleCardSelection}
                 onVote={onVoteCard}
                 onComment={onCommentCard}
+                onDelete={onDeleteCard}
             />
         {/each}
     </div>
