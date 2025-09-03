@@ -13,7 +13,7 @@ const CONFIG = {
 };
 
 class LoadTestUser {
-  constructor(userId) {
+  constructor(userId, eventTracker) {
     this.userId = userId;
     // Add timestamp to make users unique across test runs
     const timestamp = Date.now().toString().slice(-6);
@@ -23,6 +23,7 @@ class LoadTestUser {
     this.isConnected = false;
     this.cardIds = [];
     this.columnIds = []; // Will be populated from actual board data
+    this.eventTracker = eventTracker;
   }
 
   async authenticate() {
@@ -141,28 +142,57 @@ class LoadTestUser {
   }
 
   handleMessage(message) {
+    // Debug: log all incoming WebSocket messages
+    if (message.type !== 'pong') {
+      console.log(`🔔 User ${this.userId} received WebSocket message:`, JSON.stringify(message));
+    }
+
     switch (message.type) {
       case 'card_created':
-        // Track cards created by others
-        if (message.card && message.card.userId !== this.username) {
-          console.log(`User ${this.userId} saw card created by ${message.card.userId}`);
+        if (message.card_id || message.cardId || (message.card && message.card.id)) {
+          const cardId = message.card_id || message.cardId || message.card.id;
+          this.eventTracker.recordEventReceived('card_created', cardId, this.userId);
+        } else {
+          console.log(`⚠️ User ${this.userId} received card_created message without card ID:`, message);
         }
         break;
+      case 'card_updated':
       case 'card_moved':
-        console.log(`User ${this.userId} saw card moved`);
+        if (message.card_id || message.cardId || (message.card && message.card.id)) {
+          const cardId = message.card_id || message.cardId || message.card.id;
+          this.eventTracker.recordEventReceived('card_moved', cardId, this.userId);
+        } else {
+          console.log(`⚠️ User ${this.userId} received card_moved message without card ID:`, message);
+        }
         break;
       case 'vote_changed':
-        console.log(`User ${this.userId} saw vote change on card ${message.card_id}`);
+        if (message.card_id || message.cardId) {
+          const cardId = message.card_id || message.cardId;
+          this.eventTracker.recordEventReceived('vote_changed', cardId, this.userId);
+        } else {
+          console.log(`⚠️ User ${this.userId} received vote_changed message without card ID:`, message);
+        }
         break;
     }
   }
 
   async createCard() {
-    if (!this.isConnected) return;
+    if (!this.isConnected) {
+      console.log(`⚠️ User ${this.userId} skipping card creation - not connected`);
+      return;
+    }
+
+    if (this.columnIds.length === 0) {
+      console.log(`⚠️ User ${this.userId} skipping card creation - no columns available`);
+      return;
+    }
 
     try {
       const randomColumn = this.columnIds[Math.floor(Math.random() * this.columnIds.length)];
       const cardContent = `Test card from user ${this.userId} at ${new Date().toISOString()}`;
+
+      console.log(`🔄 User ${this.userId} attempting to create card in column ${randomColumn}`);
+      console.log(`🔐 Session cookie: ${this.sessionCookie ? 'present' : 'missing'}`);
 
       const response = await fetch(`${CONFIG.BASE_URL}/api/boards/${CONFIG.TEST_BOARD_ID}/cards`, {
         method: 'POST',
@@ -182,22 +212,37 @@ class LoadTestUser {
         const cardData = await response.json();
         const card = cardData.card || cardData;
         this.cardIds.push(card.id);
-        console.log(`✓ User ${this.userId} created card ${card.id}`);
+        this.eventTracker.recordEventSent('card_created', card.id, this.userId);
+        console.log(`✅ User ${this.userId} created card ${card.id}`);
       } else {
         const errorText = await response.text();
-        console.error(`✗ User ${this.userId} failed to create card: ${response.status} - ${errorText}`);
+        console.error(`❌ User ${this.userId} failed to create card: ${response.status} - ${errorText}`);
+        console.error(`❌ Request details: Board=${CONFIG.TEST_BOARD_ID}, Column=${randomColumn}, Content length=${cardContent.length}`);
+
+        // If 403, check if session is valid
+        if (response.status === 403) {
+          const meResponse = await fetch(`${CONFIG.BASE_URL}/api/auth/me`, {
+            headers: { 'Cookie': this.sessionCookie }
+          });
+          console.error(`❌ User ${this.userId} auth check response: ${meResponse.status}`);
+        }
       }
     } catch (error) {
-      console.error(`✗ User ${this.userId} create card error:`, error.message);
+      console.error(`❌ User ${this.userId} create card error:`, error.message);
     }
   }
 
   async moveCard() {
-    if (!this.isConnected || this.cardIds.length === 0) return;
+    if (!this.isConnected || this.cardIds.length === 0) {
+      console.log(`⚠️ User ${this.userId} skipping card move - ${!this.isConnected ? 'not connected' : 'no cards available'}`);
+      return;
+    }
 
     try {
       const randomCardId = this.cardIds[Math.floor(Math.random() * this.cardIds.length)];
       const randomColumn = this.columnIds[Math.floor(Math.random() * this.columnIds.length)];
+
+      console.log(`🔄 User ${this.userId} moving card ${randomCardId} to column ${randomColumn}`);
 
       const response = await fetch(`${CONFIG.BASE_URL}/api/cards/${randomCardId}/move`, {
         method: 'PUT',
@@ -213,17 +258,22 @@ class LoadTestUser {
       console.log(`User ${this.userId} move card response: ${response.status}`);
 
       if (response.ok) {
-        console.log(`✓ User ${this.userId} moved card ${randomCardId} to column ${randomColumn}`);
+        this.eventTracker.recordEventSent('card_moved', randomCardId, this.userId);
+        console.log(`✅ User ${this.userId} moved card ${randomCardId} to column ${randomColumn}`);
       } else {
-        console.error(`✗ User ${this.userId} failed to move card: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ User ${this.userId} failed to move card: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error(`✗ User ${this.userId} move card error:`, error.message);
+      console.error(`❌ User ${this.userId} move card error:`, error.message);
     }
   }
 
   async voteOnRandomCard() {
-    if (!this.isConnected) return;
+    if (!this.isConnected) {
+      console.log(`⚠️ User ${this.userId} skipping vote - not connected`);
+      return;
+    }
 
     try {
       // Get current board state to find cards to vote on
@@ -247,6 +297,7 @@ class LoadTestUser {
 
         if (allCards.length > 0) {
           const randomCard = allCards[Math.floor(Math.random() * allCards.length)];
+          console.log(`🔄 User ${this.userId} voting on card ${randomCard.id}`);
 
           const voteResponse = await fetch(`${CONFIG.BASE_URL}/api/cards/${randomCard.id}/vote`, {
             method: 'POST',
@@ -260,12 +311,21 @@ class LoadTestUser {
           console.log(`User ${this.userId} vote response: ${voteResponse.status}`);
 
           if (voteResponse.ok) {
-            console.log(`✓ User ${this.userId} voted on card ${randomCard.id}`);
+            this.eventTracker.recordEventSent('vote_changed', randomCard.id, this.userId);
+            console.log(`✅ User ${this.userId} voted on card ${randomCard.id}`);
+          } else {
+            const errorText = await voteResponse.text();
+            console.error(`❌ User ${this.userId} failed to vote: ${voteResponse.status} - ${errorText}`);
           }
+        } else {
+          console.log(`⚠️ User ${this.userId} skipping vote - no cards available`);
         }
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ User ${this.userId} failed to fetch board for voting: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error(`✗ User ${this.userId} vote error:`, error.message);
+      console.error(`❌ User ${this.userId} vote error:`, error.message);
     }
   }
 
@@ -326,6 +386,54 @@ class LoadTester {
     };
     this.startTime = Date.now();
     this.columnIds = [];
+    this.eventTracker = new EventTracker();
+  }
+
+  logDebugInfo() {
+    console.log('\n🔍 Debug Information:');
+    console.log(`Board ID: ${CONFIG.TEST_BOARD_ID}`);
+    console.log(`Column IDs: ${JSON.stringify(this.columnIds)}`);
+    console.log(`Connected users: ${this.users.filter(u => u.isConnected).length}`);
+    console.log(`Active WebSocket connections: ${this.users.filter(u => u.ws && u.ws.readyState === 1).length}`);
+  }
+
+  async testUserPermissions() {
+    console.log('\n🔐 Testing user permissions...');
+
+    if (this.users.length === 0) {
+      console.log('❌ No users available for permission testing');
+      return;
+    }
+
+    const testUser = this.users[0];
+
+    // Test auth endpoint
+    try {
+      const meResponse = await fetch(`${CONFIG.BASE_URL}/api/auth/me`, {
+        headers: { 'Cookie': testUser.sessionCookie }
+      });
+      console.log(`Auth check response: ${meResponse.status}`);
+      if (meResponse.ok) {
+        const userData = await meResponse.json();
+        console.log(`User data:`, userData);
+      }
+    } catch (error) {
+      console.log(`Auth check error:`, error.message);
+    }
+
+    // Test board access
+    try {
+      const boardResponse = await fetch(`${CONFIG.BASE_URL}/api/boards/${CONFIG.TEST_BOARD_ID}`, {
+        headers: { 'Cookie': testUser.sessionCookie }
+      });
+      console.log(`Board access response: ${boardResponse.status}`);
+      if (!boardResponse.ok) {
+        const errorText = await boardResponse.text();
+        console.log(`Board access error:`, errorText);
+      }
+    } catch (error) {
+      console.log(`Board access error:`, error.message);
+    }
   }
 
   async setupTestBoard() {
@@ -471,14 +579,15 @@ class LoadTester {
     console.log(`\nSpawning ${CONFIG.TARGET_CONNECTIONS} users...`);
 
     for (let i = 1; i <= CONFIG.TARGET_CONNECTIONS; i++) {
-      const user = new LoadTestUser(i);
+      const user = new LoadTestUser(i, this.eventTracker);
       // Share column IDs with all users
       user.columnIds = this.columnIds;
 
       try {
+        console.log(`🔄 Setting up user ${i}...`);
         const authSuccess = await user.authenticate();
         if (!authSuccess) {
-          console.error(`Failed to authenticate user ${i}`);
+          console.error(`❌ Failed to authenticate user ${i}`);
           this.stats.errors++;
           continue;
         }
@@ -492,9 +601,11 @@ class LoadTester {
           user.simulateActivity();
         }, CONFIG.ACTIVITY_INTERVAL + (Math.random() * 1000)); // Stagger activities
 
+        console.log(`✅ User ${i} setup complete (${this.stats.connected}/${CONFIG.TARGET_CONNECTIONS})`);
+
       } catch (error) {
-        console.error(`Failed to setup user ${i}:`, error.message);
-        console.error(`Error details:`, error);
+        console.error(`❌ Failed to setup user ${i}:`, error.message);
+        console.error(`❌ Error details:`, error);
         this.stats.errors++;
       }
 
@@ -530,6 +641,8 @@ class LoadTester {
 
     await this.setupTestBoard();
     await this.spawnUsers();
+    this.logDebugInfo();
+    await this.testUserPermissions();
     this.startMonitoring();
 
     // Run for specified duration
@@ -554,11 +667,28 @@ class LoadTester {
     });
 
     const duration = Math.round((Date.now() - this.startTime) / 1000);
+
+    // Generate event tracking report
+    const eventReport = this.eventTracker.generateReport(this.stats.connected);
+
     console.log(`\n📊 Final Stats:`);
     console.log(`Duration: ${duration}s`);
     console.log(`Peak connections: ${this.stats.connected}`);
     console.log(`Total errors: ${this.stats.errors}`);
     console.log(`Success rate: ${((this.stats.connected / CONFIG.TARGET_CONNECTIONS) * 100).toFixed(1)}%`);
+
+    console.log(`\n📡 WebSocket Event Delivery Report:`);
+    console.log(`Events sent: ${eventReport.totalSent}`);
+    console.log(`Events received: ${eventReport.totalReceived}`);
+    console.log(`Overall accuracy: ${eventReport.overallAccuracy.toFixed(1)}%`);
+
+    for (const eventType in eventReport.byType) {
+      const typeReport = eventReport.byType[eventType];
+      console.log(`  ${eventType}: ${typeReport.accuracy.toFixed(1)}% (${typeReport.received}/${typeReport.expected})`);
+      if (typeReport.missed > 0) {
+        console.log(`    Missed events: ${typeReport.missed}`);
+      }
+    }
   }
 }
 
@@ -567,6 +697,98 @@ process.on('SIGINT', () => {
   console.log('\n\n⏹ Interrupted by user, cleaning up...');
   process.exit(0);
 });
+
+class EventTracker {
+  constructor() {
+    this.sentEvents = new Map(); // eventId -> { type, cardId, userId, timestamp }
+    this.receivedEvents = new Map(); // eventId -> Set of userIds who received it
+  }
+
+  recordEventSent(eventType, cardId, senderId) {
+    const eventId = `${eventType}_${cardId}_${Date.now()}_${senderId}`;
+    this.sentEvents.set(eventId, {
+      type: eventType,
+      cardId,
+      senderId,
+      timestamp: Date.now()
+    });
+
+    // Initialize received tracking
+    this.receivedEvents.set(eventId, new Set());
+    return eventId;
+  }
+
+  recordEventReceived(eventType, cardId, receiverId) {
+    // Find matching sent event (most recent for this card/type combination)
+    let matchingEventId = null;
+    let latestTimestamp = 0;
+
+    for (const [eventId, eventData] of this.sentEvents) {
+      if (eventData.type === eventType &&
+        eventData.cardId === cardId &&
+        eventData.timestamp > latestTimestamp) {
+        matchingEventId = eventId;
+        latestTimestamp = eventData.timestamp;
+      }
+    }
+
+    if (matchingEventId) {
+      this.receivedEvents.get(matchingEventId).add(receiverId);
+      console.log(`📨 Event received: ${eventType} for card ${cardId} by user ${receiverId} (matched to ${matchingEventId})`);
+    } else {
+      console.log(`⚠️ Unmatched event received: ${eventType} for card ${cardId} by user ${receiverId}`);
+    }
+  }
+
+  generateReport(totalConnectedUsers) {
+    const report = {
+      totalSent: this.sentEvents.size,
+      totalReceived: 0,
+      overallAccuracy: 0,
+      byType: {}
+    };
+
+    const typeCounts = {};
+
+    for (const [eventId, eventData] of this.sentEvents) {
+      const eventType = eventData.type;
+      const expectedReceivers = totalConnectedUsers - 1; // All users except sender
+      const actualReceivers = this.receivedEvents.get(eventId).size;
+
+      if (!typeCounts[eventType]) {
+        typeCounts[eventType] = {
+          sent: 0,
+          expectedTotal: 0,
+          receivedTotal: 0
+        };
+      }
+
+      typeCounts[eventType].sent++;
+      typeCounts[eventType].expectedTotal += expectedReceivers;
+      typeCounts[eventType].receivedTotal += actualReceivers;
+
+      report.totalReceived += actualReceivers;
+    }
+
+    // Calculate overall accuracy
+    const totalExpected = Object.values(typeCounts)
+      .reduce((sum, type) => sum + type.expectedTotal, 0);
+    report.overallAccuracy = totalExpected > 0 ? (report.totalReceived / totalExpected) * 100 : 100;
+
+    // Calculate per-type accuracy
+    for (const [eventType, counts] of Object.entries(typeCounts)) {
+      report.byType[eventType] = {
+        sent: counts.sent,
+        expected: counts.expectedTotal,
+        received: counts.receivedTotal,
+        missed: counts.expectedTotal - counts.receivedTotal,
+        accuracy: counts.expectedTotal > 0 ? (counts.receivedTotal / counts.expectedTotal) * 100 : 100
+      };
+    }
+
+    return report;
+  }
+}
 
 // Run the load test
 const tester = new LoadTester();
