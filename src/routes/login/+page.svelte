@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import Input from '$lib/components/ui/Input.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	
 	let email: string = $state('');
 	let password: string = $state('');
@@ -67,34 +69,35 @@
 					<label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
 						Email
 					</label>
-					<input
+					<Input
 						id="email"
 						type="email"
 						bind:value={email}
 						required
-						class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
 						placeholder="Enter your email"
-					>
+						class="auth-input"
+					/>
 				</div>
 
 				<div>
 					<label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
 						Password
 					</label>
-					<input
+					<Input
 						id="password"
 						type="password"
 						bind:value={password}
 						required
-						class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
 						placeholder="Enter your password"
-					>
+						class="auth-input"
+					/>
 				</div>
 
-				<button
+				<Button
 					type="submit"
 					disabled={loading}
-					class="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+					class="w-full"
+					variant="primary"
 				>
 					{#if loading}
 						<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -105,7 +108,7 @@
 					{:else}
 						<span>Sign In</span>
 					{/if}
-				</button>
+				</Button>
 			</form>
 		</div>
 

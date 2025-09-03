@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import '../app.css';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	
 	let user: any = $state(null);
 	let loading = $state(true);
@@ -55,9 +56,7 @@
 							<a href="/" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Dashboard</a>
 							<div class="flex items-center space-x-3">
 								<div class="flex items-center space-x-2 bg-white/50 px-3 py-2 rounded-lg">
-									<div class="w-8 h-8 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-										{user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
-									</div>
+									<Avatar name={user.name} email={user.email} />
 									<span class="text-gray-700 font-medium">{user.name || user.email}</span>
 								</div>
 								<button 
@@ -103,9 +102,7 @@
 						<div class="text-center py-2">Loading...</div>
 					{:else if user}
 						<div class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
-							<div class="w-8 h-8 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-								{user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
-							</div>
+							<Avatar name={user.name} email={user.email} />
 							<span class="text-gray-700 font-medium">{user.name || user.email}</span>
 						</div>
 						<a href="/" class="block text-gray-600 hover:text-gray-900 font-medium py-2">Dashboard</a>

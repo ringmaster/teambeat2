@@ -45,9 +45,7 @@
 </script>
 
 <div
-    class="bg-white border border-gray-200 rounded p-3 hover:shadow-sm transition-shadow cursor-move {groupingMode
-        ? 'hover:bg-gray-50'
-        : ''} {isSelected ? 'ring-2 ring-blue-500' : ''}"
+    class="card {groupingMode ? 'grouping-mode' : ''} {isSelected ? 'selected' : ''}"
     role="button"
     aria-label="Card: {card.content.substring(0, 50)}{card.content.length > 50 ? '...' : ''}"
     tabindex="0"
@@ -89,7 +87,7 @@
                         e.stopPropagation();
                         onVote(card.id);
                     }}
-                    class="flex items-center space-x-1 px-2 py-1 bg-blue-500 text-white text-xs rounded-full hover:bg-blue-600 transition-colors"
+                    class="vote-button"
                 >
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -104,7 +102,7 @@
                         e.stopPropagation();
                         onComment(card.id);
                     }}
-                    class="flex items-center space-x-1 px-2 py-1 bg-gray-500 text-white text-xs rounded-full hover:bg-gray-600 transition-colors"
+                    class="comment-button"
                 >
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
@@ -119,3 +117,96 @@
         </div>
     </div>
 </div>
+
+<style>
+    .card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 12px;
+        cursor: move;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-top: 3px solid rgb(var(--color-teal-500));
+        position: relative;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+    }
+
+    .card.grouping-mode:hover {
+        background-color: rgb(var(--color-gray-50));
+    }
+
+    .card.selected {
+        box-shadow: 0 0 0 2px rgb(var(--color-teal-500));
+    }
+
+    /* Text styles */
+    .card p {
+        color: rgb(var(--color-gray-900));
+        margin-bottom: 8px;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+
+    /* Button styles */
+    .card button {
+        transition: all 0.2s ease;
+    }
+
+    /* Delete button */
+    .card button:first-child {
+        padding: 4px;
+        color: rgb(var(--color-red-500));
+        border-radius: 4px;
+    }
+
+    .card button:first-child:hover {
+        color: rgb(var(--color-red-700));
+        background-color: rgb(var(--color-red-100));
+    }
+
+    /* Vote button */
+    .vote-button {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background-color: rgb(var(--color-teal-500));
+        color: white;
+        font-size: 0.75rem;
+        border-radius: 9999px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .vote-button:hover {
+        background-color: rgb(var(--color-teal-600));
+    }
+
+    /* Comment button */
+    .comment-button {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background-color: rgb(var(--color-gray-500));
+        color: white;
+        font-size: 0.75rem;
+        border-radius: 9999px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .comment-button:hover {
+        background-color: rgb(var(--color-gray-600));
+    }
+
+    /* Author text */
+    .author-text {
+        font-size: 0.75rem;
+        color: rgb(var(--color-gray-400));
+    }
+</style>

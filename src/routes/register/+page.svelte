@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import Input from '$lib/components/ui/Input.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	
 	let email: string = $state('');
 	let name: string = $state('');
@@ -83,72 +85,73 @@
 					<label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
 						Email <span class="text-red-500">*</span>
 					</label>
-					<input
+					<Input
 						id="email"
 						type="email"
 						bind:value={email}
 						required
-						class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
 						placeholder="your@email.com"
-					>
+						class="auth-input"
+					/>
 				</div>
 
 				<div>
 					<label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
 						Full Name
 					</label>
-					<input
+					<Input
 						id="name"
 						type="text"
 						bind:value={name}
-						class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
 						placeholder="Your full name"
-					>
+						class="auth-input"
+					/>
 				</div>
 
 				<div>
 					<label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
 						Password <span class="text-red-500">*</span>
 					</label>
-					<input
+					<Input
 						id="password"
 						type="password"
 						bind:value={password}
 						required
-						class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
 						placeholder="Create a password (6+ characters)"
-					>
+						class="auth-input"
+					/>
 				</div>
 
 				<div>
 					<label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">
 						Confirm Password <span class="text-red-500">*</span>
 					</label>
-					<input
+					<Input
 						id="confirmPassword"
 						type="password"
 						bind:value={confirmPassword}
 						required
-						class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
 						placeholder="Confirm your password"
-					>
+						class="auth-input"
+					/>
 				</div>
 
-				<button
+				<Button
 					type="submit"
 					disabled={loading}
-					class="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 mt-6"
+					class="w-full mt-6"
+					variant="primary"
 				>
 					{#if loading}
 						<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
 							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 						</svg>
 						<span>Creating account...</span>
 					{:else}
 						<span>Create Account</span>
 					{/if}
-				</button>
+				</Button>
 			</form>
 		</div>
 

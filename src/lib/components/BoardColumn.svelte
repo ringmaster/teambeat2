@@ -70,7 +70,7 @@
 
 <div
     id="column-{column.id}"
-    class="bg-white border border-gray-200 rounded-lg overflow-hidden {isSingleColumn ? 'w-full max-w-4xl' : 'w-80 flex-shrink-0'} {dragTargetColumnId === column.id ? 'ring-2 ring-blue-300' : ''} h-full flex flex-col"
+    class="column {isSingleColumn ? 'single-column' : ''} {dragTargetColumnId === column.id ? 'drag-target' : ''}"
     role="region"
     aria-label="Column: {column.title}"
     ondragover={(e) => onDragOver(e, column.id)}
@@ -80,32 +80,26 @@
 >
     <div
         id="column-header-{column.id}"
-        class="bg-gray-50 border-b border-gray-200 px-4 py-3"
+        class="column-header"
     >
-        <h2 class="font-semibold text-gray-900 text-base">
-            {column.title}
-        </h2>
+        <h2>{column.title}</h2>
         {#if column.description}
-            <p class="text-gray-600 text-sm mt-1">
-                {column.description}
-            </p>
+            <p>{column.description}</p>
         {/if}
     </div>
 
     <!-- Add Card Section for this column -->
     {#if currentScene?.allowAddCards}
-        <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+        <div class="add-card-section">
             <div class="flex gap-2">
                 <textarea
                     value={onGetColumnContent(column.id)}
                     oninput={(e) => onSetColumnContent(column.id, e.currentTarget.value)}
                     placeholder="Add a card..."
-                    class="flex-1 px-3 py-2 border border-gray-200 rounded text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     rows="2"
                 ></textarea>
                 <button
                     onclick={() => onAddCard(column.id)}
-                    class="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
                 >
                     Add
                 </button>
@@ -116,22 +110,17 @@
     <!-- Cards Section -->
     <div
         id="column-cards-{column.id}"
-        class="p-4 space-y-3 min-h-32 flex-1 overflow-y-auto"
+        class="cards-container"
         role="region"
         aria-label="Column {column.title} - Drop zone for cards"
     >
         <!-- Grouped cards -->
         {#each Object.entries(grouped) as [groupId, groupCards]}
-            <div class="border border-dashed border-gray-300 rounded p-3 bg-gray-50">
-                <div class="flex justify-between items-start mb-2">
-                    <h4 class="text-sm font-medium text-gray-700">
-                        Group {groupId.substring(0, 8)}
-                    </h4>
+            <div class="group-container">
+                <div class="group-header">
+                    <h4>Group {groupId.substring(0, 8)}</h4>
                     {#if currentScene?.allowEditCards}
-                        <button
-                            onclick={() => onGroupCards(groupCards)}
-                            class="text-xs text-blue-600 hover:text-blue-700"
-                        >
+                        <button onclick={() => onGroupCards(groupCards)}>
                             Ungroup
                         </button>
                     {/if}
@@ -177,3 +166,130 @@
         {/each}
     </div>
 </div>
+
+<style>
+    .column {
+        background-color: transparent;
+        border: none;
+        border-radius: 8px;
+        overflow: hidden;
+        width: 20rem;
+        flex-shrink: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .column.single-column {
+        width: 100%;
+        max-width: 56rem;
+    }
+
+    .column.drag-target {
+        box-shadow: 0 0 0 2px rgb(var(--color-teal-500));
+    }
+
+    /* Column Header */
+    .column-header {
+        background-color: transparent;
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .column-header h2 {
+        font-weight: 600;
+        color: white;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .column-header p {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.875rem;
+        margin-top: 4px;
+    }
+
+    /* Add Card Section */
+    .add-card-section {
+        padding: 12px 16px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .add-card-section textarea {
+        width: 100%;
+        padding: 8px 12px;
+        background-color: white;
+        border: 1px solid rgb(var(--color-gray-200));
+        border-radius: 6px;
+        font-size: 0.875rem;
+        resize: none;
+        font-family: inherit;
+    }
+
+    .add-card-section textarea:focus {
+        outline: none;
+        border-color: rgb(var(--color-teal-500));
+        box-shadow: 0 0 0 1px rgb(var(--color-teal-500));
+    }
+
+    .add-card-section button {
+        padding: 8px 12px;
+        background-color: rgb(var(--color-teal-500));
+        color: white;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .add-card-section button:hover {
+        background-color: rgb(var(--color-teal-600));
+    }
+
+    /* Cards Container */
+    .cards-container {
+        padding: 16px;
+        gap: 12px;
+        display: flex;
+        flex-direction: column;
+        min-height: 128px;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    /* Group container */
+    .group-container {
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        padding: 12px;
+        background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .group-header h4 {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .group-header button {
+        font-size: 0.75rem;
+        color: rgb(var(--color-teal-500));
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .group-header button:hover {
+        color: rgb(var(--color-teal-600));
+    }
+</style>
