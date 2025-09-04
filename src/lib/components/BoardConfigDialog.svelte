@@ -223,62 +223,62 @@
                         />
                     </div>
                 {:else if configActiveTab === "general"}
-                    <div class="space-y-6 animate-in fade-in duration-200 ease-out">
-                        <h3 class="text-lg font-medium text-gray-900">
-                            General Settings
-                        </h3>
+                    <div class="form-group">
+                        <div class="config-section-header">
+                            <h3 class="config-section-title">
+                                General Settings
+                            </h3>
+                        </div>
 
-                        <div class="space-y-4">
-                            <div>
-                                <label
-                                    for="board-name-input"
-                                    class="block text-sm font-medium text-gray-700 mb-2"
-                                    >Board Name</label
-                                >
+                        <div class="form-group">
+                            <div class="form-group">
+                                <label for="board-name-input" class="text-medium text-secondary">
+                                    Board Name
+                                </label>
                                 <input
                                     id="board-name-input"
                                     type="text"
                                     bind:value={configForm.name}
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    class="input"
                                     onblur={() => onUpdateBoardConfig({ name: configForm.name })}
                                 />
                             </div>
 
-                            <div>
-                                <label class="flex items-center space-x-3">
+                            <div class="form-group">
+                                <label class="flex-start" style="gap: var(--spacing-3);">
                                     <input
                                         type="checkbox"
                                         bind:checked={configForm.blameFreeMode}
                                         onchange={() => onUpdateBoardConfig({ blameFreeMode: configForm.blameFreeMode })}
-                                        class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        style="width: 1rem; height: 1rem; accent-color: rgb(var(--color-primary));"
                                     />
-                                    <span class="text-sm font-medium text-gray-700">
-                                        Blame-free Mode
-                                    </span>
+                                    <div class="form-group" style="gap: var(--spacing-1);">
+                                        <span class="text-medium text-primary">
+                                            Blame-free Mode
+                                        </span>
+                                        <p class="caption text-muted">
+                                            Hide user names on cards to encourage open feedback
+                                        </p>
+                                    </div>
                                 </label>
-                                <p class="text-xs text-gray-500 ml-7 mt-1">
-                                    Hide user names on cards to encourage open feedback
-                                </p>
                             </div>
 
-                            <div>
-                                <label
-                                    for="board-status-select"
-                                    class="block text-sm font-medium text-gray-700 mb-2"
-                                    >Board Status</label
-                                >
+                            <div class="form-group">
+                                <label for="board-status-select" class="text-medium text-secondary">
+                                    Board Status
+                                </label>
                                 <select
                                     id="board-status-select"
                                     bind:value={configForm.status}
                                     onchange={() => onUpdateBoardConfig({ status: configForm.status })}
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    class="select"
                                 >
                                     <option value="draft">Draft</option>
                                     <option value="active">Active</option>
                                     <option value="completed">Completed</option>
                                     <option value="archived">Archived</option>
                                 </select>
-                                <p class="text-xs text-gray-500 mt-1">
+                                <p class="caption text-muted">
                                     Controls board visibility and accessibility
                                 </p>
                             </div>

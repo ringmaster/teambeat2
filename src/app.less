@@ -417,7 +417,7 @@ body {
 
 .header-layout {
     .flex-between();
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
 }
 
 .board-layout {
@@ -1785,9 +1785,9 @@ body {
 }
 
 .glass-effect {
-    .surface(white, 0 1px 3px rgb(0 0 0 / 0.05));
-    backdrop-filter: none;
-    border: none;
+    backdrop-filter: blur(10px);
+    background: #39495c;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .gradient-text {
@@ -1883,6 +1883,95 @@ body {
     .empty-state();
 }
 
+
+/* Board Toolbar Styling */
+.board-toolbar {
+    display: flex;
+    gap: 0.125rem;
+    align-items: center;
+}
+
+.toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    height: 1.75rem;
+    color: rgb(var(--color-text-secondary));
+    background: white;
+    border: 1px solid rgb(var(--color-gray-300));
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    
+    &:hover:not(:disabled) {
+        background: rgb(var(--color-gray-50));
+        border-color: rgb(var(--color-gray-400));
+    }
+    
+    &.toolbar-button-primary {
+        color: white;
+        background: rgb(var(--color-primary));
+        border-color: rgb(var(--color-primary));
+        
+        &:hover:not(:disabled) {
+            background: rgb(var(--color-slate-700));
+        }
+    }
+    
+    svg {
+        width: 0.75rem;
+        height: 0.75rem;
+        flex-shrink: 0;
+    }
+}
+
+/* Scene Dropdown Styling */
+.scene-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.scene-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgb(var(--color-border));
+    padding: var(--spacing-1);
+    min-width: 10rem;
+    z-index: 1000;
+    margin-top: -1px; /* Remove gap by overlapping slightly */
+}
+
+.scene-dropdown-item {
+    width: 100%;
+    text-align: left;
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 0.875rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: rgb(var(--color-text-primary));
+    
+    &:hover {
+        background: rgb(var(--color-gray-50));
+    }
+    
+    &.scene-dropdown-item-active {
+        background: rgb(var(--color-primary));
+        color: white;
+        font-weight: 500;
+    }
+}
 
 /* Responsive Components */
 .mobile-nav {

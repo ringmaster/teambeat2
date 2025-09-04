@@ -53,7 +53,7 @@
 						<div class="toolbar">
 							<a href="/" class="text-interactive text-muted text-medium">Dashboard</a>
 							<div class="toolbar">
-								<div class="button-group overlay-medium">
+								<div class="button-group">
 									<Avatar name={user.name} email={user.email} />
 									<span class="text-secondary text-medium">{user.name || user.email}</span>
 								</div>

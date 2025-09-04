@@ -309,14 +309,22 @@
     async function changeScene(sceneId: string) {
         try {
             const response = await fetch(`/api/boards/${boardId}/scene`, {
-                method: "POST",
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ sceneId }),
             });
 
             if (response.ok) {
+                const data = await response.json();
                 board.currentSceneId = sceneId;
+                // Update the current scene object too
+                if (data.scene) {
+                    currentScene = data.scene;
+                }
                 showSceneDropdown = false;
+            } else {
+                const errorData = await response.json();
+                console.error("Failed to change scene:", errorData.error);
             }
         } catch (error) {
             console.error("Failed to change scene:", error);

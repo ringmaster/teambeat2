@@ -17,7 +17,7 @@
 </script>
 
 <div
-    class="relative"
+    class="scene-dropdown-container"
     role="button"
     tabindex="0"
     onmouseenter={() => onShowSceneDropdown(true)}
@@ -29,11 +29,11 @@
     }}
 >
     <button
-        class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-full hover:bg-blue-600 transition-colors flex items-center space-x-1"
+        class="toolbar-button toolbar-button-primary"
     >
         <span>{currentScene?.title || "Scene"}</span>
         <svg
-            class="w-3 h-3"
+            class="icon-sm"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -49,7 +49,7 @@
 
     {#if showSceneDropdown}
         <div
-            class="absolute right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-40 z-10"
+            class="scene-dropdown-menu"
         >
             {#each board.scenes as scene}
                 <button
@@ -57,10 +57,7 @@
                         onSceneChange(scene.id);
                         onShowSceneDropdown(false);
                     }}
-                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors {scene.id ===
-                    board.currentSceneId
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700'}"
+                    class="scene-dropdown-item {scene.id === currentScene?.id || scene.id === board.currentSceneId ? 'scene-dropdown-item-active' : ''}"
                 >
                     {scene.title}
                 </button>

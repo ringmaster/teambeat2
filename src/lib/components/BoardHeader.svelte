@@ -46,30 +46,31 @@
     });
 </script>
 
-<div id="board-header" class="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-    <div id="board-header-content" class="max-w-7xl mx-auto" bind:this={headerContentDiv}>
-        <div class="flex justify-between items-center">
-            <!-- Left: Board title and admin badge -->
-            <div class="flex items-center space-x-3">
-                <h1 class="text-xl font-semibold text-gray-900">
+<div id="board-header" class="surface-primary content-divider page-container" style="padding: var(--spacing-4) var(--spacing-4);">
+    <div id="board-header-content" class="page-width" bind:this={headerContentDiv}>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <!-- Left: Board title with inline role/status pills -->
+            <div style="display: flex; align-items: center; gap: var(--spacing-3);">
+                <h1 class="heading" style="margin: 0;">
                     {board.name} - {new Date(board.createdAt).toLocaleDateString('en-CA')}
                 </h1>
-                <span
-                    class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
-                >
+                <div class="pill pill-sm pill-{userRole === 'admin' ? 'danger' : userRole === 'facilitator' ? 'success' : 'info'}">
                     {userRole}
-                </span>
+                </div>
+                {#if board.status && board.status !== 'active'}
+                    <div class="pill pill-sm pill-{board.status === 'draft' ? 'muted' : board.status === 'completed' ? 'success' : board.status === 'archived' ? 'warning' : 'muted'}">
+                        {board.status}
+                    </div>
+                {/if}
                 {#if board.blameFreeMode}
-                    <span
-                        class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full"
-                    >
+                    <div class="pill pill-sm pill-success">
                         Blame-free
-                    </span>
+                    </div>
                 {/if}
             </div>
 
-            <!-- Right: Control pills -->
-            <div class="flex items-center space-x-2">
+            <!-- Right: Toolbar pills -->
+            <div class="board-toolbar">
                 {#if ["admin", "facilitator"].includes(userRole)}
                     <!-- Scene dropdown/button -->
                     {#if board?.scenes?.length > 0}
@@ -86,7 +87,7 @@
                 {#if ["admin", "facilitator"].includes(userRole)}
                     <button
                         onclick={onConfigureClick}
-                        class="px-3 py-1.5 bg-white text-gray-600 text-sm rounded-full hover:bg-gray-50 transition-colors border border-gray-200"
+                        class="toolbar-button"
                     >
                         Configure
                     </button>
@@ -94,7 +95,7 @@
 
                 {#if ["admin", "facilitator"].includes(userRole)}
                     <button
-                        class="px-3 py-1.5 bg-white text-gray-600 text-sm rounded-full hover:bg-gray-50 transition-colors border border-gray-200"
+                        class="toolbar-button"
                     >
                         Timer
                     </button>
@@ -102,9 +103,9 @@
 
                 <button
                     onclick={onShareClick}
-                    class="px-3 py-1.5 bg-white text-gray-600 text-sm rounded-full hover:bg-gray-50 transition-colors border border-gray-200 flex items-center space-x-1"
+                    class="toolbar-button"
                 >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
                     </svg>
                     <span>Share</span>
