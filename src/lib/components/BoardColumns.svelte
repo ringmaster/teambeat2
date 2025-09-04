@@ -95,5 +95,6 @@
     #board-columns-flex {
         margin-left: calc((100vw - var(--board-header-width)) / 2);
         margin-right: calc((100vw - var(--board-header-width)) / 2);
+        display: flex;
     }
 </style>
