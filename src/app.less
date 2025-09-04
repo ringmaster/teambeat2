@@ -345,6 +345,21 @@
 
     --color-green-500: 34, 197, 94;
 
+    /* Component-specific semantic colors */
+    --card-border-color: 204, 204, 204; /* #ccc */
+    --card-background: 255, 255, 255; /* White */
+    --card-text-primary: var(--color-gray-900);
+    --card-text-secondary: var(--color-gray-400);
+    --card-hover-background: var(--color-gray-50);
+    --card-selection-highlight: var(--color-teal-500);
+    --card-delete-button-color: var(--color-red-500);
+    --card-delete-button-hover: var(--color-red-700);
+    --card-delete-button-background: var(--color-red-100);
+    --card-vote-button-background: var(--color-teal-500);
+    --card-vote-button-hover: var(--color-teal-600);
+    --card-comment-button-background: var(--color-gray-500);
+    --card-comment-button-hover: var(--color-gray-600);
+
     /* Spacing */
     --spacing-1: 0.25rem;
     --spacing-2: 0.5rem;
@@ -390,6 +405,69 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background: rgb(var(--color-bg-primary));
     min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+/* App Layout - Flexbox Column Structure */
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: rgb(var(--color-bg-primary));
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Footer Styling */
+.app-footer {
+    background: white;
+    border-top: 1px solid rgb(var(--color-border));
+    padding: var(--spacing-4) 0;
+    margin-top: auto;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-4);
+    
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: var(--spacing-3);
+    }
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.footer-copyright {
+    font-size: 0.875rem;
+    color: rgb(var(--color-text-muted));
+}
+
+.footer-right {
+    display: flex;
+    gap: var(--spacing-4);
+}
+
+.footer-link {
+    font-size: 0.875rem;
+    color: rgb(var(--color-text-muted));
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    
+    &:hover {
+        color: rgb(var(--color-text-primary));
+    }
 }
 
 /* Semantic Layout Components */
@@ -1044,7 +1122,7 @@ body {
 .teambeat-logo {
     width: 2rem;
     height: 2rem;
-    color: #fff;
+    color: #39495c;
 }
 
 .nav-brand-text {

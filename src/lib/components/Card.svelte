@@ -120,13 +120,13 @@
 
 <style>
     .card {
-        background-color: white;
+        background-color: rgb(var(--card-background));
         border-radius: 8px;
         padding: 12px;
         cursor: move;
         transition: box-shadow 0.2s ease, transform 0.2s ease;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border-top: 3px solid rgb(var(--color-teal-500));
+        border-top: 3px solid rgb(var(--card-border-color));
         position: relative;
     }
 
@@ -136,16 +136,16 @@
     }
 
     .card.grouping-mode:hover {
-        background-color: rgb(var(--color-gray-50));
+        background-color: rgb(var(--card-hover-background));
     }
 
     .card.selected {
-        box-shadow: 0 0 0 2px rgb(var(--color-teal-500));
+        box-shadow: 0 0 0 2px rgb(var(--card-selection-highlight));
     }
 
     /* Text styles */
     .card-content {
-        color: rgb(var(--color-gray-900));
+        color: rgb(var(--card-text-primary));
         margin-bottom: 8px;
         font-size: 0.875rem;
         line-height: 1.5;
@@ -171,7 +171,7 @@
     /* Delete button */
     .delete-button {
         padding: 4px;
-        color: rgb(var(--color-red-500));
+        color: rgb(var(--card-delete-button-color));
         border-radius: 4px;
         border: none;
         background: none;
@@ -180,8 +180,8 @@
     }
 
     .delete-button:hover {
-        color: rgb(var(--color-red-700));
-        background-color: rgb(var(--color-red-100));
+        color: rgb(var(--card-delete-button-hover));
+        background-color: rgb(var(--card-delete-button-background));
     }
 
     /* Vote button */
@@ -190,7 +190,7 @@
         align-items: center;
         gap: 4px;
         padding: 4px 8px;
-        background-color: rgb(var(--color-teal-500));
+        background-color: rgb(var(--card-vote-button-background));
         color: white;
         font-size: 0.75rem;
         border-radius: 9999px;
@@ -199,7 +199,7 @@
     }
 
     .vote-button:hover {
-        background-color: rgb(var(--color-teal-600));
+        background-color: rgb(var(--card-vote-button-hover));
     }
 
     /* Comment button */
@@ -208,7 +208,7 @@
         align-items: center;
         gap: 4px;
         padding: 4px 8px;
-        background-color: rgb(var(--color-gray-500));
+        background-color: rgb(var(--card-comment-button-background));
         color: white;
         font-size: 0.75rem;
         border-radius: 9999px;
@@ -217,12 +217,12 @@
     }
 
     .comment-button:hover {
-        background-color: rgb(var(--color-gray-600));
+        background-color: rgb(var(--card-comment-button-hover));
     }
 
     /* Author text */
     .author-text {
         font-size: 0.75rem;
-        color: rgb(var(--color-gray-400));
+        color: rgb(var(--card-text-secondary));
     }
 </style>
