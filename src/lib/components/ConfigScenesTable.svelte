@@ -114,8 +114,8 @@
 </script>
 
 <div class="mb-6">
-    <div class="flex justify-between items-center">
-        <h3 class="text-lg font-medium text-gray-900">
+    <div class="config-section-header">
+        <h3 class="config-section-title">
             {#if editingMode}
                 Board Scenes - {editingMode === 'permissions' ? 'Permissions' : 'Display'} for {activeSceneName}
             {:else}
@@ -125,7 +125,7 @@
         {#if !editingMode}
             <button
                 onclick={onAddNewScene}
-                class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center"
+                class="button"
             >
                 <svg
                     class="w-4 h-4 mr-2"
@@ -147,7 +147,7 @@
     {#if editingMode}
         <button
             onclick={exitEditingMode}
-            class="mt-2 text-sm text-blue-600 hover:text-blue-700 flex items-center"
+            class="button button-secondary"
         >
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -159,35 +159,18 @@
 
 {#if !editingMode}
     <!-- Scenes Table -->
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Title</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Permissions</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Display</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Mode</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Delete</th
-                >
+    <div class="config-table-wrapper">
+        <table class="config-table">
+        <thead>
+            <tr class="config-table-header">
+                <th class="config-table-th">Title</th>
+                <th class="config-table-th">Permissions</th>
+                <th class="config-table-th">Display</th>
+                <th class="config-table-th">Mode</th>
+                <th class="config-table-th">Delete</th>
             </tr>
         </thead>
-        <tbody
-            class="bg-white divide-y divide-gray-200"
-        >
+        <tbody>
             {#each board.scenes || [] as scene}
                 <tr
                     draggable="true"
@@ -195,47 +178,47 @@
                     ondragover={(e) => onDragOver(e, scene.id)}
                     ondragleave={onDragLeave}
                     ondrop={(e) => onDrop(e, scene.id)}
-                    class="cursor-move hover:bg-gray-50 transition-all duration-150 ease-in-out {dragState.draggedSceneId === scene.id ? 'opacity-50' : ''} {dragState.dragOverSceneId === scene.id && dragState.draggedSceneId !== scene.id && dragState.sceneDropPosition === 'above' ? 'border-t-4 border-blue-500 bg-blue-50/50' : ''} {dragState.dragOverSceneId === scene.id && dragState.draggedSceneId !== scene.id && dragState.sceneDropPosition === 'below' ? 'border-b-4 border-blue-500 bg-blue-50/50' : ''}"
+                    class="config-table-row draggable {dragState.draggedSceneId === scene.id ? 'dragging' : ''} {dragState.dragOverSceneId === scene.id && dragState.draggedSceneId !== scene.id && dragState.sceneDropPosition === 'above' ? 'drag-over-top' : ''} {dragState.dragOverSceneId === scene.id && dragState.draggedSceneId !== scene.id && dragState.sceneDropPosition === 'below' ? 'drag-over-bottom' : ''}"
                 >
-                    <td class="px-6 py-4">
+                    <td>
                         <input
                             type="text"
                             value={scene.title}
                             onblur={(e) => updateSceneTitle(scene.id, e.currentTarget.value)}
-                            class="w-full px-2 py-1 text-sm font-medium text-gray-900 border border-transparent rounded hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150 ease-in-out"
+                            class="input"
                         />
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <button
                             onclick={() => showOptionsForScene(scene.id)}
-                            class="text-gray-600 hover:text-gray-800 text-sm px-3 py-1 border border-gray-300 rounded hover:border-gray-400 transition-colors"
+                            class="button button-secondary"
                             >Options</button
                         >
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <button
                             onclick={() => showColumnsForScene(scene.id)}
-                            class="text-gray-600 hover:text-gray-800 text-sm px-3 py-1 border border-gray-300 rounded hover:border-gray-400 transition-colors"
+                            class="button button-secondary"
                             >Columns</button
                         >
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <select
                             value={scene.mode}
                             onchange={(e) => updateSceneMode(scene.id, e.currentTarget.value)}
-                            class="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 capitalize transition-all duration-150 ease-in-out"
+                            class="select"
                         >
                             <option value="columns">Columns</option>
                             <option value="present">Present</option>
                             <option value="review">Review</option>
                         </select>
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <button
                             onclick={() => onDeleteScene(scene.id)}
-                            class="text-red-600 hover:text-red-700 text-sm font-medium"
+                            class="button button-danger"
                         >
-                            Delete ×
+                            Delete
                         </button>
                     </td>
                 </tr>

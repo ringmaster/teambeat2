@@ -6,6 +6,8 @@
     import UserManagement from "$lib/components/UserManagement.svelte";
     import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
+    import Pill from "$lib/components/ui/Pill.svelte";
+    import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
 
     let user: any = $state(null);
     let series: any[] = $state([]);
@@ -397,19 +399,18 @@
                     </div>
                 </div>
             {:else}
-                <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div class="series-grid">
                     {#each series as s}
-                        <div
-                            class="card hover:shadow-2xl transition-shadow"
-                        >
+                        <div class="series-card">
                             <div class="card-content">
-                                <div
-                                    class="flex justify-between items-start mb-4"
-                                >
-                                    <div class="flex-1">
-                                        <h3 class="card-title">
-                                            {s.name}
-                                        </h3>
+                                <div class="series-card-header">
+                                    <div class="series-card-info">
+                                        <div class="series-card-title-row">
+                                            <h3 class="card-title">
+                                                {s.name}
+                                            </h3>
+                                            <Pill preset={s.role}>{s.role}</Pill>
+                                        </div>
                                         {#if s.description}
                                             <p
                                                 class="text-sm text-muted line-clamp-2"
@@ -418,52 +419,25 @@
                                             </p>
                                         {/if}
                                     </div>
-                                    <div class="flex items-center space-x-2">
-                                        <div class="badge badge-primary">
-                                            {s.role}
-                                        </div>
+                                    <div class="series-card-actions">
                                         {#if s.role === "admin"}
                                             <button
                                                 onclick={() =>
                                                     openSeriesUserManagement(s)}
-                                                class="btn btn-ghost btn-sm text-blue-500 hover:bg-blue-50"
+                                                class="icon-button icon-button-primary"
                                                 title="Manage users"
                                                 aria-label="Manage users"
                                             >
-                                                <svg
-                                                    class="w-4 h-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                                                    />
-                                                </svg>
+                                                <Icon name="users" size="sm" />
                                             </button>
                                             <button
                                                 onclick={() =>
                                                     confirmDeleteSeries(s)}
-                                                class="btn btn-ghost btn-sm text-red-500 hover:bg-red-50"
+                                                class="icon-button icon-button-danger"
                                                 title="Delete series"
                                                 aria-label="Delete series"
                                             >
-                                                <svg
-                                                    class="w-4 h-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                    />
-                                                </svg>
+                                                <Icon name="trash" size="sm" />
                                             </button>
                                         {/if}
                                     </div>
@@ -472,47 +446,21 @@
                                 <div class="space-y-3">
                                     <!-- Active and Draft Boards -->
                                     {#if s.boards && s.boards.filter( (b) => ["active", "draft"].includes(b.status), ).length > 0}
-                                        <div
-                                            class="bg-base-200 rounded-lg p-3 space-y-2"
-                                        >
-                                            <h4
-                                                class="text-sm font-semibold mb-2"
-                                            >
+                                        <div class="board-section">
+                                            <h4 class="board-section-title">
                                                 Active & Draft Boards:
                                             </h4>
-
-                                            {#each s.boards.filter( (b) => ["active", "draft"].includes(b.status), ) as board}
-                                                <div
-                                                    class="flex items-center justify-between"
-                                                >
-                                                    <div class="flex-1 min-w-0">
-                                                        <a
-                                                            href="/board/{board.id}"
-                                                            class="link link-primary font-medium text-sm truncate block"
-                                                        >
-                                                            {board.name}
-                                                        </a>
-                                                        <div
-                                                            class="text-xs text-gray-500"
-                                                        >
-                                                            {new Date(
-                                                                board.createdAt,
-                                                            ).toLocaleDateString()}
-                                                        </div>
-                                                    </div>
-                                                    <div
-                                                        class="badge badge-sm
-													{board.status === 'active'
-                                                            ? 'badge-success'
-                                                            : board.status ===
-                                                                'draft'
-                                                              ? 'badge-warning'
-                                                              : 'badge-neutral'}"
-                                                    >
-                                                        {board.status}
-                                                    </div>
-                                                </div>
-                                            {/each}
+                                            <div class="board-list">
+                                                {#each s.boards.filter( (b) => ["active", "draft"].includes(b.status), ) as board}
+                                                    <BoardListingItem
+                                                        name={board.name}
+                                                        meetingDate={board.meetingDate}
+                                                        createdAt={board.createdAt}
+                                                        status={board.status}
+                                                        onclick={() => goto(`/board/${board.id}`)}
+                                                    />
+                                                {/each}
+                                            </div>
                                         </div>
                                     {:else}
                                         <div class="alert">
@@ -527,43 +475,23 @@
 
                                     <!-- Completed Boards -->
                                     {#if s.boards && s.boards.filter((b) => b.status === "completed").length > 0}
-                                        <div
-                                            class="bg-base-200 rounded-lg p-3 space-y-2"
-                                        >
-                                            <h4
-                                                class="text-sm font-semibold mb-2"
-                                            >
+                                        <div class="board-section">
+                                            <h4 class="board-section-title">
                                                 Completed Boards:
                                             </h4>
-
-                                            {#each s.boards
-                                                .filter((b) => b.status === "completed")
-                                                .slice(0, 5) as board}
-                                                <div
-                                                    class="flex items-center justify-between"
-                                                >
-                                                    <div class="flex-1 min-w-0">
-                                                        <a
-                                                            href="/board/{board.id}"
-                                                            class="text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline truncate block"
-                                                        >
-                                                            {board.name}
-                                                        </a>
-                                                        <div
-                                                            class="text-xs text-gray-500"
-                                                        >
-                                                            {new Date(
-                                                                board.createdAt,
-                                                            ).toLocaleDateString()}
-                                                        </div>
-                                                    </div>
-                                                    <span
-                                                        class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700"
-                                                    >
-                                                        completed
-                                                    </span>
-                                                </div>
-                                            {/each}
+                                            <div class="board-list">
+                                                {#each s.boards
+                                                    .filter((b) => b.status === "completed")
+                                                    .slice(0, 5) as board}
+                                                    <BoardListingItem
+                                                        name={board.name}
+                                                        meetingDate={board.meetingDate}
+                                                        createdAt={board.createdAt}
+                                                        status="complete"
+                                                        onclick={() => goto(`/board/${board.id}`)}
+                                                    />
+                                                {/each}
+                                            </div>
                                         </div>
                                     {/if}
 

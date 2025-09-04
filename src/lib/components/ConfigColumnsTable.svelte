@@ -35,13 +35,13 @@
     
 </script>
 
-<div class="flex justify-between items-center mb-6">
-    <h3 class="text-lg font-medium text-gray-900">
+<div class="config-section-header">
+    <h3 class="config-section-title">
         Board Columns
     </h3>
     <button
         onclick={onAddNewColumn}
-        class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center"
+        class="button"
     >
         <svg
             class="w-4 h-4 mr-2"
@@ -61,59 +61,48 @@
 </div>
 
 <!-- Columns Table -->
-<div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Title</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Description</th
-                >
-                <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >Delete</th
-                >
+<div class="config-table-wrapper">
+    <table class="config-table">
+        <thead>
+            <tr class="config-table-header">
+                <th class="config-table-th">Title</th>
+                <th class="config-table-th">Description</th>
+                <th class="config-table-th">Delete</th>
             </tr>
         </thead>
-        <tbody
-            class="bg-white divide-y divide-gray-200"
-        >
-            {#each board.columns || [] as column}
+        <tbody>
+            {#each board.columns || [] as column, index}
                 <tr
                     draggable="true"
                     ondragstart={(e) => onDragStart(e, column.id)}
                     ondragover={(e) => onDragOver(e, column.id)}
                     ondragleave={onDragLeave}
                     ondrop={(e) => onDrop(e, column.id)}
-                    class="cursor-move hover:bg-gray-50 transition-all duration-150 ease-in-out {dragState.draggedColumnId === column.id ? 'opacity-50' : ''} {dragState.dragOverColumnId === column.id && dragState.draggedColumnId !== column.id && dragState.columnDropPosition === 'above' ? 'border-t-4 border-blue-500 bg-blue-50/50' : ''} {dragState.dragOverColumnId === column.id && dragState.draggedColumnId !== column.id && dragState.columnDropPosition === 'below' ? 'border-b-4 border-blue-500 bg-blue-50/50' : ''}"
+                    class="config-table-row draggable {dragState.draggedColumnId === column.id ? 'dragging' : ''} {dragState.dragOverColumnId === column.id && dragState.draggedColumnId !== column.id && dragState.columnDropPosition === 'above' ? 'drag-over-top' : ''} {dragState.dragOverColumnId === column.id && dragState.draggedColumnId !== column.id && dragState.columnDropPosition === 'below' ? 'drag-over-bottom' : ''}"
                 >
-                    <td class="px-6 py-4">
+                    <td>
                         <input
                             type="text"
                             value={column.title}
                             onblur={(e) => updateColumnTitle(column.id, e.currentTarget.value)}
-                            class="w-full px-2 py-1 text-sm font-medium text-gray-900 border border-transparent rounded hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-150 ease-in-out"
+                            class="input"
                         />
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <input
                             type="text"
                             value={column.description || ""}
                             placeholder="Enter description..."
                             onblur={(e) => updateColumnDescription(column.id, e.currentTarget.value)}
-                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-150 ease-in-out"
+                            class="input"
                         />
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <button
                             onclick={() => onDeleteColumn(column.id)}
-                            class="text-red-600 hover:text-red-700 text-sm font-medium"
+                            class="button button-danger"
                         >
-                            Delete ×
+                            Delete
                         </button>
                     </td>
                 </tr>
@@ -123,9 +112,9 @@
                 ondragover={onEndDrop}
                 ondragleave={() => {}}
                 ondrop={onEndDrop}
-                class="h-4 {dragState.dragOverColumnEnd ? 'bg-blue-100 border-2 border-dashed border-blue-400' : 'hover:bg-gray-25'}"
+                class="config-table-drop-zone {dragState.dragOverColumnEnd ? 'drag-over-bottom' : ''}"
             >
-                <td colspan="3" class="px-6 py-2 text-center text-xs text-gray-400">
+                <td colspan="3" class="config-table-drop-zone-cell">
                     {dragState.dragOverColumnEnd ? "Drop here to move to end" : ""}
                 </td>
             </tr>
