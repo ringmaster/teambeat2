@@ -91,7 +91,7 @@
     <!-- Add Card Section for this column -->
     {#if currentScene?.allowAddCards}
         <div class="add-card-section">
-            <div class="flex gap-2">
+            <div class="add-card-form">
                 <textarea
                     value={onGetColumnContent(column.id)}
                     oninput={(e) => onSetColumnContent(column.id, e.currentTarget.value)}
@@ -125,7 +125,7 @@
                         </button>
                     {/if}
                 </div>
-                <div class="space-y-2">
+                <div class="group-cards">
                     {#each groupCards as card}
                         <Card
                             {card}
@@ -193,18 +193,18 @@
     .column-header {
         background-color: transparent;
         padding: 12px 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: none;
     }
 
     .column-header h2 {
         font-weight: 600;
-        color: white;
+        color: rgb(var(--color-gray-700));
         font-size: 1rem;
         margin: 0;
     }
 
     .column-header p {
-        color: rgba(255, 255, 255, 0.7);
+        color: rgb(var(--color-gray-600));
         font-size: 0.875rem;
         margin-top: 4px;
     }
@@ -212,12 +212,17 @@
     /* Add Card Section */
     .add-card-section {
         padding: 12px 16px;
-        background-color: rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: transparent;
+        border-bottom: none;
     }
 
-    .add-card-section textarea {
-        width: 100%;
+    .add-card-form {
+        display: flex;
+        gap: 8px;
+    }
+
+    .add-card-form textarea {
+        flex: 1;
         padding: 8px 12px;
         background-color: white;
         border: 1px solid rgb(var(--color-gray-200));
@@ -225,15 +230,16 @@
         font-size: 0.875rem;
         resize: none;
         font-family: inherit;
+        transition: border-color var(--transition-fast);
     }
 
-    .add-card-section textarea:focus {
+    .add-card-form textarea:focus {
         outline: none;
         border-color: rgb(var(--color-teal-500));
         box-shadow: 0 0 0 1px rgb(var(--color-teal-500));
     }
 
-    .add-card-section button {
+    .add-card-form button {
         padding: 8px 12px;
         background-color: rgb(var(--color-teal-500));
         color: white;
@@ -241,10 +247,12 @@
         font-size: 0.875rem;
         border: none;
         cursor: pointer;
-        transition: background-color 0.2s ease;
+        transition: background-color var(--transition-fast);
+        white-space: nowrap;
+        align-self: flex-start;
     }
 
-    .add-card-section button:hover {
+    .add-card-form button:hover {
         background-color: rgb(var(--color-teal-600));
     }
 
@@ -261,10 +269,10 @@
 
     /* Group container */
     .group-container {
-        border: 1px dashed rgba(255, 255, 255, 0.2);
+        border: 1px dashed rgb(var(--color-gray-300));
         border-radius: 6px;
         padding: 12px;
-        background-color: rgba(255, 255, 255, 0.03);
+        background-color: rgb(var(--color-gray-50));
     }
 
     .group-header {
@@ -277,7 +285,7 @@
     .group-header h4 {
         font-size: 0.875rem;
         font-weight: 500;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgb(var(--color-gray-700));
     }
 
     .group-header button {
@@ -291,5 +299,11 @@
 
     .group-header button:hover {
         color: rgb(var(--color-teal-600));
+    }
+
+    .group-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
 </style>

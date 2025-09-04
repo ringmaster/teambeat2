@@ -40,33 +40,33 @@
 	}
 </script>
 
-<div class="min-h-screen gradient-bg flex items-center justify-center px-4 sm:px-6 lg:px-8">
-	<div class="max-w-md w-full space-y-8">
+<div class="login-page">
+	<div class="login-container">
 		<!-- Header -->
-		<div class="text-center">
-			<div class="mx-auto h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl mb-4">
-				<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<div class="login-header">
+			<div class="login-brand-icon">
+				<svg class="icon-md text-inverted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
 				</svg>
 			</div>
-			<h2 class="text-3xl font-bold gradient-text">Welcome back</h2>
-			<p class="mt-2 text-gray-600">Sign in to your TeamBeat account</p>
+			<h2 class="login-title gradient-text">Welcome back</h2>
+			<p class="login-subtitle">Sign in to your TeamBeat account</p>
 		</div>
 
 		<!-- Form Card -->
-		<div class="glass-effect rounded-2xl p-8 shadow-xl animate-slide-up">
+		<div class="form-card">
 			{#if error}
-				<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center space-x-2">
-					<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+				<div class="form-error">
+					<svg class="icon-sm status-text-danger" fill="currentColor" viewBox="0 0 20 20">
 						<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
 					</svg>
 					<span>{error}</span>
 				</div>
 			{/if}
 
-			<form class="space-y-6" onsubmit={(e) => { e.preventDefault(); handleLogin(); }}>
-				<div>
-					<label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+			<form class="form-group" onsubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+				<div class="form-field">
+					<label for="email" class="form-label">
 						Email
 					</label>
 					<Input
@@ -79,8 +79,8 @@
 					/>
 				</div>
 
-				<div>
-					<label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+				<div class="form-field">
+					<label for="password" class="form-label">
 						Password
 					</label>
 					<Input
@@ -96,13 +96,13 @@
 				<Button
 					type="submit"
 					disabled={loading}
-					class="w-full"
+					class="login-submit-button"
 					variant="primary"
 				>
 					{#if loading}
-						<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						<svg class="loading-spinner icon-sm text-inverted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+							<circle class="pulse-indicator" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+							<path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 						</svg>
 						<span>Signing in...</span>
 					{:else}
@@ -113,11 +113,106 @@
 		</div>
 
 		<!-- Footer -->
-		<div class="text-center">
-			<p class="text-gray-600">
+		<div class="login-footer">
+			<p class="text-muted">
 				Don't have an account?
-				<a href="/register" class="font-semibold gradient-text hover:from-indigo-600 hover:to-purple-700 transition-colors ml-1">Sign up</a>
+				<a href="/register" class="login-signup-link">Sign up</a>
 			</p>
 		</div>
 	</div>
 </div>
+
+<style>
+	.login-page {
+		min-height: 100vh;
+		background: rgb(var(--color-bg-primary));
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0 var(--spacing-4);
+	}
+
+	.login-container {
+		width: 100%;
+		max-width: 28rem;
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-8);
+	}
+
+	.login-header {
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-4);
+	}
+
+	.login-brand-icon {
+		width: 4rem;
+		height: 4rem;
+		background: linear-gradient(
+			to bottom right,
+			rgb(var(--color-indigo-500)),
+			rgb(var(--color-purple-600))
+		);
+		color: white;
+		border-radius: 1rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: var(--shadow-xl);
+	}
+
+	.login-title {
+		font-size: 1.875rem;
+		line-height: 2.25rem;
+		font-weight: 700;
+		margin: 0;
+	}
+
+	.login-subtitle {
+		color: rgb(var(--color-gray-600));
+		font-size: 1rem;
+		margin: 0;
+	}
+
+
+	.form-field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-2);
+	}
+
+	.form-label {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: rgb(var(--color-gray-700));
+	}
+
+	.login-submit-button {
+		width: 100%;
+	}
+
+	.login-footer {
+		text-align: center;
+	}
+
+	.login-signup-link {
+		font-weight: 600;
+		background: linear-gradient(to right, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		text-decoration: none;
+		margin-left: var(--spacing-1);
+		transition: all var(--transition-fast);
+	}
+
+	.login-signup-link:hover {
+		background: linear-gradient(to right, rgb(var(--color-indigo-600)), rgb(var(--color-purple-700)));
+		-webkit-background-clip: text;
+		background-clip: text;
+	}
+</style>

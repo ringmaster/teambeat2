@@ -56,33 +56,33 @@
 	}
 </script>
 
-<div class="min-h-screen gradient-bg flex items-center justify-center px-4 sm:px-6 lg:px-8">
-	<div class="max-w-md w-full space-y-8">
+<div class="register-page">
+	<div class="register-container">
 		<!-- Header -->
-		<div class="text-center">
-			<div class="mx-auto h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl mb-4">
-				<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<div class="register-header">
+			<div class="register-brand-icon">
+				<svg class="icon-md text-inverted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
 				</svg>
 			</div>
-			<h2 class="text-3xl font-bold gradient-text">Get started</h2>
-			<p class="mt-2 text-gray-600">Create your TeamBeat account</p>
+			<h2 class="register-title gradient-text">Get started</h2>
+			<p class="register-subtitle">Create your TeamBeat account</p>
 		</div>
 
 		<!-- Form Card -->
-		<div class="glass-effect rounded-2xl p-8 shadow-xl animate-slide-up">
+		<div class="form-card">
 			{#if error}
-				<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center space-x-2">
-					<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+				<div class="form-error">
+					<svg class="icon-sm status-text-danger" fill="currentColor" viewBox="0 0 20 20">
 						<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
 					</svg>
 					<span>{error}</span>
 				</div>
 			{/if}
 
-			<form class="space-y-5" onsubmit={(e) => { e.preventDefault(); handleRegister(); }}>
+			<form class="form-group" onsubmit={(e) => { e.preventDefault(); handleRegister(); }}>
 				<div>
-					<label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+					<label for="email" class="form-label">
 						Email <span class="text-red-500">*</span>
 					</label>
 					<Input
@@ -96,7 +96,7 @@
 				</div>
 
 				<div>
-					<label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+					<label for="name" class="form-label">
 						Full Name
 					</label>
 					<Input
@@ -109,7 +109,7 @@
 				</div>
 
 				<div>
-					<label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+					<label for="password" class="form-label">
 						Password <span class="text-red-500">*</span>
 					</label>
 					<Input
@@ -123,7 +123,7 @@
 				</div>
 
 				<div>
-					<label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+					<label for="confirmPassword" class="form-label">
 						Confirm Password <span class="text-red-500">*</span>
 					</label>
 					<Input
@@ -139,13 +139,13 @@
 				<Button
 					type="submit"
 					disabled={loading}
-					class="w-full mt-6"
+					class="register-submit-button"
 					variant="primary"
 				>
 					{#if loading}
-						<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						<svg class="loading-spinner icon-sm text-inverted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+							<circle class="pulse-indicator" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+							<path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 						</svg>
 						<span>Creating account...</span>
 					{:else}
@@ -156,11 +156,106 @@
 		</div>
 
 		<!-- Footer -->
-		<div class="text-center">
-			<p class="text-gray-600">
+		<div class="register-footer">
+			<p class="text-muted">
 				Already have an account?
-				<a href="/login" class="font-semibold gradient-text hover:from-indigo-600 hover:to-purple-700 transition-colors ml-1">Sign in</a>
+				<a href="/login" class="register-signin-link">Sign in</a>
 			</p>
 		</div>
 	</div>
 </div>
+
+<style>
+	.register-page {
+		min-height: 100vh;
+		background: rgb(var(--color-bg-primary));
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0 var(--spacing-4);
+	}
+
+	@media (min-width: 640px) {
+		.register-page {
+			padding: 0 var(--spacing-6);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.register-page {
+			padding: 0 var(--spacing-8);
+		}
+	}
+
+	.register-container {
+		width: 100%;
+		max-width: 28rem;
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-8);
+	}
+
+	.register-header {
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-4);
+	}
+
+	.register-brand-icon {
+		width: 4rem;
+		height: 4rem;
+		background: linear-gradient(
+			to bottom right,
+			rgb(var(--color-indigo-500)),
+			rgb(var(--color-purple-600))
+		);
+		color: white;
+		border-radius: 1rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: var(--shadow-xl);
+	}
+
+	.register-title {
+		font-size: 1.875rem;
+		line-height: 2.25rem;
+		font-weight: 700;
+		margin: 0;
+	}
+
+	.register-subtitle {
+		color: rgb(var(--color-gray-600));
+		font-size: 1rem;
+		margin: 0;
+	}
+
+
+	.register-submit-button {
+		width: 100%;
+		margin-top: var(--spacing-6);
+	}
+
+	.register-footer {
+		text-align: center;
+	}
+
+	.register-signin-link {
+		font-weight: 600;
+		background: linear-gradient(to right, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		text-decoration: none;
+		margin-left: var(--spacing-1);
+		transition: all var(--transition-fast);
+	}
+
+	.register-signin-link:hover {
+		background: linear-gradient(to right, rgb(var(--color-indigo-600)), rgb(var(--color-purple-700)));
+		-webkit-background-clip: text;
+		background-clip: text;
+	}
+</style>

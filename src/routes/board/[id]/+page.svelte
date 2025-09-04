@@ -304,9 +304,7 @@
         }
     }
 
-    function getCurrentScene() {
-        return board?.scenes?.find((s: any) => s.id === board.currentSceneId);
-    }
+    let currentScene = $derived(board?.scenes?.find((s: any) => s.id === board.currentSceneId));
 
     async function changeScene(sceneId: string) {
         try {
@@ -404,7 +402,7 @@
 
     async function addCardToColumn(columnId: string) {
         const content = newCardContentByColumn.get(columnId) || "";
-        if (!content.trim() || !getCurrentScene()?.allowAddCards) return;
+        if (!content.trim() || !currentScene?.allowAddCards) return;
 
         try {
             const response = await fetch(`/api/boards/${boardId}/cards`, {
@@ -530,7 +528,7 @@
     async function handleDrop(event: DragEvent, targetColumnId: string) {
         event.preventDefault();
 
-        if (!draggedCardId || !getCurrentScene()?.allowEditCards) {
+        if (!draggedCardId || !currentScene?.allowEditCards) {
             draggedCardId = "";
             return;
         }
@@ -1160,6 +1158,7 @@
         <BoardHeader
             {board}
             {userRole}
+            {currentScene}
             {showSceneDropdown}
             onConfigureClick={() => (showBoardConfig = true)}
             onShareClick={handleShareBoard}
@@ -1214,7 +1213,7 @@
             <BoardColumns
                 {board}
                 {cards}
-                currentScene={getCurrentScene()}
+                {currentScene}
                 {groupingMode}
                 {selectedCards}
                 dragTargetColumnId={cardDropTargetColumnId}

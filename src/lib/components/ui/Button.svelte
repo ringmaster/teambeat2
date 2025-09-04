@@ -18,7 +18,7 @@
         children
     }: Props = $props();
 
-    let buttonClass = $derived(() => {
+    let buttonClass = $derived.by(() => {
         let classes = ['btn'];
         
         // Variant classes

@@ -153,3 +153,59 @@
 - Field-level validation feedback
 - Loading states during async operations
 - No browser dialogs for error communication
+
+## Post-Tailwind Design System
+
+### Component-Focused Styling Architecture
+
+#### Semantic Classes Over Utilities
+- **MANDATORY: Use purpose-based class names** - Classes should describe what something *is*, not what it looks like
+- **DON'T use single-property utilities** - No `.flex`, `.p-4`, `.bg-white` classes in global CSS
+- **Component-specific styling** - All element styles live in component `<style>` blocks
+
+#### LESS Integration for Reusable Patterns
+- **LESS mixins for common patterns** - Use mixins for layout patterns, button styles, form inputs
+- **Design tokens in CSS variables** - Colors, spacing, typography scales defined once
+- **Mixin examples available** - `.flex-between()`, `.button-style()`, `.card-surface()`
+
+#### File Organization
+```
+src/
+├── app.less          # Design tokens + mixins only
+├── routes/           
+│   └── +layout.svelte # Import app.less here
+└── lib/components/   
+    └── *.svelte      # Component styles in <style> blocks
+```
+
+#### Available Design Tokens
+- **Colors**: `--color-primary`, `--color-teal-500`, `--color-gray-700`
+- **Spacing**: `--spacing-1` through `--spacing-20` (0.25rem to 5rem)
+- **Typography**: Use `.heading()`, `.body-text()` mixins
+- **Transitions**: `--transition-fast`, `--transition-normal`
+
+#### Component Styling Examples
+```svelte
+<!-- CORRECT: Semantic component approach -->
+<div class="card-header">
+  <h2 class="card-title">Title</h2>
+  <button class="primary-action">Save</button>
+</div>
+
+<style lang="less">
+  .card-header {
+    .flex-between();
+    padding: var(--spacing-4);
+  }
+  
+  .primary-action {
+    .button-style(var(--color-teal-500));
+  }
+</style>
+```
+
+#### Migration Principles
+- **Replace utility classes with semantic names** - `.flex items-center` becomes `.toolbar`
+- **Move styles to components** - Global utilities become component-specific styles
+- **Use LESS mixins for patterns** - Reusable layout patterns become mixins
+- **Maintain design consistency** - Same visual result with better architecture

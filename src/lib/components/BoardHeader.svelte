@@ -5,6 +5,7 @@
     interface Props {
         board: any;
         userRole: string;
+        currentScene: any;
         showSceneDropdown: boolean;
         onConfigureClick: () => void;
         onShareClick: () => void;
@@ -15,6 +16,7 @@
     let { 
         board, 
         userRole, 
+        currentScene,
         showSceneDropdown,
         onConfigureClick,
         onShareClick,
@@ -24,9 +26,6 @@
     
     let headerContentDiv: HTMLDivElement;
     
-    function getCurrentScene() {
-        return board?.scenes?.find((s: any) => s.id === board.currentSceneId);
-    }
     
     function updateHeaderWidth() {
         if (headerContentDiv) {
@@ -76,7 +75,7 @@
                     {#if board?.scenes?.length > 0}
                         <SceneDropdown
                             {board}
-                            {getCurrentScene}
+                            {currentScene}
                             {showSceneDropdown}
                             {onSceneChange}
                             {onShowSceneDropdown}

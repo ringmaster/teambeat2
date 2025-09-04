@@ -1,7 +1,7 @@
 <script lang="ts">
     interface Props {
         board: any;
-        getCurrentScene: () => any;
+        currentScene: any;
         showSceneDropdown: boolean;
         onSceneChange: (sceneId: string) => void;
         onShowSceneDropdown: (show: boolean) => void;
@@ -9,7 +9,7 @@
     
     let { 
         board, 
-        getCurrentScene, 
+        currentScene, 
         showSceneDropdown = $bindable(),
         onSceneChange,
         onShowSceneDropdown 
@@ -31,7 +31,7 @@
     <button
         class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded-full hover:bg-blue-600 transition-colors flex items-center space-x-1"
     >
-        <span>{getCurrentScene()?.title || "Scene"}</span>
+        <span>{currentScene?.title || "Scene"}</span>
         <svg
             class="w-3 h-3"
             fill="none"

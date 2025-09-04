@@ -2,36 +2,36 @@
     interface Props {
         name?: string;
         email?: string;
-        size?: 'sm' | 'md' | 'lg';
+        size?: "sm" | "md" | "lg";
         class?: string;
     }
 
     let {
-        name = '',
-        email = '',
-        size = 'md',
-        class: className = ''
+        name = "",
+        email = "",
+        size = "md",
+        class: className = "",
     }: Props = $props();
 
-    let displayText = $derived(() => {
+    let displayText = $derived.by(() => {
         if (name) {
             return name[0].toUpperCase();
         } else if (email) {
             return email[0].toUpperCase();
         }
-        return '?';
+        return "?";
     });
 
-    let sizeClass = $derived(() => {
+    let sizeClass = $derived.by(() => {
         switch (size) {
-            case 'sm':
-                return 'avatar-sm';
-            case 'md':
-                return 'avatar-md';
-            case 'lg':
-                return 'avatar-lg';
+            case "sm":
+                return "avatar-sm";
+            case "md":
+                return "avatar-md";
+            case "lg":
+                return "avatar-lg";
             default:
-                return 'avatar-md';
+                return "avatar-md";
         }
     });
 </script>
@@ -42,7 +42,11 @@
 
 <style>
     .avatar {
-        background: linear-gradient(to bottom right, rgb(var(--color-indigo-400)), rgb(var(--color-purple-500)));
+        background: linear-gradient(
+            to bottom right,
+            rgb(var(--color-indigo-400)),
+            rgb(var(--color-purple-500))
+        );
         border-radius: var(--radius-full);
         display: flex;
         align-items: center;
