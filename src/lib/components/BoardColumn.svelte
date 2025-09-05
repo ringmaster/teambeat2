@@ -1,5 +1,6 @@
 <script lang="ts">
     import Card from './Card.svelte';
+    import TextareaWithButton from './ui/TextareaWithButton.svelte';
     
     interface Props {
         column: any;
@@ -91,19 +92,15 @@
     <!-- Add Card Section for this column -->
     {#if currentScene?.allowAddCards}
         <div class="add-card-section">
-            <div class="add-card-form">
-                <textarea
-                    value={onGetColumnContent(column.id)}
-                    oninput={(e) => onSetColumnContent(column.id, e.currentTarget.value)}
-                    placeholder="Add a card..."
-                    rows="2"
-                ></textarea>
-                <button
-                    onclick={() => onAddCard(column.id)}
-                >
-                    Add
-                </button>
-            </div>
+            <TextareaWithButton
+                value={onGetColumnContent(column.id)}
+                oninput={(e) => onSetColumnContent(column.id, e.currentTarget.value)}
+                placeholder="Add a card..."
+                rows={2}
+                buttonText="Add"
+                buttonVariant="primary"
+                onButtonClick={() => onAddCard(column.id)}
+            />
         </div>
     {/if}
 
@@ -214,46 +211,6 @@
         padding: 12px 16px;
         background-color: transparent;
         border-bottom: none;
-    }
-
-    .add-card-form {
-        display: flex;
-        gap: 8px;
-    }
-
-    .add-card-form textarea {
-        flex: 1;
-        padding: 8px 12px;
-        background-color: white;
-        border: 1px solid rgb(var(--color-gray-200));
-        border-radius: 6px;
-        font-size: 0.875rem;
-        resize: none;
-        font-family: inherit;
-        transition: border-color var(--transition-fast);
-    }
-
-    .add-card-form textarea:focus {
-        outline: none;
-        border-color: rgb(var(--color-teal-500));
-        box-shadow: 0 0 0 1px rgb(var(--color-teal-500));
-    }
-
-    .add-card-form button {
-        padding: 8px 12px;
-        background-color: rgb(var(--color-teal-500));
-        color: white;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        border: none;
-        cursor: pointer;
-        transition: background-color var(--transition-fast);
-        white-space: nowrap;
-        align-self: flex-start;
-    }
-
-    .add-card-form button:hover {
-        background-color: rgb(var(--color-teal-600));
     }
 
     /* Cards Container */

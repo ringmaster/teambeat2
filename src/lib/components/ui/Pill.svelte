@@ -42,3 +42,64 @@
 <span class={pillClass}>
     {@render children?.()}
 </span>
+
+<style>
+.pill {
+    display: inline-block;
+    font-weight: 500;
+    border-radius: 9999px;
+    text-align: center;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.pill-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.pill-md {
+    font-size: 0.875rem;
+    padding: 0.375rem 1rem;
+}
+
+.pill-lg {
+    font-size: 1rem;
+    padding: 0.5rem 1.25rem;
+}
+
+.pill-primary {
+    background: rgb(var(--color-primary));
+    color: white;
+}
+
+.pill-secondary {
+    background: rgb(var(--color-secondary));
+    color: white;
+}
+
+.pill-success {
+    background: rgb(var(--color-success));
+    color: white;
+}
+
+.pill-warning {
+    background: rgb(var(--color-warning));
+    color: rgb(var(--color-gray-900));
+}
+
+.pill-danger {
+    background: rgb(var(--color-danger));
+    color: white;
+}
+
+.pill-info {
+    background: rgb(var(--color-info));
+    color: white;
+}
+
+.pill-muted {
+    background: rgb(var(--color-gray-200));
+    color: rgb(var(--color-gray-700));
+}
+</style>

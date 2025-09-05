@@ -53,13 +53,13 @@
 <!-- Board Columns for configured board (full-width with horizontal scroll) -->
 <div
     id="board-columns-container"
-    class="w-full overflow-x-auto py-8 flex-1 flex flex-col"
+    class="board-columns-container"
 >
     <div
         id="board-columns-flex"
-        class="flex space-x-4 flex-1 h-full {board.columns?.length === 1
-            ? 'justify-center'
-            : 'min-w-max'} h-full"
+        class="{board.columns?.length === 1
+            ? 'single-column'
+            : 'multiple-columns'}"
     >
         {#each board.columns as column}
             <BoardColumn
@@ -92,9 +92,29 @@
 </div>
 
 <style>
-    #board-columns-flex {
-        margin-left: calc((100vw - var(--board-header-width)) / 2);
-        margin-right: calc((100vw - var(--board-header-width)) / 2);
+    .board-columns-container {
+        width: 100%;
+        overflow-x: auto;
+        padding: 2rem 0;
+        flex: 1;
         display: flex;
+        flex-direction: column;
+    }
+    
+    #board-columns-flex {
+        margin-left: calc((100vw - var(--board-header-width, 800px)) / 2) !important;
+        margin-right: calc((100vw - var(--board-header-width, 800px)) / 2) !important;
+        display: flex;
+        gap: 1rem;
+        flex: 1;
+        height: 100%;
+    }
+    
+    #board-columns-flex.single-column {
+        justify-content: center;
+    }
+    
+    #board-columns-flex.multiple-columns {
+        min-width: max-content;
     }
 </style>

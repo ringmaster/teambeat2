@@ -316,3 +316,202 @@
         </div>
     </div>
 {/if}
+
+<style lang="less">
+/* Config Modal Dialog Styles */
+.config-modal-dialog {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2xl);
+    width: 100%;
+    max-width: 64rem;
+    max-height: 70vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.config-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-4) var(--spacing-6);
+    border-bottom: 1px solid rgb(var(--color-border));
+}
+
+.config-header-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-8);
+    flex: 1;
+}
+
+.config-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: rgb(var(--color-text-primary));
+    margin: 0;
+}
+
+.config-modal-content {
+    padding: var(--spacing-6);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Config Tabs Styling */
+.config-tabs {
+    display: flex;
+    gap: var(--spacing-1);
+}
+
+.config-tab {
+    position: relative;
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(var(--color-text-secondary));
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: -1px;
+    
+    &:hover:not(.config-tab-active) {
+        color: rgb(var(--color-text-primary));
+        background: rgb(var(--color-gray-50));
+        border-bottom-color: rgb(var(--color-gray-300));
+    }
+    
+    &.config-tab-active {
+        color: rgb(var(--color-primary));
+        background: white;
+        border-bottom-color: rgb(var(--color-primary));
+        
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: white;
+        }
+    }
+}
+
+/* Config Section Styles */
+.config-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-6);
+}
+
+.config-section-title {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: rgb(var(--color-text-primary));
+}
+
+/* Config Table Styles */
+.config-table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid rgb(var(--color-border));
+}
+
+.config-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+}
+
+.config-table-header {
+    background: rgb(var(--color-gray-50));
+    border-bottom: 1px solid rgb(var(--color-border));
+}
+
+.config-table-th {
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(var(--color-text-secondary));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.config-table-row {
+    position: relative;
+    transition: all 0.2s ease;
+    
+    td {
+        padding: var(--spacing-4);
+        vertical-align: middle;
+        border-bottom: 1px solid rgb(var(--color-border));
+    }
+    
+    &:hover:not(.dragging) {
+        background: rgb(var(--color-gray-50));
+    }
+    
+    &:last-child td {
+        border-bottom: none;
+    }
+}
+
+.config-table-drop-zone {
+    height: var(--spacing-4);
+    
+    td {
+        padding: var(--spacing-2);
+        text-align: center;
+        font-size: 0.75rem;
+        color: rgb(var(--color-text-muted));
+        border-bottom: 1px solid rgb(var(--color-border));
+    }
+    
+    &:hover {
+        background: rgb(var(--color-gray-25));
+    }
+}
+
+.config-table-drop-zone-cell {
+    text-align: center;
+    font-size: 0.75rem;
+    color: rgb(var(--color-text-muted));
+}
+
+/* Drag and Drop Visual Indicators */
+.draggable {
+    cursor: move;
+    user-select: none;
+}
+
+.dragging {
+    opacity: 0.5;
+}
+
+.drag-over-top {
+    border-top: 3px solid rgb(var(--color-primary)) !important;
+}
+
+.drag-over-bottom {
+    border-bottom: 3px solid rgb(var(--color-primary)) !important;
+}
+
+.drag-handle {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-1);
+    color: rgb(var(--color-text-muted));
+    cursor: move;
+    
+    &:hover {
+        color: rgb(var(--color-text-secondary));
+    }
+}
+</style>

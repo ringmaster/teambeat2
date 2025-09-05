@@ -29,7 +29,7 @@
     
     function updateHeaderWidth() {
         if (headerContentDiv) {
-            const innerDiv = headerContentDiv.querySelector('.flex');
+            const innerDiv = headerContentDiv.querySelector('.board-header-content');
             if (innerDiv) {
                 const width = (innerDiv as HTMLElement).offsetWidth;
                 document.documentElement.style.setProperty('--board-header-width', `${width}px`);
@@ -48,7 +48,7 @@
 
 <div id="board-header" class="surface-primary content-divider page-container" style="padding: var(--spacing-4) var(--spacing-4);">
     <div id="board-header-content" class="page-width" bind:this={headerContentDiv}>
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <div class="board-header-content" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <!-- Left: Board title with inline role/status pills -->
             <div style="display: flex; align-items: center; gap: var(--spacing-3);">
                 <h1 class="heading" style="margin: 0;">

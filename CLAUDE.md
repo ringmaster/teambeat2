@@ -25,7 +25,7 @@ This project prioritizes **developer autonomy** over framework magic. We choose 
 
 ### 4. Schema as Code
 - Database schema lives in version control
-- Types are generated from schema, not maintained separately  
+- Types are generated from schema, not maintained separately
 - Migrations are code, not magic
 - Schema changes should be reviewable diffs
 
@@ -57,6 +57,12 @@ This project prioritizes **developer autonomy** over framework magic. We choose 
 - **Usage**: API input validation, form validation, data parsing
 - **Avoid**: Duplicate validation logic between client/server
 
+### Style Management: Custom Design System
+- **Why**: Full control over UI, no dependency on third-party themes
+- **Usage**: Reusable components, consistent styling, responsive design, selector composition with LESS
+- **Avoid**: Overly complex CSS frameworks like Tailwind that bloat the codebase
+- **Note**: Remove Tailwind-style classes as you go, ensuring that the styles they provided are replaced with custom styles.
+
 ## Code Organization
 
 ### Directory Structure
@@ -77,7 +83,7 @@ src/
 
 ### Naming Conventions
 - **Files**: kebab-case (`card-editor.svelte`, `user-repository.js`)
-- **Components**: PascalCase (`CardEditor`, `UserPresence`)  
+- **Components**: PascalCase (`CardEditor`, `UserPresence`)
 - **Variables**: camelCase (`boardId`, `currentUser`)
 - **Constants**: SCREAMING_SNAKE_CASE (`MAX_CARDS_PER_COLUMN`)
 - **Database**: snake_case (`board_id`, `created_at`)
@@ -127,7 +133,7 @@ src/
 
 ### Three Critical Documentation Files Only
 1. **README.md** - User documentation on how to use the application
-2. **DEVELOPMENT.md** - Technical implementation decisions and architecture choices for future developers/AI agents  
+2. **DEVELOPMENT.md** - Technical implementation decisions and architecture choices for future developers/AI agents
    - Document small but critical decisions that impact future development
    - Include reasoning behind architectural choices, library selections, schema decisions
    - Structure by topic (Database, Authentication, Real-time, etc.)
@@ -153,6 +159,8 @@ src/
 - **Single test directory** with single command to run all tests
 - **Tests must not affect development/production data** - use isolated test databases
 - **Note potential tests** in REVISIT.md rather than implementing immediately unless specifically needed
+
+- **Style Observation Upon Change** - When writing code that is meant to change the appearance of the UI, attempt to use MCP tools that might be available to ensure that the change you've applied has had the desired effect. This is not a hard requirement for every visual change, but when given instruction that the UI does not look like desired, changes should be checked with MCP tools to ensure the change has had the desired effect.
 
 ### Performance Considerations
 - **Page loads under 300ms** for reasonable connections
