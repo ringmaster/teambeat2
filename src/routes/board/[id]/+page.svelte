@@ -628,8 +628,8 @@
                 body: JSON.stringify(columnData),
             });
             if (response.ok) {
+                // Don't update local state - let the websocket handle it to avoid duplicates
                 const data = await response.json();
-                board.columns = [...(board.columns || []), data.column];
             } else {
                 const errorData = await response.json();
                 console.error("Failed to create column:", errorData);
