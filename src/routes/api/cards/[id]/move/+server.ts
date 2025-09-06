@@ -52,9 +52,9 @@ export const PUT: RequestHandler = async (event) => {
 			);
 		}
 		
-		// Check if current scene allows editing cards
+		// Check if current scene allows moving cards
 		const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-		if (!currentScene || !currentScene.allowEditCards) {
+		if (!currentScene || !currentScene.allowMoveCards) {
 			return json(
 				{ success: false, error: 'Moving cards not allowed in current scene' },
 				{ status: 403 }

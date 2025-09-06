@@ -43,19 +43,22 @@
         // Admin and facilitator can always delete
         return ["admin", "facilitator"].includes(userRole);
     });
+
+    // Check if card can be moved/dragged
+    let canMove = $derived(currentScene?.allowMoveCards ?? false);
 </script>
 
 <div
     class="card {groupingMode ? 'grouping-mode' : ''} {isSelected
         ? 'selected'
-        : ''}"
+        : ''} {!canMove ? 'no-drag' : ''}"
     role="button"
     aria-label="Card: {card.content.substring(0, 50)}{card.content.length > 50
         ? '...'
         : ''}"
     tabindex="0"
-    draggable="true"
-    ondragstart={(e) => onDragStart(e, card.id)}
+    draggable={canMove}
+    ondragstart={(e) => canMove && onDragStart(e, card.id)}
     onclick={() => groupingMode && onToggleSelection(card.id)}
     onkeydown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -164,6 +167,10 @@
 
     .card.selected {
         box-shadow: 0 0 0 2px var(--card-selection-highlight);
+    }
+
+    .card.no-drag {
+        cursor: default;
     }
 
     /* Text styles */

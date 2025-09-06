@@ -493,6 +493,12 @@
     }
 
     function handleDragStart(event: DragEvent, cardId: string) {
+        // Check if moving cards is allowed in current scene
+        if (!currentScene?.allowMoveCards) {
+            event.preventDefault();
+            return;
+        }
+        
         draggedCardId = cardId;
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = "move";
@@ -501,6 +507,15 @@
 
     function handleDragOver(event: DragEvent, columnId: string) {
         event.preventDefault();
+        
+        // Don't allow drop if moving cards is not allowed
+        if (!currentScene?.allowMoveCards) {
+            if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = "none";
+            }
+            return;
+        }
+        
         if (event.dataTransfer) {
             event.dataTransfer.dropEffect = "move";
         }
@@ -511,7 +526,7 @@
 
     function handleDragEnter(event: DragEvent, columnId: string) {
         event.preventDefault();
-        if (draggedCardId) {
+        if (draggedCardId && currentScene?.allowMoveCards) {
             cardDropTargetColumnId = columnId;
         }
     }
@@ -536,8 +551,9 @@
     async function handleDrop(event: DragEvent, targetColumnId: string) {
         event.preventDefault();
 
-        if (!draggedCardId || !currentScene?.allowEditCards) {
+        if (!draggedCardId || !currentScene?.allowMoveCards) {
             draggedCardId = "";
+            cardDropTargetColumnId = "";
             return;
         }
 
