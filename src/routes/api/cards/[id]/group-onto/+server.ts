@@ -80,19 +80,27 @@ export const POST: RequestHandler = async (event) => {
 			);
 		}
 		
-		const groupId = await groupCardOntoTarget(cardId, data.targetCardId);
+		const result = await groupCardOntoTarget(cardId, data.targetCardId);
 		
 		// Get all affected cards and broadcast updates
 		const updatedCards = await getCardsForBoard(board.id);
-		const affectedCards = updatedCards.filter(c => c.groupId === groupId);
+		const affectedCards = updatedCards.filter(c => c.groupId === result.targetGroupId);
 		
 		for (const affectedCard of affectedCards) {
 			broadcastCardUpdated(board.id, affectedCard);
 		}
 		
+		// Broadcast updates for any cards affected by ungrouping (like lead card losing status)
+		for (const affectedCardId of result.affectedCardIds) {
+			const affectedCard = updatedCards.find(c => c.id === affectedCardId);
+			if (affectedCard) {
+				broadcastCardUpdated(board.id, affectedCard);
+			}
+		}
+		
 		return json({
 			success: true,
-			groupId
+			groupId: result.targetGroupId
 		});
 	} catch (error) {
 		if (error instanceof Response) {

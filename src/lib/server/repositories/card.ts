@@ -291,8 +291,18 @@ export async function groupCardOntoTarget(draggedCardId: string, targetCardId: s
         updatedAt: new Date().toISOString()
       })
       .where(eq(cards.groupId, draggedCard.groupId));
+    
+    return { targetGroupId, affectedCardIds: [] };
   } else {
-    // Just move the single dragged card to the target's group
+    let affectedCardIds: string[] = [];
+    
+    // If the dragged card is part of a group (subordinate), use ungroupCard for proper cleanup
+    if (draggedCard.groupId) {
+      const ungroupResult = await ungroupCard(draggedCardId);
+      affectedCardIds = ungroupResult.affectedCardIds;
+    }
+
+    // Move the card to the target's group
     await db
       .update(cards)
       .set({
@@ -302,9 +312,11 @@ export async function groupCardOntoTarget(draggedCardId: string, targetCardId: s
         updatedAt: new Date().toISOString()
       })
       .where(eq(cards.id, draggedCardId));
+
+    return { targetGroupId, affectedCardIds };
   }
 
-  return targetGroupId;
+  return { targetGroupId, affectedCardIds: [] };
 }
 
 
