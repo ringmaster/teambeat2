@@ -238,21 +238,21 @@
         font-size: 1.125rem;
         line-height: 1.75rem;
         font-weight: 500;
-        color: rgb(var(--color-gray-900));
+        color: var(--color-text-primary);
         margin: 0;
     }
 
     .add-user-section {
-        border: 1px solid rgb(var(--color-border));
+        border: 1px solid var(--color-border);
         border-radius: var(--radius-lg);
         padding: var(--spacing-4);
-        background-color: rgb(var(--color-gray-50));
+        background-color: var(--surface-elevated);
     }
 
     .section-header {
         font-size: 0.875rem;
         font-weight: 500;
-        color: rgb(var(--color-gray-700));
+        color: var(--color-text-secondary);
         margin: 0 0 var(--spacing-3) 0;
     }
 
@@ -264,7 +264,7 @@
     .email-input {
         flex: 1;
         padding: var(--spacing-2) var(--spacing-3);
-        border: 1px solid rgb(var(--color-border));
+        border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         font-size: 0.875rem;
         background-color: white;
@@ -272,8 +272,8 @@
 
     .email-input:focus {
         outline: none;
-        border-color: rgb(var(--color-primary));
-        ring: 2px solid rgb(var(--color-primary) / 0.2);
+        border-color: var(--color-primary);
+        ring: 2px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
     }
 
     .email-input:disabled {
@@ -298,7 +298,7 @@
     }
 
     .form-error-small {
-        color: rgb(var(--color-red-600));
+        color: var(--color-danger);
         font-size: 0.75rem;
         line-height: 1rem;
         margin-top: var(--spacing-2);
@@ -313,7 +313,7 @@
     .empty-users-state {
         text-align: center;
         padding: var(--spacing-8) 0;
-        color: rgb(var(--color-gray-500));
+        color: var(--color-text-muted);
     }
 
     .empty-users-text {
@@ -346,7 +346,7 @@
     .user-name {
         font-weight: 500;
         font-size: 0.875rem;
-        color: rgb(var(--color-gray-900));
+        color: var(--color-text-primary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -361,24 +361,24 @@
     }
 
     .role-badge.role-admin {
-        background-color: rgb(var(--color-red-100));
-        color: rgb(var(--color-red-800));
+        background-color: var(--status-error-bg);
+        color: var(--status-error-text);
     }
 
     .role-badge.role-facilitator {
-        background-color: rgb(var(--color-yellow-100));
-        color: rgb(var(--color-yellow-800));
+        background-color: var(--status-warning-bg);
+        color: var(--status-warning-text);
     }
 
     .role-badge.role-member {
-        background-color: rgb(var(--color-gray-100));
-        color: rgb(var(--color-gray-800));
+        background-color: var(--surface-primary);
+        color: var(--color-text-primary);
     }
 
     .user-details {
         font-size: 0.75rem;
         line-height: 1rem;
-        color: rgb(var(--color-gray-500));
+        color: var(--color-text-muted);
         margin-top: 0.125rem;
     }
 
@@ -391,7 +391,7 @@
 
     .role-select {
         padding: 0.125rem var(--spacing-2);
-        border: 1px solid rgb(var(--color-border));
+        border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         font-size: 0.75rem;
         line-height: 1rem;
@@ -403,22 +403,22 @@
         padding: 0.125rem;
         background: none;
         border: none;
-        color: rgb(var(--color-red-600));
+        color: var(--color-danger);
         cursor: pointer;
         border-radius: var(--radius-md);
         transition: all var(--transition-fast);
     }
 
     .remove-user-button:hover {
-        background-color: rgb(var(--color-red-50));
-        color: rgb(var(--color-red-700));
+        background-color: var(--status-error-bg);
+        color: var(--color-danger-hover);
     }
 
     .permissions-help {
         font-size: 0.75rem;
         line-height: 1rem;
-        color: rgb(var(--color-gray-500));
-        background-color: rgb(var(--color-blue-50));
+        color: var(--color-text-muted);
+        background-color: var(--status-info-bg);
         padding: var(--spacing-3);
         border-radius: var(--radius-lg);
     }

@@ -88,18 +88,18 @@
 
     /* Variants */
     .btn-primary {
-        background-color: rgb(var(--color-blue-500));
+        background-color: var(--input-border-focus);
         color: white;
     }
 
     .btn-primary:hover:not(:disabled) {
-        background-color: rgb(var(--color-blue-600));
+        background-color: var(--input-border-focus);
         box-shadow: var(--shadow-md);
     }
 
     .btn-secondary {
         background-color: rgb(255 255 255 / 0.5);
-        color: rgb(var(--color-gray-700));
+        color: var(--color-text-secondary);
     }
 
     .btn-secondary:hover:not(:disabled) {
@@ -108,23 +108,23 @@
     }
 
     .btn-danger {
-        background-color: rgb(var(--color-red-600));
+        background-color: var(--color-danger);
         color: white;
     }
 
     .btn-danger:hover:not(:disabled) {
-        background-color: rgb(var(--color-red-700));
+        background-color: var(--color-danger-hover);
         box-shadow: var(--shadow-md);
     }
 
     .btn-ghost {
         background-color: transparent;
-        color: rgb(var(--color-gray-600));
+        color: var(--color-text-secondary);
     }
 
     .btn-ghost:hover:not(:disabled) {
-        background-color: rgb(var(--color-gray-100));
-        color: rgb(var(--color-gray-900));
+        background-color: var(--surface-primary);
+        color: var(--color-text-primary);
     }
 
     /* Sizes */

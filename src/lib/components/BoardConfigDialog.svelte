@@ -304,7 +304,7 @@
                                                 blameFreeMode:
                                                     configForm.blameFreeMode,
                                             })}
-                                        style="width: 1rem; height: 1rem; accent-color: rgb(var(--color-primary));"
+                                        style="width: 1rem; height: 1rem; accent-color: var(--color-primary);"
                                     />
                                     <div
                                         class="form-group"
@@ -405,7 +405,7 @@
         align-items: center;
         justify-content: space-between;
         padding: var(--spacing-4) var(--spacing-6);
-        border-bottom: 1px solid rgb(var(--color-border));
+        border-bottom: 1px solid var(--color-border);
     }
 
     .config-header-content {
@@ -418,7 +418,7 @@
     .config-modal-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
         margin: 0;
     }
 
@@ -439,7 +439,7 @@
         padding: var(--spacing-3) var(--spacing-4);
         font-size: 0.875rem;
         font-weight: 500;
-        color: rgb(var(--color-text-secondary));
+        color: var(--color-text-secondary);
         background: transparent;
         border: none;
         border-bottom: 3px solid transparent;
@@ -448,15 +448,15 @@
         margin-bottom: -1px;
 
         &:hover:not(.config-tab-active) {
-            color: rgb(var(--color-text-primary));
-            background: rgb(var(--color-gray-50));
-            border-bottom-color: rgb(var(--color-gray-300));
+            color: var(--color-text-primary);
+            background: var(--surface-elevated);
+            border-bottom-color: var(--surface-secondary);
         }
 
         &.config-tab-active {
-            color: rgb(var(--color-primary));
+            color: var(--color-primary);
             background: white;
-            border-bottom-color: rgb(var(--color-primary));
+            border-bottom-color: var(--color-primary);
 
             &::after {
                 content: "";
@@ -481,7 +481,7 @@
     .config-section-title {
         font-size: 1.125rem;
         font-weight: 500;
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
     }
 
     /* Config Add Button Styles */
@@ -490,7 +490,7 @@
         align-items: center;
         gap: var(--spacing-2);
         padding: var(--spacing-2) var(--spacing-4);
-        background: rgb(var(--color-primary));
+        background: var(--color-primary);
         color: white;
         border: none;
         border-radius: var(--radius-md);
@@ -501,7 +501,7 @@
         white-space: nowrap;
 
         &:hover {
-            background: rgb(var(--color-teal-600));
+            background: var(--card-vote-button-hover);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -521,7 +521,7 @@
     .config-table-wrapper {
         overflow-x: auto;
         border-radius: var(--radius-md);
-        border: 1px solid rgb(var(--color-border));
+        border: 1px solid var(--color-border);
     }
 
     .config-table {
@@ -532,8 +532,8 @@
     }
 
     .config-table-header {
-        background: rgb(var(--color-gray-50));
-        border-bottom: 1px solid rgb(var(--color-border));
+        background: var(--surface-elevated);
+        border-bottom: 1px solid var(--color-border);
     }
 
     .config-table-th {
@@ -541,7 +541,7 @@
         text-align: left;
         font-size: 0.75rem;
         font-weight: 500;
-        color: rgb(var(--color-text-secondary));
+        color: var(--color-text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -553,7 +553,7 @@
         td {
             padding: var(--spacing-3) var(--spacing-4);
             vertical-align: middle;
-            border-bottom: 1px solid rgb(var(--color-border));
+            border-bottom: 1px solid var(--color-border);
         }
 
         td .input {
@@ -565,7 +565,7 @@
         }
 
         &:hover:not(.dragging) {
-            background: rgb(var(--color-gray-50));
+            background: var(--surface-elevated);
         }
 
         &:last-child td {
@@ -580,19 +580,19 @@
             padding: var(--spacing-2);
             text-align: center;
             font-size: 0.75rem;
-            color: rgb(var(--color-text-muted));
-            border-bottom: 1px solid rgb(var(--color-border));
+            color: var(--color-text-muted);
+            border-bottom: 1px solid var(--color-border);
         }
 
         &:hover {
-            background: rgb(var(--color-gray-25));
+            background: var(--surface-elevated);
         }
     }
 
     .config-table-drop-zone-cell {
         text-align: center;
         font-size: 0.75rem;
-        color: rgb(var(--color-text-muted));
+        color: var(--color-text-muted);
     }
 
     /* Drag and Drop Visual Indicators */
@@ -606,11 +606,11 @@
     }
 
     .drag-over-top {
-        border-top: 3px solid rgb(var(--color-primary)) !important;
+        border-top: 3px solid var(--color-primary) !important;
     }
 
     .drag-over-bottom {
-        border-bottom: 3px solid rgb(var(--color-primary)) !important;
+        border-bottom: 3px solid var(--color-primary) !important;
     }
 
     .drag-handle {
@@ -619,14 +619,14 @@
         justify-content: center;
         width: 24px;
         height: 24px;
-        color: rgb(var(--color-text-muted));
+        color: var(--color-text-muted);
         cursor: move;
         border-radius: var(--radius-sm);
         transition: all 0.2s ease;
 
         &:hover {
-            color: rgb(var(--color-text-secondary));
-            background: rgb(var(--color-gray-100));
+            color: var(--color-text-secondary);
+            background: var(--surface-primary);
         }
     }
 

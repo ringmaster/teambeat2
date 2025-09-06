@@ -154,7 +154,8 @@
                             >Dashboard</a
                         >
                         <button
-                            class="full-width status-text-danger text-medium"
+                            class="status-text-danger text-medium"
+                            style="width: 100%;"
                             onclick={async () => {
                                 await fetch("/api/auth/logout", {
                                     method: "POST",
@@ -165,10 +166,10 @@
                             Sign Out
                         </button>
                     {:else}
-                        <a href="/login" class="btn-secondary full-width"
+                        <a href="/login" class="btn-secondary" style="width: 100%;"
                             >Sign In</a
                         >
-                        <a href="/register" class="btn-primary full-width"
+                        <a href="/register" class="btn-primary" style="width: 100%;"
                             >Register</a
                         >
                     {/if}

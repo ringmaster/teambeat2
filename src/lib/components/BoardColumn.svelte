@@ -1,6 +1,7 @@
 <script lang="ts">
     import Card from './Card.svelte';
     import TextareaWithButton from './ui/TextareaWithButton.svelte';
+    import Icon from './ui/Icon.svelte';
     
     interface Props {
         column: any;
@@ -97,10 +98,13 @@
                 oninput={(e) => onSetColumnContent(column.id, e.currentTarget.value)}
                 placeholder="Add a card..."
                 rows={2}
-                buttonText="Add"
                 buttonVariant="primary"
                 onButtonClick={() => onAddCard(column.id)}
-            />
+            >
+                {#snippet buttonContent()}
+                    <Icon name="plus" size="sm" />
+                {/snippet}
+            </TextareaWithButton>
         </div>
     {/if}
 
@@ -183,7 +187,7 @@
     }
 
     .column.drag-target {
-        box-shadow: 0 0 0 2px rgb(var(--color-teal-500));
+        box-shadow: 0 0 0 2px var(--card-interactive-highlight);
     }
 
     /* Column Header */
@@ -195,13 +199,13 @@
 
     .column-header h2 {
         font-weight: 600;
-        color: rgb(var(--color-gray-700));
+        color: var(--color-text-secondary);
         font-size: 1rem;
         margin: 0;
     }
 
     .column-header p {
-        color: rgb(var(--color-gray-600));
+        color: var(--color-text-secondary);
         font-size: 0.875rem;
         margin-top: 4px;
     }
@@ -226,10 +230,10 @@
 
     /* Group container */
     .group-container {
-        border: 1px dashed rgb(var(--color-gray-300));
+        border: 1px dashed var(--surface-secondary);
         border-radius: 6px;
         padding: 12px;
-        background-color: rgb(var(--color-gray-50));
+        background-color: var(--surface-elevated);
     }
 
     .group-header {
@@ -242,12 +246,12 @@
     .group-header h4 {
         font-size: 0.875rem;
         font-weight: 500;
-        color: rgb(var(--color-gray-700));
+        color: var(--color-text-secondary);
     }
 
     .group-header button {
         font-size: 0.75rem;
-        color: rgb(var(--color-teal-500));
+        color: var(--card-interactive-highlight);
         background: none;
         border: none;
         cursor: pointer;
@@ -255,7 +259,7 @@
     }
 
     .group-header button:hover {
-        color: rgb(var(--color-teal-600));
+        color: var(--card-vote-button-hover);
     }
 
     .group-cards {

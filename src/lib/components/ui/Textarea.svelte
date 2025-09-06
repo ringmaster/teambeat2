@@ -43,7 +43,7 @@
     .textarea {
         width: 100%;
         padding: var(--spacing-3);
-        border: 1px solid rgb(var(--color-gray-200));
+        border: 1px solid var(--input-border);
         border-radius: var(--radius-lg);
         font-size: 0.875rem;
         line-height: 1.25rem;
@@ -55,17 +55,17 @@
 
     .textarea:focus {
         outline: none;
-        border-color: rgb(var(--color-blue-500));
-        box-shadow: 0 0 0 1px rgb(var(--color-blue-500));
+        border-color: var(--input-border-focus);
+        box-shadow: 0 0 0 1px var(--input-border-focus);
     }
 
     .textarea:disabled {
-        background-color: rgb(var(--color-gray-50));
+        background-color: var(--input-background-disabled);
         opacity: 0.6;
         cursor: not-allowed;
     }
 
     .textarea::placeholder {
-        color: rgb(var(--color-gray-400));
+        color: var(--input-placeholder);
     }
 </style>

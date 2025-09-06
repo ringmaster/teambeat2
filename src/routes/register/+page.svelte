@@ -168,7 +168,7 @@
 <style>
 	.register-page {
 		min-height: 100vh;
-		background: rgb(var(--color-bg-primary));
+		background: var(--color-bg-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -208,8 +208,8 @@
 		height: 4rem;
 		background: linear-gradient(
 			to bottom right,
-			rgb(var(--color-indigo-500)),
-			rgb(var(--color-purple-600))
+			var(--avatar-gradient-start),
+			var(--avatar-gradient-end)
 		);
 		color: white;
 		border-radius: 1rem;
@@ -227,7 +227,7 @@
 	}
 
 	.register-subtitle {
-		color: rgb(var(--color-gray-600));
+		color: var(--color-text-secondary);
 		font-size: 1rem;
 		margin: 0;
 	}
@@ -244,7 +244,7 @@
 
 	.register-signin-link {
 		font-weight: 600;
-		background: linear-gradient(to right, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+		background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
@@ -254,7 +254,7 @@
 	}
 
 	.register-signin-link:hover {
-		background: linear-gradient(to right, rgb(var(--color-indigo-600)), rgb(var(--color-purple-700)));
+		background: linear-gradient(to right, var(--avatar-gradient-start), var(--avatar-gradient-end));
 		-webkit-background-clip: text;
 		background-clip: text;
 	}

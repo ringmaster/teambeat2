@@ -44,8 +44,8 @@
     .avatar {
         background: linear-gradient(
             to bottom right,
-            rgb(var(--color-indigo-400)),
-            rgb(var(--color-purple-500))
+            var(--avatar-gradient-start),
+            var(--avatar-gradient-end)
         );
         border-radius: var(--radius-full);
         display: flex;

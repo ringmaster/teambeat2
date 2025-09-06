@@ -527,13 +527,13 @@
     /* Style select boxes to match buttons */
     .select {
         appearance: none;
-        background: white;
-        border: 1px solid rgb(var(--color-border));
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         padding: var(--spacing-2) var(--spacing-4);
         font-size: 0.875rem;
         font-weight: 500;
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
         cursor: pointer;
         transition: all 0.2s ease;
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -544,14 +544,15 @@
     }
 
     .select:hover {
-        border-color: rgb(var(--color-border-hover));
-        background-color: rgb(var(--color-gray-50));
+        border-color: var(--color-border-hover);
+        background-color: var(--surface-elevated);
     }
 
     .select:focus {
         outline: none;
-        border-color: rgb(var(--color-primary));
-        box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.1);
+        border-color: var(--color-border-focus);
+        box-shadow: 0 0 0 3px var(--color-border-focus);
+        opacity: 0.1;
     }
 
     /* Permission Section Styles */
@@ -562,7 +563,7 @@
     .permissions-title {
         font-size: 0.875rem;
         font-weight: 500;
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
         margin-bottom: var(--spacing-4);
     }
 
@@ -592,26 +593,27 @@
 
     /* Inactive (unchecked) buttons - muted secondary color */
     .permissions-grid .btn-secondary {
-        background-color: rgb(var(--color-gray-100));
-        border-color: rgb(var(--color-border));
-        color: rgb(var(--color-text-secondary));
+        background-color: var(--btn-unselected-bg);
+        border-color: var(--btn-unselected-border);
+        color: var(--btn-unselected-text);
     }
 
     .permissions-grid .btn-secondary:hover {
-        background-color: rgb(var(--color-gray-200));
-        border-color: rgb(var(--color-border-hover));
+        background-color: var(--btn-unselected-bg-hover);
+        border-color: var(--btn-unselected-border);
     }
 
     /* Active (checked) Permission Button State - primary color */
     .btn-secondary.permission-active {
-        background-color: rgb(var(--color-primary));
-        border-color: rgb(var(--color-primary));
-        color: white;
+        background-color: var(--btn-primary-bg);
+        border-color: var(--btn-primary-bg);
+        color: var(--btn-primary-text);
     }
 
     .btn-secondary.permission-active:hover {
-        background-color: rgb(var(--color-primary) / 0.9);
-        border-color: rgb(var(--color-primary));
+        background-color: var(--btn-primary-bg-hover);
+        border-color: var(--btn-primary-bg-hover);
+        color: var(--btn-primary-text);
     }
 
     /* Show icon when permission is active - higher specificity */

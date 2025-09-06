@@ -1,5 +1,40 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 
+/* ==================================
+   LESS Color System - Brand Colors
+   ================================== */
+
+// TeamBeat Brand Color Family - 5 coordinated colors for all controls
+@brand-primary: #39495C;        // Primary brand color (confirmed)
+@brand-secondary: #395A5C;      // Teal-leaning secondary
+@brand-tertiary: #3B395C;       // Purple-leaning tertiary
+@brand-accent: #4D7A75;         // Cool accent color
+//@brand-accent: #5C3B39;         // Warm accent color
+@brand-complement: #5A5C39;     // Earth tone complement
+
+// Semantic color assignments from brand family
+@interactive-primary: @brand-primary;    // Main interactive elements
+@interactive-secondary: @brand-secondary; // Secondary actions
+@interactive-accent: @brand-accent;      // Highlighting and focus states
+@interactive-tertiary: @brand-tertiary;  // Alternative actions
+@surface-accent: @brand-complement;      // Subtle surface accents
+
+// Status colors - derived from brand family with adjustments for accessibility
+@brand-danger: hsl(0, 61%, 70%);         // Softer red for errors
+@brand-warning: hsl(35, 92%, 50%);       // Yellow/Orange for warnings
+@brand-success: hsl(174, 80%, 40%);      // Teal for success
+@brand-info: @brand-secondary;           // Use secondary brand color for info
+
+// Neutral colors
+@neutral-white: hsl(0, 0%, 100%);
+@neutral-off-white: hsl(0, 0%, 96%);
+@neutral-light-gray: hsl(210, 14%, 95%);
+@neutral-gray: hsl(210, 11%, 85%);
+@neutral-mid-gray: hsl(210, 10%, 55%);
+@neutral-dark-gray: hsl(210, 10%, 30%);
+@neutral-darker: hsl(210, 12%, 20%);
+@neutral-black: hsl(0, 0%, 10%);
+
 /* LESS Mixins for Common Patterns */
 
 // Flexbox Layout Mixins
@@ -66,14 +101,14 @@
 
 .input-style() {
     width: 100%;
-    border: 1px solid rgb(var(--color-gray-200));
+    border: 1px solid var(--input-border);
     font-family: inherit;
     transition: all var(--transition-fast);
 
     &:focus {
         outline: none;
-        border-color: rgb(var(--color-teal-500));
-        box-shadow: 0 0 0 1px rgb(var(--color-teal-500));
+        border-color: var(--card-interactive-highlight);
+        box-shadow: 0 0 0 1px var(--card-interactive-highlight);
     }
 }
 
@@ -86,7 +121,7 @@
 .card-surface() {
     .surface(white, var(--shadow-md));
     border-radius: var(--radius-lg);
-    border: 1px solid rgb(var(--color-gray-200));
+    border: 1px solid var(--input-border);
 }
 
 .form-card() {
@@ -102,7 +137,7 @@
 
 .user-card() {
     background-color: white;
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--spacing-3);
     transition: all var(--transition-fast);
@@ -129,15 +164,15 @@
 
 // Form and Layout Mixins
 .form-error-base() {
-    color: rgb(var(--color-red-600));
+    color: var(--color-danger);
     font-size: 0.875rem;
     line-height: 1.25rem;
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
     padding: var(--spacing-3) var(--spacing-4);
-    background-color: rgb(var(--color-red-50));
-    border: 1px solid rgb(var(--color-red-200));
+    background-color: var(--status-error-bg);
+    border: 1px solid var(--status-error-bg);
     border-radius: var(--radius-xl);
     margin-bottom: var(--spacing-6);
 }
@@ -154,7 +189,7 @@
 .empty-state() {
     text-align: center;
     padding: var(--spacing-12) var(--spacing-4);
-    color: rgb(var(--color-gray-500));
+    color: var(--color-text-muted);
 }
 
 // Modal Mixins
@@ -186,7 +221,7 @@
 
 .modal-header() {
     padding: var(--spacing-6);
-    border-bottom: 1px solid rgb(var(--color-gray-200));
+    border-bottom: 1px solid var(--input-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -201,13 +236,13 @@
 .modal-title() {
     font-size: 1.25rem;
     font-weight: 700;
-    color: rgb(var(--color-gray-900));
+    color: var(--color-text-primary);
     margin: 0;
 }
 
 .modal-subtitle() {
     font-size: 0.875rem;
-    color: rgb(var(--color-gray-600));
+    color: var(--color-text-secondary);
     margin: 0;
 }
 
@@ -221,21 +256,21 @@
 .close-button() {
     background: none;
     border: none;
-    color: rgb(var(--color-gray-400));
+    color: var(--input-placeholder);
     cursor: pointer;
     padding: var(--spacing-1);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
 
     &:hover {
-        color: rgb(var(--color-gray-600));
-        background-color: rgb(var(--color-gray-100));
+        color: var(--color-text-secondary);
+        background-color: var(--surface-primary);
     }
 }
 
 .warning-section() {
-    background-color: rgb(var(--color-red-50));
-    border: 1px solid rgb(var(--color-red-200));
+    background-color: var(--status-error-bg);
+    border: 1px solid var(--status-error-bg);
     border-radius: var(--radius-lg);
     padding: var(--spacing-4);
     margin: var(--spacing-4) 0;
@@ -282,91 +317,132 @@
 }
 
 :root {
-    /* Color Variables - Design Tokens */
-    --color-primary: 62, 83, 104; /* Slate Blue */
-    --color-secondary: 82, 103, 124; /* Muted Blue Gray */
-    --color-accent: 59, 130, 246; /* Bright Blue for CTAs */
-    --color-bg-primary: 245, 245, 245; /* Not-quite White */
+    /* Primary Brand Colors - Using TeamBeat 5-Color Family */
+    --color-primary: @interactive-primary;
+    --color-primary-hover: lighten(@interactive-primary, 15%);
+    --color-primary-active: darken(@interactive-primary, 8%);
+
+    --color-secondary: @interactive-secondary;
+    --color-secondary-hover: lighten(@interactive-secondary, 15%);
+
+    --color-accent: @interactive-accent;
+    --color-accent-hover: lighten(@interactive-accent, 15%);
+
+    --color-tertiary: @interactive-tertiary;
+    --color-tertiary-hover: lighten(@interactive-tertiary, 15%);
+
+    /* Background Colors */
+    --color-bg-primary: @neutral-off-white;
+    --color-bg-secondary: @neutral-white;
+    --color-bg-muted: @neutral-light-gray;
+
+    /* Text Colors */
+    --color-text-primary: @neutral-darker;
+    --color-text-secondary: @neutral-dark-gray;
+    --color-text-muted: @neutral-mid-gray;
+    --color-text-inverse: @neutral-white;
 
     /* Semantic Status Colors */
-    --color-danger: 234, 125, 125; /* Softer red */
-    --color-danger-hover: 185, 28, 28; /* Red 700 */
-    --color-warning: 245, 158, 11; /* Yellow 500 */
-    --color-success: 20, 184, 166; /* Teal 500 */
-    --color-info: 59, 130, 246; /* Blue 500 */
+    --color-danger: @brand-danger;
+    --color-danger-hover: darken(@brand-danger, 10%);
+    --color-warning: @brand-warning;
+    --color-warning-hover: darken(@brand-warning, 10%);
+    --color-success: @brand-success;
+    --color-success-hover: darken(@brand-success, 10%);
+    --color-info: @brand-info;
+    --color-info-hover: darken(@brand-info, 10%);
 
-    /* Brand Colors - Muted Palette */
-    --color-blue-400: 96, 165, 250;
-    --color-blue-500: 59, 130, 246;
-    --color-blue-600: 37, 99, 235;
-    --color-blue-700: 29, 78, 216;
+    /* Input and Form Colors */
+    --input-border: lighten(@neutral-gray, 5%);
+    --input-border-focus: @interactive-accent;
+    --input-background-disabled: @neutral-off-white;
+    --input-placeholder: darken(@neutral-gray, 10%);
 
-    --color-slate-400: 148, 163, 184;
-    --color-slate-500: 100, 116, 139;
-    --color-slate-600: 71, 85, 105;
-    --color-slate-700: 51, 65, 85;
-    --color-slate-800: 30, 41, 59;
+    /* Surface Colors */
+    --surface-elevated: @neutral-off-white;
+    --surface-primary: @neutral-light-gray;
+    --surface-secondary: @neutral-gray;
+    --surface-hover: @neutral-off-white;
 
-    --color-indigo-400: 129, 140, 248;
-    --color-indigo-500: 99, 102, 241;
+    /* Interactive Colors */
+    --interactive-hover: @neutral-off-white;
+    --interactive-selected: @interactive-secondary;
+    --interactive-focus-ring: @interactive-primary;
 
-    --color-purple-500: 168, 85, 247;
-    --color-purple-600: 147, 51, 234;
+    /* Status Background Colors */
+    --status-error-bg: fade(@brand-danger, 15%);
+    --status-warning-bg: fade(@brand-warning, 15%);
+    --status-success-bg: fade(@brand-success, 15%);
+    --status-info-bg: fade(@brand-info, 15%);
 
-    --color-teal-500: 20, 184, 166;
-    --color-teal-600: 13, 148, 136;
+    /* Status Text Colors */
+    --status-error-text: darken(@brand-danger, 15%);
+    --status-warning-text: darken(@brand-warning, 15%);
+    --status-success-text: darken(@brand-success, 15%);
+    --status-info-text: darken(@brand-info, 15%);
 
-    /* Gray Scale */
-    --color-gray-50: 249, 250, 251;
-    --color-gray-100: 243, 244, 246;
-    --color-gray-200: 229, 231, 235;
-    --color-gray-300: 209, 213, 219;
-    --color-gray-400: 156, 163, 175;
-    --color-gray-500: 107, 114, 128;
-    --color-gray-600: 75, 85, 99;
-    --color-gray-700: 55, 65, 81;
-    --color-gray-800: 31, 41, 55;
-    --color-gray-900: 17, 24, 39;
+    /* Avatar and Brand Accent Colors */
+    --avatar-gradient-start: @interactive-tertiary;
+    --avatar-gradient-end: @interactive-accent;
+
+    /* Card Interactive Colors */
+    --card-interactive-highlight: @interactive-accent;
 
     /* Border Colors */
-    --color-border: 200, 200, 200; /* Muted gray border */
-    --color-border-hover: 156, 163, 175; /* Gray 400 for hover */
+    --color-border: @neutral-gray;
+    --color-border-hover: darken(@neutral-gray, 10%);
+    --color-border-focus: @brand-primary;
 
-    /* Status Colors */
-    --color-red-100: 254, 226, 226;
-    --color-red-500: 239, 68, 68;
-    --color-red-600: 220, 38, 38;
-    --color-red-700: 185, 28, 28;
-    --color-red-800: 153, 27, 27;
+    /* Button Specific Colors - Using Brand Family */
+    --btn-primary-bg: @interactive-primary;
+    --btn-primary-bg-hover: lighten(@interactive-primary, 12%);
+    --btn-primary-text: @neutral-white;
 
-    --color-yellow-100: 254, 249, 195;
-    --color-yellow-500: 245, 158, 11;
-    --color-yellow-800: 146, 64, 14;
+    --btn-secondary-bg: @interactive-secondary;
+    --btn-secondary-bg-hover: lighten(@interactive-secondary, 12%);
+    --btn-secondary-text: @neutral-white;
+    --btn-secondary-border: @interactive-secondary;
 
-    --color-orange-100: 255, 237, 213;
-    --color-orange-500: 249, 115, 22;
-    --color-orange-800: 154, 52, 18;
+    --btn-tertiary-bg: @interactive-tertiary;
+    --btn-tertiary-bg-hover: lighten(@interactive-tertiary, 12%);
+    --btn-tertiary-text: @neutral-white;
 
-    --color-green-500: 34, 197, 94;
+    --btn-accent-bg: @interactive-accent;
+    --btn-accent-bg-hover: lighten(@interactive-accent, 12%);
+    --btn-accent-text: @neutral-white;
+
+    --btn-danger-bg: @brand-danger;
+    --btn-danger-bg-hover: darken(@brand-danger, 10%);
+    --btn-danger-text: @neutral-white;
+
+    --btn-unselected-bg: fade(@interactive-primary, 8%);
+    --btn-unselected-bg-hover: fade(@interactive-primary, 15%);
+    --btn-unselected-text: @interactive-primary;
+    --btn-unselected-border: fade(@interactive-primary, 20%);
+
+    /* Component Specific Colors */
+    --card-bg: @neutral-white;
+    --card-border: @neutral-gray;
+    --card-shadow: fade(@neutral-black, 10%);
 
     /* Component-specific semantic colors */
-    --card-border-color: 204, 204, 204; /* #ccc */
-    --card-background: 255, 255, 255; /* White */
-    --card-text-primary: var(--color-gray-900);
-    --card-text-secondary: var(--color-gray-400);
-    --card-hover-background: var(--color-gray-50);
-    --card-selection-highlight: var(--color-teal-500);
-    --card-delete-button-color: var(--color-red-500);
-    --card-delete-button-hover: var(--color-red-700);
-    --card-delete-button-background: var(--color-red-100);
-    --card-vote-button-background: var(--color-teal-500);
-    --card-vote-button-hover: var(--color-teal-600);
-    --card-comment-button-background: var(--color-gray-500);
-    --card-comment-button-hover: var(--color-gray-600);
+    --card-border-color: @neutral-gray;
+    --card-background: @neutral-white;
+    --card-text-primary: var(--color-text-primary);
+    --card-text-secondary: var(--color-text-muted);
+    --card-hover-background: var(--surface-elevated);
+    --card-selection-highlight: var(--card-interactive-highlight);
+    --card-delete-button-color: var(--color-danger);
+    --card-delete-button-hover: var(--color-danger-hover);
+    --card-delete-button-background: var(--status-error-bg);
+    --card-vote-button-background: var(--card-interactive-highlight);
+    --card-vote-button-hover: lighten(@interactive-accent, 8%);
+    --card-comment-button-background: @interactive-tertiary;
+    --card-comment-button-hover: lighten(@interactive-tertiary, 10%);
 
     /* Title Bar Variables */
-    --title-bar-background: 57, 73, 92; /* #39495c */
-    --title-bar-color: 255, 255, 255; /* White */
+    --title-bar-background: @brand-primary;
+    --title-bar-color: @neutral-white;
 
     /* Spacing */
     --spacing-1: 0.25rem;
@@ -411,7 +487,7 @@ body {
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: rgb(var(--color-bg-primary));
+    background: var(--color-bg-primary);
     min-height: 100vh;
     margin: 0;
     padding: 0;
@@ -422,7 +498,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: rgb(var(--color-bg-primary));
+    background: var(--color-bg-primary);
 }
 
 .main-content {
@@ -434,7 +510,7 @@ body {
 /* Footer Styling */
 .app-footer {
     background: white;
-    border-top: 1px solid rgb(var(--color-border));
+    border-top: 1px solid var(--color-border);
     padding: var(--spacing-4) 0;
     margin-top: auto;
 }
@@ -459,7 +535,7 @@ body {
 
 .footer-copyright {
     font-size: 0.875rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
 }
 
 .footer-right {
@@ -469,12 +545,12 @@ body {
 
 .footer-link {
     font-size: 0.875rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
     text-decoration: none;
     transition: color var(--transition-fast);
 
     &:hover {
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
     }
 }
 
@@ -586,27 +662,27 @@ body {
 .icon-circle {
     border-radius: 50%;
     padding: 0.375rem;
-    background-color: rgb(var(--color-gray-100));
-    border: 1px solid rgb(var(--color-gray-300));
+    background-color: var(--surface-primary);
+    border: 1px solid var(--surface-secondary);
 
     &.status-text-danger {
-        background-color: rgb(var(--color-danger) / 0.1);
-        border-color: rgb(var(--color-danger) / 0.3);
+        background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+        border-color: color-mix(in srgb, var(--color-danger) 30%, transparent);
     }
 
     &.status-text-warning {
-        background-color: rgb(var(--color-warning) / 0.1);
-        border-color: rgb(var(--color-warning) / 0.3);
+        background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
+        border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
     }
 
     &.status-text-success {
-        background-color: rgb(var(--color-success) / 0.1);
-        border-color: rgb(var(--color-success) / 0.3);
+        background-color: color-mix(in srgb, var(--color-success) 10%, transparent);
+        border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
     }
 
     &.status-text-info {
-        background-color: rgb(var(--color-info) / 0.1);
-        border-color: rgb(var(--color-info) / 0.3);
+        background-color: color-mix(in srgb, var(--color-info) 10%, transparent);
+        border-color: color-mix(in srgb, var(--color-info) 30%, transparent);
     }
 }
 
@@ -621,14 +697,14 @@ body {
     text-align: left;
     padding: var(--spacing-3) var(--spacing-4);
     background: white;
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-        background: rgb(var(--color-gray-50));
-        border-color: rgb(var(--color-border-hover));
+        background: var(--surface-elevated);
+        border-color: var(--color-border-hover);
     }
 }
 
@@ -645,13 +721,13 @@ body {
 .board-listing-name {
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     margin: 0;
 }
 
 .board-listing-date {
     font-size: 0.75rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
     margin: var(--spacing-1) 0 0;
 }
 
@@ -665,7 +741,7 @@ body {
 }
 
 .dashboard-header {
-    background: linear-gradient(135deg, rgb(var(--color-primary) / 0.05), rgb(var(--color-secondary) / 0.05));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 5%, transparent), color-mix(in srgb, var(--color-secondary) 5%, transparent));
     border-radius: var(--radius-lg);
     padding: var(--spacing-8);
     margin-bottom: var(--spacing-8);
@@ -681,7 +757,7 @@ body {
 .dashboard-title {
     font-size: 1.875rem;
     font-weight: 700;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-2);
 
     @media (min-width: 768px) {
@@ -690,7 +766,7 @@ body {
 }
 
 .dashboard-subtitle {
-    color: rgb(var(--color-text-secondary));
+    color: var(--color-text-secondary);
     margin-bottom: var(--spacing-6);
 }
 
@@ -747,29 +823,29 @@ body {
     background: transparent;
 
     &:hover {
-        background: rgb(var(--color-gray-100));
+        background: var(--surface-primary);
     }
 }
 
 .icon-button-primary {
-    color: rgb(var(--color-primary));
+    color: var(--color-primary);
 
     &:hover {
-        background: rgb(var(--color-primary) / 0.1);
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     }
 }
 
 .icon-button-danger {
-    color: rgb(var(--color-danger));
+    color: var(--color-danger);
 
     &:hover {
-        background: rgb(var(--color-danger) / 0.1);
+        background: color-mix(in srgb, var(--color-danger) 10%, transparent);
     }
 }
 
 /* Board Section Styles */
 .board-section {
-    background: rgb(var(--color-gray-50));
+    background: var(--surface-elevated);
     border-radius: var(--radius-lg);
     padding: var(--spacing-3);
 }
@@ -778,7 +854,7 @@ body {
     font-size: 0.875rem;
     font-weight: 600;
     margin-bottom: var(--spacing-2);
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
 }
 
 .board-list {
@@ -789,28 +865,28 @@ body {
 
 /* Nav Bar Styling */
 .sticky-header {
-    background: rgb(var(--title-bar-background));
-    color: rgb(var(--title-bar-color));
+    background: var(--title-bar-background);
+    color: var(--title-bar-color);
 
     a {
-        color: rgb(var(--title-bar-color));
+        color: var(--title-bar-color);
 
         &:hover {
-            color: rgba(var(--title-bar-color), 0.8);
+            color: color-mix(in srgb, var(--title-bar-color) 80%, transparent);
         }
     }
 
     .text-muted,
     .text-medium,
     .text-secondary {
-        color: rgb(var(--title-bar-color));
+        color: var(--title-bar-color);
     }
 
     .btn-primary,
     .btn-secondary {
         // Ensure buttons remain styled properly
         background: white;
-        color: rgb(var(--title-bar-background));
+        color: var(--title-bar-background);
 
         &:hover {
             background: rgba(255, 255, 255, 0.9);
@@ -824,19 +900,19 @@ body {
     align-items: center;
     gap: var(--spacing-3);
     text-decoration: none;
-    color: rgb(var(--title-bar-color));
+    color: var(--title-bar-color);
 }
 
 .teambeat-logo {
     width: 2rem;
     height: 2rem;
-    color: rgb(var(--title-bar-background));
+    color: var(--title-bar-background);
 }
 
 .nav-brand-text {
     font-size: 1.25rem;
     font-weight: 600;
-    color: rgb(var(--title-bar-color));
+    color: var(--title-bar-color);
 }
 
 /* Config styles moved to BoardConfigDialog.svelte */
@@ -847,26 +923,26 @@ body {
     padding: var(--spacing-2) var(--spacing-3);
     font-size: 0.875rem;
     line-height: 1.5;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     background: white;
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     transition: all 0.2s ease;
 
     &:focus {
         outline: none;
-        border-color: rgb(var(--color-primary));
-        box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.1);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
     }
 
     &:disabled {
-        background: rgb(var(--color-gray-50));
+        background: var(--surface-elevated);
         cursor: not-allowed;
         opacity: 0.6;
     }
 
     &::placeholder {
-        color: rgb(var(--color-text-muted));
+        color: var(--color-text-muted);
     }
 }
 
@@ -879,19 +955,19 @@ body {
     font-weight: 500;
     line-height: 1.5;
     color: white;
-    background: rgb(var(--color-primary));
+    background: var(--color-primary);
     border: 1px solid transparent;
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
-        background: rgb(var(--color-primary-hover));
+        background: var(--color-primary-hover);
     }
 
     &:focus {
         outline: none;
-        box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.2);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
     }
 
     &:disabled {
@@ -900,21 +976,21 @@ body {
     }
 
     &.button-secondary {
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
         background: white;
-        border-color: rgb(var(--color-border));
+        border-color: var(--color-border);
 
         &:hover:not(:disabled) {
-            background: rgb(var(--color-gray-50));
-            border-color: rgb(var(--color-border-hover));
+            background: var(--surface-elevated);
+            border-color: var(--color-border-hover);
         }
     }
 
     &.button-danger {
-        background: rgb(var(--color-danger));
+        background: var(--color-danger);
 
         &:hover:not(:disabled) {
-            background: rgb(var(--color-danger-hover));
+            background: var(--color-danger-hover);
         }
     }
 }
@@ -925,13 +1001,13 @@ body {
     padding-right: var(--spacing-10);
     font-size: 0.875rem;
     line-height: 1.5;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     background: white;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center;
     background-repeat: no-repeat;
     background-size: 1.5em 1.5em;
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     appearance: none;
     cursor: pointer;
@@ -939,12 +1015,12 @@ body {
 
     &:focus {
         outline: none;
-        border-color: rgb(var(--color-primary));
-        box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.1);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
     }
 
     &:disabled {
-        background: rgb(var(--color-gray-50));
+        background: var(--surface-elevated);
         cursor: not-allowed;
         opacity: 0.6;
     }
@@ -1019,16 +1095,16 @@ body {
 
 /* Border Components */
 .card-border {
-    border: 1px solid rgb(var(--color-gray-300));
+    border: 1px solid var(--surface-secondary);
     border-radius: var(--radius-lg);
 }
 
 .section-divider {
-    border-top: 1px solid rgb(var(--color-gray-200) / 0.5);
+    border-top: 1px solid color-mix(in srgb, var(--input-border) 50%, transparent);
 }
 
 .content-divider {
-    border-bottom: 1px solid rgb(var(--color-gray-200));
+    border-bottom: 1px solid var(--input-border);
 }
 
 .status-border-warning {
@@ -1049,11 +1125,11 @@ body {
 }
 
 .surface-muted {
-    .surface(rgb(var(--color-gray-50)));
+    .surface(var(--surface-elevated));
 }
 
 .surface-subtle {
-    .surface(rgb(var(--color-gray-100)));
+    .surface(var(--surface-primary));
 }
 
 /* Modal Components using mixins */
@@ -1098,33 +1174,33 @@ body {
 }
 
 .surface-accent {
-    .surface(rgb(var(--color-blue-500)));
+    .surface(var(--input-border-focus));
     color: white;
 
     &:hover {
-        background-color: rgb(var(--color-blue-600));
+        background-color: var(--input-border-focus);
     }
 }
 
 .status-surface-warning {
-    .surface(rgb(var(--color-yellow-100)));
+    .surface(var(--status-warning-bg));
 }
 
 .status-surface-info {
-    .surface(rgb(var(--color-orange-100)));
+    .surface(var(--status-warning-bg));
 }
 
 .status-surface-danger {
-    .surface(rgb(var(--color-red-100)));
+    .surface(var(--status-error-bg));
 }
 
 .brand-surface-indigo {
-    .surface(rgb(var(--color-indigo-500)));
+    .surface(var(--avatar-gradient-start));
     color: white;
 }
 
 .brand-surface-purple {
-    .surface(rgb(var(--color-purple-500)));
+    .surface(var(--avatar-gradient-end));
     color: white;
 }
 
@@ -1136,8 +1212,8 @@ body {
 .brand-gradient {
     background: linear-gradient(
         to bottom right,
-        rgb(var(--color-indigo-500)),
-        rgb(var(--color-purple-600))
+        var(--avatar-gradient-start),
+        var(--avatar-gradient-end)
     );
     color: white;
 }
@@ -1161,19 +1237,19 @@ body {
 
 /* Typography Components using mixins */
 .text-primary {
-    color: rgb(var(--color-gray-900));
+    color: var(--color-text-primary);
 }
 
 .text-secondary {
-    color: rgb(var(--color-gray-700));
+    color: var(--color-text-secondary);
 }
 
 .text-muted {
-    color: rgb(var(--color-gray-600));
+    color: var(--color-text-secondary);
 }
 
 .text-subtle {
-    color: rgb(var(--color-gray-500));
+    color: var(--color-text-muted);
 }
 
 .text-inverted {
@@ -1181,15 +1257,15 @@ body {
 }
 
 .status-text-danger {
-    color: rgb(var(--color-red-700));
+    color: var(--color-danger-hover);
 }
 
 .status-text-warning {
-    color: rgb(var(--color-yellow-800));
+    color: var(--status-warning-text);
 }
 
 .status-text-info {
-    color: rgb(var(--color-orange-800));
+    color: var(--status-warning-text);
 }
 
 .caption {
@@ -1296,7 +1372,7 @@ body {
     cursor: pointer;
 
     &:hover {
-        color: rgb(var(--color-gray-900));
+        color: var(--color-text-primary);
     }
 }
 
@@ -1305,7 +1381,7 @@ body {
     cursor: pointer;
 
     &:hover {
-        background-color: rgb(var(--color-gray-50));
+        background-color: var(--surface-elevated);
     }
 }
 
@@ -1372,18 +1448,18 @@ body {
 
 /* TeamBeat Brand Components */
 .gradient-bg {
-    background: rgb(var(--color-bg-primary));
+    background: var(--color-bg-primary);
     min-height: 100vh;
 }
 
 .glass-effect {
     backdrop-filter: blur(10px);
-    background: rgb(var(--title-bar-background));
-    border: 1px solid rgba(var(--title-bar-color), 0.2);
+    background: var(--title-bar-background);
+    border: 1px solid color-mix(in srgb, var(--title-bar-color) 20%, transparent);
 }
 
 .gradient-text {
-    background: linear-gradient(to right, rgb(var(--color-primary)), rgb(var(--color-secondary)));
+    background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -1401,12 +1477,12 @@ body {
 
 .btn-primary {
     .btn();
-    .button-style(var(--color-teal-500), white, var(--color-teal-600));
+    .button-style(var(--card-interactive-highlight), white, var(--card-vote-button-hover));
 }
 
 .btn-secondary {
     .btn();
-    .button-style(var(--color-slate-600), white, var(--color-slate-500));
+    .button-style(var(--btn-secondary-bg), white, var(--btn-secondary-bg-hover));
 }
 
 .btn-danger {
@@ -1430,7 +1506,7 @@ body {
     padding: var(--spacing-3) var(--spacing-4);
 
     &:focus {
-        box-shadow: 0 0 0 2px rgb(var(--color-indigo-500));
+        box-shadow: 0 0 0 2px var(--avatar-gradient-start);
         border-color: transparent;
     }
 }
@@ -1446,7 +1522,7 @@ body {
     .card-title {
         font-size: 1.125rem;
         font-weight: 600;
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
         margin-bottom: var(--spacing-2);
     }
 }
@@ -1493,26 +1569,26 @@ body {
     font-weight: 500;
     line-height: 1.2;
     height: 1.75rem;
-    color: rgb(var(--color-text-secondary));
+    color: var(--color-text-secondary);
     background: white;
-    border: 1px solid rgb(var(--color-gray-300));
+    border: 1px solid var(--surface-secondary);
     border-radius: var(--radius-full);
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
 
     &:hover:not(:disabled) {
-        background: rgb(var(--color-gray-50));
-        border-color: rgb(var(--color-gray-400));
+        background: var(--surface-elevated);
+        border-color: var(--input-placeholder);
     }
 
     &.toolbar-button-primary {
         color: white;
-        background: rgb(var(--color-primary));
-        border-color: rgb(var(--color-primary));
+        background: var(--color-primary);
+        border-color: var(--color-primary);
 
         &:hover:not(:disabled) {
-            background: rgb(var(--color-slate-700));
+            background: var(--btn-tertiary-bg);
         }
     }
 
@@ -1536,7 +1612,7 @@ body {
     background: white;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     padding: var(--spacing-1);
     min-width: 10rem;
     z-index: 1000;
@@ -1553,14 +1629,14 @@ body {
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-fast);
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
 
     &:hover {
-        background: rgb(var(--color-gray-50));
+        background: var(--surface-elevated);
     }
 
     &.scene-dropdown-item-active {
-        background: rgb(var(--color-primary));
+        background: var(--color-primary);
         color: white;
         font-weight: 500;
     }

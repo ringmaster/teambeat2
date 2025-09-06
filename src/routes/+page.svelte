@@ -673,8 +673,8 @@
     .loading-spinner {
         width: 3rem;
         height: 3rem;
-        border: 4px solid rgb(var(--color-gray-200));
-        border-top: 4px solid rgb(var(--color-primary));
+        border: 4px solid var(--input-border);
+        border-top: 4px solid var(--color-primary);
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -689,7 +689,7 @@
     }
 
     .loading-text {
-        color: rgb(var(--color-text-primary));
+        color: var(--color-text-primary);
         font-weight: 500;
         font-size: 1rem;
         margin: 0;
@@ -715,8 +715,8 @@
         font-weight: 700;
         background: linear-gradient(
             to right,
-            rgb(var(--color-primary)),
-            rgb(var(--color-secondary))
+            var(--color-primary),
+            var(--color-secondary)
         );
         -webkit-background-clip: text;
         background-clip: text;
@@ -725,7 +725,7 @@
     }
 
     .welcome-subtitle {
-        color: rgb(var(--color-text-muted));
+        color: var(--color-text-muted);
         font-size: 1.125rem;
         margin: 0 0 var(--spacing-8) 0;
     }
@@ -772,12 +772,12 @@
         font-size: 1.875rem;
         line-height: 2.25rem;
         font-weight: 700;
-        color: rgb(var(--color-gray-900));
+        color: var(--color-text-primary);
         margin: 0;
     }
 
     .dashboard-subtitle {
-        color: rgb(var(--color-gray-600));
+        color: var(--color-text-secondary);
         margin: var(--spacing-2) 0 0 0;
         font-size: 1rem;
     }
@@ -801,7 +801,7 @@
         font-size: 1.25rem;
         line-height: 1.75rem;
         font-weight: 700;
-        color: rgb(var(--color-gray-900));
+        color: var(--color-text-primary);
         margin: 0 0 var(--spacing-4) 0;
     }
 
@@ -810,7 +810,7 @@
         padding: var(--spacing-12) var(--spacing-4);
         background-color: white;
         border-radius: 1rem;
-        border: 2px dashed rgb(var(--color-border));
+        border: 2px dashed var(--color-border);
     }
 
     .empty-state-icon {
@@ -818,8 +818,8 @@
         height: 4rem;
         background: linear-gradient(
             to bottom right,
-            rgba(var(--color-indigo-500), 0.1),
-            rgba(var(--color-purple-500), 0.1)
+            color-mix(in srgb, var(--avatar-gradient-start) 10%, transparent),
+            color-mix(in srgb, var(--avatar-gradient-end) 10%, transparent)
         );
         border-radius: 50%;
         display: flex;
@@ -829,7 +829,7 @@
     }
 
     .empty-state-text {
-        color: rgb(var(--color-gray-600));
+        color: var(--color-text-secondary);
         margin: 0 0 var(--spacing-4) 0;
         font-size: 1rem;
     }
@@ -837,7 +837,7 @@
     .warning-icon {
         width: 2.5rem;
         height: 2.5rem;
-        background-color: rgb(var(--color-red-100));
+        background-color: var(--status-error-bg);
         border-radius: 50%;
         display: flex;
         align-items: center;

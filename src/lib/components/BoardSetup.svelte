@@ -261,7 +261,7 @@
 .setup-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-4);
 }
 
@@ -272,7 +272,7 @@
 }
 
 .setup-subtitle {
-    color: rgb(var(--color-text-secondary));
+    color: var(--color-text-secondary);
     margin-bottom: var(--spacing-8);
 }
 
@@ -308,7 +308,7 @@
     width: 100%;
     text-align: left;
     padding: var(--spacing-4);
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: white;
     cursor: pointer;
@@ -317,37 +317,37 @@
 }
 
 .template-card:hover {
-    background: rgb(var(--color-gray-50));
-    border-color: rgb(var(--color-border-hover));
+    background: var(--surface-elevated);
+    border-color: var(--color-border-hover);
     box-shadow: var(--shadow-md);
 }
 
 .template-card-title {
     font-weight: 500;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-2);
 }
 
 .template-card-description {
     font-size: 0.875rem;
-    color: rgb(var(--color-text-secondary));
+    color: var(--color-text-secondary);
     margin-bottom: var(--spacing-3);
 }
 
 .template-card-meta {
     font-size: 0.75rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
 }
 
 .template-card-columns {
     margin-top: var(--spacing-2);
     font-size: 0.75rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
 }
 
 .template-column-tag {
     display: inline-block;
-    background: rgb(var(--color-gray-100));
+    background: var(--surface-primary);
     border-radius: var(--radius-sm);
     padding: var(--spacing-1) var(--spacing-2);
     margin-right: var(--spacing-1);
@@ -356,7 +356,7 @@
 
 .template-more-text {
     display: inline-block;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
 }
 
 /* Clone Grid Styles */
@@ -379,24 +379,24 @@
 
 .clone-section-title {
     font-weight: 500;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-4);
 }
 
 .clone-empty-state {
     font-size: 0.875rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
     padding: var(--spacing-4);
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    background: rgb(var(--color-gray-50));
+    background: var(--surface-elevated);
 }
 
 .clone-board-card {
     width: 100%;
     text-align: left;
     padding: var(--spacing-4);
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: white;
     cursor: pointer;
@@ -404,18 +404,18 @@
 }
 
 .clone-board-card:hover {
-    background: rgb(var(--color-gray-50));
-    border-color: rgb(var(--color-border-hover));
+    background: var(--surface-elevated);
+    border-color: var(--color-border-hover);
 }
 
 .clone-board-name {
     font-weight: 500;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
 }
 
 .clone-board-date {
     font-size: 0.75rem;
-    color: rgb(var(--color-text-muted));
+    color: var(--color-text-muted);
     margin-top: var(--spacing-1);
 }
 
@@ -426,54 +426,54 @@
 }
 
 .clone-board-status.status-primary {
-    background: rgb(var(--color-primary) / 0.1);
-    color: rgb(var(--color-primary));
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
 }
 
 .clone-board-status.status-secondary {
-    background: rgb(var(--color-secondary) / 0.1);
-    color: rgb(var(--color-secondary));
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    color: var(--color-secondary);
 }
 
 /* Setup Manual Section */
 .setup-manual-section {
-    border-top: 1px solid rgb(var(--color-border));
+    border-top: 1px solid var(--color-border);
     padding-top: var(--spacing-8);
 }
 
 .setup-manual-title {
     font-size: 1.125rem;
     font-weight: 500;
-    color: rgb(var(--color-text-primary));
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-4);
 }
 
 .setup-manual-description {
-    color: rgb(var(--color-text-secondary));
+    color: var(--color-text-secondary);
     margin-bottom: var(--spacing-6);
 }
 
 .setup-info-section {
-    background: rgb(var(--color-primary) / 0.05);
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
     border-radius: var(--radius-lg);
     padding: var(--spacing-6);
-    border: 1px solid rgb(var(--color-primary) / 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .setup-info-title {
     font-size: 1.125rem;
     font-weight: 500;
-    color: rgb(var(--color-primary));
+    color: var(--color-primary);
     margin-bottom: var(--spacing-2);
 }
 
 .setup-info-description {
-    color: rgb(var(--color-primary));
+    color: var(--color-primary);
     margin-bottom: var(--spacing-4);
 }
 
 .setup-info-list {
-    color: rgb(var(--color-primary));
+    color: var(--color-primary);
     font-size: 0.875rem;
     list-style: none;
 }

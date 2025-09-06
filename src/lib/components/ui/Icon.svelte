@@ -136,27 +136,27 @@
     .icon-circle {
         border-radius: 50%;
         padding: 0.375rem;
-        background-color: rgb(var(--color-gray-100));
-        border: 1px solid rgb(var(--color-gray-300));
+        background-color: var(--surface-primary);
+        border: 1px solid var(--surface-secondary);
 
         &.status-text-danger {
-            background-color: rgb(var(--color-danger) / 0.1);
-            border-color: rgb(var(--color-danger) / 0.3);
+            background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+            border-color: color-mix(in srgb, var(--color-danger) 30%, transparent);
         }
 
         &.status-text-warning {
-            background-color: rgb(var(--color-warning) / 0.1);
-            border-color: rgb(var(--color-warning) / 0.3);
+            background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
+            border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
         }
 
         &.status-text-success {
-            background-color: rgb(var(--color-success) / 0.1);
-            border-color: rgb(var(--color-success) / 0.3);
+            background-color: color-mix(in srgb, var(--color-success) 10%, transparent);
+            border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
         }
 
         &.status-text-info {
-            background-color: rgb(var(--color-info) / 0.1);
-            border-color: rgb(var(--color-info) / 0.3);
+            background-color: color-mix(in srgb, var(--color-info) 10%, transparent);
+            border-color: color-mix(in srgb, var(--color-info) 30%, transparent);
         }
     }
 </style>

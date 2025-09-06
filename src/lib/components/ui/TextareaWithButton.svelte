@@ -9,12 +9,12 @@
         class?: string;
         rows?: number;
         maxlength?: number;
-        buttonText: string;
         buttonVariant?: 'primary' | 'secondary' | 'danger' | 'ghost';
         buttonDisabled?: boolean;
         oninput?: (event: Event) => void;
         onkeydown?: (event: KeyboardEvent) => void;
         onButtonClick?: (event: MouseEvent) => void;
+        buttonContent: any;
     }
 
     let {
@@ -27,12 +27,12 @@
         class: className = '',
         rows = 3,
         maxlength,
-        buttonText,
         buttonVariant = 'primary',
         buttonDisabled = false,
         oninput,
         onkeydown,
-        onButtonClick
+        onButtonClick,
+        buttonContent
     }: Props = $props();
 
     let buttonClass = $derived.by(() => {
@@ -78,14 +78,14 @@
         disabled={buttonDisabled || disabled}
         onclick={onButtonClick}
     >
-        {buttonText}
+        {@render buttonContent?.()}
     </button>
 </div>
 
 <style>
     .textarea-with-button {
         display: flex;
-        border: 1px solid rgb(var(--color-gray-200));
+        border: 1px solid var(--input-border);
         border-radius: var(--radius-lg);
         overflow: hidden;
         background-color: white;
@@ -93,8 +93,8 @@
     }
 
     .textarea-with-button:focus-within {
-        border-color: rgb(var(--color-blue-500));
-        box-shadow: 0 0 0 1px rgb(var(--color-blue-500));
+        border-color: var(--input-border-focus);
+        box-shadow: 0 0 0 1px var(--input-border-focus);
     }
 
     .textarea-field {
@@ -111,7 +111,7 @@
     }
 
     .textarea-field::placeholder {
-        color: rgb(var(--color-gray-400));
+        color: var(--input-placeholder);
     }
 
     .textarea-field:disabled {
@@ -123,7 +123,7 @@
     .textarea-button {
         padding: var(--spacing-3) var(--spacing-4);
         border: none;
-        border-left: 1px solid rgb(var(--color-gray-200));
+        border-left: 1px solid var(--input-border);
         font-size: 0.875rem;
         line-height: 1.25rem;
         font-weight: 500;
@@ -131,7 +131,10 @@
         transition: all var(--transition-fast);
         font-family: inherit;
         white-space: nowrap;
-        align-self: flex-end;
+        align-self: stretch;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .textarea-button:disabled {
@@ -141,49 +144,49 @@
 
     /* Button variants */
     .button-primary {
-        background-color: rgb(var(--color-blue-500));
+        background-color: var(--input-border-focus);
         color: white;
-        border-left-color: rgb(var(--color-blue-500));
+        border-left-color: var(--input-border-focus);
     }
 
     .button-primary:hover:not(:disabled) {
-        background-color: rgb(var(--color-blue-600));
+        background-color: var(--input-border-focus);
     }
 
     .button-secondary {
-        background-color: rgb(var(--color-gray-50));
-        color: rgb(var(--color-gray-700));
-        border-left-color: rgb(var(--color-gray-200));
+        background-color: var(--surface-elevated);
+        color: var(--color-text-secondary);
+        border-left-color: var(--input-border);
     }
 
     .button-secondary:hover:not(:disabled) {
-        background-color: rgb(var(--color-gray-100));
+        background-color: var(--surface-primary);
     }
 
     .button-danger {
-        background-color: rgb(var(--color-red-600));
+        background-color: var(--color-danger);
         color: white;
-        border-left-color: rgb(var(--color-red-600));
+        border-left-color: var(--color-danger);
     }
 
     .button-danger:hover:not(:disabled) {
-        background-color: rgb(var(--color-red-700));
+        background-color: var(--color-danger-hover);
     }
 
     .button-ghost {
         background-color: transparent;
-        color: rgb(var(--color-gray-600));
-        border-left-color: rgb(var(--color-gray-200));
+        color: var(--color-text-secondary);
+        border-left-color: var(--input-border);
     }
 
     .button-ghost:hover:not(:disabled) {
-        background-color: rgb(var(--color-gray-50));
-        color: rgb(var(--color-gray-900));
+        background-color: var(--surface-elevated);
+        color: var(--color-text-primary);
     }
 
     /* Disabled state for the entire component */
     .textarea-with-button:has(.textarea-field:disabled) {
         opacity: 0.6;
-        background-color: rgb(var(--color-gray-50));
+        background-color: var(--surface-elevated);
     }
 </style>
