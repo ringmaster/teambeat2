@@ -80,7 +80,7 @@
 
                 {#if showTemplateSelector}
                     <div class="template-grid">
-                        {#each templates as template}
+                        {#each templates as template (template.name)}
                             <button
                                 onclick={() => onSetupTemplate(template)}
                                 class="template-card"
@@ -96,7 +96,7 @@
                                 </div>
                                 <!-- Show column previews -->
                                 <div class="template-card-columns">
-                                    {#each template.columns.slice(0, 2) as column}
+                                    {#each template.columns.slice(0, 2) as column, index (index)}
                                         <span class="template-column-tag">
                                             {column.length > 20 ? column.substring(0, 20) + '...' : column}
                                         </span>
@@ -138,7 +138,7 @@
                                     </div>
                                 {:else}
                                     <div class="space-y-3">
-                                        {#each cloneSources.currentSeries as board}
+                                        {#each cloneSources.currentSeries as board (board.id)}
                                             <button
                                                 onclick={() => handleCloneBoard(board.id)}
                                                 class="clone-board-card"
@@ -169,7 +169,7 @@
                                     </div>
                                 {:else}
                                     <div class="space-y-3">
-                                        {#each cloneSources.otherSeries as board}
+                                        {#each cloneSources.otherSeries as board (board.id)}
                                             <button
                                                 onclick={() => handleCloneBoard(board.id)}
                                                 class="clone-board-card"

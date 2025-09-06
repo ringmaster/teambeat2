@@ -89,31 +89,27 @@
     });
 
     async function handleUserAdded(email: string) {
-        try {
-            const response = await fetch(
-                `/api/series/${board.seriesId}/users`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, role: "member" }),
-                },
-            );
+        const response = await fetch(
+            `/api/series/${board.seriesId}/users`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, role: "member" }),
+            },
+        );
 
-            if (response.ok) {
-                // Reload users list
-                const usersResponse = await fetch(
-                    `/api/series/${board.seriesId}/users`,
-                );
-                if (usersResponse.ok) {
-                    const data = await usersResponse.json();
-                    seriesUsers = data.users;
-                }
-            } else {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to add user");
+        if (response.ok) {
+            // Reload users list
+            const usersResponse = await fetch(
+                `/api/series/${board.seriesId}/users`,
+            );
+            if (usersResponse.ok) {
+                const data = await usersResponse.json();
+                seriesUsers = data.users;
             }
-        } catch (error) {
-            throw error;
+        } else {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to add user");
         }
     }
 

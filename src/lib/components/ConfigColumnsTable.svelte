@@ -56,7 +56,7 @@
             </tr>
         </thead>
         <tbody>
-            {#each board.columns || [] as column, index}
+            {#each board.columns || [] as column, _index (column.id)}
                 <tr
                     draggable="true"
                     ondragstart={(e) => onDragStart(e, column.id)}

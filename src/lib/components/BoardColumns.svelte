@@ -61,7 +61,7 @@
             ? 'single-column'
             : 'multiple-columns'}"
     >
-        {#each board.columns as column}
+        {#each board.columns as column (column.id)}
             <BoardColumn
                 {column}
                 {cards}

@@ -19,7 +19,7 @@
     
     let { 
         card, 
-        isGrouped = false,
+        isGrouped: _ = false,
         groupingMode,
         isSelected,
         currentScene,
@@ -55,7 +55,9 @@
     onkeydown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            groupingMode && onToggleSelection(card.id);
+            if (groupingMode) {
+                onToggleSelection(card.id);
+            }
         }
     }}
 >

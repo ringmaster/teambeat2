@@ -51,7 +51,7 @@
         <div
             class="scene-dropdown-menu"
         >
-            {#each board.scenes as scene}
+            {#each board.scenes as scene (scene.id)}
                 <button
                     onclick={() => {
                         onSceneChange(scene.id);

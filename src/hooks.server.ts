@@ -83,7 +83,7 @@ function handleWebSocketMessage(clientId: string, message: any) {
 			}
 			break;
 			
-		case 'ping':
+		case 'ping': {
 			// Respond to ping with pong
 			const client = wsManager.getClient(clientId);
 			if (client && client.ws.readyState === client.ws.OPEN) {
@@ -93,6 +93,7 @@ function handleWebSocketMessage(clientId: string, message: any) {
 				}));
 			}
 			break;
+		}
 			
 		default:
 			console.log('Unknown WebSocket message type:', message.type);

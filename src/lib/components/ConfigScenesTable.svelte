@@ -178,7 +178,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each board.scenes || [] as scene}
+                {#each board.scenes || [] as scene (scene.id)}
                     <tr
                         draggable="true"
                         ondragstart={(e) => onDragStart(e, scene.id)}
@@ -450,7 +450,7 @@
                     Column Display Settings
                 </h4>
                 <div class="space-y-3">
-                    {#each board.allColumns || board.columns || [] as column}
+                    {#each board.allColumns || board.columns || [] as column (column.id)}
                         {@const currentState =
                             columnStates[activeSceneId]?.[column.id] ||
                             "visible"}

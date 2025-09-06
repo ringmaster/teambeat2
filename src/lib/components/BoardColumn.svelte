@@ -116,7 +116,7 @@
         aria-label="Column {column.title} - Drop zone for cards"
     >
         <!-- Grouped cards -->
-        {#each Object.entries(grouped) as [groupId, groupCards]}
+        {#each Object.entries(grouped) as [groupId, groupCards] (groupId)}
             <div class="group-container">
                 <div class="group-header">
                     <h4>Group {groupId.substring(0, 8)}</h4>
@@ -127,7 +127,7 @@
                     {/if}
                 </div>
                 <div class="group-cards">
-                    {#each groupCards as card}
+                    {#each groupCards as card (card.id)}
                         <Card
                             {card}
                             isGrouped={true}
@@ -149,7 +149,7 @@
         {/each}
 
         <!-- Ungrouped cards -->
-        {#each ungrouped as card}
+        {#each ungrouped as card (card.id)}
             <Card
                 {card}
                 {groupingMode}

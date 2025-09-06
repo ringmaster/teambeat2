@@ -22,7 +22,7 @@
     }
 
     let {
-        seriesId,
+        seriesId: _seriesId,
         currentUserRole,
         users = $bindable(),
         onUserAdded,
