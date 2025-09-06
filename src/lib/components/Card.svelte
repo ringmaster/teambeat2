@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { getUserDisplayName } from '$lib/utils/animalNames';
-    
+    import { getUserDisplayName } from "$lib/utils/animalNames";
+    import Icon from "./ui/Icon.svelte";
+
     interface Props {
         card: any;
         isGrouped?: boolean;
@@ -16,9 +17,9 @@
         onComment: (cardId: string) => void;
         onDelete: (cardId: string) => void;
     }
-    
-    let { 
-        card, 
+
+    let {
+        card,
         isGrouped: _ = false,
         groupingMode,
         isSelected,
@@ -30,30 +31,34 @@
         onToggleSelection,
         onVote,
         onComment,
-        onDelete
+        onDelete,
     }: Props = $props();
-    
+
     // Check if user can delete this card
     let canDelete = $derived.by(() => {
         // Author can always delete (if scene allows editing for members)
         if (card.userId === currentUserId) {
-            return userRole !== 'member' || currentScene?.allowEditCards;
+            return userRole !== "member" || currentScene?.allowEditCards;
         }
         // Admin and facilitator can always delete
-        return ['admin', 'facilitator'].includes(userRole);
+        return ["admin", "facilitator"].includes(userRole);
     });
 </script>
 
 <div
-    class="card {groupingMode ? 'grouping-mode' : ''} {isSelected ? 'selected' : ''}"
+    class="card {groupingMode ? 'grouping-mode' : ''} {isSelected
+        ? 'selected'
+        : ''}"
     role="button"
-    aria-label="Card: {card.content.substring(0, 50)}{card.content.length > 50 ? '...' : ''}"
+    aria-label="Card: {card.content.substring(0, 50)}{card.content.length > 50
+        ? '...'
+        : ''}"
     tabindex="0"
     draggable="true"
     ondragstart={(e) => onDragStart(e, card.id)}
     onclick={() => groupingMode && onToggleSelection(card.id)}
     onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             if (groupingMode) {
                 onToggleSelection(card.id);
@@ -64,7 +69,7 @@
     <p class="card-content">
         {card.content}
     </p>
-    
+
     <div class="card-footer">
         <div class="card-actions">
             {#if canDelete}
@@ -77,12 +82,10 @@
                     title="Delete card"
                     aria-label="Delete card"
                 >
-                    <svg class="icon-xs" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
+                    <Icon name="trash" size="sm" />
                 </button>
             {/if}
-            
+
             {#if currentScene?.allowVoting}
                 <button
                     onclick={(e) => {
@@ -91,13 +94,19 @@
                     }}
                     class="vote-button"
                 >
-                    <svg class="icon-xs" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    <svg
+                        class="icon-xs"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                        />
                     </svg>
                     <span>{card._count?.votes || 0}</span>
                 </button>
             {/if}
-            
+
             {#if currentScene?.allowComments}
                 <button
                     onclick={(e) => {
@@ -106,16 +115,26 @@
                     }}
                     class="comment-button"
                 >
-                    <svg class="icon-xs" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    <svg
+                        class="icon-xs"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+                        />
                     </svg>
                     <span>{card._count?.comments || 0}</span>
                 </button>
             {/if}
         </div>
-        
+
         <div class="author-text">
-            {getUserDisplayName(card.userName || 'Unknown', board.id, board.blameFreeMode)}
+            {getUserDisplayName(
+                card.userName || "Unknown",
+                board.id,
+                board.blameFreeMode,
+            )}
         </div>
     </div>
 </div>
@@ -126,7 +145,9 @@
         border-radius: 8px;
         padding: 12px;
         cursor: move;
-        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        transition:
+            box-shadow 0.2s ease,
+            transform 0.2s ease;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         border-top: 3px solid var(--card-border-color);
         position: relative;

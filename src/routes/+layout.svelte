@@ -2,10 +2,12 @@
     import { onMount } from "svelte";
     import "../app.less";
     import Avatar from "$lib/components/ui/Avatar.svelte";
+    import Icon from "$lib/components/ui/Icon.svelte";
 
     let user: any = $state(null);
     let loading = $state(true);
     let mobileMenuOpen = $state(false);
+    let showUserDropdown = $state(false);
     let { children } = $props();
 
     onMount(async () => {
@@ -20,6 +22,20 @@
         } finally {
             loading = false;
         }
+        
+        // Click outside handler for dropdown
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest('.avatar-dropdown-container')) {
+                showUserDropdown = false;
+            }
+        };
+        
+        document.addEventListener('click', handleClickOutside);
+        
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
     });
 </script>
 
@@ -66,34 +82,56 @@
                             ></div>
                         </div>
                     {:else if user}
-                        <div class="toolbar">
-                            <a
-                                href="/"
-                                class="text-interactive text-muted text-medium"
-                                >Dashboard</a
+                        <div class="avatar-dropdown-container">
+                            <button
+                                class="avatar-dropdown-trigger"
+                                onclick={() => showUserDropdown = !showUserDropdown}
+                                onkeydown={(e) => e.key === 'Escape' && (showUserDropdown = false)}
                             >
-                            <div class="toolbar">
-                                <div class="button-group">
-                                    <Avatar
-                                        name={user.name}
-                                        email={user.email}
-                                    />
-                                    <span class="text-secondary text-medium"
-                                        >{user.name || user.email}</span
+                                <Avatar
+                                    name={user.name}
+                                    email={user.email}
+                                />
+                            </button>
+                            
+                            {#if showUserDropdown}
+                                <div class="avatar-dropdown-menu">
+                                    <div class="dropdown-user-info">
+                                        <div class="dropdown-user-name">{user.name || 'User'}</div>
+                                        <div class="dropdown-user-email">{user.email}</div>
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    <a
+                                        href="/"
+                                        class="dropdown-item"
+                                        onclick={() => showUserDropdown = false}
                                     >
+                                        <Icon name="home" size="sm" />
+                                        <span>Dashboard</span>
+                                    </a>
+                                    <a
+                                        href="/profile"
+                                        class="dropdown-item"
+                                        onclick={() => showUserDropdown = false}
+                                    >
+                                        <Icon name="user" size="sm" />
+                                        <span>Profile</span>
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <button
+                                        class="dropdown-item dropdown-item-danger"
+                                        onclick={async () => {
+                                            await fetch("/api/auth/logout", {
+                                                method: "POST",
+                                            });
+                                            window.location.reload();
+                                        }}
+                                    >
+                                        <Icon name="logout" size="sm" />
+                                        <span>Sign Out</span>
+                                    </button>
                                 </div>
-                                <button
-                                    class="btn-secondary"
-                                    onclick={async () => {
-                                        await fetch("/api/auth/logout", {
-                                            method: "POST",
-                                        });
-                                        window.location.reload();
-                                    }}
-                                >
-                                    Sign Out
-                                </button>
-                            </div>
+                            {/if}
                         </div>
                     {:else}
                         <a href="/login" class="btn-secondary">Sign In</a>
@@ -151,7 +189,14 @@
                         <a
                             href="/"
                             class="text-interactive text-muted text-medium"
+                            onclick={() => mobileMenuOpen = false}
                             >Dashboard</a
+                        >
+                        <a
+                            href="/profile"
+                            class="text-interactive text-muted text-medium"
+                            onclick={() => mobileMenuOpen = false}
+                            >Profile</a
                         >
                         <button
                             class="status-text-danger text-medium"
@@ -222,5 +267,92 @@
         margin-right: 0.5em;
         vertical-align: middle;
         color: var(--title-bar-color);
+    }
+
+    /* Avatar Dropdown Styles */
+    .avatar-dropdown-container {
+        position: relative;
+    }
+
+    .avatar-dropdown-trigger {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        border-radius: 50%;
+        transition: all var(--transition-fast);
+    }
+
+    .avatar-dropdown-trigger:hover {
+        opacity: 0.8;
+    }
+
+    .avatar-dropdown-trigger:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+    }
+
+    .avatar-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--color-border);
+        min-width: 200px;
+        z-index: 1000;
+        overflow: hidden;
+    }
+
+    .dropdown-user-info {
+        padding: var(--spacing-3) var(--spacing-4);
+        background: var(--surface-elevated);
+    }
+
+    .dropdown-user-name {
+        font-weight: 600;
+        color: var(--color-text-primary);
+        font-size: 0.875rem;
+    }
+
+    .dropdown-user-email {
+        color: var(--color-text-muted);
+        font-size: 0.75rem;
+        margin-top: 2px;
+    }
+
+    .dropdown-divider {
+        height: 1px;
+        background: var(--color-border);
+        margin: 0;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-3);
+        padding: var(--spacing-3) var(--spacing-4);
+        color: var(--color-text-primary);
+        text-decoration: none;
+        background: transparent;
+        border: none;
+        width: 100%;
+        text-align: left;
+        font-size: 0.875rem;
+        transition: background var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .dropdown-item:hover {
+        background: var(--surface-elevated);
+    }
+
+    .dropdown-item-danger {
+        color: var(--color-danger);
+    }
+
+    .dropdown-item-danger:hover {
+        background: var(--status-error-bg);
     }
 </style>

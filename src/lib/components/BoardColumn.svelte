@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Card from './Card.svelte';
-    import TextareaWithButton from './ui/TextareaWithButton.svelte';
-    import Icon from './ui/Icon.svelte';
-    
+    import Card from "./Card.svelte";
+    import TextareaWithButton from "./ui/TextareaWithButton.svelte";
+    import Icon from "./ui/Icon.svelte";
+
     interface Props {
         column: any;
         cards: any[];
@@ -28,8 +28,8 @@
         currentUserId: string;
         isSingleColumn?: boolean;
     }
-    
-    let { 
+
+    let {
         column,
         cards,
         currentScene,
@@ -52,27 +52,36 @@
         onDeleteCard,
         userRole,
         currentUserId,
-        isSingleColumn = false
+        isSingleColumn = false,
     }: Props = $props();
-    
+
     // Filter cards for this column
-    let columnCards = $derived(cards.filter(card => card.columnId === column.id));
-    
+    let columnCards = $derived(
+        cards.filter((card) => card.columnId === column.id),
+    );
+
     // Group cards by groupId
-    let grouped = $derived(columnCards
-        .filter(card => card.groupId)
-        .reduce((acc, card) => {
-            if (!acc[card.groupId]) acc[card.groupId] = [];
-            acc[card.groupId].push(card);
-            return acc;
-        }, {} as Record<string, any[]>));
-    
-    let ungrouped = $derived(columnCards.filter(card => !card.groupId));
+    let grouped = $derived(
+        columnCards
+            .filter((card) => card.groupId)
+            .reduce(
+                (acc, card) => {
+                    if (!acc[card.groupId]) acc[card.groupId] = [];
+                    acc[card.groupId].push(card);
+                    return acc;
+                },
+                {} as Record<string, any[]>,
+            ),
+    );
+
+    let ungrouped = $derived(columnCards.filter((card) => !card.groupId));
 </script>
 
 <div
     id="column-{column.id}"
-    class="column {isSingleColumn ? 'single-column' : ''} {dragTargetColumnId === column.id ? 'drag-target' : ''}"
+    class="column {isSingleColumn
+        ? 'single-column'
+        : ''} {dragTargetColumnId === column.id ? 'drag-target' : ''}"
     role="region"
     aria-label="Column: {column.title}"
     ondragover={(e) => onDragOver(e, column.id)}
@@ -80,10 +89,7 @@
     ondragleave={(e) => onDragLeave(e, column.id)}
     ondrop={(e) => onDrop(e, column.id)}
 >
-    <div
-        id="column-header-{column.id}"
-        class="column-header"
-    >
+    <div id="column-header-{column.id}" class="column-header">
         <h2>{column.title}</h2>
         {#if column.description}
             <p>{column.description}</p>
@@ -95,7 +101,8 @@
         <div class="add-card-section">
             <TextareaWithButton
                 value={onGetColumnContent(column.id)}
-                oninput={(e) => onSetColumnContent(column.id, e.currentTarget.value)}
+                oninput={(e) =>
+                    onSetColumnContent(column.id, e.currentTarget.value)}
                 placeholder="Add a card..."
                 rows={2}
                 buttonVariant="primary"
@@ -137,7 +144,7 @@
                             {board}
                             {userRole}
                             {currentUserId}
-                            onDragStart={onDragStart}
+                            {onDragStart}
                             onToggleSelection={onToggleCardSelection}
                             onVote={onVoteCard}
                             onComment={onCommentCard}
@@ -158,7 +165,7 @@
                 {board}
                 {userRole}
                 {currentUserId}
-                onDragStart={onDragStart}
+                {onDragStart}
                 onToggleSelection={onToggleCardSelection}
                 onVote={onVoteCard}
                 onComment={onCommentCard}
@@ -193,7 +200,7 @@
     /* Column Header */
     .column-header {
         background-color: transparent;
-        padding: 12px 16px;
+        padding: 12px 8px;
         border-bottom: none;
     }
 
@@ -212,20 +219,20 @@
 
     /* Add Card Section */
     .add-card-section {
-        padding: 12px 16px;
+        padding: 12px 8px;
         background-color: transparent;
         border-bottom: none;
     }
 
     /* Cards Container */
     .cards-container {
-        padding: 16px;
         gap: 12px;
         display: flex;
         flex-direction: column;
         min-height: 128px;
         flex: 1;
         overflow-y: auto;
+        padding: 8px;
     }
 
     /* Group container */
