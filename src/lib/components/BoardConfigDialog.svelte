@@ -89,14 +89,11 @@
     });
 
     async function handleUserAdded(email: string) {
-        const response = await fetch(
-            `/api/series/${board.seriesId}/users`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, role: "member" }),
-            },
-        );
+        const response = await fetch(`/api/series/${board.seriesId}/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, role: "member" }),
+        });
 
         if (response.ok) {
             // Reload users list
@@ -394,6 +391,7 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        margin-top: 100px;
     }
 
     .config-modal-header {
@@ -601,12 +599,12 @@
         opacity: 0.5;
     }
 
-    .drag-over-top {
-        border-top: 3px solid var(--color-primary) !important;
+    :global .drag-over-top td {
+        border-top: 3px solid var(--color-accent) !important;
     }
 
-    .drag-over-bottom {
-        border-bottom: 3px solid var(--color-primary) !important;
+    :global .drag-over-bottom td {
+        border-bottom: 3px solid var(--color-accent) !important;
     }
 
     .drag-handle {
@@ -629,5 +627,9 @@
     .drag-handle-icon {
         width: 16px;
         height: 16px;
+    }
+
+    #board-config-modal-overlay {
+        align-items: flex-start;
     }
 </style>

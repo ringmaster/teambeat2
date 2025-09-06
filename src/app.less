@@ -90,11 +90,11 @@
 
 .button-style(@bg, @color: white, @hover-bg: darken(@bg, 10%)) {
     .button-base();
-    background-color: rgb(@bg);
+    background-color: @bg;
     color: @color;
 
     &:hover {
-        background-color: rgb(@hover-bg);
+        background-color: @hover-bg;
         box-shadow: var(--shadow-sm);
     }
 }
@@ -128,7 +128,7 @@
     background-color: white;
     backdrop-filter: none;
     border: none;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+    box-shadow: 0 1px 3px rgb(0 0 0);
     border-radius: 1rem;
     padding: var(--spacing-8);
     box-shadow: var(--shadow-xl);

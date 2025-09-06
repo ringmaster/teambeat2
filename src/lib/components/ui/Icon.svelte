@@ -46,6 +46,8 @@
         "chevron-down": "M19 9l-7 7-7-7",
         "chevron-up": "M5 15l7-7 7 7",
         menu: "M4 6h16M4 12h16M4 18h16",
+        "grip-vertical":
+            "M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z",
 
         // Actions
         plus: "M12 5v14m7-7H5",
@@ -140,23 +142,55 @@
         border: 1px solid var(--surface-secondary);
 
         &.status-text-danger {
-            background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
-            border-color: color-mix(in srgb, var(--color-danger) 30%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--color-danger) 10%,
+                transparent
+            );
+            border-color: color-mix(
+                in srgb,
+                var(--color-danger) 30%,
+                transparent
+            );
         }
 
         &.status-text-warning {
-            background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
-            border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--color-warning) 10%,
+                transparent
+            );
+            border-color: color-mix(
+                in srgb,
+                var(--color-warning) 30%,
+                transparent
+            );
         }
 
         &.status-text-success {
-            background-color: color-mix(in srgb, var(--color-success) 10%, transparent);
-            border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--color-success) 10%,
+                transparent
+            );
+            border-color: color-mix(
+                in srgb,
+                var(--color-success) 30%,
+                transparent
+            );
         }
 
         &.status-text-info {
-            background-color: color-mix(in srgb, var(--color-info) 10%, transparent);
-            border-color: color-mix(in srgb, var(--color-info) 30%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--color-info) 10%,
+                transparent
+            );
+            border-color: color-mix(
+                in srgb,
+                var(--color-info) 30%,
+                transparent
+            );
         }
     }
 </style>

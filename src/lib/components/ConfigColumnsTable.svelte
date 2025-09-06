@@ -78,15 +78,11 @@
                 >
                     <td>
                         <div class="drag-handle" title="Drag to reorder">
-                            <svg
+                            <Icon
+                                name="grip-vertical"
+                                size="sm"
                                 class="drag-handle-icon"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                            >
-                                <path
-                                    d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
-                                />
-                            </svg>
+                            />
                         </div>
                     </td>
                     <td>
@@ -150,12 +146,17 @@
         align-items: center;
         margin-bottom: 1.5rem;
     }
-    
+
     .config-table-wrapper {
         width: 100%;
     }
-    
+
     .config-table {
         width: 100%;
+    }
+
+    .drag-handle {
+        cursor: grab;
+        color: var(--color-text-muted);
     }
 </style>

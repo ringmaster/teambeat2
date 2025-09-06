@@ -56,11 +56,18 @@
 </script>
 
 <span class={pillClass}>
+    {#if false}
+        <!-- Force these classes to exist for the component -->
+        <span
+            class="pill pill-icon pill-sm pill-md pill-lg pill-muted pill-primary pill-secondary pill-success pill-warning pill-danger pill-info"
+            >x</span
+        >
+    {/if}
     {@render children?.()}
 </span>
 
 <style lang="less">
-    :global .pill {
+    .pill {
         display: inline-block;
         font-weight: 500;
         border-radius: 9999px;
@@ -69,52 +76,52 @@
         line-height: 1;
     }
 
-    :global .pill-sm {
+    .pill-sm {
         font-size: 0.75rem;
         padding: 0.25rem 0.75rem;
     }
 
-    :global .pill-md {
+    .pill-md {
         font-size: 0.875rem;
         padding: 0.375rem 1rem;
     }
 
-    :global .pill-lg {
+    .pill-lg {
         font-size: 1rem;
         padding: 0.5rem 1.25rem;
     }
 
-    :global .pill-primary {
+    .pill-primary {
         background: var(--color-primary);
         color: white;
     }
 
-    :global .pill-secondary {
+    .pill-secondary {
         background: var(--color-secondary);
         color: white;
     }
 
-    :global .pill-success {
+    .pill-success {
         background: var(--color-success);
         color: white;
     }
 
-    :global .pill-warning {
+    .pill-warning {
         background: var(--color-warning);
         color: var(--color-text-primary);
     }
 
-    :global .pill-danger {
+    .pill-danger {
         background: var(--color-danger);
         color: white;
     }
 
-    :global .pill-info {
+    .pill-info {
         background: var(--color-info);
         color: white;
     }
 
-    :global .pill-muted {
+    .pill-muted {
         background: var(--input-border);
         color: var(--color-text-secondary);
     }
