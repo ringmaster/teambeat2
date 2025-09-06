@@ -1,9 +1,11 @@
 <script lang="ts">
+    import Icon from "./ui/Icon.svelte";
+
     interface User {
         userId: string;
         userName: string;
         email: string;
-        role: 'admin' | 'facilitator' | 'member';
+        role: "admin" | "facilitator" | "member";
         joinedAt: string;
     }
 
@@ -13,7 +15,10 @@
         users: User[];
         onUserAdded: (email: string) => void;
         onUserRemoved: (userId: string) => void;
-        onUserRoleChanged: (userId: string, newRole: 'admin' | 'facilitator' | 'member') => void;
+        onUserRoleChanged: (
+            userId: string,
+            newRole: "admin" | "facilitator" | "member",
+        ) => void;
     }
 
     let {
@@ -22,32 +27,32 @@
         users = $bindable(),
         onUserAdded,
         onUserRemoved,
-        onUserRoleChanged
+        onUserRoleChanged,
     }: Props = $props();
 
-    let newUserEmail = $state('');
+    let newUserEmail = $state("");
     let addingUser = $state(false);
-    let addUserError = $state('');
+    let addUserError = $state("");
 
     async function handleAddUser() {
         if (!newUserEmail.trim()) {
-            addUserError = 'Email is required';
+            addUserError = "Email is required";
             return;
         }
 
         if (!isValidEmail(newUserEmail)) {
-            addUserError = 'Please enter a valid email address';
+            addUserError = "Please enter a valid email address";
             return;
         }
 
         addingUser = true;
-        addUserError = '';
+        addUserError = "";
 
         try {
             await onUserAdded(newUserEmail.trim());
-            newUserEmail = '';
+            newUserEmail = "";
         } catch (error) {
-            addUserError = 'Failed to add user';
+            addUserError = "Failed to add user";
         } finally {
             addingUser = false;
         }
@@ -60,41 +65,39 @@
 
     function canModifyUser(targetUserRole: string): boolean {
         // Only admins can modify other users
-        if (currentUserRole !== 'admin') return false;
-        
+        if (currentUserRole !== "admin") return false;
+
         // Admins can modify facilitators and members, but not other admins
-        return targetUserRole !== 'admin';
+        return targetUserRole !== "admin";
     }
 
     function canRemoveUser(targetUserRole: string): boolean {
         // Only admins can remove users
-        if (currentUserRole !== 'admin') return false;
-        
+        if (currentUserRole !== "admin") return false;
+
         // Admins can remove facilitators and members, but not other admins
-        return targetUserRole !== 'admin';
+        return targetUserRole !== "admin";
     }
 
     function getRoleBadgeClass(role: string): string {
         switch (role) {
-            case 'admin':
-                return 'badge-error';
-            case 'facilitator':
-                return 'badge-warning';
-            case 'member':
-                return 'badge-neutral';
+            case "admin":
+                return "badge-error";
+            case "facilitator":
+                return "badge-warning";
+            case "member":
+                return "badge-neutral";
             default:
-                return 'badge-ghost';
+                return "badge-ghost";
         }
     }
 </script>
 
 <div class="user-management">
-    <h3 class="management-title">
-        User Management
-    </h3>
+    <h3 class="management-title">User Management</h3>
 
     <!-- Add User Section -->
-    {#if currentUserRole === 'admin'}
+    {#if currentUserRole === "admin"}
         <div class="add-user-section">
             <h4 class="section-header">Add User</h4>
             <div class="add-user-form">
@@ -105,18 +108,19 @@
                     class="email-input"
                     disabled={addingUser}
                     onkeydown={(e) => {
-                        if (e.key === 'Enter') handleAddUser();
+                        if (e.key === "Enter") handleAddUser();
                     }}
                 />
                 <button
                     onclick={handleAddUser}
                     disabled={addingUser || !newUserEmail.trim()}
-                    class="btn-primary add-user-button">
+                    class="btn-primary add-user-button"
                 >
                     {#if addingUser}
                         <div class="loading-spinner-small"></div>
                         Adding...
                     {:else}
+                        <Icon name="plus" size="md" class="icon-white" />
                         Add User
                     {/if}
                 </button>
@@ -130,7 +134,7 @@
     <!-- Users List -->
     <div class="users-list-section">
         <h4 class="section-header">Current Users ({users.length})</h4>
-        
+
         {#if users.length === 0}
             <div class="empty-users-state">
                 <div class="empty-users-text">No users in this series yet</div>
@@ -142,14 +146,16 @@
                         <div class="user-info">
                             <div class="user-name-role">
                                 <div class="user-name">
-                                    {user.userName || 'Unknown User'}
+                                    {user.userName || "Unknown User"}
                                 </div>
                                 <div class="role-badge role-{user.role}">
                                     {user.role}
                                 </div>
                             </div>
                             <div class="user-details">
-                                {user.email} • Joined {new Date(user.joinedAt).toLocaleDateString()}
+                                {user.email} • Joined {new Date(
+                                    user.joinedAt,
+                                ).toLocaleDateString()}
                             </div>
                         </div>
 
@@ -157,11 +163,17 @@
                             {#if canModifyUser(user.role)}
                                 <select
                                     value={user.role}
-                                    onchange={(e) => onUserRoleChanged(user.userId, e.target.value)}
+                                    onchange={(e) =>
+                                        onUserRoleChanged(
+                                            user.userId,
+                                            e.target.value,
+                                        )}
                                     class="role-select"
                                 >
                                     <option value="member">Member</option>
-                                    <option value="facilitator">Facilitator</option>
+                                    <option value="facilitator"
+                                        >Facilitator</option
+                                    >
                                     <option value="admin">Admin</option>
                                 </select>
                             {/if}
@@ -173,8 +185,18 @@
                                     title="Remove user"
                                     aria-label="Remove user"
                                 >
-                                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    <svg
+                                        class="icon-sm"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                        />
                                     </svg>
                                 </button>
                             {/if}
@@ -189,9 +211,18 @@
     <div class="permissions-help">
         <div class="help-title">Role Permissions:</div>
         <ul class="permissions-list">
-            <li><strong>Admin:</strong> Full access - can manage users, boards, and series settings</li>
-            <li><strong>Facilitator:</strong> Can create/manage boards and see draft boards</li>
-            <li><strong>Member:</strong> Can participate in active and completed boards</li>
+            <li>
+                <strong>Admin:</strong> Full access - can manage users, boards, and
+                series settings
+            </li>
+            <li>
+                <strong>Facilitator:</strong> Can create/manage boards and see draft
+                boards
+            </li>
+            <li>
+                <strong>Member:</strong> Can participate in active and completed
+                boards
+            </li>
         </ul>
     </div>
 </div>
@@ -294,7 +325,6 @@
         flex-direction: column;
         gap: var(--spacing-2);
     }
-
 
     .user-card {
         display: flex;
@@ -406,7 +436,11 @@
     }
 
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
     }
 </style>

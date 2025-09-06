@@ -286,37 +286,25 @@
                 (s: any) => s.id === activeSceneId,
             )}
             {#if activeScene}
-                <div class="space-y-3">
-                    <h4 class="text-sm font-medium text-gray-900 mb-4">
-                        Scene Permissions
-                    </h4>
-                    <div class="grid grid-cols-3 gap-3">
+                <div class="permissions-section">
+                    <h4 class="permissions-title">Scene Permissions</h4>
+                    <div class="permissions-grid">
                         <button
                             onclick={() =>
                                 togglePermission(
                                     activeSceneId,
                                     "allowAddCards",
                                 )}
-                            class="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors {activeScene.allowAddCards
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowAddCards
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Add Cards</span>
-                                {#if activeScene.allowAddCards}
-                                    <svg
-                                        class="w-4 h-4 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Add Cards
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
@@ -325,26 +313,16 @@
                                     activeSceneId,
                                     "allowEditCards",
                                 )}
-                            class="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors {activeScene.allowEditCards
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowEditCards
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Edit Cards</span>
-                                {#if activeScene.allowEditCards}
-                                    <svg
-                                        class="w-4 h-4 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Edit Cards
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
@@ -353,26 +331,16 @@
                                     activeSceneId,
                                     "allowObscureCards",
                                 )}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowObscureCards
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowObscureCards
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Obscure Cards</span>
-                                {#if activeScene.allowObscureCards}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Obscure Cards
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
@@ -381,26 +349,16 @@
                                     activeSceneId,
                                     "allowMoveCards",
                                 )}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowMoveCards
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowMoveCards
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Move Cards</span>
-                                {#if activeScene.allowMoveCards}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Move Cards
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
@@ -409,101 +367,61 @@
                                     activeSceneId,
                                     "allowGroupCards",
                                 )}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowGroupCards
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowGroupCards
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Group Cards</span>
-                                {#if activeScene.allowGroupCards}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Group Cards
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
                             onclick={() =>
                                 togglePermission(activeSceneId, "showVotes")}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.showVotes
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.showVotes
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Show Votes</span>
-                                {#if activeScene.showVotes}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Show Votes
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
                             onclick={() =>
                                 togglePermission(activeSceneId, "allowVoting")}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowVoting
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowVoting
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Enable Votes</span>
-                                {#if activeScene.allowVoting}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Enable Votes
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
                             onclick={() =>
                                 togglePermission(activeSceneId, "showComments")}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.showComments
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.showComments
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Show Comments</span>
-                                {#if activeScene.showComments}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Show Comments
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
 
                         <button
@@ -512,26 +430,16 @@
                                     activeSceneId,
                                     "allowComments",
                                 )}
-                            class="w-full text-left px-4 py-3 text-sm rounded-lg transition-colors {activeScene.allowComments
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                            class="btn-secondary {activeScene.allowComments
+                                ? 'permission-active'
+                                : ''}"
                         >
-                            <div class="flex items-center justify-between">
-                                <span>Enable Comments</span>
-                                {#if activeScene.allowComments}
-                                    <svg
-                                        class="w-5 h-5 text-blue-600"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                {/if}
-                            </div>
+                            Enable Comments
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
                         </button>
                     </div>
                 </div>
@@ -607,12 +515,109 @@
         align-items: center;
         margin-bottom: 1.5rem;
     }
-    
+
     .config-table-wrapper {
         width: 100%;
     }
-    
+
     .config-table {
         width: 100%;
+    }
+
+    /* Style select boxes to match buttons */
+    .select {
+        appearance: none;
+        background: white;
+        border: 1px solid rgb(var(--color-border));
+        border-radius: var(--radius-md);
+        padding: var(--spacing-2) var(--spacing-4);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgb(var(--color-text-primary));
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right var(--spacing-2) center;
+        background-repeat: no-repeat;
+        background-size: 1em 1em;
+        padding-right: var(--spacing-8);
+    }
+
+    .select:hover {
+        border-color: rgb(var(--color-border-hover));
+        background-color: rgb(var(--color-gray-50));
+    }
+
+    .select:focus {
+        outline: none;
+        border-color: rgb(var(--color-primary));
+        box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.1);
+    }
+
+    /* Permission Section Styles */
+    .permissions-section {
+        margin-bottom: var(--spacing-6);
+    }
+
+    .permissions-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgb(var(--color-text-primary));
+        margin-bottom: var(--spacing-4);
+    }
+
+    .permissions-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-3);
+    }
+
+    /* Permission Button Styles */
+    .permissions-grid .btn-secondary {
+        flex: 1 1 calc(33.333% - var(--spacing-2));
+        min-width: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacing-3) var(--spacing-4);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    /* Permission Icon - Hidden by default */
+    :global(.permission-icon) {
+        display: none;
+        color: white;
+    }
+
+    /* Inactive (unchecked) buttons - muted secondary color */
+    .permissions-grid .btn-secondary {
+        background-color: rgb(var(--color-gray-100));
+        border-color: rgb(var(--color-border));
+        color: rgb(var(--color-text-secondary));
+    }
+
+    .permissions-grid .btn-secondary:hover {
+        background-color: rgb(var(--color-gray-200));
+        border-color: rgb(var(--color-border-hover));
+    }
+
+    /* Active (checked) Permission Button State - primary color */
+    .btn-secondary.permission-active {
+        background-color: rgb(var(--color-primary));
+        border-color: rgb(var(--color-primary));
+        color: white;
+    }
+
+    .btn-secondary.permission-active:hover {
+        background-color: rgb(var(--color-primary) / 0.9);
+        border-color: rgb(var(--color-primary));
+    }
+
+    /* Show icon when permission is active - higher specificity */
+    :global(
+            .permissions-grid .btn-secondary.permission-active .permission-icon
+        ) {
+        display: inherit;
     }
 </style>
