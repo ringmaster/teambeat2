@@ -63,18 +63,14 @@
     );
 
     // Get lead cards and their subordinate cards
-    let leadCards = $derived(
-        columnCards.filter((card) => card.isGroupLead)
-    );
-    
-    let ungroupedCards = $derived(
-        columnCards.filter((card) => !card.groupId)
-    );
-    
+    let leadCards = $derived(columnCards.filter((card) => card.isGroupLead));
+
+    let ungroupedCards = $derived(columnCards.filter((card) => !card.groupId));
+
     // Function to get subordinate cards for a lead card
     function getSubordinateCards(leadCard: any) {
         return columnCards.filter(
-            (card) => card.groupId === leadCard.groupId && !card.isGroupLead
+            (card) => card.groupId === leadCard.groupId && !card.isGroupLead,
         );
     }
 </script>
@@ -145,7 +141,7 @@
                     onComment={onCommentCard}
                     onDelete={onDeleteCard}
                 />
-                
+
                 <!-- Subordinate cards inside the lead card -->
                 {#if subordinateCards.length > 0}
                     <div class="subordinate-cards">
@@ -213,6 +209,12 @@
 
     .column.drag-target {
         box-shadow: 0 0 0 2px var(--card-interactive-highlight);
+        background-color: var(--surface-secondary);
+    }
+
+    :global .column.drag-target:has(.drag-target) {
+        background-color: transparent;
+        box-shadow: none;
     }
 
     /* Column Header */
