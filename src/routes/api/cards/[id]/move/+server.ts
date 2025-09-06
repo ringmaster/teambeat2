@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
-import { findCardById, moveCardToColumn } from '$lib/server/repositories/card.js';
+import { findCardById, moveCardToColumn, moveGroupToColumn, ungroupCard, getCardsForBoard } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated } from '$lib/server/websockets/broadcast.js';
@@ -70,15 +70,73 @@ export const PUT: RequestHandler = async (event) => {
 			);
 		}
 		
-		const updatedCard = await moveCardToColumn(cardId, data.columnId);
-		
-		// Broadcast the updated card to all clients
-		broadcastCardUpdated(board.id, updatedCard);
-		
-		return json({
-			success: true,
-			card: updatedCard
-		});
+		// Check if this is a group lead card - if so, move the entire group
+		if (card.isGroupLead && card.groupId) {
+			await moveGroupToColumn(cardId, data.columnId);
+			
+			// Get all cards in the group and broadcast updates
+			const updatedCards = await getCardsForBoard(board.id);
+			const groupCards = updatedCards.filter(c => c.groupId === card.groupId);
+			
+			for (const groupCard of groupCards) {
+				broadcastCardUpdated(board.id, groupCard);
+			}
+			
+			return json({
+				success: true,
+				groupMoved: true,
+				groupId: card.groupId
+			});
+		} else {
+			// Check if this card is part of a group (subordinate card)
+			if (card.groupId && !card.isGroupLead) {
+				// This is a subordinate card being moved out of its group
+				// First, remove it from the group
+				const ungroupResult = await ungroupCard(cardId);
+				
+				// Then move it to the target column
+				const updatedCard = await moveCardToColumn(cardId, data.columnId);
+				
+				// Get all cards to check for remaining group members
+				const allCards = await getCardsForBoard(board.id);
+				
+				// Broadcast update for the moved card
+				broadcastCardUpdated(board.id, updatedCard);
+				
+				// Broadcast updates for any cards affected by ungrouping (like last remaining card losing group lead status)
+				for (const affectedCardId of ungroupResult.affectedCardIds) {
+					const affectedCard = allCards.find(c => c.id === affectedCardId);
+					if (affectedCard) {
+						broadcastCardUpdated(board.id, affectedCard);
+					}
+				}
+				
+				// Broadcast updates for any remaining cards in the original group
+				if (card.groupId) {
+					const remainingGroupCards = allCards.filter(c => c.groupId === card.groupId);
+					for (const groupCard of remainingGroupCards) {
+						broadcastCardUpdated(board.id, groupCard);
+					}
+				}
+				
+				return json({
+					success: true,
+					card: updatedCard,
+					ungrouped: true
+				});
+			} else {
+				// Move single ungrouped card
+				const updatedCard = await moveCardToColumn(cardId, data.columnId);
+				
+				// Broadcast the updated card to all clients
+				broadcastCardUpdated(board.id, updatedCard);
+				
+				return json({
+					success: true,
+					card: updatedCard
+				});
+			}
+		}
 	} catch (error) {
 		if (error instanceof Response) {
 			throw error;

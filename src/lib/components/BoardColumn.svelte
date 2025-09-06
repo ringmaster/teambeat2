@@ -15,6 +15,7 @@
         onDragEnter: (e: DragEvent, columnId: string) => void;
         onDragLeave: (e: DragEvent, columnId: string) => void;
         onDrop: (e: DragEvent, columnId: string) => void;
+        onCardDrop: (e: DragEvent, targetCardId: string) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
         onVoteCard: (cardId: string) => void;
@@ -41,6 +42,7 @@
         onDragEnter,
         onDragLeave,
         onDrop,
+        onCardDrop,
         onDragStart,
         onToggleCardSelection,
         onVoteCard,
@@ -57,24 +59,24 @@
 
     // Filter cards for this column
     let columnCards = $derived(
-        cards.filter((card) => card.columnId === column.id),
+        cards.filter((card) => card && card.columnId === column.id),
     );
 
-    // Group cards by groupId
-    let grouped = $derived(
-        columnCards
-            .filter((card) => card.groupId)
-            .reduce(
-                (acc, card) => {
-                    if (!acc[card.groupId]) acc[card.groupId] = [];
-                    acc[card.groupId].push(card);
-                    return acc;
-                },
-                {} as Record<string, any[]>,
-            ),
+    // Get lead cards and their subordinate cards
+    let leadCards = $derived(
+        columnCards.filter((card) => card.isGroupLead)
     );
-
-    let ungrouped = $derived(columnCards.filter((card) => !card.groupId));
+    
+    let ungroupedCards = $derived(
+        columnCards.filter((card) => !card.groupId)
+    );
+    
+    // Function to get subordinate cards for a lead card
+    function getSubordinateCards(leadCard: any) {
+        return columnCards.filter(
+            (card) => card.groupId === leadCard.groupId && !card.isGroupLead
+        );
+    }
 </script>
 
 <div
@@ -122,41 +124,56 @@
         role="region"
         aria-label="Column {column.title} - Drop zone for cards"
     >
-        <!-- Grouped cards -->
-        {#each Object.entries(grouped) as [groupId, groupCards] (groupId)}
-            <div class="group-container">
-                <div class="group-header">
-                    <h4>Group {groupId.substring(0, 8)}</h4>
-                    {#if currentScene?.allowEditCards}
-                        <button onclick={() => onGroupCards(groupCards)}>
-                            Ungroup
-                        </button>
-                    {/if}
-                </div>
-                <div class="group-cards">
-                    {#each groupCards as card (card.id)}
-                        <Card
-                            {card}
-                            isGrouped={true}
-                            {groupingMode}
-                            isSelected={selectedCards.has(card.id)}
-                            {currentScene}
-                            {board}
-                            {userRole}
-                            {currentUserId}
-                            {onDragStart}
-                            onToggleSelection={onToggleCardSelection}
-                            onVote={onVoteCard}
-                            onComment={onCommentCard}
-                            onDelete={onDeleteCard}
-                        />
-                    {/each}
-                </div>
+        <!-- Lead cards with their subordinate cards -->
+        {#each leadCards as leadCard (leadCard.id)}
+            {@const subordinateCards = getSubordinateCards(leadCard)}
+            <div class="card-group">
+                <!-- Lead card -->
+                <Card
+                    card={leadCard}
+                    isGroupLead={true}
+                    {groupingMode}
+                    isSelected={selectedCards.has(leadCard.id)}
+                    {currentScene}
+                    {board}
+                    {userRole}
+                    {currentUserId}
+                    {onDragStart}
+                    {onCardDrop}
+                    onToggleSelection={onToggleCardSelection}
+                    onVote={onVoteCard}
+                    onComment={onCommentCard}
+                    onDelete={onDeleteCard}
+                />
+                
+                <!-- Subordinate cards inside the lead card -->
+                {#if subordinateCards.length > 0}
+                    <div class="subordinate-cards">
+                        {#each subordinateCards as subCard (subCard.id)}
+                            <Card
+                                card={subCard}
+                                isSubordinate={true}
+                                {groupingMode}
+                                isSelected={selectedCards.has(subCard.id)}
+                                {currentScene}
+                                {board}
+                                {userRole}
+                                {currentUserId}
+                                {onDragStart}
+                                {onCardDrop}
+                                onToggleSelection={onToggleCardSelection}
+                                onVote={onVoteCard}
+                                onComment={onCommentCard}
+                                onDelete={onDeleteCard}
+                            />
+                        {/each}
+                    </div>
+                {/if}
             </div>
         {/each}
 
         <!-- Ungrouped cards -->
-        {#each ungrouped as card (card.id)}
+        {#each ungroupedCards as card (card.id)}
             <Card
                 {card}
                 {groupingMode}
@@ -166,6 +183,7 @@
                 {userRole}
                 {currentUserId}
                 {onDragStart}
+                {onCardDrop}
                 onToggleSelection={onToggleCardSelection}
                 onVote={onVoteCard}
                 onComment={onCommentCard}
@@ -235,43 +253,21 @@
         padding: 8px;
     }
 
-    /* Group container */
-    .group-container {
-        border: 1px dashed var(--surface-secondary);
-        border-radius: 6px;
-        padding: 12px;
-        background-color: var(--surface-elevated);
+    /* Card group container */
+    .card-group {
+        position: relative;
     }
 
-    .group-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 8px;
-    }
-
-    .group-header h4 {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--color-text-secondary);
-    }
-
-    .group-header button {
-        font-size: 0.75rem;
-        color: var(--card-interactive-highlight);
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-    }
-
-    .group-header button:hover {
-        color: var(--card-vote-button-hover);
-    }
-
-    .group-cards {
+    /* Subordinate cards container */
+    .subordinate-cards {
+        margin-left: 16px;
+        margin-top: 8px;
+        padding: 8px;
+        border-left: 2px solid var(--surface-secondary);
+        border-radius: 0 4px 4px 0;
+        background-color: rgba(var(--surface-elevated-rgb), 0.5);
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
     }
 </style>

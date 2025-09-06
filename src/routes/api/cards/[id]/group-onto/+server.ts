@@ -1,15 +1,25 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
-import { findCardById, groupCards, ungroupCard, getCardsForBoard } from '$lib/server/repositories/card.js';
+import { 
+	findCardById, 
+	groupCardOntoTarget, 
+	ungroupCard,
+	moveGroupToColumn,
+	moveCardToColumn,
+	getCardsForBoard 
+} from '$lib/server/repositories/card.js';
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated } from '$lib/server/websockets/broadcast.js';
 import { z } from 'zod';
 
-const groupCardsSchema = z.object({
-	cardIds: z.array(z.string().uuid()).min(2).max(20),
-	groupId: z.string().uuid().optional()
+const groupOntoSchema = z.object({
+	targetCardId: z.string().uuid()
+});
+
+const moveToColumnSchema = z.object({
+	columnId: z.string().uuid()
 });
 
 export const POST: RequestHandler = async (event) => {
@@ -17,17 +27,20 @@ export const POST: RequestHandler = async (event) => {
 		const user = requireUser(event);
 		const cardId = event.params.id;
 		const body = await event.request.json();
-		const data = groupCardsSchema.parse(body);
-		
-		// Ensure the main card is in the list
-		if (!data.cardIds.includes(cardId)) {
-			data.cardIds.push(cardId);
-		}
+		const data = groupOntoSchema.parse(body);
 		
 		const card = await findCardById(cardId);
 		if (!card) {
 			return json(
 				{ success: false, error: 'Card not found' },
+				{ status: 404 }
+			);
+		}
+		
+		const targetCard = await findCardById(data.targetCardId);
+		if (!targetCard) {
+			return json(
+				{ success: false, error: 'Target card not found' },
 				{ status: 404 }
 			);
 		}
@@ -58,22 +71,23 @@ export const POST: RequestHandler = async (event) => {
 			);
 		}
 		
-		// Only facilitators and admins can group cards
-		if (!['admin', 'facilitator'].includes(userRole)) {
+		// Check if current scene allows grouping cards
+		const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
+		if (!currentScene || !currentScene.allowGroupCards) {
 			return json(
-				{ success: false, error: 'Access denied' },
+				{ success: false, error: 'Grouping cards not allowed in current scene' },
 				{ status: 403 }
 			);
 		}
 		
-		const groupId = await groupCards(data.cardIds, data.groupId);
+		const groupId = await groupCardOntoTarget(cardId, data.targetCardId);
 		
-		// Broadcast updates for all grouped cards
-		for (const cId of data.cardIds) {
-			const updatedCard = await findCardById(cId);
-			if (updatedCard) {
-				broadcastCardUpdated(board.id, updatedCard);
-			}
+		// Get all affected cards and broadcast updates
+		const updatedCards = await getCardsForBoard(board.id);
+		const affectedCards = updatedCards.filter(c => c.groupId === groupId);
+		
+		for (const affectedCard of affectedCards) {
+			broadcastCardUpdated(board.id, affectedCard);
 		}
 		
 		return json({
@@ -103,6 +117,8 @@ export const DELETE: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const cardId = event.params.id;
+		const body = await event.request.json();
+		const data = moveToColumnSchema.parse(body);
 		
 		const card = await findCardById(cardId);
 		if (!card) {
@@ -138,28 +154,45 @@ export const DELETE: RequestHandler = async (event) => {
 			);
 		}
 		
-		// Only facilitators and admins can ungroup cards
-		if (!['admin', 'facilitator'].includes(userRole)) {
+		// Check if current scene allows grouping cards
+		const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
+		if (!currentScene || !currentScene.allowGroupCards) {
 			return json(
-				{ success: false, error: 'Access denied' },
+				{ success: false, error: 'Grouping cards not allowed in current scene' },
 				{ status: 403 }
 			);
 		}
 		
+		// Store the original group ID before ungrouping
+		const originalGroupId = card.groupId;
+		
 		const ungroupResult = await ungroupCard(cardId);
 		
-		// Broadcast the updated card
-		const updatedCard = await findCardById(cardId);
-		if (updatedCard) {
-			broadcastCardUpdated(board.id, updatedCard);
+		// Move the ungrouped card to the target column
+		await moveCardToColumn(cardId, data.columnId);
+		
+		// Get all cards and broadcast updates
+		const updatedCards = await getCardsForBoard(board.id);
+		
+		// Broadcast update for the ungrouped card
+		const ungroupedCard = updatedCards.find(c => c.id === cardId);
+		if (ungroupedCard) {
+			broadcastCardUpdated(board.id, ungroupedCard);
 		}
 		
 		// Broadcast updates for any cards affected by ungrouping (like last remaining card losing group lead status)
-		const allCards = await getCardsForBoard(board.id);
 		for (const affectedCardId of ungroupResult.affectedCardIds) {
-			const affectedCard = allCards.find(c => c.id === affectedCardId);
+			const affectedCard = updatedCards.find(c => c.id === affectedCardId);
 			if (affectedCard) {
 				broadcastCardUpdated(board.id, affectedCard);
+			}
+		}
+		
+		// Broadcast updates for remaining cards in the original group
+		if (originalGroupId) {
+			const remainingGroupCards = updatedCards.filter(c => c.groupId === originalGroupId);
+			for (const groupCard of remainingGroupCards) {
+				broadcastCardUpdated(board.id, groupCard);
 			}
 		}
 		
@@ -169,6 +202,13 @@ export const DELETE: RequestHandler = async (event) => {
 	} catch (error) {
 		if (error instanceof Response) {
 			throw error;
+		}
+		
+		if (error instanceof z.ZodError) {
+			return json(
+				{ success: false, error: 'Invalid input', details: error.errors },
+				{ status: 400 }
+			);
 		}
 		
 		return json(

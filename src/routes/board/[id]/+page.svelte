@@ -566,9 +566,14 @@
 
             if (response.ok) {
                 const data = await response.json();
-                cards = cards.map((c) =>
-                    c.id === draggedCardId ? data.card : c,
-                );
+                // Only update local state if it's a single card move
+                // Group moves are handled via WebSocket broadcasts
+                if (data.card) {
+                    cards = cards.map((c) =>
+                        c.id === draggedCardId ? data.card : c,
+                    );
+                }
+                // For group moves, the WebSocket broadcasts will update the UI
             }
         } catch (error) {
             console.error("Failed to move card:", error);
@@ -576,6 +581,59 @@
 
         draggedCardId = "";
         cardDropTargetColumnId = "";
+    }
+
+    async function handleCardDrop(event: DragEvent, targetCardId: string) {
+        event.preventDefault();
+
+        if (!draggedCardId || !currentScene?.allowGroupCards) {
+            draggedCardId = "";
+            return;
+        }
+
+        // Don't allow dropping a card onto itself
+        if (draggedCardId === targetCardId) {
+            draggedCardId = "";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/cards/${draggedCardId}/group-onto`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ targetCardId: targetCardId }),
+            });
+
+            if (response.ok) {
+                // Card updates will come through WebSocket
+                console.log("Card grouped successfully");
+            } else {
+                console.error("Failed to group card");
+            }
+        } catch (error) {
+            console.error("Failed to group card:", error);
+        }
+
+        draggedCardId = "";
+        cardDropTargetColumnId = "";
+    }
+
+    async function ungroupCard(cardId: string, targetColumnId: string) {
+        try {
+            const response = await fetch(`/api/cards/${cardId}/group-onto`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ columnId: targetColumnId }),
+            });
+
+            if (response.ok) {
+                console.log("Card ungrouped successfully");
+            } else {
+                console.error("Failed to ungroup card");
+            }
+        } catch (error) {
+            console.error("Failed to ungroup card:", error);
+        }
     }
 
     async function groupCards(cardsToGroup: any[]) {
@@ -1245,6 +1303,7 @@
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                onCardDrop={handleCardDrop}
                 onDragStart={handleDragStart}
                 onToggleCardSelection={toggleCardSelection}
                 onVoteCard={voteCard}

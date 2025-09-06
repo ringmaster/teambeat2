@@ -5,6 +5,8 @@
     interface Props {
         card: any;
         isGrouped?: boolean;
+        isGroupLead?: boolean;
+        isSubordinate?: boolean;
         groupingMode: boolean;
         isSelected: boolean;
         currentScene: any;
@@ -16,11 +18,14 @@
         onVote: (cardId: string) => void;
         onComment: (cardId: string) => void;
         onDelete: (cardId: string) => void;
+        onCardDrop?: (e: DragEvent, targetCardId: string) => void;
     }
 
     let {
         card,
         isGrouped: _ = false,
+        isGroupLead = false,
+        isSubordinate = false,
         groupingMode,
         isSelected,
         currentScene,
@@ -32,6 +37,7 @@
         onVote,
         onComment,
         onDelete,
+        onCardDrop,
     }: Props = $props();
 
     // Check if user can delete this card
@@ -46,12 +52,51 @@
 
     // Check if card can be moved/dragged
     let canMove = $derived(currentScene?.allowMoveCards ?? false);
+    
+    // Check if grouping is enabled
+    let canGroup = $derived(currentScene?.allowGroupCards ?? false);
+    
+    // State for drag targeting
+    let isDragTarget = $state(false);
+    
+    // Drag and drop handlers for grouping
+    function handleDragOver(e: DragEvent) {
+        if (canGroup && onCardDrop) {
+            e.preventDefault();
+            e.dataTransfer!.dropEffect = 'move';
+        }
+    }
+    
+    function handleDragEnter(e: DragEvent) {
+        if (canGroup && onCardDrop) {
+            e.preventDefault();
+            isDragTarget = true;
+        }
+    }
+    
+    function handleDragLeave(e: DragEvent) {
+        if (canGroup && onCardDrop) {
+            // Only clear target if leaving the card element itself, not its children
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                isDragTarget = false;
+            }
+        }
+    }
+    
+    function handleDrop(e: DragEvent) {
+        if (canGroup && onCardDrop) {
+            e.preventDefault();
+            e.stopPropagation();
+            isDragTarget = false;
+            onCardDrop(e, card.id);
+        }
+    }
 </script>
 
 <div
     class="card {groupingMode ? 'grouping-mode' : ''} {isSelected
         ? 'selected'
-        : ''} {!canMove ? 'no-drag' : ''}"
+        : ''} {!canMove ? 'no-drag' : ''} {isGroupLead ? 'group-lead' : ''} {isSubordinate ? 'subordinate' : ''} {isDragTarget ? 'drag-target' : ''}"
     role="button"
     aria-label="Card: {card.content.substring(0, 50)}{card.content.length > 50
         ? '...'
@@ -59,6 +104,10 @@
     tabindex="0"
     draggable={canMove}
     ondragstart={(e) => canMove && onDragStart(e, card.id)}
+    ondragover={handleDragOver}
+    ondragenter={handleDragEnter}
+    ondragleave={handleDragLeave}
+    ondrop={handleDrop}
     onclick={() => groupingMode && onToggleSelection(card.id)}
     onkeydown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -171,6 +220,26 @@
 
     .card.no-drag {
         cursor: default;
+    }
+    
+    .card.group-lead {
+        border-left: 4px solid var(--card-interactive-highlight);
+    }
+    
+    .card.subordinate {
+        background-color: var(--surface-elevated);
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+    
+    .card.subordinate .card-content {
+        margin-bottom: 4px;
+    }
+    
+    .card.drag-target {
+        box-shadow: 0 0 0 2px var(--card-interactive-highlight);
+        transform: translateY(-2px);
     }
 
     /* Text styles */

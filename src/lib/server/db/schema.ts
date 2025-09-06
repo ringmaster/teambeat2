@@ -87,6 +87,7 @@ export const cards = sqliteTable('cards', {
 	userId: text('user_id').references(() => users.id),
 	content: text('content').notNull(),
 	groupId: text('group_id'),
+	isGroupLead: integer('is_group_lead', { mode: 'boolean' }).default(false),
 	createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 	updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });

@@ -12,6 +12,7 @@
         onDragEnter: (e: DragEvent, columnId: string) => void;
         onDragLeave: (e: DragEvent, columnId: string) => void;
         onDrop: (e: DragEvent, columnId: string) => void;
+        onCardDrop: (e: DragEvent, targetCardId: string) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
         onVoteCard: (cardId: string) => void;
@@ -36,6 +37,7 @@
         onDragEnter,
         onDragLeave,
         onDrop,
+        onCardDrop,
         onDragStart,
         onToggleCardSelection,
         onVoteCard,
@@ -74,6 +76,7 @@
                 {onDragEnter}
                 {onDragLeave}
                 {onDrop}
+                {onCardDrop}
                 {onDragStart}
                 {onToggleCardSelection}
                 {onVoteCard}
