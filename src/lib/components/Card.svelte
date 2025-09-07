@@ -59,6 +59,12 @@
     // State for drag targeting
     let isDragTarget = $state(false);
 
+    // Check if card should be obscured
+    let isObscured = $derived.by(() => {
+        return currentScene?.allowObscureCards && 
+               card.userId !== currentUserId;
+    });
+
     // Drag and drop handlers for grouping
     function handleDragOver(e: DragEvent) {
         if (canGroup && onCardDrop) {
@@ -158,7 +164,7 @@
         ? 'drag-target'
         : ''}"
     role="button"
-    aria-label={card.isObscured
+    aria-label={isObscured
         ? "Obscured card content"
         : `Card: ${card.content.substring(0, 50)}${card.content.length > 50 ? "..." : ""}`}
     tabindex="0"
@@ -178,8 +184,8 @@
         }
     }}
 >
-    <p class="card-content {card.isObscured ? 'obscured' : ''}">
-        {#if card.isObscured}
+    <p class="card-content {isObscured ? 'obscured' : ''}">
+        {#if isObscured}
             {greekText(card.content)}
         {:else}
             {card.content}
