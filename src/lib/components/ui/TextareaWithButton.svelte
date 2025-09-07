@@ -9,7 +9,7 @@
         class?: string;
         rows?: number;
         maxlength?: number;
-        buttonVariant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+        buttonVariant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'light';
         buttonDisabled?: boolean;
         oninput?: (event: Event) => void;
         onkeydown?: (event: KeyboardEvent) => void;
@@ -52,10 +52,27 @@
             case 'ghost':
                 classes.push('button-ghost');
                 break;
+            case 'light':
+                classes.push('button-light');
+                break;
         }
         
         return classes.join(' ');
     });
+
+    function handleKeydown(event: KeyboardEvent) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            if (onButtonClick && !buttonDisabled && !disabled) {
+                onButtonClick(new MouseEvent('click', { bubbles: true }));
+            }
+        }
+        
+        // Call the original onkeydown handler if provided
+        if (onkeydown) {
+            onkeydown(event);
+        }
+    }
 </script>
 
 <div class="textarea-with-button {className}">
@@ -70,7 +87,7 @@
         {maxlength}
         class="textarea-field"
         oninput={oninput}
-        onkeydown={onkeydown}
+        onkeydown={handleKeydown}
     ></textarea>
     <button
         type="button"
@@ -106,7 +123,7 @@
         font-family: inherit;
         background-color: transparent;
         outline: none;
-        resize: vertical;
+        resize: none;
         min-height: calc(1.25rem * 3 + var(--spacing-3) * 2);
     }
 
@@ -182,6 +199,17 @@
     .button-ghost:hover:not(:disabled) {
         background-color: var(--surface-elevated);
         color: var(--color-text-primary);
+    }
+
+    .button-light {
+        background-color: white;
+        color: #000000;
+        border-left: none;
+    }
+
+    .button-light:hover:not(:disabled) {
+        background-color: #f5f5f5;
+        color: #000000;
     }
 
     /* Disabled state for the entire component */

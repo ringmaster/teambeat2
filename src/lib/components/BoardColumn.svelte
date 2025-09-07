@@ -103,7 +103,7 @@
                     onSetColumnContent(column.id, e.currentTarget.value)}
                 placeholder="Add a card..."
                 rows={2}
-                buttonVariant="primary"
+                buttonVariant="light"
                 onButtonClick={() => onAddCard(column.id)}
             >
                 {#snippet buttonContent()}
