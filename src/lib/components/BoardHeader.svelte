@@ -27,8 +27,8 @@
     }: Props = $props();
 </script>
 
-<div id="board-header" class="surface-primary content-divider page-container">
-    <div id="board-header-content" class="page-width">
+<div id="board-header" class="surface-primary content-divider">
+    <div id="board-header-content" class="page-width page-container">
         <!-- Left: Board title with inline role/status pills -->
         <div>
             <h1 class="heading" style="margin: 0;">
@@ -87,7 +87,6 @@
     #board-header-content {
         display: flex;
         justify-content: space-between;
-        width: 78rem;
 
         div {
             display: flex;

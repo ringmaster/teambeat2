@@ -22,19 +22,19 @@
         } finally {
             loading = false;
         }
-        
+
         // Click outside handler for dropdown
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
-            if (!target.closest('.avatar-dropdown-container')) {
+            if (!target.closest(".avatar-dropdown-container")) {
                 showUserDropdown = false;
             }
         };
-        
-        document.addEventListener('click', handleClickOutside);
-        
+
+        document.addEventListener("click", handleClickOutside);
+
         return () => {
-            document.removeEventListener('click', handleClickOutside);
+            document.removeEventListener("click", handleClickOutside);
         };
     });
 </script>
@@ -85,26 +85,31 @@
                         <div class="avatar-dropdown-container">
                             <button
                                 class="avatar-dropdown-trigger"
-                                onclick={() => showUserDropdown = !showUserDropdown}
-                                onkeydown={(e) => e.key === 'Escape' && (showUserDropdown = false)}
+                                onclick={() =>
+                                    (showUserDropdown = !showUserDropdown)}
+                                onkeydown={(e) =>
+                                    e.key === "Escape" &&
+                                    (showUserDropdown = false)}
                             >
-                                <Avatar
-                                    name={user.name}
-                                    email={user.email}
-                                />
+                                <Avatar name={user.name} email={user.email} />
                             </button>
-                            
+
                             {#if showUserDropdown}
                                 <div class="avatar-dropdown-menu">
                                     <div class="dropdown-user-info">
-                                        <div class="dropdown-user-name">{user.name || 'User'}</div>
-                                        <div class="dropdown-user-email">{user.email}</div>
+                                        <div class="dropdown-user-name">
+                                            {user.name || "User"}
+                                        </div>
+                                        <div class="dropdown-user-email">
+                                            {user.email}
+                                        </div>
                                     </div>
                                     <div class="dropdown-divider"></div>
                                     <a
                                         href="/"
                                         class="dropdown-item"
-                                        onclick={() => showUserDropdown = false}
+                                        onclick={() =>
+                                            (showUserDropdown = false)}
                                     >
                                         <Icon name="home" size="sm" />
                                         <span>Dashboard</span>
@@ -112,7 +117,8 @@
                                     <a
                                         href="/profile"
                                         class="dropdown-item"
-                                        onclick={() => showUserDropdown = false}
+                                        onclick={() =>
+                                            (showUserDropdown = false)}
                                     >
                                         <Icon name="user" size="sm" />
                                         <span>Profile</span>
@@ -189,14 +195,13 @@
                         <a
                             href="/"
                             class="text-interactive text-muted text-medium"
-                            onclick={() => mobileMenuOpen = false}
+                            onclick={() => (mobileMenuOpen = false)}
                             >Dashboard</a
                         >
                         <a
                             href="/profile"
                             class="text-interactive text-muted text-medium"
-                            onclick={() => mobileMenuOpen = false}
-                            >Profile</a
+                            onclick={() => (mobileMenuOpen = false)}>Profile</a
                         >
                         <button
                             class="status-text-danger text-medium"
@@ -211,11 +216,15 @@
                             Sign Out
                         </button>
                     {:else}
-                        <a href="/login" class="btn-secondary" style="width: 100%;"
-                            >Sign In</a
+                        <a
+                            href="/login"
+                            class="btn-secondary"
+                            style="width: 100%;">Sign In</a
                         >
-                        <a href="/register" class="btn-primary" style="width: 100%;"
-                            >Register</a
+                        <a
+                            href="/register"
+                            class="btn-primary"
+                            style="width: 100%;">Register</a
                         >
                     {/if}
                 </div>

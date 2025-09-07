@@ -1241,85 +1241,81 @@
         </div>
     </div>
 {:else}
-    <div class="flex flex-grow flex-col h-full max-h-screen overflow-hidden">
-        <BoardHeader
-            {board}
-            {userRole}
-            {currentScene}
-            {showSceneDropdown}
-            onConfigureClick={() => (showBoardConfig = true)}
-            onShareClick={handleShareBoard}
-            onSceneChange={changeScene}
-            onShowSceneDropdown={(show) => (showSceneDropdown = show)}
-        />
+    <BoardHeader
+        {board}
+        {userRole}
+        {currentScene}
+        {showSceneDropdown}
+        onConfigureClick={() => (showBoardConfig = true)}
+        onShareClick={handleShareBoard}
+        onSceneChange={changeScene}
+        onShowSceneDropdown={(show) => (showSceneDropdown = show)}
+    />
 
-        <!-- Connection Status Indicator -->
-        {#if wsConnectionState !== "connected"}
-            <div
-                class="connection-status connection-status--{wsConnectionState}"
-            >
-                <div class="connection-status__content">
-                    {#if wsConnectionState === "connecting"}
-                        <div
-                            class="connection-status__indicator connection-status__indicator--connecting"
-                        ></div>
-                        <span>Connecting...</span>
-                    {:else if wsConnectionState === "disconnected"}
-                        <div
-                            class="connection-status__indicator connection-status__indicator--disconnected"
-                        ></div>
-                        <span
-                            >Reconnecting... (Attempt {wsReconnectAttempts}/{wsMaxReconnectAttempts})</span
-                        >
-                    {:else}
-                        <div
-                            class="connection-status__indicator connection-status__indicator--error"
-                        ></div>
-                        <span>Connection failed - reloading...</span>
-                    {/if}
-                </div>
+    <!-- Connection Status Indicator -->
+    {#if wsConnectionState !== "connected"}
+        <div class="connection-status connection-status--{wsConnectionState}">
+            <div class="connection-status__content">
+                {#if wsConnectionState === "connecting"}
+                    <div
+                        class="connection-status__indicator connection-status__indicator--connecting"
+                    ></div>
+                    <span>Connecting...</span>
+                {:else if wsConnectionState === "disconnected"}
+                    <div
+                        class="connection-status__indicator connection-status__indicator--disconnected"
+                    ></div>
+                    <span
+                        >Reconnecting... (Attempt {wsReconnectAttempts}/{wsMaxReconnectAttempts})</span
+                    >
+                {:else}
+                    <div
+                        class="connection-status__indicator connection-status__indicator--error"
+                    ></div>
+                    <span>Connection failed - reloading...</span>
+                {/if}
             </div>
-        {/if}
+        </div>
+    {/if}
 
-        <!-- Main content area that grows to fill available space -->
-        {#if (!board.columns || board.columns.length === 0) && (!board.scenes || board.scenes.length === 0)}
-            <BoardSetup
-                bind:showTemplateSelector
-                {templates}
-                {boardId}
-                onToggleTemplateSelector={() =>
-                    (showTemplateSelector = !showTemplateSelector)}
-                onSetupTemplate={setupTemplate}
-                onConfigureClick={() => (showBoardConfig = true)}
-                onCloneBoard={cloneBoard}
-            />
-        {:else}
-            <BoardColumns
-                {board}
-                {cards}
-                {currentScene}
-                {groupingMode}
-                {selectedCards}
-                dragTargetColumnId={cardDropTargetColumnId}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onCardDrop={handleCardDrop}
-                onDragStart={handleDragStart}
-                onToggleCardSelection={toggleCardSelection}
-                onVoteCard={voteCard}
-                onCommentCard={commentCard}
-                onAddCard={addCardToColumn}
-                onGroupCards={groupCards}
-                onGetColumnContent={getColumnContent}
-                onSetColumnContent={setColumnContent}
-                onDeleteCard={deleteCard}
-                {userRole}
-                currentUserId={user?.id}
-            />
-        {/if}
-    </div>
+    <!-- Main content area that grows to fill available space -->
+    {#if (!board.columns || board.columns.length === 0) && (!board.scenes || board.scenes.length === 0)}
+        <BoardSetup
+            bind:showTemplateSelector
+            {templates}
+            {boardId}
+            onToggleTemplateSelector={() =>
+                (showTemplateSelector = !showTemplateSelector)}
+            onSetupTemplate={setupTemplate}
+            onConfigureClick={() => (showBoardConfig = true)}
+            onCloneBoard={cloneBoard}
+        />
+    {:else}
+        <BoardColumns
+            {board}
+            {cards}
+            {currentScene}
+            {groupingMode}
+            {selectedCards}
+            dragTargetColumnId={cardDropTargetColumnId}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onCardDrop={handleCardDrop}
+            onDragStart={handleDragStart}
+            onToggleCardSelection={toggleCardSelection}
+            onVoteCard={voteCard}
+            onCommentCard={commentCard}
+            onAddCard={addCardToColumn}
+            onGroupCards={groupCards}
+            onGetColumnContent={getColumnContent}
+            onSetColumnContent={setColumnContent}
+            onDeleteCard={deleteCard}
+            {userRole}
+            currentUserId={user?.id}
+        />
+    {/if}
 
     <BoardConfigDialog
         {showBoardConfig}
