@@ -7,6 +7,8 @@
     import BoardSetup from "$lib/components/BoardSetup.svelte";
     import BoardColumns from "$lib/components/BoardColumns.svelte";
     import BoardConfigDialog from "$lib/components/BoardConfigDialog.svelte";
+    import Icon from "$lib/components/ui/Icon.svelte";
+    import { toastStore } from "$lib/stores/toast";
 
     let board: any = $state(null);
     let cards: any[] = $state([]);
@@ -140,18 +142,21 @@
                 sseReconnectAttempts = 0;
             };
 
-            eventSource.addEventListener('connected', (event) => {
+            eventSource.addEventListener("connected", (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     clientId = data.clientId;
                     console.log("SSE client ID:", clientId);
-                    
+
                     // Join the board to receive updates
                     if (user) {
                         joinBoard(boardId, user.id);
                     }
                 } catch (error) {
-                    console.error("Failed to parse SSE connected message:", error);
+                    console.error(
+                        "Failed to parse SSE connected message:",
+                        error,
+                    );
                 }
             });
 
@@ -167,7 +172,7 @@
             eventSource.onerror = (error) => {
                 console.error("SSE error:", error);
                 sseConnectionState = "disconnected";
-                
+
                 // Attempt reconnection with exponential backoff
                 attemptReconnection();
             };
@@ -184,48 +189,47 @@
             sseReconnectTimeout = null;
         }
     }
-    
+
     async function joinBoard(boardId: string, userId: string) {
         if (!clientId) return;
-        
+
         try {
-            await fetch('/api/sse', {
-                method: 'POST',
+            await fetch("/api/sse", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    action: 'join_board',
+                    action: "join_board",
                     clientId,
                     boardId,
-                    userId
-                })
+                    userId,
+                }),
             });
         } catch (error) {
-            console.error('Failed to join board:', error);
-        }
-    }
-    
-    async function sendPresenceUpdate(activity: any) {
-        if (!clientId) return;
-        
-        try {
-            await fetch('/api/sse', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'presence_update',
-                    clientId,
-                    data: activity
-                })
-            });
-        } catch (error) {
-            console.error('Failed to send presence update:', error);
+            console.error("Failed to join board:", error);
         }
     }
 
+    async function sendPresenceUpdate(activity: any) {
+        if (!clientId) return;
+
+        try {
+            await fetch("/api/sse", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    action: "presence_update",
+                    clientId,
+                    data: activity,
+                }),
+            });
+        } catch (error) {
+            console.error("Failed to send presence update:", error);
+        }
+    }
 
     function attemptReconnection() {
         if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
@@ -288,10 +292,11 @@
                     board.votingAllocation = data.board.votingAllocation;
                     board.status = data.board.status;
                     board.updatedAt = data.board.updatedAt;
-                    
+
                     // Update column visibility data if it exists
                     if (data.board.hiddenColumnsByScene) {
-                        board.hiddenColumnsByScene = data.board.hiddenColumnsByScene;
+                        board.hiddenColumnsByScene =
+                            data.board.hiddenColumnsByScene;
                     }
 
                     // Update config form if it exists
@@ -331,18 +336,21 @@
         if (!board?.columns || !board?.currentSceneId) {
             return board?.columns || [];
         }
-        
-        const hiddenColumns = board.hiddenColumnsByScene?.[board.currentSceneId] || [];
-        return board.columns.filter((column: any) => !hiddenColumns.includes(column.id));
+
+        const hiddenColumns =
+            board.hiddenColumnsByScene?.[board.currentSceneId] || [];
+        return board.columns.filter(
+            (column: any) => !hiddenColumns.includes(column.id),
+        );
     });
 
     // Create a board object with filtered columns for display
     let displayBoard = $derived.by(() => {
         if (!board) return board;
-        
+
         return {
             ...board,
-            columns: visibleColumns
+            columns: visibleColumns,
         };
     });
 
@@ -1212,20 +1220,50 @@
     }
 
     async function handleShareBoard() {
+        // Check if board is in draft status
+        if (board.status === "draft") {
+            toastStore.draftBoardWarning(async () => {
+                try {
+                    // Update board status to active
+                    const response = await fetch(`/api/boards/${boardId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "active" }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        board.status = data.board.status;
+                        // Now proceed with sharing
+                        await copyBoardUrlToClipboard();
+                    } else {
+                        toastStore.error(
+                            "Failed to make board active. Please try again.",
+                        );
+                    }
+                } catch (error) {
+                    console.error("Error updating board status:", error);
+                    toastStore.error("Error updating board. Please try again.");
+                }
+            });
+        } else {
+            // Board is active, proceed with sharing
+            await copyBoardUrlToClipboard();
+        }
+    }
+
+    async function copyBoardUrlToClipboard() {
         try {
-            // Simply copy the current board URL
             const shareUrl = window.location.href;
-
-            // Copy to clipboard
             await navigator.clipboard.writeText(shareUrl);
-
-            // Show success message
-            alert(
+            toastStore.success(
                 "Board URL copied to clipboard! Anyone with this link can access the board.",
             );
         } catch (error) {
             console.error("Error copying to clipboard:", error);
-            alert("Error copying link. Please try again.");
+            toastStore.error(
+                "Error copying link to clipboard. Please try again.",
+            );
         }
     }
 
@@ -1243,37 +1281,23 @@
 </script>
 
 {#if loading}
-    <div class="min-h-screen flex items-center justify-center">
-        <div
-            class="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"
-        ></div>
+    <div id="board-loading">
+        <Icon name="loading" size="lg" />
     </div>
 {:else if !board}
-    <div class="min-h-screen flex items-center justify-center">
-        <div class="text-center">
-            <div
-                class="w-20 h-20 bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-4"
-            >
-                <svg
-                    class="w-10 h-10 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                </svg>
+    <div id="board-not-found">
+        <div class="board-not-found-content">
+            <div class="board-not-found-icon">
+                <Icon name="warning" color="danger" circle={true} size="lg" />
             </div>
-            <p class="text-xl font-semibold text-gray-900 mb-2">
-                Board not found
-            </p>
-            <p class="text-gray-600 mb-4">
+            <h2 class="board-not-found-title">Board not found</h2>
+            <p class="board-not-found-message">
                 The board you're looking for doesn't exist or you don't have
                 access.
+            </p>
+            <p class="board-not-found-message-2">
+                If the board is in draft, your admin needs to make it active for
+                you to access it.
             </p>
             <a href="/" class="btn-primary">Go to Dashboard</a>
         </div>
@@ -1448,5 +1472,56 @@
         50% {
             opacity: 0.5;
         }
+    }
+
+    /* Loading State */
+    #board-loading {
+        .flex-center();
+        min-height: 100vh;
+        color: var(--color-text-muted);
+    }
+
+    /* Board Not Found State */
+    #board-not-found {
+        .flex-center();
+        flex: 1;
+        padding: var(--spacing-4);
+        margin: auto;
+    }
+
+    .board-not-found-content {
+        .flex-column-center();
+        gap: var(--spacing-4);
+        max-width: 28rem;
+        text-align: center;
+    }
+
+    .board-not-found-icon {
+        margin-bottom: var(--spacing-2);
+
+        :global(.icon) {
+            width: 4rem;
+            height: 4rem;
+        }
+    }
+
+    .board-not-found-title {
+        .heading(2);
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+
+    .board-not-found-message {
+        .body-text(base);
+        color: var(--color-text-secondary);
+        margin: 0 0 var(--spacing-2);
+        line-height: 1.6;
+    }
+    .board-not-found-message-2 {
+        .body-text(base);
+        color: var(--color-text-muted);
+        font-size: smaller;
+        margin: 0 0 var(--spacing-2);
+        line-height: 1.6;
     }
 </style>

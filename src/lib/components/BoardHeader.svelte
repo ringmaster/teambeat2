@@ -118,7 +118,7 @@
         .scene-date {
             font-size: var(--text-sm);
             color: var(--text-muted);
-            margin: 0;
+            margin: 0.3rem 0 -0.3rem 0.3rem;
             font-weight: normal;
 
             b {

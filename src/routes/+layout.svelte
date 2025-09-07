@@ -3,6 +3,7 @@
     import "../app.less";
     import Avatar from "$lib/components/ui/Avatar.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
+    import ToastContainer from "$lib/components/ui/ToastContainer.svelte";
 
     let user: any = $state(null);
     let loading = $state(true);
@@ -267,6 +268,9 @@
             </div>
         </div>
     </footer>
+    
+    <!-- Toast Container -->
+    <ToastContainer />
 </div>
 
 <style>

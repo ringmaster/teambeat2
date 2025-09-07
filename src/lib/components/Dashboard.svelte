@@ -72,7 +72,7 @@
 
             if (response.ok) {
                 series = [...series, data.series];
-                initializeBoardName(data.series.id, data.series.name);
+                initializeBoardName(data.series.id, data.series.boards.length);
                 newSeriesName = "";
             } else {
                 seriesError = data.error || "Failed to create series";
@@ -86,25 +86,115 @@
 
     function generateBoardName(seed: string): string {
         const colors = [
-            "Amber", "Azure", "Crimson", "Emerald", "Golden", "Indigo", "Jade", "Lavender", "Magenta", "Navy",
-            "Olive", "Pearl", "Quartz", "Ruby", "Sage", "Teal", "Violet", "White", "Coral", "Ebony",
-            "Frost", "Gray", "Ivory", "Lime", "Mint", "Onyx", "Pink", "Rose", "Sand", "Tan",
-            "Aqua", "Beige", "Cyan", "Dusk", "Fire", "Gold", "Jade", "Kiwi", "Lava", "Moss",
-            "Opal", "Plum", "Rain", "Snow", "Tusk", "Wine", "Zinc", "Bone", "Clay", "Dawn"
+            "Amber",
+            "Azure",
+            "Crimson",
+            "Emerald",
+            "Golden",
+            "Indigo",
+            "Jade",
+            "Lavender",
+            "Magenta",
+            "Navy",
+            "Olive",
+            "Pearl",
+            "Quartz",
+            "Ruby",
+            "Sage",
+            "Teal",
+            "Violet",
+            "White",
+            "Coral",
+            "Ebony",
+            "Frost",
+            "Gray",
+            "Ivory",
+            "Lime",
+            "Mint",
+            "Onyx",
+            "Pink",
+            "Rose",
+            "Sand",
+            "Tan",
+            "Aqua",
+            "Beige",
+            "Cyan",
+            "Dusk",
+            "Fire",
+            "Gold",
+            "Jade",
+            "Kiwi",
+            "Lava",
+            "Moss",
+            "Opal",
+            "Plum",
+            "Rain",
+            "Snow",
+            "Tusk",
+            "Wine",
+            "Zinc",
+            "Bone",
+            "Clay",
+            "Dawn",
         ];
 
         const objects = [
-            "Bridge", "Tower", "Compass", "Arrow", "Shield", "Anchor", "Crown", "Hammer", "Lantern", "Mirror",
-            "Pyramid", "River", "Stone", "Thread", "Vault", "Wheel", "Beacon", "Canyon", "Dagger", "Engine",
-            "Falcon", "Garden", "Harbor", "Island", "Journey", "Kettle", "Ladder", "Mountain", "Needle", "Ocean",
-            "Palace", "Quill", "Ribbon", "Summit", "Temple", "Umbrella", "Valley", "Waterfall", "Axe", "Blade",
-            "Canvas", "Door", "Eagle", "Forge", "Gate", "Horizon", "Iron", "Jewel", "Key", "Lock"
+            "Bridge",
+            "Tower",
+            "Compass",
+            "Arrow",
+            "Shield",
+            "Anchor",
+            "Crown",
+            "Hammer",
+            "Lantern",
+            "Mirror",
+            "Pyramid",
+            "River",
+            "Stone",
+            "Thread",
+            "Vault",
+            "Wheel",
+            "Beacon",
+            "Canyon",
+            "Dagger",
+            "Engine",
+            "Falcon",
+            "Garden",
+            "Harbor",
+            "Island",
+            "Journey",
+            "Kettle",
+            "Ladder",
+            "Mountain",
+            "Needle",
+            "Ocean",
+            "Palace",
+            "Quill",
+            "Ribbon",
+            "Summit",
+            "Temple",
+            "Umbrella",
+            "Valley",
+            "Waterfall",
+            "Axe",
+            "Blade",
+            "Canvas",
+            "Door",
+            "Eagle",
+            "Forge",
+            "Gate",
+            "Horizon",
+            "Iron",
+            "Jewel",
+            "Key",
+            "Lock",
         ];
 
         let hash = 0;
         for (let i = 0; i < seed.length; i++) {
             const char = seed.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
+            hash = (hash << 5) - hash + char;
             hash = hash & hash;
         }
 
@@ -114,12 +204,14 @@
         return `${colors[colorIndex]} ${objects[objectIndex]}`;
     }
 
-    function initializeBoardName(seriesId: string, seriesName: string) {
+    function initializeBoardName(seriesId: string, boardCount: number) {
         if (!boardNames[seriesId]) {
-            const currentDate = new Date().toISOString().split('T')[0];
+            const currentDate = new Date().toISOString().split("T")[0];
             boardNames = {
                 ...boardNames,
-                [seriesId]: generateBoardName(`${seriesName} ${currentDate}`),
+                [seriesId]: generateBoardName(
+                    `${seriesId} ${boardCount} ${currentDate}`,
+                ),
             };
         }
     }
