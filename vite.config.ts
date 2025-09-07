@@ -4,6 +4,6 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [sveltekit()],
   server: {
-    allowedHosts: ['.ngrok-free.app']
+    allowedHosts: ['.ngrok-free.app', 'teambeat.ngrok.dev']
   }
 });
