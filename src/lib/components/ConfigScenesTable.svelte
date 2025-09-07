@@ -133,6 +133,26 @@
                 Board Scenes - {editingMode === "permissions"
                     ? "Permissions"
                     : "Display"} for {activeSceneName}
+
+                <button
+                    onclick={exitEditingMode}
+                    class="button button-secondary"
+                >
+                    <svg
+                        class="w-4 h-4 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+                    Back
+                </button>
             {:else}
                 Board Scenes
             {/if}
@@ -144,153 +164,137 @@
             </button>
         {/if}
     </div>
-    {#if editingMode}
-        <button onclick={exitEditingMode} class="button button-secondary">
-            <svg
-                class="w-4 h-4 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 19l-7-7 7-7"
-                />
-            </svg>
-            Back
-        </button>
-    {/if}
 </div>
 
-{#if !editingMode}
-    <!-- Scenes Table -->
+{#key editingMode}
     <div class="config-table-wrapper">
-        <table class="config-table">
-            <thead>
-                <tr class="config-table-header">
-                    <th class="config-table-th" style="width: 40px;">Order</th>
-                    <th class="config-table-th">Title</th>
-                    <th class="config-table-th">Permissions</th>
-                    <th class="config-table-th">Display</th>
-                    <th class="config-table-th">Mode</th>
-                    <th class="config-table-th" style="width: 120px;">Delete</th
-                    >
-                </tr>
-            </thead>
-            <tbody>
-                {#each board.scenes || [] as scene (scene.id)}
+        {#if !editingMode}
+            <!-- Scenes Table -->
+            <table class="config-table">
+                <thead>
+                    <tr class="config-table-header">
+                        <th class="config-table-th" style="width: 40px;"
+                            >Order</th
+                        >
+                        <th class="config-table-th">Title</th>
+                        <th class="config-table-th"
+                            >Permissions &amp; Display</th
+                        >
+                        <th class="config-table-th">Mode</th>
+                        <th class="config-table-th" style="width: 120px;"
+                            >Delete</th
+                        >
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each board.scenes || [] as scene (scene.id)}
+                        <tr
+                            draggable="true"
+                            ondragstart={(e) => onDragStart(e, scene.id)}
+                            ondragover={(e) => onDragOver(e, scene.id)}
+                            ondragleave={onDragLeave}
+                            ondrop={(e) => onDrop(e, scene.id)}
+                            class="config-table-row draggable {dragState.draggedSceneId ===
+                            scene.id
+                                ? 'dragging'
+                                : ''} {dragState.dragOverSceneId === scene.id &&
+                            dragState.draggedSceneId !== scene.id &&
+                            dragState.sceneDropPosition === 'above'
+                                ? 'drag-over-top'
+                                : ''} {dragState.dragOverSceneId === scene.id &&
+                            dragState.draggedSceneId !== scene.id &&
+                            dragState.sceneDropPosition === 'below'
+                                ? 'drag-over-bottom'
+                                : ''}"
+                        >
+                            <td>
+                                <div
+                                    class="drag-handle"
+                                    title="Drag to reorder"
+                                >
+                                    <Icon
+                                        name="grip-vertical"
+                                        size="sm"
+                                        class="drag-handle-icon"
+                                    />
+                                </div>
+                            </td>
+                            <td>
+                                <input
+                                    type="text"
+                                    value={scene.title}
+                                    onblur={(e) =>
+                                        updateSceneTitle(
+                                            scene.id,
+                                            e.currentTarget.value,
+                                        )}
+                                    class="input"
+                                />
+                            </td>
+                            <td style="text-align: center;">
+                                <button
+                                    onclick={() =>
+                                        showOptionsForScene(scene.id)}
+                                    class="button button-secondary"
+                                    >Options</button
+                                >
+                                <button
+                                    onclick={() =>
+                                        showColumnsForScene(scene.id)}
+                                    class="button button-secondary"
+                                    >Columns</button
+                                >
+                            </td>
+                            <td>
+                                <select
+                                    value={scene.mode}
+                                    onchange={(e) =>
+                                        updateSceneMode(
+                                            scene.id,
+                                            e.currentTarget.value,
+                                        )}
+                                    class="select"
+                                >
+                                    <option value="columns">Columns</option>
+                                    <option value="present">Present</option>
+                                    <option value="review">Review</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button
+                                    onclick={() => onDeleteScene(scene.id)}
+                                    class="button button-danger"
+                                >
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    {/each}
+                    <!-- Drop zone for adding items at the end -->
                     <tr
-                        draggable="true"
-                        ondragstart={(e) => onDragStart(e, scene.id)}
-                        ondragover={(e) => onDragOver(e, scene.id)}
-                        ondragleave={onDragLeave}
-                        ondrop={(e) => onDrop(e, scene.id)}
-                        class="config-table-row draggable {dragState.draggedSceneId ===
-                        scene.id
-                            ? 'dragging'
-                            : ''} {dragState.dragOverSceneId === scene.id &&
-                        dragState.draggedSceneId !== scene.id &&
-                        dragState.sceneDropPosition === 'above'
-                            ? 'drag-over-top'
-                            : ''} {dragState.dragOverSceneId === scene.id &&
-                        dragState.draggedSceneId !== scene.id &&
-                        dragState.sceneDropPosition === 'below'
+                        ondragover={onEndDrop}
+                        ondragleave={() => {}}
+                        ondrop={onEndDrop}
+                        class="config-table-drop-zone {dragState.dragOverSceneEnd
                             ? 'drag-over-bottom'
                             : ''}"
                     >
-                        <td>
-                            <div class="drag-handle" title="Drag to reorder">
-                                <Icon
-                                    name="grip-vertical"
-                                    size="sm"
-                                    class="drag-handle-icon"
-                                />
-                            </div>
-                        </td>
-                        <td>
-                            <input
-                                type="text"
-                                value={scene.title}
-                                onblur={(e) =>
-                                    updateSceneTitle(
-                                        scene.id,
-                                        e.currentTarget.value,
-                                    )}
-                                class="input"
-                            />
-                        </td>
-                        <td>
-                            <button
-                                onclick={() => showOptionsForScene(scene.id)}
-                                class="button button-secondary">Options</button
-                            >
-                        </td>
-                        <td>
-                            <button
-                                onclick={() => showColumnsForScene(scene.id)}
-                                class="button button-secondary">Columns</button
-                            >
-                        </td>
-                        <td>
-                            <select
-                                value={scene.mode}
-                                onchange={(e) =>
-                                    updateSceneMode(
-                                        scene.id,
-                                        e.currentTarget.value,
-                                    )}
-                                class="select"
-                            >
-                                <option value="columns">Columns</option>
-                                <option value="present">Present</option>
-                                <option value="review">Review</option>
-                            </select>
-                        </td>
-                        <td>
-                            <button
-                                onclick={() => onDeleteScene(scene.id)}
-                                class="button button-danger"
-                            >
-                                Delete
-                            </button>
+                        <td colspan="6" class="config-table-drop-zone-cell">
+                            {dragState.dragOverSceneEnd
+                                ? "Drop here to move to end"
+                                : ""}
                         </td>
                     </tr>
-                {/each}
-                <!-- Drop zone for adding items at the end -->
-                <tr
-                    ondragover={onEndDrop}
-                    ondragleave={() => {}}
-                    ondrop={onEndDrop}
-                    class="config-table-drop-zone {dragState.dragOverSceneEnd
-                        ? 'drag-over-bottom'
-                        : ''}"
-                >
-                    <td colspan="6" class="config-table-drop-zone-cell">
-                        {dragState.dragOverSceneEnd
-                            ? "Drop here to move to end"
-                            : ""}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-{:else}
-    <!-- Inline Editing Content -->
-    <div class="max-h-96 overflow-y-auto">
-        {#if editingMode === "permissions"}
-            {@const activeScene = board.scenes.find(
-                (s: any) => s.id === activeSceneId,
-            )}
-            {#if activeScene}
-                {#key editingMode}
-                    <div 
-                        class="permissions-section"
-                        in:fly={{ x: 20, duration: 300, easing: cubicOut }}
-                        out:fly={{ x: -20, duration: 200, easing: cubicOut }}
-                    >
-                    <h4 class="permissions-title">Scene Permissions</h4>
+                </tbody>
+            </table>
+        {:else}
+            <!-- Inline Editing Content -->
+
+            {#if editingMode === "permissions"}
+                {@const activeScene = board.scenes.find(
+                    (s: any) => s.id === activeSceneId,
+                )}
+                {#if activeScene}
                     <div class="permissions-grid">
                         <button
                             onclick={() =>
@@ -445,16 +449,8 @@
                             />
                         </button>
                     </div>
-                    </div>
-                {/key}
-            {/if}
-        {:else if editingMode === "display"}
-            {#key editingMode}
-                <div 
-                    class="space-y-3"
-                    in:fly={{ x: 20, duration: 300, easing: cubicOut }}
-                    out:fly={{ x: -20, duration: 200, easing: cubicOut }}
-                >
+                {/if}
+            {:else if editingMode === "display"}
                 <h4 class="text-sm font-medium text-gray-900 mb-4">
                     Column Display Settings
                 </h4>
@@ -512,11 +508,10 @@
                         </div>
                     {/each}
                 </div>
-                </div>
-            {/key}
+            {/if}
         {/if}
     </div>
-{/if}
+{/key}
 
 <style>
     .config-section-header {
