@@ -280,6 +280,11 @@
                     board.votingAllocation = data.board.votingAllocation;
                     board.status = data.board.status;
                     board.updatedAt = data.board.updatedAt;
+                    
+                    // Update column visibility data if it exists
+                    if (data.board.hiddenColumnsByScene) {
+                        board.hiddenColumnsByScene = data.board.hiddenColumnsByScene;
+                    }
 
                     // Update config form if it exists
                     if (configForm) {
@@ -307,6 +312,26 @@
     let currentScene = $derived(
         board?.scenes?.find((s: any) => s.id === board.currentSceneId),
     );
+
+    // Filter columns based on current scene visibility settings
+    let visibleColumns = $derived.by(() => {
+        if (!board?.columns || !board?.currentSceneId) {
+            return board?.columns || [];
+        }
+        
+        const hiddenColumns = board.hiddenColumnsByScene?.[board.currentSceneId] || [];
+        return board.columns.filter((column: any) => !hiddenColumns.includes(column.id));
+    });
+
+    // Create a board object with filtered columns for display
+    let displayBoard = $derived.by(() => {
+        if (!board) return board;
+        
+        return {
+            ...board,
+            columns: visibleColumns
+        };
+    });
 
     async function changeScene(sceneId: string) {
         try {
@@ -1292,7 +1317,7 @@
         />
     {:else}
         <BoardColumns
-            {board}
+            board={displayBoard}
             {cards}
             {currentScene}
             {groupingMode}

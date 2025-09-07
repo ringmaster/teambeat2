@@ -50,18 +50,28 @@
         userRole,
         currentUserId,
     }: Props = $props();
+
+    function columnCountClass(count: number) {
+        switch (count) {
+            case 0:
+                return "no-columns";
+            case 1:
+                return "single-column";
+            case 2:
+                return "two-columns";
+            case 3:
+                return "three-columns";
+            default:
+                return "multiple-columns";
+        }
+    }
 </script>
 
 <!-- Board Columns for configured board (full-width with horizontal scroll) -->
-<div
-    id="board-columns-container"
-    class="board-columns-container"
->
+<div id="board-columns-container" class="board-columns-container">
     <div
         id="board-columns-flex"
-        class="{board.columns?.length === 1
-            ? 'single-column'
-            : 'multiple-columns'}"
+        class={columnCountClass(board.columns?.length)}
     >
         {#each board.columns as column (column.id)}
             <BoardColumn
@@ -103,21 +113,35 @@
         display: flex;
         flex-direction: column;
     }
-    
+
     #board-columns-flex {
-        margin-left: calc((100vw - var(--board-header-width, 800px)) / 2) !important;
-        margin-right: calc((100vw - var(--board-header-width, 800px)) / 2) !important;
+        margin-left: calc(
+            (100vw - var(--board-header-width, 800px)) / 2
+        ) !important;
+        margin-right: calc(
+            (100vw - var(--board-header-width, 800px)) / 2
+        ) !important;
         display: flex;
         gap: 1rem;
         flex: 1;
         height: 100%;
     }
-    
+
     #board-columns-flex.single-column {
         justify-content: center;
+        :global .column {
+            width: 70%;
+        }
     }
-    
-    #board-columns-flex.multiple-columns {
-        min-width: max-content;
+
+    :global #board-columns-flex.multiple-columns .column {
+        width: 25%;
+        /* min-width: max-content; */
+    }
+    :global #board-columns-flex.two-columns .column {
+        width: 50%;
+    }
+    :global #board-columns-flex.three-columns .column {
+        width: 33%;
     }
 </style>

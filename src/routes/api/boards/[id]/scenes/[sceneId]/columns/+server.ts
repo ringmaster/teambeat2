@@ -65,16 +65,13 @@ export const PUT: RequestHandler = async (event) => {
 				});
 		}
 		
-		// Get the updated scene data to broadcast
-		const [scene] = await db
-			.select()
-			.from(scenes)
-			.where(eq(scenes.id, sceneId))
-			.limit(1);
+		// Get the updated board data with column visibility to broadcast
+		const updatedBoard = await getBoardWithDetails(boardId);
 		
-		// Broadcast scene change to all connected clients
-		if (scene) {
-			broadcastSceneChanged(boardId, scene);
+		// Broadcast board update to all connected clients so they get the updated hiddenColumnsByScene
+		if (updatedBoard) {
+			const { broadcastBoardUpdated } = await import('$lib/server/websockets/broadcast.js');
+			broadcastBoardUpdated(boardId, updatedBoard);
 		}
 		
 		return json({

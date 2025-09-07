@@ -124,6 +124,31 @@
 
     // Track column states per scene
     let columnStates = $state<Record<string, Record<string, string>>>({});
+    
+    // Reactively update column states when board hiddenColumnsByScene changes
+    $effect(() => {
+        // If we're in display mode and the board hiddenColumnsByScene data changes, update local state
+        if (editingMode === "display" && activeSceneId && board.hiddenColumnsByScene) {
+            if (!columnStates[activeSceneId]) {
+                columnStates[activeSceneId] = {};
+            }
+            
+            // Reset all columns to visible first
+            const columnsToUse = board.allColumns || board.columns;
+            columnsToUse?.forEach((col: any) => {
+                columnStates[activeSceneId][col.id] = "visible";
+            });
+            
+            // Mark hidden columns based on board data
+            if (board.hiddenColumnsByScene[activeSceneId]) {
+                board.hiddenColumnsByScene[activeSceneId].forEach((colId: string) => {
+                    if (columnStates[activeSceneId]) {
+                        columnStates[activeSceneId][colId] = "hidden";
+                    }
+                });
+            }
+        }
+    });
 </script>
 
 <div class="mb-6">
@@ -451,62 +476,35 @@
                     </div>
                 {/if}
             {:else if editingMode === "display"}
-                <h4 class="text-sm font-medium text-gray-900 mb-4">
-                    Column Display Settings
-                </h4>
-                <div class="space-y-3">
-                    {#each board.allColumns || board.columns || [] as column (column.id)}
-                        {@const currentState =
-                            columnStates[activeSceneId]?.[column.id] ||
-                            "visible"}
-                        <div
-                            class="p-4 border border-gray-200 rounded-lg bg-gray-50"
-                        >
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-sm text-gray-700 font-medium"
-                                    >{column.title}</span
-                                >
-                            </div>
-                            <div class="flex gap-4">
-                                <label class="flex items-center cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="column-{column.id}"
-                                        value="visible"
-                                        checked={currentState === "visible"}
-                                        onchange={() =>
-                                            updateColumnDisplay(
-                                                activeSceneId,
-                                                column.id,
-                                                "visible",
-                                            )}
-                                        class="mr-2 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span class="text-sm text-gray-600"
-                                        >Visible</span
-                                    >
-                                </label>
-                                <label class="flex items-center cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="column-{column.id}"
-                                        value="hidden"
-                                        checked={currentState === "hidden"}
-                                        onchange={() =>
-                                            updateColumnDisplay(
-                                                activeSceneId,
-                                                column.id,
-                                                "hidden",
-                                            )}
-                                        class="mr-2 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span class="text-sm text-gray-600"
-                                        >Hidden</span
-                                    >
-                                </label>
-                            </div>
-                        </div>
-                    {/each}
+                <div class="permissions-section">
+                    <h4 class="permissions-title">
+                        Column Display Settings
+                    </h4>
+                    <div class="permissions-grid">
+                        {#each board.allColumns || board.columns || [] as column (column.id)}
+                            {@const currentState =
+                                columnStates[activeSceneId]?.[column.id] ||
+                                "visible"}
+                            <button
+                                onclick={() =>
+                                    updateColumnDisplay(
+                                        activeSceneId,
+                                        column.id,
+                                        currentState === "visible" ? "hidden" : "visible",
+                                    )}
+                                class="btn-secondary {currentState === 'visible'
+                                    ? 'permission-active'
+                                    : ''}"
+                            >
+                                {column.title}
+                                <Icon
+                                    name="check"
+                                    size="md"
+                                    class="permission-icon"
+                                />
+                            </button>
+                        {/each}
+                    </div>
                 </div>
             {/if}
         {/if}
