@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateColumn, deleteColumn } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastColumnsUpdated } from '$lib/server/websockets/broadcast.js';
+import { broadcastColumnsUpdated } from '$lib/server/sse/broadcast.js';
 import { db } from '$lib/server/db/index.js';
 import { columns } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';

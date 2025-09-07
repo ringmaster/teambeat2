@@ -13,18 +13,17 @@
     let user: any = $state(null);
     let userRole = $state("");
     let loading = $state(true);
-    let ws: WebSocket | null = null;
+    let eventSource: EventSource | null = null;
     let boardId = $state("");
+    let clientId = $state("");
 
-    // WebSocket Health Monitoring
-    let wsConnectionState = $state<
+    // SSE Connection Health Monitoring
+    let sseConnectionState = $state<
         "connecting" | "connected" | "disconnected" | "error"
     >("disconnected");
-    let wsReconnectAttempts = $state(0);
-    let wsMaxReconnectAttempts = 5;
-    let wsPingInterval: number | null = null;
-    let wsReconnectTimeout: number | null = null;
-    let wsLastPongTime = 0;
+    let sseReconnectAttempts = $state(0);
+    let sseMaxReconnectAttempts = 5;
+    let sseReconnectTimeout: number | null = null;
 
     // UI State
     let newCardContentByColumn = $state(new Map<string, string>());
@@ -107,8 +106,8 @@
                 cards = cardsData.cards || [];
             }
 
-            // Set up WebSocket connection
-            setupWebSocket();
+            // Set up SSE connection
+            setupSSE();
             loading = false;
         } catch (error) {
             console.error("Error loading board:", error);
@@ -117,135 +116,144 @@
     });
 
     onDestroy(() => {
-        clearWebSocketTimers();
-        if (ws) {
-            ws.close();
+        clearSSETimers();
+        if (eventSource) {
+            eventSource.close();
         }
     });
 
-    function setupWebSocket() {
+    function setupSSE() {
         // Clear any existing timers
-        clearWebSocketTimers();
+        clearSSETimers();
 
         // Set connecting state
-        wsConnectionState = "connecting";
-
-        const wsProtocol =
-            window.location.protocol === "https:" ? "wss:" : "ws:";
-        // Connect to WebSocket server on port 8080 with session parameter
-        const wsUrl = `${wsProtocol}//${window.location.hostname}:8080?session=${encodeURIComponent(document.cookie.split("session=")[1]?.split(";")[0] || "")}`;
+        sseConnectionState = "connecting";
 
         try {
-            ws = new WebSocket(wsUrl);
+            // Create SSE connection
+            const sseUrl = `/api/sse?boardId=${encodeURIComponent(boardId)}`;
+            eventSource = new EventSource(sseUrl);
 
-            ws.onopen = () => {
-                console.log("WebSocket connected");
-                wsConnectionState = "connected";
-                wsReconnectAttempts = 0;
-                wsLastPongTime = Date.now();
-
-                // Join the board to receive updates
-                if (ws && user) {
-                    ws.send(
-                        JSON.stringify({
-                            type: "join_board",
-                            board_id: boardId,
-                            user_id: user.id,
-                        }),
-                    );
-                }
-
-                // Start ping/pong health checks
-                startWebSocketHealthCheck();
+            eventSource.onopen = () => {
+                console.log("SSE connected");
+                sseConnectionState = "connected";
+                sseReconnectAttempts = 0;
             };
 
-            ws.onmessage = (event) => {
+            eventSource.addEventListener('connected', (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    handleWebSocketMessage(data);
+                    clientId = data.clientId;
+                    console.log("SSE client ID:", clientId);
+                    
+                    // Join the board to receive updates
+                    if (user) {
+                        joinBoard(boardId, user.id);
+                    }
                 } catch (error) {
-                    console.error("Failed to parse WebSocket message:", error);
+                    console.error("Failed to parse SSE connected message:", error);
+                }
+            });
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleSSEMessage(data);
+                } catch (error) {
+                    console.error("Failed to parse SSE message:", error);
                 }
             };
 
-            ws.onclose = (event) => {
-                console.log("WebSocket disconnected", {
-                    code: event.code,
-                    reason: event.reason,
-                });
-                wsConnectionState = "disconnected";
-                clearWebSocketTimers();
-
+            eventSource.onerror = (error) => {
+                console.error("SSE error:", error);
+                sseConnectionState = "disconnected";
+                
                 // Attempt reconnection with exponential backoff
                 attemptReconnection();
             };
-
-            ws.onerror = (error) => {
-                console.error("WebSocket error:", error);
-                wsConnectionState = "error";
-            };
         } catch (error) {
-            console.error("Failed to create WebSocket:", error);
-            wsConnectionState = "error";
+            console.error("Failed to create SSE connection:", error);
+            sseConnectionState = "error";
             attemptReconnection();
         }
     }
 
-    function clearWebSocketTimers() {
-        if (wsPingInterval) {
-            clearInterval(wsPingInterval);
-            wsPingInterval = null;
+    function clearSSETimers() {
+        if (sseReconnectTimeout) {
+            clearTimeout(sseReconnectTimeout);
+            sseReconnectTimeout = null;
         }
-        if (wsReconnectTimeout) {
-            clearTimeout(wsReconnectTimeout);
-            wsReconnectTimeout = null;
+    }
+    
+    async function joinBoard(boardId: string, userId: string) {
+        if (!clientId) return;
+        
+        try {
+            await fetch('/api/sse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'join_board',
+                    clientId,
+                    boardId,
+                    userId
+                })
+            });
+        } catch (error) {
+            console.error('Failed to join board:', error);
+        }
+    }
+    
+    async function sendPresenceUpdate(activity: any) {
+        if (!clientId) return;
+        
+        try {
+            await fetch('/api/sse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'presence_update',
+                    clientId,
+                    data: activity
+                })
+            });
+        } catch (error) {
+            console.error('Failed to send presence update:', error);
         }
     }
 
-    function startWebSocketHealthCheck() {
-        // Send ping every 30 seconds
-        wsPingInterval = setInterval(() => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "ping" }));
-
-                // Check if we haven't received a pong in the last 60 seconds
-                if (Date.now() - wsLastPongTime > 60000) {
-                    console.warn(
-                        "WebSocket health check failed - no pong received",
-                    );
-                    ws.close();
-                }
-            }
-        }, 30000);
-    }
 
     function attemptReconnection() {
-        if (wsReconnectAttempts >= wsMaxReconnectAttempts) {
+        if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
             console.error(
-                "Max WebSocket reconnection attempts reached, reloading page",
+                "Max SSE reconnection attempts reached, reloading page",
             );
-            wsConnectionState = "error";
+            sseConnectionState = "error";
             // Reload the page as final fallback
             window.location.reload();
             return;
         }
 
-        wsReconnectAttempts++;
+        sseReconnectAttempts++;
         const delay = Math.min(
-            1000 * Math.pow(2, wsReconnectAttempts - 1),
+            1000 * Math.pow(2, sseReconnectAttempts - 1),
             30000,
         ); // Exponential backoff, max 30s
 
         console.log(
-            `WebSocket reconnection attempt ${wsReconnectAttempts}/${wsMaxReconnectAttempts} in ${delay}ms`,
+            `SSE reconnection attempt ${sseReconnectAttempts}/${sseMaxReconnectAttempts} in ${delay}ms`,
         );
 
-        wsReconnectTimeout = setTimeout(() => {
-            setupWebSocket();
+        sseReconnectTimeout = setTimeout(() => {
+            setupSSE();
         }, delay);
     }
 
-    function handleWebSocketMessage(data: any) {
+    function handleSSEMessage(data: any) {
         switch (data.type) {
             case "card_created":
                 cards = [...cards, data.card];
@@ -256,7 +264,7 @@
                 );
                 break;
             case "card_deleted":
-                cards = cards.filter((c) => c.id !== data.cardId);
+                cards = cards.filter((c) => c.id !== data.card_id);
                 break;
             case "scene_changed":
                 if (board && data.scene) {
@@ -302,9 +310,14 @@
                     board.columns = data.columns;
                 }
                 break;
-            case "pong":
-                // Update last pong time for health monitoring
-                wsLastPongTime = Date.now();
+            case "user_joined":
+                console.log("User joined:", data.user_id);
+                break;
+            case "user_left":
+                console.log("User left:", data.user_id);
+                break;
+            case "presence_update":
+                console.log("Presence update:", data.user_id, data.activity);
                 break;
         }
     }
@@ -1278,20 +1291,20 @@
     />
 
     <!-- Connection Status Indicator -->
-    {#if wsConnectionState !== "connected"}
-        <div class="connection-status connection-status--{wsConnectionState}">
+    {#if sseConnectionState !== "connected"}
+        <div class="connection-status connection-status--{sseConnectionState}">
             <div class="connection-status__content">
-                {#if wsConnectionState === "connecting"}
+                {#if sseConnectionState === "connecting"}
                     <div
                         class="connection-status__indicator connection-status__indicator--connecting"
                     ></div>
                     <span>Connecting...</span>
-                {:else if wsConnectionState === "disconnected"}
+                {:else if sseConnectionState === "disconnected"}
                     <div
                         class="connection-status__indicator connection-status__indicator--disconnected"
                     ></div>
                     <span
-                        >Reconnecting... (Attempt {wsReconnectAttempts}/{wsMaxReconnectAttempts})</span
+                        >Reconnecting... (Attempt {sseReconnectAttempts}/{sseMaxReconnectAttempts})</span
                     >
                 {:else}
                     <div

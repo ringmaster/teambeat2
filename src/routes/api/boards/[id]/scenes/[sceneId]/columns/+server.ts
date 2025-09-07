@@ -7,7 +7,7 @@ import { db } from '$lib/server/db/index.js';
 import { scenesColumns, scenes } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { broadcastSceneChanged } from '$lib/server/websockets/broadcast.js';
+import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
 
 const updateColumnDisplaySchema = z.object({
 	columnId: z.string().uuid(),
@@ -70,7 +70,7 @@ export const PUT: RequestHandler = async (event) => {
 		
 		// Broadcast board update to all connected clients so they get the updated hiddenColumnsByScene
 		if (updatedBoard) {
-			const { broadcastBoardUpdated } = await import('$lib/server/websockets/broadcast.js');
+			const { broadcastBoardUpdated } = await import('$lib/server/sse/broadcast.js');
 			broadcastBoardUpdated(boardId, updatedBoard);
 		}
 		

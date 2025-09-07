@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardStatus, updateBoardSettings } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastBoardUpdated } from '$lib/server/websockets/broadcast.js';
+import { broadcastBoardUpdated } from '$lib/server/sse/broadcast.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { z } from 'zod';
 

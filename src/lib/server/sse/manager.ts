@@ -1,25 +1,25 @@
-import type { WebSocket } from 'ws';
-
-export interface WebSocketMessage {
+export interface SSEMessage {
 	type: string;
 	board_id: string;
 	[key: string]: any;
 }
 
-export interface ConnectedClient {
-	ws: WebSocket;
+export interface ConnectedSSEClient {
+	response: Response;
+	controller: ReadableStreamDefaultController<string>;
 	userId: string | null;
 	boardId: string | null;
 	lastSeen: number;
 }
 
-class WebSocketManager {
-	private clients = new Map<string, ConnectedClient>();
+class SSEManager {
+	private clients = new Map<string, ConnectedSSEClient>();
 	private boardClients = new Map<string, Set<string>>();
 	
-	addClient(clientId: string, ws: WebSocket, userId: string | null = null, boardId: string | null = null) {
-		const client: ConnectedClient = {
-			ws,
+	addClient(clientId: string, response: Response, controller: ReadableStreamDefaultController<string>, userId: string | null = null, boardId: string | null = null) {
+		const client: ConnectedSSEClient = {
+			response,
+			controller,
 			userId,
 			boardId,
 			lastSeen: Date.now()
@@ -34,14 +34,7 @@ class WebSocketManager {
 			this.boardClients.get(boardId)!.add(clientId);
 		}
 		
-		ws.on('close', () => {
-			this.removeClient(clientId);
-		});
-		
-		ws.on('error', (error) => {
-			console.error('WebSocket error for client', clientId, error);
-			this.removeClient(clientId);
-		});
+		console.log(`SSE client ${clientId} connected, board: ${boardId}, user: ${userId}`);
 	}
 	
 	removeClient(clientId: string) {
@@ -55,7 +48,18 @@ class WebSocketManager {
 				}
 			}
 		}
+		
+		// Close the SSE stream
+		if (client) {
+			try {
+				client.controller.close();
+			} catch (error) {
+				// Controller may already be closed
+			}
+		}
+		
 		this.clients.delete(clientId);
+		console.log(`SSE client ${clientId} disconnected`);
 	}
 	
 	updateClientBoard(clientId: string, boardId: string, userId?: string) {
@@ -82,48 +86,55 @@ class WebSocketManager {
 			this.boardClients.set(boardId, new Set());
 		}
 		this.boardClients.get(boardId)!.add(clientId);
+		
+		console.log(`SSE client ${clientId} joined board ${boardId}`);
 	}
 	
-	broadcastToBoard(boardId: string, message: WebSocketMessage, excludeClientId?: string) {
+	broadcastToBoard(boardId: string, message: SSEMessage, excludeClientId?: string) {
 		const boardClients = this.boardClients.get(boardId);
 		if (!boardClients) return;
 		
-		const messageString = JSON.stringify(message);
+		const messageString = `data: ${JSON.stringify(message)}\n\n`;
 		
 		for (const clientId of boardClients) {
 			if (excludeClientId && clientId === excludeClientId) continue;
 			
 			const client = this.clients.get(clientId);
-			if (client && client.ws.readyState === client.ws.OPEN) {
+			if (client) {
 				try {
-					client.ws.send(messageString);
+					client.controller.enqueue(messageString);
+					client.lastSeen = Date.now();
 				} catch (error) {
-					console.error('Failed to send message to client', clientId, error);
+					console.error('Failed to send SSE message to client', clientId, error);
 					this.removeClient(clientId);
 				}
 			}
 		}
+		
+		console.log(`SSE broadcast to board ${boardId}: ${message.type}, clients: ${boardClients.size}`);
 	}
 	
-	sendToClient(clientId: string, message: WebSocketMessage) {
+	sendToClient(clientId: string, message: SSEMessage) {
 		const client = this.clients.get(clientId);
-		if (client && client.ws.readyState === client.ws.OPEN) {
+		if (client) {
 			try {
-				client.ws.send(JSON.stringify(message));
+				const messageString = `data: ${JSON.stringify(message)}\n\n`;
+				client.controller.enqueue(messageString);
+				client.lastSeen = Date.now();
 			} catch (error) {
-				console.error('Failed to send message to client', clientId, error);
+				console.error('Failed to send SSE message to client', clientId, error);
 				this.removeClient(clientId);
 			}
 		}
 	}
 	
-	getBoardClients(boardId: string): ConnectedClient[] {
+	getBoardClients(boardId: string): ConnectedSSEClient[] {
 		const clientIds = this.boardClients.get(boardId);
 		if (!clientIds) return [];
 		
 		return Array.from(clientIds)
 			.map(id => this.clients.get(id))
-			.filter((client): client is ConnectedClient => client !== undefined);
+			.filter((client): client is ConnectedSSEClient => client !== undefined);
 	}
 	
 	getActiveUserCount(boardId: string): number {
@@ -131,24 +142,44 @@ class WebSocketManager {
 			.filter(client => client.userId !== null).length;
 	}
 	
-	getClient(clientId: string): ConnectedClient | undefined {
+	getClient(clientId: string): ConnectedSSEClient | undefined {
 		return this.clients.get(clientId);
+	}
+	
+	sendHeartbeat(clientId: string) {
+		const client = this.clients.get(clientId);
+		if (client) {
+			try {
+				client.controller.enqueue(`: heartbeat\n\n`);
+				client.lastSeen = Date.now();
+			} catch (error) {
+				console.error('Failed to send heartbeat to client', clientId, error);
+				this.removeClient(clientId);
+			}
+		}
 	}
 	
 	cleanupStaleConnections() {
 		const staleThreshold = Date.now() - (5 * 60 * 1000); // 5 minutes
 		
 		for (const [clientId, client] of this.clients.entries()) {
-			if (client.lastSeen < staleThreshold || client.ws.readyState !== client.ws.OPEN) {
+			if (client.lastSeen < staleThreshold) {
 				this.removeClient(clientId);
 			}
 		}
 	}
 }
 
-export const wsManager = new WebSocketManager();
+export const sseManager = new SSEManager();
 
 // Cleanup stale connections every 5 minutes
 setInterval(() => {
-	wsManager.cleanupStaleConnections();
+	sseManager.cleanupStaleConnections();
 }, 5 * 60 * 1000);
+
+// Send heartbeat every 30 seconds to keep connections alive
+setInterval(() => {
+	for (const [clientId] of sseManager['clients']) {
+		sseManager.sendHeartbeat(clientId);
+	}
+}, 30 * 1000);

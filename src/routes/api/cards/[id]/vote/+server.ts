@@ -5,7 +5,7 @@ import { findCardById } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { castVote, checkVotingAllocation, getCardVotes } from '$lib/server/repositories/vote.js';
-import { broadcastVoteChanged } from '$lib/server/websockets/broadcast.js';
+import { broadcastVoteChanged } from '$lib/server/sse/broadcast.js';
 
 export const POST: RequestHandler = async (event) => {
 	try {

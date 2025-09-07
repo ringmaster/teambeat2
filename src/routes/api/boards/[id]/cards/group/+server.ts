@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { groupCards } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastCardUpdated } from '$lib/server/websockets/broadcast.js';
+import { broadcastCardUpdated } from '$lib/server/sse/broadcast.js';
 import { z } from 'zod';
 
 const groupCardsSchema = z.object({

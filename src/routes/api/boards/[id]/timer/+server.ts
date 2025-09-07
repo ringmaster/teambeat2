@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { createTimer, getTimer, deleteTimer, getRemainingTime, castExtensionVote, getExtensionVoteCounts } from '$lib/server/repositories/timer.js';
-import { broadcastTimerUpdate } from '$lib/server/websockets/broadcast.js';
+import { broadcastTimerUpdate } from '$lib/server/sse/broadcast.js';
 import { z } from 'zod';
 
 const createTimerSchema = z.object({

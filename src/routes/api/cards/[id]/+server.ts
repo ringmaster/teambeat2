@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById, updateCard, deleteCard } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastCardUpdated, broadcastCardDeleted } from '$lib/server/websockets/broadcast.js';
+import { broadcastCardUpdated, broadcastCardDeleted } from '$lib/server/sse/broadcast.js';
 import { z } from 'zod';
 
 const updateCardSchema = z.object({

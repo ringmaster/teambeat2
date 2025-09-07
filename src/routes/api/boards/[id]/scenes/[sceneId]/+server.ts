@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { updateScene, deleteScene } from '$lib/server/repositories/scene.js';
-import { broadcastSceneChanged } from '$lib/server/websockets/broadcast.js';
+import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
 import { db } from '$lib/server/db/index.js';
 import { boards } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
