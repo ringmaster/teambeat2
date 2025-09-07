@@ -1,5 +1,7 @@
 <script lang="ts">
     import Icon from "./ui/Icon.svelte";
+    import { fly, fade } from "svelte/transition";
+    import { cubicOut } from "svelte/easing";
 
     interface Props {
         board: any;
@@ -282,7 +284,12 @@
                 (s: any) => s.id === activeSceneId,
             )}
             {#if activeScene}
-                <div class="permissions-section">
+                {#key editingMode}
+                    <div 
+                        class="permissions-section"
+                        in:fly={{ x: 20, duration: 300, easing: cubicOut }}
+                        out:fly={{ x: -20, duration: 200, easing: cubicOut }}
+                    >
                     <h4 class="permissions-title">Scene Permissions</h4>
                     <div class="permissions-grid">
                         <button
@@ -438,10 +445,16 @@
                             />
                         </button>
                     </div>
-                </div>
+                    </div>
+                {/key}
             {/if}
         {:else if editingMode === "display"}
-            <div class="space-y-3">
+            {#key editingMode}
+                <div 
+                    class="space-y-3"
+                    in:fly={{ x: 20, duration: 300, easing: cubicOut }}
+                    out:fly={{ x: -20, duration: 200, easing: cubicOut }}
+                >
                 <h4 class="text-sm font-medium text-gray-900 mb-4">
                     Column Display Settings
                 </h4>
@@ -499,7 +512,8 @@
                         </div>
                     {/each}
                 </div>
-            </div>
+                </div>
+            {/key}
         {/if}
     </div>
 {/if}

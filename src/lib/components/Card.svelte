@@ -52,28 +52,28 @@
 
     // Check if card can be moved/dragged
     let canMove = $derived(currentScene?.allowMoveCards ?? false);
-    
+
     // Check if grouping is enabled
     let canGroup = $derived(currentScene?.allowGroupCards ?? false);
-    
+
     // State for drag targeting
     let isDragTarget = $state(false);
-    
+
     // Drag and drop handlers for grouping
     function handleDragOver(e: DragEvent) {
         if (canGroup && onCardDrop) {
             e.preventDefault();
-            e.dataTransfer!.dropEffect = 'move';
+            e.dataTransfer!.dropEffect = "move";
         }
     }
-    
+
     function handleDragEnter(e: DragEvent) {
         if (canGroup && onCardDrop) {
             e.preventDefault();
             isDragTarget = true;
         }
     }
-    
+
     function handleDragLeave(e: DragEvent) {
         if (canGroup && onCardDrop) {
             // Only clear target if leaving the card element itself, not its children
@@ -82,7 +82,7 @@
             }
         }
     }
-    
+
     function handleDrop(e: DragEvent) {
         if (canGroup && onCardDrop) {
             e.preventDefault();
@@ -91,16 +91,76 @@
             onCardDrop(e, card.id);
         }
     }
+
+    function greekText(english: string): string {
+        // Generate a numeric hash from 1 to 26 from the input string so that the hash is the same for the same input
+        let hash = 0;
+        for (let i = 0; i < english.length; i++) {
+            hash += english.charCodeAt(i);
+        }
+        hash = (hash % 26) + 1; // 1 to 26
+
+        // Greek alphabet array
+        const greekAlphabet = [
+            "α",
+            "β",
+            "γ",
+            "δ",
+            "ε",
+            "ζ",
+            "η",
+            "θ",
+            "ι",
+            "κ",
+            "λ",
+            "μ",
+            "ν",
+            "ξ",
+            "ο",
+            "π",
+            "ρ",
+            "σ",
+            "τ",
+            "υ",
+            "φ",
+            "χ",
+            "ψ",
+            "ω",
+        ];
+
+        // Map each english letter to a Greek letter, skipping {hash} letters for each step in the alphabet
+        const mapping: Record<string, string> = {};
+        const englishAlphabet = "abcdefghijklmnopqrstuvwxyz";
+
+        for (let i = 0; i < englishAlphabet.length; i++) {
+            const englishChar = englishAlphabet[i];
+            const greekIndex = (i * (hash + 1)) % greekAlphabet.length;
+            mapping[englishChar] = greekAlphabet[greekIndex];
+        }
+
+        // Transform the input string using the mapping
+        return english
+            .split("")
+            .map((char) => {
+                const lowerChar = char.toLowerCase();
+                return mapping[lowerChar] || char;
+            })
+            .join("");
+    }
 </script>
 
 <div
     class="card {groupingMode ? 'grouping-mode' : ''} {isSelected
         ? 'selected'
-        : ''} {!canMove ? 'no-drag' : ''} {isGroupLead ? 'group-lead' : ''} {isSubordinate ? 'subordinate' : ''} {isDragTarget ? 'drag-target' : ''}"
-    role="button"
-    aria-label="Card: {card.content.substring(0, 50)}{card.content.length > 50
-        ? '...'
+        : ''} {!canMove ? 'no-drag' : ''} {isGroupLead
+        ? 'group-lead'
+        : ''} {isSubordinate ? 'subordinate' : ''} {isDragTarget
+        ? 'drag-target'
         : ''}"
+    role="button"
+    aria-label={card.isObscured
+        ? "Obscured card content"
+        : `Card: ${card.content.substring(0, 50)}${card.content.length > 50 ? "..." : ""}`}
     tabindex="0"
     draggable={canMove}
     ondragstart={(e) => canMove && onDragStart(e, card.id)}
@@ -118,8 +178,12 @@
         }
     }}
 >
-    <p class="card-content">
-        {card.content}
+    <p class="card-content {card.isObscured ? 'obscured' : ''}">
+        {#if card.isObscured}
+            {greekText(card.content)}
+        {:else}
+            {card.content}
+        {/if}
     </p>
 
     <div class="card-footer">
@@ -221,22 +285,22 @@
     .card.no-drag {
         cursor: default;
     }
-    
+
     .card.group-lead {
         border-left: 4px solid var(--card-interactive-highlight);
     }
-    
+
     .card.subordinate {
         background-color: var(--surface-elevated);
         border-radius: 6px;
         padding: 8px;
         font-size: 0.8rem;
     }
-    
+
     .card.subordinate .card-content {
         margin-bottom: 4px;
     }
-    
+
     .card.drag-target {
         box-shadow: 0 0 0 2px var(--card-interactive-highlight);
         transform: translateY(-2px);
@@ -248,6 +312,26 @@
         margin-bottom: 8px;
         font-size: 0.875rem;
         line-height: 1.5;
+    }
+
+    .card-content.obscured {
+        color: var(--text-muted);
+        opacity: 0.8;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        pointer-events: none;
+        filter: blur(0.5px);
+        filter: blur(2px);
+    }
+
+    .card-content.obscured::selection {
+        background: transparent;
+    }
+
+    .card-content.obscured::-moz-selection {
+        background: transparent;
     }
 
     .card-footer {

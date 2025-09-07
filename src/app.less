@@ -443,6 +443,7 @@
     /* Title Bar Variables */
     --title-bar-background: @brand-primary;
     --title-bar-color: @neutral-white;
+    --board-header-width: 1248px;
 
     /* Spacing */
     --spacing-1: 0.25rem;
@@ -911,6 +912,17 @@ body {
 
 .app-footer svg.teambeat-logo {
     color: var(--color-text-muted);
+}
+
+.app-footer {
+    flex: 0;
+}
+nav {
+    flex: 0;
+}
+.content-container {
+    display: flex;
+    flex-direction: column;
 }
 
 .nav-brand-text {
