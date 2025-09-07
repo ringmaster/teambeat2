@@ -51,7 +51,7 @@
     });
 
     // Check if card can be moved/dragged
-    let canMove = $derived(currentScene?.allowMoveCards ?? false);
+    let canMove = $derived((currentScene?.allowMoveCards ?? false) && !isObscured);
 
     // Check if grouping is enabled
     let canGroup = $derived(currentScene?.allowGroupCards ?? false);
@@ -67,21 +67,21 @@
 
     // Drag and drop handlers for grouping
     function handleDragOver(e: DragEvent) {
-        if (canGroup && onCardDrop) {
+        if (canGroup && onCardDrop && !isObscured) {
             e.preventDefault();
             e.dataTransfer!.dropEffect = "move";
         }
     }
 
     function handleDragEnter(e: DragEvent) {
-        if (canGroup && onCardDrop) {
+        if (canGroup && onCardDrop && !isObscured) {
             e.preventDefault();
             isDragTarget = true;
         }
     }
 
     function handleDragLeave(e: DragEvent) {
-        if (canGroup && onCardDrop) {
+        if (canGroup && onCardDrop && !isObscured) {
             // Only clear target if leaving the card element itself, not its children
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                 isDragTarget = false;
@@ -90,7 +90,7 @@
     }
 
     function handleDrop(e: DragEvent) {
-        if (canGroup && onCardDrop) {
+        if (canGroup && onCardDrop && !isObscured) {
             e.preventDefault();
             e.stopPropagation();
             isDragTarget = false;

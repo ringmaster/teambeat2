@@ -304,7 +304,9 @@
         }
     }
 
-    let currentScene = $derived(board?.scenes?.find((s: any) => s.id === board.currentSceneId));
+    let currentScene = $derived(
+        board?.scenes?.find((s: any) => s.id === board.currentSceneId),
+    );
 
     async function changeScene(sceneId: string) {
         try {
@@ -498,7 +500,7 @@
             event.preventDefault();
             return;
         }
-        
+
         draggedCardId = cardId;
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = "move";
@@ -507,7 +509,7 @@
 
     function handleDragOver(event: DragEvent, columnId: string) {
         event.preventDefault();
-        
+
         // Don't allow drop if moving cards is not allowed
         if (!currentScene?.allowMoveCards) {
             if (event.dataTransfer) {
@@ -515,7 +517,7 @@
             }
             return;
         }
-        
+
         if (event.dataTransfer) {
             event.dataTransfer.dropEffect = "move";
         }
@@ -598,11 +600,14 @@
         }
 
         try {
-            const response = await fetch(`/api/cards/${draggedCardId}/group-onto`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ targetCardId: targetCardId }),
-            });
+            const response = await fetch(
+                `/api/cards/${draggedCardId}/group-onto`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ targetCardId: targetCardId }),
+                },
+            );
 
             if (response.ok) {
                 // Card updates will come through WebSocket
@@ -1251,28 +1256,25 @@
         <!-- Connection Status Indicator -->
         {#if wsConnectionState !== "connected"}
             <div
-                class="fixed top-4 right-4 z-50 px-3 py-2 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 {wsConnectionState ===
-                'connecting'
-                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                    : wsConnectionState === 'disconnected'
-                      ? 'bg-orange-100 text-orange-800 border border-orange-200'
-                      : 'bg-red-100 text-red-800 border border-red-200'}"
+                class="connection-status connection-status--{wsConnectionState}"
             >
-                <div class="flex items-center space-x-2">
+                <div class="connection-status__content">
                     {#if wsConnectionState === "connecting"}
                         <div
-                            class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"
+                            class="connection-status__indicator connection-status__indicator--connecting"
                         ></div>
                         <span>Connecting...</span>
                     {:else if wsConnectionState === "disconnected"}
                         <div
-                            class="w-3 h-3 bg-orange-500 rounded-full animate-pulse"
+                            class="connection-status__indicator connection-status__indicator--disconnected"
                         ></div>
                         <span
                             >Reconnecting... (Attempt {wsReconnectAttempts}/{wsMaxReconnectAttempts})</span
                         >
                     {:else}
-                        <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <div
+                            class="connection-status__indicator connection-status__indicator--error"
+                        ></div>
                         <span>Connection failed - reloading...</span>
                     {/if}
                 </div>
@@ -1342,3 +1344,75 @@
         {dragState}
     />
 {/if}
+
+<style type="less">
+    .connection-status {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 50;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        box-shadow:
+            0 10px 15px -3px rgba(0, 0, 0, 0.1),
+            0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: 1px solid;
+    }
+
+    .connection-status--connecting {
+        background-color: #fef3c7;
+        color: #92400e;
+        border-color: #fde68a;
+    }
+
+    .connection-status--disconnected {
+        background-color: #fed7aa;
+        color: #c2410c;
+        border-color: #fdba74;
+    }
+
+    .connection-status--error {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border-color: #fecaca;
+    }
+
+    .connection-status__content {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .connection-status__indicator {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+    }
+
+    .connection-status__indicator--connecting {
+        background-color: #eab308;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .connection-status__indicator--disconnected {
+        background-color: #ea580c;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .connection-status__indicator--error {
+        background-color: #dc2626;
+    }
+
+    @keyframes pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+    }
+</style>
