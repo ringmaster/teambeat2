@@ -734,6 +734,51 @@
         }
     }
 
+    async function performDeleteBoard() {
+        if (!["admin", "facilitator"].includes(userRole)) return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                toastStore.success("Board deleted successfully");
+                // Navigate back to dashboard
+                goto("/");
+            } else {
+                const data = await response.json();
+                toastStore.error(data.error || "Failed to delete board");
+            }
+        } catch (error) {
+            console.error("Failed to delete board:", error);
+            toastStore.error("Failed to delete board");
+        }
+    }
+
+    function deleteBoard() {
+        if (!["admin", "facilitator"].includes(userRole)) return;
+        
+        toastStore.warning(
+            "Are you sure that you want to delete this board?",
+            {
+                autoHide: false,
+                actions: [
+                    {
+                        label: "Delete",
+                        onClick: performDeleteBoard,
+                        variant: "primary"
+                    },
+                    {
+                        label: "Cancel",
+                        onClick: () => {}, // Will auto-close on action
+                        variant: "secondary"
+                    }
+                ]
+            }
+        );
+    }
+
     // Column Management Functions
     async function createColumn(formData: any = null) {
         if (!["admin", "facilitator"].includes(userRole)) return;
@@ -1399,6 +1444,7 @@
         onDragLeave={handleConfigDragLeave}
         onDrop={handleConfigDrop}
         onEndDrop={handleConfigEndDrop}
+        onDeleteBoard={deleteBoard}
         {dragState}
     />
 {/if}

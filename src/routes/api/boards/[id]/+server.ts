@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
-import { getBoardWithDetails, updateBoardStatus, updateBoardSettings } from '$lib/server/repositories/board.js';
+import { getBoardWithDetails, updateBoardStatus, updateBoardSettings, deleteBoard } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastBoardUpdated } from '$lib/server/sse/broadcast.js';
 import { handleApiError } from '$lib/server/api-utils.js';
@@ -117,3 +117,37 @@ export const PUT: RequestHandler = async (event) => {
 };
 
 export const PATCH: RequestHandler = PUT;
+
+export const DELETE: RequestHandler = async (event) => {
+	try {
+		const user = requireUser(event);
+		const boardId = event.params.id;
+		
+		const board = await getBoardWithDetails(boardId);
+		if (!board) {
+			return json(
+				{ success: false, error: 'Board not found' },
+				{ status: 404 }
+			);
+		}
+		
+		// Check if user has permission to delete this board
+		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
+			return json(
+				{ success: false, error: 'Access denied' },
+				{ status: 403 }
+			);
+		}
+		
+		// Delete the board and all its related data
+		await deleteBoard(boardId);
+		
+		return json({
+			success: true,
+			message: 'Board deleted successfully'
+		});
+	} catch (error) {
+		return handleApiError(error, 'Failed to delete board');
+	}
+};

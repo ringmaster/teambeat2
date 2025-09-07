@@ -36,6 +36,7 @@
         onDragLeave: (type: "column" | "scene", e: DragEvent) => void;
         onDrop: (type: "column" | "scene", e: DragEvent, id: string) => void;
         onEndDrop: (type: "column" | "scene", e: DragEvent) => void;
+        onDeleteBoard?: () => void;
         dragState: {
             draggedColumnId: string;
             draggedSceneId: string;
@@ -68,6 +69,7 @@
         onDragLeave,
         onDrop,
         onEndDrop,
+        onDeleteBoard,
         dragState,
     }: Props = $props();
 
@@ -301,110 +303,128 @@
                         />
                     </div>
                 {:else if configActiveTab === "general"}
-                    <div class="form-group">
+                    <div class="general-settings">
                         <div class="config-section-header">
                             <h3 class="config-section-title">
                                 General Settings
                             </h3>
                         </div>
 
-                        <div class="form-group">
-                            <div class="form-group">
-                                <label
-                                    for="board-name-input"
-                                    class="text-medium text-secondary"
-                                >
-                                    Board Name
-                                </label>
-                                <input
-                                    id="board-name-input"
-                                    type="text"
-                                    bind:value={configForm.name}
-                                    class="input"
-                                    onblur={() =>
-                                        onUpdateBoardConfig({
-                                            name: configForm.name,
-                                        })}
-                                />
+                        <div class="general-form">
+                            <div class="general-form-row">
+                                <div class="general-form-label">
+                                    <label for="board-name-input" class="text-medium text-secondary">
+                                        Board Name
+                                    </label>
+                                </div>
+                                <div class="general-form-control">
+                                    <input
+                                        id="board-name-input"
+                                        type="text"
+                                        bind:value={configForm.name}
+                                        class="input"
+                                        onblur={() =>
+                                            onUpdateBoardConfig({
+                                                name: configForm.name,
+                                            })}
+                                    />
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label
-                                    class="flex-start"
-                                    style="gap: var(--spacing-3);"
-                                >
+                            <div class="general-form-row">
+                                <div class="general-form-label">
+                                    <span class="text-medium text-secondary">
+                                        Blame-free Mode
+                                    </span>
+                                    <p class="caption text-muted">
+                                        Hide user names on cards to encourage open feedback
+                                    </p>
+                                </div>
+                                <div class="general-form-control">
                                     <input
                                         type="checkbox"
                                         bind:checked={configForm.blameFreeMode}
                                         onchange={() =>
                                             onUpdateBoardConfig({
-                                                blameFreeMode:
-                                                    configForm.blameFreeMode,
+                                                blameFreeMode: configForm.blameFreeMode,
                                             })}
-                                        style="width: 1rem; height: 1rem; accent-color: var(--color-primary);"
+                                        class="general-checkbox"
                                     />
-                                    <div
-                                        class="form-group"
-                                        style="gap: var(--spacing-1);"
+                                </div>
+                            </div>
+
+                            <div class="general-form-row">
+                                <div class="general-form-label">
+                                    <label for="board-status-select" class="text-medium text-secondary">
+                                        Board Status
+                                    </label>
+                                    <p class="caption text-muted">
+                                        Controls board visibility and accessibility
+                                    </p>
+                                </div>
+                                <div class="general-form-control">
+                                    <select
+                                        id="board-status-select"
+                                        bind:value={configForm.status}
+                                        onchange={() =>
+                                            onUpdateBoardConfig({
+                                                status: configForm.status,
+                                            })}
+                                        class="select"
                                     >
-                                        <span class="text-medium text-primary">
-                                            Blame-free Mode
-                                        </span>
-                                        <p class="caption text-muted">
-                                            Hide user names on cards to
-                                            encourage open feedback
-                                        </p>
-                                    </div>
-                                </label>
+                                        <option value="draft">Draft</option>
+                                        <option value="active">Active</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="archived">Archived</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label
-                                    for="board-status-select"
-                                    class="text-medium text-secondary"
-                                >
-                                    Board Status
-                                </label>
-                                <select
-                                    id="board-status-select"
-                                    bind:value={configForm.status}
-                                    onchange={() =>
-                                        onUpdateBoardConfig({
-                                            status: configForm.status,
-                                        })}
-                                    class="select"
-                                >
-                                    <option value="draft">Draft</option>
-                                    <option value="active">Active</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="archived">Archived</option>
-                                </select>
-                                <p class="caption text-muted">
-                                    Controls board visibility and accessibility
-                                </p>
-                            </div>
-
-                            <div class="form-group">
-                                <label
-                                    for="board-creation-date"
-                                    class="text-medium text-secondary"
-                                >
-                                    Retrospective Date
-                                </label>
-                                <input
-                                    id="board-creation-date"
-                                    type="text"
-                                    bind:this={datePickerElement}
-                                    class="input"
-                                    placeholder="Select date"
-                                    readonly
-                                />
-                                <p class="caption text-muted">
-                                    When this retrospective is meant to take
-                                    place
-                                </p>
+                            <div class="general-form-row">
+                                <div class="general-form-label">
+                                    <label for="board-creation-date" class="text-medium text-secondary">
+                                        Retrospective Date
+                                    </label>
+                                    <p class="caption text-muted">
+                                        When this retrospective is meant to take place
+                                    </p>
+                                </div>
+                                <div class="general-form-control">
+                                    <input
+                                        id="board-creation-date"
+                                        type="text"
+                                        bind:this={datePickerElement}
+                                        class="input"
+                                        placeholder="Select date"
+                                        readonly
+                                    />
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Delete Board Section -->
+                        {#if onDeleteBoard}
+                            <div class="general-delete-section">
+                                <div class="general-form-row">
+                                    <div class="general-form-label">
+                                        <span class="text-medium text-danger">
+                                            Delete Board
+                                        </span>
+                                        <p class="caption text-muted">
+                                            Permanently delete this board and all its contents. This action cannot be undone.
+                                        </p>
+                                    </div>
+                                    <div class="general-form-control">
+                                        <button
+                                            onclick={() => onDeleteBoard?.()}
+                                            class="general-delete-button"
+                                        >
+                                            Delete Board
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {/if}
                     </div>
                 {/if}
 
@@ -696,5 +716,86 @@
 
     #board-config-modal-overlay {
         align-items: flex-start;
+    }
+
+    /* General Settings Form Layout */
+    .general-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-6);
+    }
+
+    .general-form-row {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-6);
+        min-height: 2.5rem;
+    }
+
+    .general-form-label {
+        flex: 0 0 16rem;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-1);
+        padding-top: var(--spacing-1);
+    }
+
+    .general-form-label label,
+    .general-form-label span {
+        font-weight: 500;
+    }
+
+    .general-form-control {
+        flex: 1;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .general-form-control .input,
+    .general-form-control .select {
+        width: 100%;
+        margin: 0;
+    }
+
+    .general-checkbox {
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--color-primary);
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .general-delete-section {
+        margin-top: var(--spacing-8);
+        padding-top: var(--spacing-6);
+        border-top: 1px solid var(--color-border);
+    }
+
+    .general-delete-button {
+        background-color: var(--color-danger);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: var(--spacing-3) var(--spacing-6);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+
+        &:hover {
+            background-color: var(--color-danger-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+
+        &:focus {
+            outline: 2px solid var(--color-danger);
+            outline-offset: 2px;
+        }
     }
 </style>

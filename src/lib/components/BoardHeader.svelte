@@ -77,7 +77,7 @@
 
             {#if ["admin", "facilitator"].includes(userRole)}
                 <button onclick={onConfigureClick} class="toolbar-button">
-                    Configure
+                    <Icon name="settings" size="sm" />
                 </button>
             {/if}
 
