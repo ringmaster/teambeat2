@@ -170,6 +170,7 @@ export interface UpdateBoardSettingsData {
 	blameFreeMode?: boolean;
 	votingAllocation?: number;
 	votingEnabled?: boolean;
+	createdAt?: string;
 }
 
 export async function updateBoardSettings(boardId: string, data: UpdateBoardSettingsData) {

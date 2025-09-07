@@ -12,7 +12,8 @@ const updateBoardSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
 	blameFreeMode: z.boolean().optional(),
 	votingAllocation: z.number().int().min(1).max(20).optional(),
-	votingEnabled: z.boolean().optional()
+	votingEnabled: z.boolean().optional(),
+	createdAt: z.string().datetime().optional()
 });
 
 export const GET: RequestHandler = async (event) => {
@@ -87,7 +88,8 @@ export const PUT: RequestHandler = async (event) => {
 			name: data.name,
 			blameFreeMode: data.blameFreeMode,
 			votingAllocation: data.votingAllocation,
-			votingEnabled: data.votingEnabled
+			votingEnabled: data.votingEnabled,
+			createdAt: data.createdAt
 		};
 		
 		// Filter out undefined values

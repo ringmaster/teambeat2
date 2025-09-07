@@ -1,9 +1,12 @@
 <script lang="ts">
     import { fade, fly } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
+    import { onMount } from "svelte";
     import ConfigScenesTable from "./ConfigScenesTable.svelte";
     import ConfigColumnsTable from "./ConfigColumnsTable.svelte";
     import UserManagement from "./UserManagement.svelte";
+    import flatpickr from "flatpickr";
+    import "flatpickr/dist/flatpickr.min.css";
 
     interface Props {
         showBoardConfig: boolean;
@@ -71,6 +74,10 @@
     // User management state
     let seriesUsers = $state([]);
 
+    // Date picker instance
+    let datePickerInstance: any = null;
+    let datePickerElement: HTMLInputElement;
+
     // Load users when the users tab is opened
     $effect(async () => {
         if (configActiveTab === "users" && board?.seriesId) {
@@ -86,6 +93,43 @@
                 console.error("Failed to load users:", error);
             }
         }
+    });
+
+    // Initialize date picker when dialog opens or tab changes
+    $effect(() => {
+        if (
+            showBoardConfig &&
+            configActiveTab === "general" &&
+            datePickerElement &&
+            !datePickerInstance
+        ) {
+            const boardCreatedAt = board?.createdAt
+                ? new Date(board.createdAt)
+                : new Date();
+
+            datePickerInstance = flatpickr(datePickerElement, {
+                dateFormat: "Y-m-d",
+                defaultDate: boardCreatedAt,
+                enableTime: false,
+                onChange: (selectedDates) => {
+                    if (selectedDates.length > 0) {
+                        const newDate = selectedDates[0];
+                        // Update the board's creation date
+                        onUpdateBoardConfig({
+                            createdAt: newDate.toISOString(),
+                        });
+                    }
+                },
+            });
+        }
+
+        return () => {
+            // Cleanup date picker when dialog closes
+            if (datePickerInstance && !showBoardConfig) {
+                datePickerInstance.destroy();
+                datePickerInstance = null;
+            }
+        };
     });
 
     async function handleUserAdded(email: string) {
@@ -337,6 +381,27 @@
                                 </select>
                                 <p class="caption text-muted">
                                     Controls board visibility and accessibility
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label
+                                    for="board-creation-date"
+                                    class="text-medium text-secondary"
+                                >
+                                    Retrospective Date
+                                </label>
+                                <input
+                                    id="board-creation-date"
+                                    type="text"
+                                    bind:this={datePickerElement}
+                                    class="input"
+                                    placeholder="Select date"
+                                    readonly
+                                />
+                                <p class="caption text-muted">
+                                    When this retrospective is meant to take
+                                    place
                                 </p>
                             </div>
                         </div>
