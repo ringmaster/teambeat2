@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { boards, columns, scenes, cards, votes, comments, scenesColumns } from '../db/schema.js';
+import { boards, columns, scenes, cards, votes, comments, scenesColumns, boardSeries } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -79,8 +79,28 @@ export async function findBoardsByUser(userId: string) {
 }
 
 export async function getBoardWithDetails(boardId: string) {
-	const board = await findBoardById(boardId);
-	if (!board) return null;
+	const [boardResult] = await db
+		.select({
+			id: boards.id,
+			seriesId: boards.seriesId,
+			name: boards.name,
+			status: boards.status,
+			currentSceneId: boards.currentSceneId,
+			blameFreeMode: boards.blameFreeMode,
+			votingAllocation: boards.votingAllocation,
+			votingEnabled: boards.votingEnabled,
+			meetingDate: boards.meetingDate,
+			createdAt: boards.createdAt,
+			updatedAt: boards.updatedAt,
+			series: boardSeries.name
+		})
+		.from(boards)
+		.leftJoin(boardSeries, eq(boards.seriesId, boardSeries.id))
+		.where(eq(boards.id, boardId))
+		.limit(1);
+	
+	if (!boardResult) return null;
+	const board = boardResult;
 	
 	const boardColumns = await db
 		.select()

@@ -31,20 +31,33 @@
     <div id="board-header-content" class="page-width page-container">
         <!-- Left: Board title with inline role/status pills -->
         <div>
-            <h1 class="heading" style="margin: 0;">
-                {board.name} - {new Date(board.createdAt).toLocaleDateString(
-                    "en-CA",
-                )}
-            </h1>
-            <Pill size="sm" preset={userRole}>{userRole}</Pill>
-            {#if board.status && board.status !== "active"}
-                <Pill size="sm" preset={board.status}>
-                    {board.status}
-                </Pill>
-            {/if}
-            {#if board.blameFreeMode}
-                <Pill size="sm" variant="success">Blame-free</Pill>
-            {/if}
+            <header id="board-title">
+                <h2 class="scene-date">
+                    <b>{board.series || ""}</b> &bullet; {new Date().toLocaleDateString(
+                        "en-US",
+                        {
+                            weekday: "short",
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                        },
+                    )}
+                </h2>
+                <div class="board-name-row">
+                    <h1>{board.name}</h1>
+                    <div class="pills">
+                        <Pill size="sm" preset={userRole}>{userRole}</Pill>
+                        {#if board.status && board.status !== "active"}
+                            <Pill size="sm" preset={board.status}>
+                                {board.status}
+                            </Pill>
+                        {/if}
+                        {#if board.blameFreeMode}
+                            <Pill size="sm" variant="success">Blame-free</Pill>
+                        {/if}
+                    </div>
+                </div>
+            </header>
         </div>
 
         <!-- Right: Toolbar pills -->
@@ -82,16 +95,53 @@
 
 <style type="less">
     #board-header {
-        padding: var(--spacing-4) var(--spacing-4);
+        padding: 0 var(--spacing-4);
     }
     #board-header-content {
         display: flex;
         justify-content: space-between;
 
-        div {
+        > div:first-child {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        > div:last-child {
             display: flex;
             gap: var(--spacing-4);
             align-items: center;
+        }
+    }
+
+    #board-title {
+        .scene-date {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            margin: 0;
+            font-weight: normal;
+
+            b {
+                font-weight: 600;
+            }
+        }
+
+        .board-name-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+
+            h1 {
+                margin: 0;
+                font-weight: bold;
+                color: var(--text-primary);
+            }
+
+            .pills {
+                display: flex;
+                gap: var(--spacing-2);
+                align-items: center;
+            }
         }
     }
 </style>

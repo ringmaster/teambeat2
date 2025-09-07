@@ -84,15 +84,42 @@
         }
     }
 
-    function generateBoardName(seriesName: string): string {
-        return seriesName;
+    function generateBoardName(seed: string): string {
+        const colors = [
+            "Amber", "Azure", "Crimson", "Emerald", "Golden", "Indigo", "Jade", "Lavender", "Magenta", "Navy",
+            "Olive", "Pearl", "Quartz", "Ruby", "Sage", "Teal", "Violet", "White", "Coral", "Ebony",
+            "Frost", "Gray", "Ivory", "Lime", "Mint", "Onyx", "Pink", "Rose", "Sand", "Tan",
+            "Aqua", "Beige", "Cyan", "Dusk", "Fire", "Gold", "Jade", "Kiwi", "Lava", "Moss",
+            "Opal", "Plum", "Rain", "Snow", "Tusk", "Wine", "Zinc", "Bone", "Clay", "Dawn"
+        ];
+
+        const objects = [
+            "Bridge", "Tower", "Compass", "Arrow", "Shield", "Anchor", "Crown", "Hammer", "Lantern", "Mirror",
+            "Pyramid", "River", "Stone", "Thread", "Vault", "Wheel", "Beacon", "Canyon", "Dagger", "Engine",
+            "Falcon", "Garden", "Harbor", "Island", "Journey", "Kettle", "Ladder", "Mountain", "Needle", "Ocean",
+            "Palace", "Quill", "Ribbon", "Summit", "Temple", "Umbrella", "Valley", "Waterfall", "Axe", "Blade",
+            "Canvas", "Door", "Eagle", "Forge", "Gate", "Horizon", "Iron", "Jewel", "Key", "Lock"
+        ];
+
+        let hash = 0;
+        for (let i = 0; i < seed.length; i++) {
+            const char = seed.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+
+        const colorIndex = Math.abs(hash) % colors.length;
+        const objectIndex = Math.abs(hash >> 8) % objects.length;
+
+        return `${colors[colorIndex]} ${objects[objectIndex]}`;
     }
 
     function initializeBoardName(seriesId: string, seriesName: string) {
         if (!boardNames[seriesId]) {
+            const currentDate = new Date().toISOString().split('T')[0];
             boardNames = {
                 ...boardNames,
-                [seriesId]: generateBoardName(seriesName),
+                [seriesId]: generateBoardName(`${seriesName} ${currentDate}`),
             };
         }
     }
