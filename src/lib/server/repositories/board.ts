@@ -103,7 +103,15 @@ export async function getBoardWithDetails(boardId: string) {
   const board = boardResult;
 
   const boardColumns = await db
-    .select()
+    .select({
+      id: columns.id,
+      boardId: columns.boardId,
+      title: columns.title,
+      description: columns.description,
+      seq: columns.seq,
+      defaultAppearance: columns.defaultAppearance,
+      createdAt: columns.createdAt
+    })
     .from(columns)
     .where(eq(columns.boardId, boardId))
     .orderBy(columns.seq);

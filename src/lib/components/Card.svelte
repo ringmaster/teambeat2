@@ -51,7 +51,9 @@
     });
 
     // Check if card can be moved/dragged
-    let canMove = $derived((currentScene?.allowMoveCards ?? false) && !isObscured);
+    let canMove = $derived(
+        (currentScene?.allowMoveCards ?? false) && !isObscured,
+    );
 
     // Check if grouping is enabled
     let canGroup = $derived(currentScene?.allowGroupCards ?? false);
@@ -61,8 +63,7 @@
 
     // Check if card should be obscured
     let isObscured = $derived.by(() => {
-        return currentScene?.allowObscureCards && 
-               card.userId !== currentUserId;
+        return currentScene?.allowObscureCards && card.userId !== currentUserId;
     });
 
     // Drag and drop handlers for grouping
@@ -321,7 +322,7 @@
     }
 
     .card-content.obscured {
-        color: var(--text-muted);
+        color: var(--color-text-muted);
         opacity: 0.8;
         user-select: none;
         -webkit-user-select: none;

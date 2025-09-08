@@ -117,7 +117,7 @@
     #board-title {
         .scene-date {
             font-size: var(--text-sm);
-            color: var(--text-muted);
+            color: var(--color-text-muted);
             margin: 0.3rem 0 -0.3rem 0.3rem;
             font-weight: normal;
 

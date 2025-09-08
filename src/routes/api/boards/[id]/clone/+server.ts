@@ -5,7 +5,7 @@ import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
-import { boards, columns, scenes } from '$lib/server/db/schema.js';
+import { boards, columns, scenes, scenesColumns } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -77,6 +77,17 @@ export const POST: RequestHandler = async (event) => {
         
         // Clone in a transaction - MUST be synchronous with better-sqlite3
         db.transaction((tx) => {
+            // Clone board options from source board
+            tx
+                .update(boards)
+                .set({
+                    blameFreeMode: sourceBoard.blameFreeMode,
+                    votingAllocation: sourceBoard.votingAllocation,
+                    votingEnabled: sourceBoard.votingEnabled
+                })
+                .where(eq(boards.id, boardId))
+                .run();
+            
             // Clone columns
             const sourceColumns = tx
                 .select()
@@ -84,11 +95,17 @@ export const POST: RequestHandler = async (event) => {
                 .where(eq(columns.boardId, data.sourceId))
                 .all();
             
+            // Map old column IDs to new column IDs for scene column settings
+            const columnIdMapping: Record<string, string> = {};
+            
             for (const column of sourceColumns) {
+                const newColumnId = uuidv4();
+                columnIdMapping[column.id] = newColumnId;
+                
                 tx
                     .insert(columns)
                     .values({
-                        id: uuidv4(),
+                        id: newColumnId,
                         boardId: boardId,
                         title: column.title,
                         description: column.description,
@@ -107,10 +124,13 @@ export const POST: RequestHandler = async (event) => {
                 .all();
             
             let firstSceneId: string | null = null;
+            // Map old scene IDs to new scene IDs for scene column settings
+            const sceneIdMapping: Record<string, string> = {};
             
             for (const scene of sourceScenes) {
                 const newSceneId = uuidv4();
                 if (!firstSceneId) firstSceneId = newSceneId;
+                sceneIdMapping[scene.id] = newSceneId;
                 
                 tx
                     .insert(scenes)
@@ -134,6 +154,37 @@ export const POST: RequestHandler = async (event) => {
                         createdAt: new Date().toISOString()
                     })
                     .run();
+            }
+            
+            // Clone scene column settings
+            const sourceScenesColumns = tx
+                .select()
+                .from(scenesColumns)
+                .where(eq(scenesColumns.sceneId, data.sourceId))
+                .all();
+            
+            // Find scenes_columns entries for any scene in the source board
+            const allSourceScenesColumns = tx
+                .select({ sceneId: scenesColumns.sceneId, columnId: scenesColumns.columnId, state: scenesColumns.state })
+                .from(scenesColumns)
+                .innerJoin(scenes, eq(scenes.id, scenesColumns.sceneId))
+                .where(eq(scenes.boardId, data.sourceId))
+                .all();
+            
+            for (const sceneColumn of allSourceScenesColumns) {
+                const newSceneId = sceneIdMapping[sceneColumn.sceneId];
+                const newColumnId = columnIdMapping[sceneColumn.columnId];
+                
+                if (newSceneId && newColumnId) {
+                    tx
+                        .insert(scenesColumns)
+                        .values({
+                            sceneId: newSceneId,
+                            columnId: newColumnId,
+                            state: sceneColumn.state
+                        })
+                        .run();
+                }
             }
             
             // Set current scene to first scene if any scenes were cloned

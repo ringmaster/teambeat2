@@ -1,58 +1,4 @@
 export const BOARD_TEMPLATES = {
-  basic: {
-    id: 'basic',
-    name: 'Basic Retrospective',
-    description: 'A simple retrospective with what went well, what could be improved, and action items.',
-    columns: [
-      { title: 'What went well?', seq: 1 },
-      { title: 'What could be improved?', seq: 2 },
-      { title: 'Action items', seq: 3 }
-    ],
-    scenes: [
-      {
-        title: 'Add Cards',
-        mode: 'columns' as const,
-        seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
-      },
-      {
-        title: 'Discuss & Vote',
-        mode: 'present' as const,
-        seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true
-      },
-      {
-        title: 'Review Results',
-        mode: 'review' as const,
-        seq: 3,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
-      }
-    ]
-  },
   kafe: {
     id: 'kafe',
     name: 'KAFE (Kvetches, Appreciations, Flaws, Experiments)',
@@ -141,9 +87,9 @@ export const BOARD_TEMPLATES = {
     name: 'Start, Stop, Continue',
     description: 'Focus on behaviors to start, stop, and continue for the next iteration.',
     columns: [
-      { title: 'Start (What should we begin doing?)', seq: 1 },
-      { title: 'Stop (What should we cease doing?)', seq: 2 },
-      { title: 'Continue (What should we keep doing?)', seq: 3 }
+      { title: 'Start', description: '(What should we begin doing?)', seq: 1 },
+      { title: 'Stop', description: '(What should we cease doing?)', seq: 2 },
+      { title: 'Continue', description: '(What should we keep doing?)', seq: 3 }
     ],
     scenes: [
       {
@@ -195,9 +141,9 @@ export const BOARD_TEMPLATES = {
     name: 'Mad, Sad, Glad',
     description: 'An emotional retrospective focusing on feelings and reactions.',
     columns: [
-      { title: 'Mad (What frustrated us?)', seq: 1 },
-      { title: 'Sad (What disappointed us?)', seq: 2 },
-      { title: 'Glad (What made us happy?)', seq: 3 }
+      { title: 'Mad', description: '(What frustrated us?)', seq: 1 },
+      { title: 'Sad', description: '(What disappointed us?)', seq: 2 },
+      { title: 'Glad', description: '(What made us happy?)', seq: 3 }
     ],
     scenes: [
       {
@@ -249,10 +195,10 @@ export const BOARD_TEMPLATES = {
     name: "4 L's (Liked, Learned, Lacked, Longed for)",
     description: 'A comprehensive reflection on the four L\'s of team experience.',
     columns: [
-      { title: 'Liked (What did we enjoy?)', seq: 1 },
-      { title: 'Learned (What did we discover?)', seq: 2 },
-      { title: 'Lacked (What was missing?)', seq: 3 },
-      { title: 'Longed for (What did we wish for?)', seq: 4 }
+      { title: 'Liked', description: '(What did we enjoy?)', seq: 1 },
+      { title: 'Learned', description: '(What did we discover?)', seq: 2 },
+      { title: 'Lacked', description: '(What was missing?)', seq: 3 },
+      { title: 'Longed for', description: '(What did we wish for?)', seq: 4 }
     ],
     scenes: [
       {
@@ -316,11 +262,10 @@ export const BOARD_TEMPLATES = {
   leancoffee: {
     id: 'leancoffee',
     name: 'Lean Coffee',
-    description: 'A democratic discussion format where topics are proposed, voted on, and discussed.',
+    description: 'A democratic discussion format where topics are proposed, discussed, and decided on.',
     columns: [
-      { title: 'Topics to Discuss', seq: 1 },
-      { title: 'Currently Discussing', seq: 2 },
-      { title: 'Discussed', seq: 3 }
+      { title: 'Icebreaker', seq: 1, default_appearance: 'locked' },
+      { title: 'Issues to Discuss', seq: 2, default_appearance: 'spread' }
     ],
     scenes: [
       {
@@ -335,21 +280,21 @@ export const BOARD_TEMPLATES = {
         showVotes: true,
         allowVoting: false,
         showComments: true,
-        allowComments: false
+        allowComments: true
       },
       {
         title: 'Vote on Topics',
-        mode: 'present' as const,
+        mode: 'columns' as const,
         seq: 2,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
         allowMoveCards: false,
         allowGroupCards: false,
-        showVotes: true,
+        showVotes: false,
         allowVoting: true,
-        showComments: false,
-        allowComments: false
+        showComments: true,
+        allowComments: true
       },
       {
         title: 'Discuss Topics',

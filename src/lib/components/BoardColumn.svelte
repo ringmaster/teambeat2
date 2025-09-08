@@ -77,9 +77,12 @@
 
 <div
     id="column-{column.id}"
-    class="column {isSingleColumn
-        ? 'single-column'
-        : ''} {dragTargetColumnId === column.id ? 'drag-target' : ''}"
+    class="column {column.defaultAppearance
+        ? column.defaultAppearance
+        : ''} {isSingleColumn ? 'single-column' : ''} {dragTargetColumnId ===
+    column.id
+        ? 'drag-target'
+        : ''}"
     role="region"
     aria-label="Column: {column.title}"
     ondragover={(e) => onDragOver(e, column.id)}
@@ -271,5 +274,24 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+    }
+
+    :global #board-columns-container #board-columns-flex .column.locked {
+        width: 300px;
+        border-right: 1px solid var(--surface-secondary);
+    }
+
+    :global #board-columns-container #board-columns-flex .column.spread {
+        width: inherit;
+        flex: 1;
+        .cards-container {
+            flex-direction: row;
+            flex-wrap: wrap;
+            flex: none;
+            .card {
+                flex: 1;
+                min-width: 300px;
+            }
+        }
     }
 </style>
