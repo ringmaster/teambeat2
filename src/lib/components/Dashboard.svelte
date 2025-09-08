@@ -819,6 +819,8 @@
         display: flex;
         flex-direction: column;
         gap: var(--spacing-8);
+        height: 100%;
+        overflow-y: scroll;
     }
 
     .dashboard-header {

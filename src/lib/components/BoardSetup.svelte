@@ -8,49 +8,51 @@
         onConfigureClick: () => void;
         onCloneBoard?: (sourceId: string) => void;
     }
-    
-    let { 
+
+    let {
         showTemplateSelector = $bindable(),
         templates,
         boardId,
         onToggleTemplateSelector,
         onSetupTemplate,
         onConfigureClick,
-        onCloneBoard
+        onCloneBoard,
     }: Props = $props();
-    
+
     let showCloneSelector = $state(false);
     let cloneSources = $state(null);
     let loadingCloneSources = $state(false);
-    
+
     async function toggleCloneSelector() {
         showCloneSelector = !showCloneSelector;
-        
+
         if (showCloneSelector && !cloneSources) {
             loadingCloneSources = true;
             try {
-                const response = await fetch(`/api/boards/${boardId}/clone-sources`);
+                const response = await fetch(
+                    `/api/boards/${boardId}/clone-sources`,
+                );
                 const data = await response.json();
-                
+
                 if (data.success) {
                     cloneSources = data.data;
                 } else {
-                    console.error('Failed to fetch clone sources:', data.error);
+                    console.error("Failed to fetch clone sources:", data.error);
                 }
             } catch (error) {
-                console.error('Error fetching clone sources:', error);
+                console.error("Error fetching clone sources:", error);
             } finally {
                 loadingCloneSources = false;
             }
         }
     }
-    
+
     function formatDate(dateString: string) {
-        if (!dateString) return '';
+        if (!dateString) return "";
         const date = new Date(dateString);
         return date.toLocaleDateString();
     }
-    
+
     function handleCloneBoard(sourceId: string) {
         if (onCloneBoard) {
             onCloneBoard(sourceId);
@@ -62,9 +64,7 @@
     <div class="setup-content">
         <!-- Configuration Options -->
         <div class="setup-header">
-            <h2 class="setup-title">
-                Configure Your Board
-            </h2>
+            <h2 class="setup-title">Configure Your Board</h2>
             <p class="setup-subtitle">
                 Choose a preset template or configure your board manually.
             </p>
@@ -75,7 +75,9 @@
                     onclick={onToggleTemplateSelector}
                     class="btn-primary setup-primary-button"
                 >
-                    {showTemplateSelector ? "Hide Templates" : "Quick Setup with Templates"}
+                    {showTemplateSelector
+                        ? "Hide Templates"
+                        : "Quick Setup with Templates"}
                 </button>
 
                 {#if showTemplateSelector}
@@ -92,13 +94,17 @@
                                     {template.description}
                                 </p>
                                 <div class="template-card-meta">
-                                    {template.columns.length} columns • {template.scenes} scenes
+                                    {template.columns.length} columns • {template.scenes}
+                                    scenes
                                 </div>
                                 <!-- Show column previews -->
                                 <div class="template-card-columns">
                                     {#each template.columns.slice(0, 2) as column, index (index)}
                                         <span class="template-column-tag">
-                                            {column.length > 20 ? column.substring(0, 20) + '...' : column}
+                                            {column.length > 20
+                                                ? column.substring(0, 20) +
+                                                  "..."
+                                                : column}
                                         </span>
                                     {/each}
                                     {#if template.columns.length > 2}
@@ -119,19 +125,25 @@
                     onclick={toggleCloneSelector}
                     class="btn-secondary setup-primary-button"
                 >
-                    {showCloneSelector ? "Hide Clone Options" : "Clone An Existing Board"}
+                    {showCloneSelector
+                        ? "Hide Clone Options"
+                        : "Clone An Existing Board"}
                 </button>
 
                 {#if showCloneSelector}
                     {#if loadingCloneSources}
                         <div class="clone-loading">
-                            <div class="loading-text">Loading available boards...</div>
+                            <div class="loading-text">
+                                Loading available boards...
+                            </div>
                         </div>
                     {:else if cloneSources}
                         <div class="clone-grid">
                             <!-- Current Series Boards -->
                             <div>
-                                <h4 class="clone-section-title">From This Series</h4>
+                                <h4 class="clone-section-title">
+                                    From This Series
+                                </h4>
                                 {#if cloneSources.currentSeries.length === 0}
                                     <div class="clone-empty-state">
                                         No other boards in this series
@@ -140,17 +152,31 @@
                                     <div class="space-y-3">
                                         {#each cloneSources.currentSeries as board (board.id)}
                                             <button
-                                                onclick={() => handleCloneBoard(board.id)}
+                                                onclick={() =>
+                                                    handleCloneBoard(board.id)}
                                                 class="clone-board-card"
                                             >
-                                                <div class="flex justify-between items-start">
+                                                <div
+                                                    class="flex justify-between items-start"
+                                                >
                                                     <div class="flex-1">
-                                                        <h5 class="clone-board-name">{board.name}</h5>
-                                                        <div class="clone-board-date">
-                                                            {formatDate(board.meetingDate || board.createdAt)}
+                                                        <h5
+                                                            class="clone-board-name"
+                                                        >
+                                                            {board.name}
+                                                        </h5>
+                                                        <div
+                                                            class="clone-board-date"
+                                                        >
+                                                            {formatDate(
+                                                                board.meetingDate ||
+                                                                    board.createdAt,
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <span class="clone-board-status status-primary">
+                                                    <span
+                                                        class="clone-board-status status-primary"
+                                                    >
                                                         {board.status}
                                                     </span>
                                                 </div>
@@ -162,7 +188,9 @@
 
                             <!-- Other Series Boards -->
                             <div>
-                                <h4 class="clone-section-title">From Other Series</h4>
+                                <h4 class="clone-section-title">
+                                    From Other Series
+                                </h4>
                                 {#if cloneSources.otherSeries.length === 0}
                                     <div class="clone-empty-state">
                                         No boards available from other series
@@ -171,17 +199,32 @@
                                     <div class="space-y-3">
                                         {#each cloneSources.otherSeries as board (board.id)}
                                             <button
-                                                onclick={() => handleCloneBoard(board.id)}
+                                                onclick={() =>
+                                                    handleCloneBoard(board.id)}
                                                 class="clone-board-card"
                                             >
-                                                <div class="flex justify-between items-start">
+                                                <div
+                                                    class="flex justify-between items-start"
+                                                >
                                                     <div class="flex-1">
-                                                        <h5 class="clone-board-name">{board.seriesName} - {board.name}</h5>
-                                                        <div class="clone-board-date">
-                                                            {formatDate(board.meetingDate || board.createdAt)}
+                                                        <h5
+                                                            class="clone-board-name"
+                                                        >
+                                                            {board.seriesName} -
+                                                            {board.name}
+                                                        </h5>
+                                                        <div
+                                                            class="clone-board-date"
+                                                        >
+                                                            {formatDate(
+                                                                board.meetingDate ||
+                                                                    board.createdAt,
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <span class="clone-board-status status-secondary">
+                                                    <span
+                                                        class="clone-board-status status-secondary"
+                                                    >
                                                         {board.status}
                                                     </span>
                                                 </div>
@@ -197,11 +240,10 @@
 
             <!-- Custom Configuration -->
             <div class="setup-manual-section">
-                <h3 class="setup-manual-title">
-                    Or Configure Manually
-                </h3>
+                <h3 class="setup-manual-title">Or Configure Manually</h3>
                 <p class="setup-manual-description">
-                    Set up your board columns, scenes, and settings from scratch.
+                    Set up your board columns, scenes, and settings from
+                    scratch.
                 </p>
                 <button
                     onclick={onConfigureClick}
@@ -214,271 +256,285 @@
 
         <!-- Info Section -->
         <div class="setup-info-section">
-            <h3 class="setup-info-title">
-                Getting Started
-            </h3>
+            <h3 class="setup-info-title">Getting Started</h3>
             <p class="setup-info-description">
-                Your board is ready! Add some columns and scenes to get started with
-                your retrospective or planning session.
+                Your board is ready! Add some columns and scenes to get started
+                with your retrospective or planning session.
             </p>
             <ul class="setup-info-list">
-                <li>• Columns organize different types of feedback or topics</li>
-                <li>• Scenes control what participants can do (add cards, vote, etc.)</li>
-                <li>• Templates provide quick setups for common meeting types</li>
+                <li>
+                    • Columns organize different types of feedback or topics
+                </li>
+                <li>
+                    • Scenes control what participants can do (add cards, vote,
+                    etc.)
+                </li>
+                <li>
+                    • Templates provide quick setups for common meeting types
+                </li>
             </ul>
         </div>
     </div>
 </div>
 
 <style>
-/* Setup Container Styles */
-.setup-container {
-    padding: var(--spacing-8) var(--spacing-4);
-}
-
-@media (min-width: 640px) {
+    /* Setup Container Styles */
     .setup-container {
-        padding: var(--spacing-8) var(--spacing-6);
+        padding: var(--spacing-8) var(--spacing-4);
     }
-}
 
-@media (min-width: 1024px) {
-    .setup-container {
-        padding: var(--spacing-8);
+    @media (min-width: 640px) {
+        .setup-container {
+            padding: var(--spacing-8) var(--spacing-6);
+        }
     }
-}
 
-.setup-content {
-    max-width: 64rem;
-    margin: 0 auto;
-}
+    @media (min-width: 1024px) {
+        .setup-container {
+            padding: var(--spacing-8);
+        }
+    }
 
-.setup-header {
-    text-align: center;
-    margin-bottom: var(--spacing-12);
-}
+    .setup-content {
+        max-width: 64rem;
+        margin: 0 auto;
+    }
 
-.setup-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: var(--spacing-4);
-}
+    .setup-header {
+        text-align: center;
+        margin-bottom: var(--spacing-12);
+    }
 
-@media (min-width: 768px) {
     .setup-title {
-        font-size: 2rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-4);
     }
-}
 
-.setup-subtitle {
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-8);
-}
+    @media (min-width: 768px) {
+        .setup-title {
+            font-size: 2rem;
+        }
+    }
 
-.setup-section {
-    margin-bottom: var(--spacing-8);
-}
+    .setup-subtitle {
+        color: var(--color-text-secondary);
+        margin-bottom: var(--spacing-8);
+    }
 
-.setup-primary-button {
-    width: 100%;
-    margin-bottom: var(--spacing-4);
-}
+    .setup-section {
+        margin-bottom: var(--spacing-8);
+    }
 
-/* Template Grid Styles */
-.template-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-4);
-}
+    .setup-primary-button {
+        width: 100%;
+        margin-bottom: var(--spacing-4);
+    }
 
-@media (min-width: 768px) {
+    /* Template Grid Styles */
     .template-grid {
-        grid-template-columns: repeat(2, 1fr);
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--spacing-4);
     }
-}
 
-@media (min-width: 1024px) {
-    .template-grid {
-        grid-template-columns: repeat(3, 1fr);
+    @media (min-width: 768px) {
+        .template-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
-}
 
-.template-card {
-    width: 100%;
-    text-align: left;
-    padding: var(--spacing-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
-}
+    @media (min-width: 1024px) {
+        .template-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
 
-.template-card:hover {
-    background: var(--surface-elevated);
-    border-color: var(--color-border-hover);
-    box-shadow: var(--shadow-md);
-}
+    .template-card {
+        width: 100%;
+        text-align: left;
+        padding: var(--spacing-4);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
+    }
 
-.template-card-title {
-    font-weight: 500;
-    color: var(--color-text-primary);
-    margin-bottom: var(--spacing-2);
-}
+    .template-card:hover {
+        background: var(--surface-elevated);
+        border-color: var(--color-border-hover);
+        box-shadow: var(--shadow-md);
+    }
 
-.template-card-description {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-3);
-}
+    .template-card-title {
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-2);
+    }
 
-.template-card-meta {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-}
+    .template-card-description {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        margin-bottom: var(--spacing-3);
+    }
 
-.template-card-columns {
-    margin-top: var(--spacing-2);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-}
+    .template-card-meta {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+    }
 
-.template-column-tag {
-    display: inline-block;
-    background: var(--surface-primary);
-    border-radius: var(--radius-sm);
-    padding: var(--spacing-1) var(--spacing-2);
-    margin-right: var(--spacing-1);
-    margin-bottom: var(--spacing-1);
-}
+    .template-card-columns {
+        margin-top: var(--spacing-2);
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+    }
 
-.template-more-text {
-    display: inline-block;
-    color: var(--color-text-muted);
-}
+    .template-column-tag {
+        display: inline-block;
+        background: var(--surface-primary);
+        border-radius: var(--radius-sm);
+        padding: var(--spacing-1) var(--spacing-2);
+        margin-right: var(--spacing-1);
+        margin-bottom: var(--spacing-1);
+    }
 
-/* Clone Grid Styles */
-.clone-loading {
-    text-align: center;
-    padding: var(--spacing-8) 0;
-}
+    .template-more-text {
+        display: inline-block;
+        color: var(--color-text-muted);
+    }
 
-.clone-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-6);
-}
+    /* Clone Grid Styles */
+    .clone-loading {
+        text-align: center;
+        padding: var(--spacing-8) 0;
+    }
 
-@media (min-width: 1024px) {
     .clone-grid {
-        grid-template-columns: repeat(2, 1fr);
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--spacing-6);
     }
-}
 
-.clone-section-title {
-    font-weight: 500;
-    color: var(--color-text-primary);
-    margin-bottom: var(--spacing-4);
-}
+    @media (min-width: 1024px) {
+        .clone-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
 
-.clone-empty-state {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-    padding: var(--spacing-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--surface-elevated);
-}
+    .clone-section-title {
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-4);
+    }
 
-.clone-board-card {
-    width: 100%;
-    text-align: left;
-    padding: var(--spacing-4);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
+    .clone-empty-state {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        padding: var(--spacing-4);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--surface-elevated);
+    }
 
-.clone-board-card:hover {
-    background: var(--surface-elevated);
-    border-color: var(--color-border-hover);
-}
+    .clone-board-card {
+        width: 100%;
+        text-align: left;
+        padding: var(--spacing-4);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
 
-.clone-board-name {
-    font-weight: 500;
-    color: var(--color-text-primary);
-}
+    .clone-board-card:hover {
+        background: var(--surface-elevated);
+        border-color: var(--color-border-hover);
+    }
 
-.clone-board-date {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-top: var(--spacing-1);
-}
+    .clone-board-name {
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
 
-.clone-board-status {
-    font-size: 0.75rem;
-    padding: var(--spacing-1) var(--spacing-2);
-    border-radius: var(--radius-full);
-}
+    .clone-board-date {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-top: var(--spacing-1);
+    }
 
-.clone-board-status.status-primary {
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-    color: var(--color-primary);
-}
+    .clone-board-status {
+        font-size: 0.75rem;
+        padding: var(--spacing-1) var(--spacing-2);
+        border-radius: var(--radius-full);
+    }
 
-.clone-board-status.status-secondary {
-    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
-    color: var(--color-secondary);
-}
+    .clone-board-status.status-primary {
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+        color: var(--color-primary);
+    }
 
-/* Setup Manual Section */
-.setup-manual-section {
-    border-top: 1px solid var(--color-border);
-    padding-top: var(--spacing-8);
-}
+    .clone-board-status.status-secondary {
+        background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+        color: var(--color-secondary);
+    }
 
-.setup-manual-title {
-    font-size: 1.125rem;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    margin-bottom: var(--spacing-4);
-}
+    /* Setup Manual Section */
+    .setup-manual-section {
+        border-top: 1px solid var(--color-border);
+        padding-top: var(--spacing-8);
+    }
 
-.setup-manual-description {
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-6);
-}
+    .setup-manual-title {
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-4);
+    }
 
-.setup-info-section {
-    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-6);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 10%, transparent);
-}
+    .setup-manual-description {
+        color: var(--color-text-secondary);
+        margin-bottom: var(--spacing-6);
+    }
 
-.setup-info-title {
-    font-size: 1.125rem;
-    font-weight: 500;
-    color: var(--color-primary);
-    margin-bottom: var(--spacing-2);
-}
+    .setup-info-section {
+        background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-6);
+        border: 1px solid
+            color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
 
-.setup-info-description {
-    color: var(--color-primary);
-    margin-bottom: var(--spacing-4);
-}
+    .setup-info-title {
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: var(--color-primary);
+        margin-bottom: var(--spacing-2);
+    }
 
-.setup-info-list {
-    color: var(--color-primary);
-    font-size: 0.875rem;
-    list-style: none;
-}
+    .setup-info-description {
+        color: var(--color-primary);
+        margin-bottom: var(--spacing-4);
+    }
 
-.setup-info-list li {
-    margin-bottom: var(--spacing-1);
-}
+    .setup-info-list {
+        color: var(--color-primary);
+        font-size: 0.875rem;
+        list-style: none;
+    }
+
+    .setup-info-list li {
+        margin-bottom: var(--spacing-1);
+    }
+
+    #empty-board-setup {
+        height: 100%;
+        overflow-y: scroll;
+        display: flex;
+        justify-content: center;
+        background: var(--surface-background);
+    }
 </style>
