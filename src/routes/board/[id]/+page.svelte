@@ -341,6 +341,16 @@
             case "presence_update":
                 console.log("Presence update:", data.user_id, data.activity);
                 break;
+            case "vote_changed":
+                // Update card vote count when votes change
+                if (data.card_id && data.vote_count !== undefined) {
+                    cards = cards.map((c) =>
+                        c.id === data.card_id
+                            ? { ...c, voteCount: data.vote_count }
+                            : c,
+                    );
+                }
+                break;
         }
     }
 
@@ -574,7 +584,8 @@
                 if (allocationData.userVotes) {
                     const newUserVotes = new Map<string, number>();
                     allocationData.userVotes.forEach((vote: any) => {
-                        newUserVotes.set(vote.cardId, 1); // Current system: 1 vote per card max
+                        const currentCount = newUserVotes.get(vote.cardId) || 0;
+                        newUserVotes.set(vote.cardId, currentCount + 1);
                     });
                     userVotesByCard = newUserVotes;
                 }
@@ -959,7 +970,7 @@
             allowEditCards: true,
             allowComments: true,
             allowVoting: false,
-            multipleVotesPerCard: false,
+            multipleVotesPerCard: true,
         };
 
         if (!sceneData.title.trim()) {
@@ -998,7 +1009,7 @@
             allowEditCards: true,
             allowComments: true,
             allowVoting: false,
-            multipleVotesPerCard: false,
+            multipleVotesPerCard: true,
         };
 
         await createScene(newScene);

@@ -121,16 +121,20 @@
     }
 
     #board-columns-flex {
+        /*
         margin-left: calc(
             (100vw - var(--board-header-width, 800px)) / 2
         ) !important;
         margin-right: calc(
             (100vw - var(--board-header-width, 800px)) / 2
         ) !important;
+        */
         display: flex;
         gap: 1rem;
         flex: 1;
         height: 100%;
+        width: var(--board-header-width);
+        margin: 0 auto;
     }
 
     #board-columns-flex.single-column {

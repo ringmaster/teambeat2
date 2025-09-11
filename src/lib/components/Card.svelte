@@ -45,6 +45,20 @@
         onCardDrop,
     }: Props = $props();
 
+    // Helper function to determine vote view mode based on scene settings
+    function getVoteViewMode(
+        showVotes: boolean,
+        allowVoting: boolean,
+    ): "votes" | "total" | "both" {
+        if (showVotes && allowVoting) {
+            return "both";
+        } else if (showVotes) {
+            return "total";
+        } else {
+            return "votes";
+        }
+    }
+
     // Check if user can delete this card
     let canDelete = $derived.by(() => {
         // Author can always delete (if scene allows editing for members)
@@ -214,14 +228,17 @@
                 </button>
             {/if}
 
-            {#if currentScene?.allowVoting}
+            {#if currentScene?.showVotes || currentScene?.allowVoting}
                 <div onclick={(e) => e.stopPropagation()}>
                     <Vote
                         votes={userVotesOnCard}
-                        total={card._count?.votes || 0}
+                        total={card.voteCount || 0}
                         enabled={currentScene?.allowVoting ?? false}
                         {hasVotes}
-                        view={currentScene?.allowShowVotes ? "both" : "votes"}
+                        view={getVoteViewMode(
+                            currentScene?.showVotes ?? false,
+                            currentScene?.allowVoting ?? false,
+                        )}
                         itemID={card.id}
                         onVote={(itemID, delta) => onVote(itemID, delta)}
                     />

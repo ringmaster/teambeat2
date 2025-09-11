@@ -21,6 +21,8 @@
 
     let isAnimating = false;
     let animationDirection: "up" | "down" | null = null;
+    let previousVotes = $state(votes);
+    let previousTotal = $state(total);
 
     // Display logic based on view property
     let displayText = $derived.by(() => {
@@ -45,32 +47,54 @@
     // Add "voted" class when user has voted
     let hasVoted = $derived(votes > 0);
 
+    // Reactive animation based on vote count changes from SSE
+    $effect(() => {
+        if (previousVotes !== votes || previousTotal !== total) {
+            // Determine animation direction based on what changed and view mode
+            let shouldAnimate = false;
+            let direction: "up" | "down" = "up";
+
+            if (view === "votes" && previousVotes !== votes) {
+                shouldAnimate = true;
+                direction = votes > previousVotes ? "up" : "down";
+            } else if (view === "total" && previousTotal !== total) {
+                shouldAnimate = true;
+                direction = total > previousTotal ? "up" : "down";
+            } else if (view === "both") {
+                // For 'both' view, prioritize user votes for animation direction
+                if (previousVotes !== votes) {
+                    shouldAnimate = true;
+                    direction = votes > previousVotes ? "up" : "down";
+                } else if (previousTotal !== total) {
+                    shouldAnimate = true;
+                    direction = total > previousTotal ? "up" : "down";
+                }
+            }
+
+            if (shouldAnimate) {
+                animationDirection = direction;
+                isAnimating = true;
+
+                setTimeout(() => {
+                    isAnimating = false;
+                    animationDirection = null;
+                }, 200);
+            }
+
+            // Update previous values
+            previousVotes = votes;
+            previousTotal = total;
+        }
+    });
+
     function handleUpVote() {
         if (!enabled || !hasVotes) return;
-
-        animationDirection = "up";
-        isAnimating = true;
-
         onVote(itemID, 1);
-
-        setTimeout(() => {
-            isAnimating = false;
-            animationDirection = null;
-        }, 2000);
     }
 
     function handleDownVote() {
         if (!enabled || votes <= 0) return;
-
-        animationDirection = "down";
-        isAnimating = true;
-
         onVote(itemID, -1);
-
-        setTimeout(() => {
-            isAnimating = false;
-            animationDirection = null;
-        }, 2000);
     }
 
     function handleVoteCountClick() {

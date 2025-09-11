@@ -124,28 +124,34 @@
 
     // Track column states per scene
     let columnStates = $state<Record<string, Record<string, string>>>({});
-    
+
     // Reactively update column states when board hiddenColumnsByScene changes
     $effect(() => {
         // If we're in display mode and the board hiddenColumnsByScene data changes, update local state
-        if (editingMode === "display" && activeSceneId && board.hiddenColumnsByScene) {
+        if (
+            editingMode === "display" &&
+            activeSceneId &&
+            board.hiddenColumnsByScene
+        ) {
             if (!columnStates[activeSceneId]) {
                 columnStates[activeSceneId] = {};
             }
-            
+
             // Reset all columns to visible first
             const columnsToUse = board.allColumns || board.columns;
             columnsToUse?.forEach((col: any) => {
                 columnStates[activeSceneId][col.id] = "visible";
             });
-            
+
             // Mark hidden columns based on board data
             if (board.hiddenColumnsByScene[activeSceneId]) {
-                board.hiddenColumnsByScene[activeSceneId].forEach((colId: string) => {
-                    if (columnStates[activeSceneId]) {
-                        columnStates[activeSceneId][colId] = "hidden";
-                    }
-                });
+                board.hiddenColumnsByScene[activeSceneId].forEach(
+                    (colId: string) => {
+                        if (columnStates[activeSceneId]) {
+                            columnStates[activeSceneId][colId] = "hidden";
+                        }
+                    },
+                );
             }
         }
     });
@@ -443,6 +449,24 @@
 
                         <button
                             onclick={() =>
+                                togglePermission(
+                                    activeSceneId,
+                                    "multipleVotesPerCard",
+                                )}
+                            class="btn-secondary {activeScene.multipleVotesPerCard
+                                ? 'permission-active'
+                                : ''}"
+                        >
+                            Multiple Votes Per Card
+                            <Icon
+                                name="check"
+                                size="md"
+                                class="permission-icon"
+                            />
+                        </button>
+
+                        <button
+                            onclick={() =>
                                 togglePermission(activeSceneId, "showComments")}
                             class="btn-secondary {activeScene.showComments
                                 ? 'permission-active'
@@ -477,9 +501,7 @@
                 {/if}
             {:else if editingMode === "display"}
                 <div class="permissions-section">
-                    <h4 class="permissions-title">
-                        Column Display Settings
-                    </h4>
+                    <h4 class="permissions-title">Column Display Settings</h4>
                     <div class="permissions-grid">
                         {#each board.allColumns || board.columns || [] as column (column.id)}
                             {@const currentState =
@@ -490,7 +512,9 @@
                                     updateColumnDisplay(
                                         activeSceneId,
                                         column.id,
-                                        currentState === "visible" ? "hidden" : "visible",
+                                        currentState === "visible"
+                                            ? "hidden"
+                                            : "visible",
                                     )}
                                 class="btn-secondary {currentState === 'visible'
                                     ? 'permission-active'
