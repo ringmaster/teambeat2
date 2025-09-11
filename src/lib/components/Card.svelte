@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getUserDisplayName } from "$lib/utils/animalNames";
     import Icon from "./ui/Icon.svelte";
+    import Vote from "./ui/Vote.svelte";
 
     interface Props {
         card: any;
@@ -13,9 +14,11 @@
         board: any;
         userRole: string;
         currentUserId: string;
+        userVotesOnCard?: number; // Number of votes this user has on this card (0 or 1 for current system)
+        hasVotes?: boolean; // Whether user has votes available (same for all cards on board)
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleSelection: (cardId: string) => void;
-        onVote: (cardId: string) => void;
+        onVote: (cardId: string, delta: 1 | -1) => void;
         onComment: (cardId: string) => void;
         onDelete: (cardId: string) => void;
         onCardDrop?: (e: DragEvent, targetCardId: string) => void;
@@ -32,6 +35,8 @@
         board,
         userRole,
         currentUserId,
+        userVotesOnCard = 0,
+        hasVotes = false,
         onDragStart,
         onToggleSelection,
         onVote,
@@ -210,24 +215,17 @@
             {/if}
 
             {#if currentScene?.allowVoting}
-                <button
-                    onclick={(e) => {
-                        e.stopPropagation();
-                        onVote(card.id);
-                    }}
-                    class="vote-button"
-                >
-                    <svg
-                        class="icon-xs"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                        />
-                    </svg>
-                    <span>{card._count?.votes || 0}</span>
-                </button>
+                <div onclick={(e) => e.stopPropagation()}>
+                    <Vote
+                        votes={userVotesOnCard}
+                        total={card._count?.votes || 0}
+                        enabled={currentScene?.allowVoting ?? false}
+                        {hasVotes}
+                        view={currentScene?.allowShowVotes ? "both" : "votes"}
+                        itemID={card.id}
+                        onVote={(itemID, delta) => onVote(itemID, delta)}
+                    />
+                </div>
             {/if}
 
             {#if currentScene?.allowComments}
@@ -372,24 +370,6 @@
     .delete-button:hover {
         color: var(--card-delete-button-hover);
         background-color: var(--card-delete-button-background);
-    }
-
-    /* Vote button */
-    .vote-button {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 8px;
-        background-color: var(--card-vote-button-background);
-        color: white;
-        font-size: 0.75rem;
-        border-radius: 9999px;
-        border: none;
-        cursor: pointer;
-    }
-
-    .vote-button:hover {
-        background-color: var(--card-vote-button-hover);
     }
 
     /* Comment button */

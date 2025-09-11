@@ -18,7 +18,7 @@
         onCardDrop: (e: DragEvent, targetCardId: string) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
-        onVoteCard: (cardId: string) => void;
+        onVoteCard: (cardId: string, delta: 1 | -1) => void;
         onCommentCard: (cardId: string) => void;
         onAddCard: (columnId: string) => void;
         onGroupCards: (cards: any[]) => void;
@@ -27,6 +27,8 @@
         onDeleteCard: (cardId: string) => void;
         userRole: string;
         currentUserId: string;
+        hasVotes: boolean;
+        userVotesByCard: Map<string, number>;
         isSingleColumn?: boolean;
     }
 
@@ -54,6 +56,8 @@
         onDeleteCard,
         userRole,
         currentUserId,
+        hasVotes,
+        userVotesByCard,
         isSingleColumn = false,
     }: Props = $props();
 
@@ -137,6 +141,8 @@
                     {board}
                     {userRole}
                     {currentUserId}
+                    userVotesOnCard={userVotesByCard.get(leadCard.id) || 0}
+                    {hasVotes}
                     {onDragStart}
                     {onCardDrop}
                     onToggleSelection={onToggleCardSelection}
@@ -158,6 +164,10 @@
                                 {board}
                                 {userRole}
                                 {currentUserId}
+                                userVotesOnCard={userVotesByCard.get(
+                                    subCard.id,
+                                ) || 0}
+                                {hasVotes}
                                 {onDragStart}
                                 {onCardDrop}
                                 onToggleSelection={onToggleCardSelection}
@@ -181,6 +191,8 @@
                 {board}
                 {userRole}
                 {currentUserId}
+                userVotesOnCard={userVotesByCard.get(card.id) || 0}
+                {hasVotes}
                 {onDragStart}
                 {onCardDrop}
                 onToggleSelection={onToggleCardSelection}

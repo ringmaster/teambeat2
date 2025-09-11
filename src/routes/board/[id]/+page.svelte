@@ -50,6 +50,23 @@
     let groupingMode = $state(false);
     let selectedCards = $state(new Set<string>());
 
+    // Voting State
+    let votingAllocation = $state<{
+        canVote: boolean;
+        remainingVotes: number;
+    } | null>(null);
+    let userVotesByCard = $state(new Map<string, number>()); // cardId -> user votes on that card
+
+    // Calculate if user has votes available (same value for all cards on the board)
+    let hasVotes = $derived(votingAllocation?.canVote ?? false);
+
+    // Load user voting data when board and user are ready
+    $effect(() => {
+        if (boardId && user?.id && !loading) {
+            loadUserVotingData();
+        }
+    });
+
     // Config Form State
     let configForm = $state({
         name: "",
@@ -497,18 +514,40 @@
         selectedCards = new Set(selectedCards);
     }
 
-    async function voteCard(cardId: string) {
+    async function voteCard(cardId: string, delta: 1 | -1) {
         try {
-            const response = await fetch(
-                `/api/boards/${boardId}/cards/${cardId}/vote`,
-                {
-                    method: "POST",
-                },
-            );
+            const response = await fetch(`/api/cards/${cardId}/vote`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ delta }),
+            });
 
             if (response.ok) {
                 const data = await response.json();
-                cards = cards.map((c) => (c.id === cardId ? data.card : c));
+
+                // Update cards with new vote counts
+                if (data.card) {
+                    cards = cards.map((c) => (c.id === cardId ? data.card : c));
+                }
+
+                // Update user voting allocation if returned by API
+                if (data.allocation) {
+                    votingAllocation = data.allocation;
+                }
+
+                // Update user votes tracking based on vote result
+                if (data.voteResult) {
+                    const currentUserVotes = userVotesByCard.get(cardId) || 0;
+                    if (data.voteResult.action === "added") {
+                        userVotesByCard.set(cardId, currentUserVotes + 1); // Support multiple votes
+                    } else if (data.voteResult.action === "removed") {
+                        userVotesByCard.set(
+                            cardId,
+                            Math.max(0, currentUserVotes - 1),
+                        );
+                    }
+                    userVotesByCard = new Map(userVotesByCard);
+                }
             }
         } catch (error) {
             console.error("Failed to vote:", error);
@@ -517,6 +556,46 @@
 
     async function commentCard(cardId: string) {
         console.log("Comment on card:", cardId);
+    }
+
+    async function loadUserVotingData() {
+        if (!boardId || !user?.id) return;
+
+        try {
+            // Load user's voting allocation
+            const allocationResponse = await fetch(
+                `/api/boards/${boardId}/user-votes`,
+            );
+            if (allocationResponse.ok) {
+                const allocationData = await allocationResponse.json();
+                votingAllocation = allocationData.allocation;
+
+                // Load user's current votes on each card
+                if (allocationData.userVotes) {
+                    const newUserVotes = new Map<string, number>();
+                    allocationData.userVotes.forEach((vote: any) => {
+                        newUserVotes.set(vote.cardId, 1); // Current system: 1 vote per card max
+                    });
+                    userVotesByCard = newUserVotes;
+                }
+
+                console.log(
+                    "Final state - votingAllocation:",
+                    votingAllocation,
+                    "hasVotes:",
+                    hasVotes,
+                );
+            } else {
+                console.error(
+                    "Failed to load voting allocation, status:",
+                    allocationResponse.status,
+                );
+                const errorText = await allocationResponse.text();
+                console.error("Error response:", errorText);
+            }
+        } catch (error) {
+            console.error("Failed to load user voting data:", error);
+        }
     }
 
     async function deleteCard(cardId: string) {
@@ -758,25 +837,22 @@
 
     function deleteBoard() {
         if (!["admin", "facilitator"].includes(userRole)) return;
-        
-        toastStore.warning(
-            "Are you sure that you want to delete this board?",
-            {
-                autoHide: false,
-                actions: [
-                    {
-                        label: "Delete",
-                        onClick: performDeleteBoard,
-                        variant: "primary"
-                    },
-                    {
-                        label: "Cancel",
-                        onClick: () => {}, // Will auto-close on action
-                        variant: "secondary"
-                    }
-                ]
-            }
-        );
+
+        toastStore.warning("Are you sure that you want to delete this board?", {
+            autoHide: false,
+            actions: [
+                {
+                    label: "Delete",
+                    onClick: performDeleteBoard,
+                    variant: "primary",
+                },
+                {
+                    label: "Cancel",
+                    onClick: () => {}, // Will auto-close on action
+                    variant: "secondary",
+                },
+            ],
+        });
     }
 
     // Column Management Functions
@@ -1421,6 +1497,8 @@
             onDeleteCard={deleteCard}
             {userRole}
             currentUserId={user?.id}
+            {hasVotes}
+            {userVotesByCard}
         />
     {/if}
 

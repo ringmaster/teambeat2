@@ -1,185 +1,209 @@
 export interface SSEMessage {
-	type: string;
-	board_id: string;
-	[key: string]: any;
+  type: string;
+  board_id: string;
+  [key: string]: any;
 }
 
 export interface ConnectedSSEClient {
-	response: Response;
-	controller: ReadableStreamDefaultController<string>;
-	userId: string | null;
-	boardId: string | null;
-	lastSeen: number;
+  response: Response;
+  controller: ReadableStreamDefaultController<string>;
+  userId: string | null;
+  boardId: string | null;
+  lastSeen: number;
 }
 
 class SSEManager {
-	private clients = new Map<string, ConnectedSSEClient>();
-	private boardClients = new Map<string, Set<string>>();
-	
-	addClient(clientId: string, response: Response, controller: ReadableStreamDefaultController<string>, userId: string | null = null, boardId: string | null = null) {
-		const client: ConnectedSSEClient = {
-			response,
-			controller,
-			userId,
-			boardId,
-			lastSeen: Date.now()
-		};
-		
-		this.clients.set(clientId, client);
-		
-		if (boardId) {
-			if (!this.boardClients.has(boardId)) {
-				this.boardClients.set(boardId, new Set());
-			}
-			this.boardClients.get(boardId)!.add(clientId);
-		}
-		
-		console.log(`SSE client ${clientId} connected, board: ${boardId}, user: ${userId}`);
-	}
-	
-	removeClient(clientId: string) {
-		const client = this.clients.get(clientId);
-		if (client && client.boardId) {
-			const boardClients = this.boardClients.get(client.boardId);
-			if (boardClients) {
-				boardClients.delete(clientId);
-				if (boardClients.size === 0) {
-					this.boardClients.delete(client.boardId);
-				}
-			}
-		}
-		
-		// Close the SSE stream
-		if (client) {
-			try {
-				client.controller.close();
-			} catch (error) {
-				// Controller may already be closed
-			}
-		}
-		
-		this.clients.delete(clientId);
-		console.log(`SSE client ${clientId} disconnected`);
-	}
-	
-	updateClientBoard(clientId: string, boardId: string, userId?: string) {
-		const client = this.clients.get(clientId);
-		if (!client) return;
-		
-		// Remove from old board if exists
-		if (client.boardId) {
-			const oldBoardClients = this.boardClients.get(client.boardId);
-			if (oldBoardClients) {
-				oldBoardClients.delete(clientId);
-				if (oldBoardClients.size === 0) {
-					this.boardClients.delete(client.boardId);
-				}
-			}
-		}
-		
-		// Add to new board
-		client.boardId = boardId;
-		if (userId) client.userId = userId;
-		client.lastSeen = Date.now();
-		
-		if (!this.boardClients.has(boardId)) {
-			this.boardClients.set(boardId, new Set());
-		}
-		this.boardClients.get(boardId)!.add(clientId);
-		
-		console.log(`SSE client ${clientId} joined board ${boardId}`);
-	}
-	
-	broadcastToBoard(boardId: string, message: SSEMessage, excludeClientId?: string) {
-		const boardClients = this.boardClients.get(boardId);
-		if (!boardClients) return;
-		
-		const messageString = `data: ${JSON.stringify(message)}\n\n`;
-		
-		for (const clientId of boardClients) {
-			if (excludeClientId && clientId === excludeClientId) continue;
-			
-			const client = this.clients.get(clientId);
-			if (client) {
-				try {
-					client.controller.enqueue(messageString);
-					client.lastSeen = Date.now();
-				} catch (error) {
-					console.error('Failed to send SSE message to client', clientId, error);
-					this.removeClient(clientId);
-				}
-			}
-		}
-		
-		console.log(`SSE broadcast to board ${boardId}: ${message.type}, clients: ${boardClients.size}`);
-	}
-	
-	sendToClient(clientId: string, message: SSEMessage) {
-		const client = this.clients.get(clientId);
-		if (client) {
-			try {
-				const messageString = `data: ${JSON.stringify(message)}\n\n`;
-				client.controller.enqueue(messageString);
-				client.lastSeen = Date.now();
-			} catch (error) {
-				console.error('Failed to send SSE message to client', clientId, error);
-				this.removeClient(clientId);
-			}
-		}
-	}
-	
-	getBoardClients(boardId: string): ConnectedSSEClient[] {
-		const clientIds = this.boardClients.get(boardId);
-		if (!clientIds) return [];
-		
-		return Array.from(clientIds)
-			.map(id => this.clients.get(id))
-			.filter((client): client is ConnectedSSEClient => client !== undefined);
-	}
-	
-	getActiveUserCount(boardId: string): number {
-		return this.getBoardClients(boardId)
-			.filter(client => client.userId !== null).length;
-	}
-	
-	getClient(clientId: string): ConnectedSSEClient | undefined {
-		return this.clients.get(clientId);
-	}
-	
-	sendHeartbeat(clientId: string) {
-		const client = this.clients.get(clientId);
-		if (client) {
-			try {
-				client.controller.enqueue(`: heartbeat\n\n`);
-				client.lastSeen = Date.now();
-			} catch (error) {
-				console.error('Failed to send heartbeat to client', clientId, error);
-				this.removeClient(clientId);
-			}
-		}
-	}
-	
-	cleanupStaleConnections() {
-		const staleThreshold = Date.now() - (5 * 60 * 1000); // 5 minutes
-		
-		for (const [clientId, client] of this.clients.entries()) {
-			if (client.lastSeen < staleThreshold) {
-				this.removeClient(clientId);
-			}
-		}
-	}
+  private clients = new Map<string, ConnectedSSEClient>();
+  private boardClients = new Map<string, Set<string>>();
+
+  addClient(clientId: string, response: Response, controller: ReadableStreamDefaultController<string>, userId: string | null = null, boardId: string | null = null) {
+    const client: ConnectedSSEClient = {
+      response,
+      controller,
+      userId,
+      boardId,
+      lastSeen: Date.now()
+    };
+
+    this.clients.set(clientId, client);
+
+    if (boardId) {
+      if (!this.boardClients.has(boardId)) {
+        this.boardClients.set(boardId, new Set());
+      }
+      this.boardClients.get(boardId)!.add(clientId);
+    }
+
+    console.log(`SSE client ${clientId} connected, board: ${boardId}, user: ${userId}`);
+  }
+
+  removeClient(clientId: string) {
+    const client = this.clients.get(clientId);
+    if (client && client.boardId) {
+      const boardClients = this.boardClients.get(client.boardId);
+      if (boardClients) {
+        boardClients.delete(clientId);
+        if (boardClients.size === 0) {
+          this.boardClients.delete(client.boardId);
+        }
+      }
+    }
+
+    // Close the SSE stream
+    if (client) {
+      try {
+        client.controller.close();
+      } catch (error) {
+        // Controller may already be closed
+      }
+    }
+
+    this.clients.delete(clientId);
+    console.log(`SSE client ${clientId} disconnected`);
+  }
+
+  updateClientBoard(clientId: string, boardId: string, userId?: string) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    // Remove from old board if exists
+    if (client.boardId) {
+      const oldBoardClients = this.boardClients.get(client.boardId);
+      if (oldBoardClients) {
+        oldBoardClients.delete(clientId);
+        if (oldBoardClients.size === 0) {
+          this.boardClients.delete(client.boardId);
+        }
+      }
+    }
+
+    // Add to new board
+    client.boardId = boardId;
+    if (userId) client.userId = userId;
+    client.lastSeen = Date.now();
+
+    if (!this.boardClients.has(boardId)) {
+      this.boardClients.set(boardId, new Set());
+    }
+    this.boardClients.get(boardId)!.add(clientId);
+
+    console.log(`SSE client ${clientId} joined board ${boardId}`);
+  }
+
+  broadcastToBoard(boardId: string, message: SSEMessage, excludeClientId?: string) {
+    const boardClients = this.boardClients.get(boardId);
+    if (!boardClients) return;
+
+    const messageString = `data: ${JSON.stringify(message)}\n\n`;
+
+    for (const clientId of boardClients) {
+      if (excludeClientId && clientId === excludeClientId) continue;
+
+      const client = this.clients.get(clientId);
+      if (client) {
+        try {
+          client.controller.enqueue(messageString);
+          client.lastSeen = Date.now();
+        } catch (error) {
+          console.error('Failed to send SSE message to client', clientId, error);
+          this.removeClient(clientId);
+        }
+      }
+    }
+
+    console.log(`SSE broadcast to board ${boardId}: ${message.type}, clients: ${boardClients.size}`);
+  }
+
+  broadcastToUser(boardId: string, userId: string, message: SSEMessage) {
+    const boardClients = this.boardClients.get(boardId);
+    if (!boardClients) return;
+
+    const messageString = `data: ${JSON.stringify(message)}\n\n`;
+    let sentCount = 0;
+
+    for (const clientId of boardClients) {
+      const client = this.clients.get(clientId);
+      if (client && client.userId === userId) {
+        try {
+          client.controller.enqueue(messageString);
+          client.lastSeen = Date.now();
+          sentCount++;
+        } catch (error) {
+          console.error('Failed to send SSE message to client', clientId, error);
+          this.removeClient(clientId);
+        }
+      }
+    }
+
+    console.log(`SSE message to user ${userId} on board ${boardId}: ${message.type}, clients: ${sentCount}`);
+  }
+
+  sendToClient(clientId: string, message: SSEMessage) {
+    const client = this.clients.get(clientId);
+    if (client) {
+      try {
+        const messageString = `data: ${JSON.stringify(message)}\n\n`;
+        client.controller.enqueue(messageString);
+        client.lastSeen = Date.now();
+      } catch (error) {
+        console.error('Failed to send SSE message to client', clientId, error);
+        this.removeClient(clientId);
+      }
+    }
+  }
+
+  getBoardClients(boardId: string): ConnectedSSEClient[] {
+    const clientIds = this.boardClients.get(boardId);
+    if (!clientIds) return [];
+
+    return Array.from(clientIds)
+      .map(id => this.clients.get(id))
+      .filter((client): client is ConnectedSSEClient => client !== undefined);
+  }
+
+  getActiveUserCount(boardId: string): number {
+    return this.getBoardClients(boardId)
+      .filter(client => client.userId !== null).length;
+  }
+
+  getClient(clientId: string): ConnectedSSEClient | undefined {
+    return this.clients.get(clientId);
+  }
+
+  sendHeartbeat(clientId: string) {
+    const client = this.clients.get(clientId);
+    if (client) {
+      try {
+        client.controller.enqueue(`: heartbeat\n\n`);
+        client.lastSeen = Date.now();
+      } catch (error) {
+        console.error('Failed to send heartbeat to client', clientId, error);
+        this.removeClient(clientId);
+      }
+    }
+  }
+
+  cleanupStaleConnections() {
+    const staleThreshold = Date.now() - (5 * 60 * 1000); // 5 minutes
+
+    for (const [clientId, client] of this.clients.entries()) {
+      if (client.lastSeen < staleThreshold) {
+        this.removeClient(clientId);
+      }
+    }
+  }
 }
 
 export const sseManager = new SSEManager();
 
 // Cleanup stale connections every 5 minutes
 setInterval(() => {
-	sseManager.cleanupStaleConnections();
+  sseManager.cleanupStaleConnections();
 }, 5 * 60 * 1000);
 
 // Send heartbeat every 30 seconds to keep connections alive
 setInterval(() => {
-	for (const [clientId] of sseManager['clients']) {
-		sseManager.sendHeartbeat(clientId);
-	}
+  for (const [clientId] of sseManager['clients']) {
+    sseManager.sendHeartbeat(clientId);
+  }
 }, 30 * 1000);

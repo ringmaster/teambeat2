@@ -15,7 +15,7 @@
         onCardDrop: (e: DragEvent, targetCardId: string) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
-        onVoteCard: (cardId: string) => void;
+        onVoteCard: (cardId: string, delta: 1 | -1) => void;
         onCommentCard: (cardId: string) => void;
         onAddCard: (columnId: string) => void;
         onGroupCards: (cards: any[]) => void;
@@ -24,6 +24,8 @@
         onDeleteCard: (cardId: string) => void;
         userRole: string;
         currentUserId: string;
+        hasVotes: boolean;
+        userVotesByCard: Map<string, number>;
     }
 
     let {
@@ -49,6 +51,8 @@
         onDeleteCard,
         userRole,
         currentUserId,
+        hasVotes,
+        userVotesByCard,
     }: Props = $props();
 
     function columnCountClass(count: number) {
@@ -98,6 +102,8 @@
                 {onDeleteCard}
                 {userRole}
                 {currentUserId}
+                {hasVotes}
+                {userVotesByCard}
                 isSingleColumn={board.columns?.length === 1}
             />
         {/each}
