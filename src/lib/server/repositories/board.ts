@@ -231,7 +231,7 @@ export async function updateColumn(
   data: {
     title?: string;
     description?: string | null;
-    defaultAppearance?: 'shown' | 'hidden' | 'fixed';
+    defaultAppearance?: string;
   }
 ) {
   const [column] = await db

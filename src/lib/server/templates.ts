@@ -1,4 +1,79 @@
-export const BOARD_TEMPLATES = {
+/**
+ * Template system for board creation
+ *
+ * Templates can include:
+ * - Static column descriptions
+ * - Dynamic column descriptions via getDescription() function
+ * - Default appearance settings for columns
+ * - Scene configurations
+ */
+
+// Icebreaker questions for Lean Coffee
+const ICEBREAKER_QUESTIONS = [
+  "What's the best piece of advice you've ever received?",
+  "If you could instantly become an expert in something, what would it be?",
+  "What's the most interesting thing you've learned this week?",
+  "What's your go-to productivity hack that works best for you?",
+  "If you could have dinner with any historical figure, who would it be and why?",
+  "What's one skill you wish they taught in school?",
+  "What's the best compliment you've ever received?",
+  "If you could solve one world problem, what would it be?",
+  "What's your favorite way to unwind after a challenging day?",
+  "What's one thing that always makes you smile?",
+  "If you could live in any decade, what would it be?",
+  "What's the most useful app on your phone?",
+  "What's one book that changed your perspective?",
+  "If you could master any language overnight, which would you choose?",
+  "What's your favorite tradition or ritual?",
+  "What's the best gift you've ever given someone?",
+  "If you could have any superpower for a day, what would it be?",
+  "What's one thing you're grateful for today?",
+  "What's your favorite way to learn new things?",
+  "If you could ask your future self one question, what would it be?",
+  "What's the most beautiful place you've ever seen?",
+  "What's one habit you're proud of developing?",
+  "If you could attend any event in history, what would it be?",
+  "What's your favorite quote or saying?",
+  "What's one thing that always motivates you?"
+];
+
+function getRandomIcebreakerQuestion(): string {
+  return ICEBREAKER_QUESTIONS[Math.floor(Math.random() * ICEBREAKER_QUESTIONS.length)];
+}
+
+// Type definitions for template structure
+interface TemplateColumn {
+  title: string;
+  description?: string;  // Static description
+  seq: number;
+  default_appearance?: string;
+  getDescription?: () => string;  // Dynamic description function (overrides static description)
+}
+
+interface TemplateScene {
+  title: string;
+  mode: 'columns' | 'present' | 'review';
+  seq: number;
+  allowAddCards: boolean;
+  allowEditCards: boolean;
+  allowObscureCards: boolean;
+  allowMoveCards: boolean;
+  allowGroupCards: boolean;
+  showVotes: boolean;
+  allowVoting: boolean;
+  showComments: boolean;
+  allowComments: boolean;
+}
+
+interface BoardTemplate {
+  id: string;
+  name: string;
+  description: string;
+  columns: TemplateColumn[];
+  scenes: TemplateScene[];
+}
+
+export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
   kafe: {
     id: 'kafe',
     name: 'KAFE (Kvetches, Appreciations, Flaws, Experiments)',
@@ -264,7 +339,12 @@ export const BOARD_TEMPLATES = {
     name: 'Lean Coffee',
     description: 'A democratic discussion format where topics are proposed, discussed, and decided on.',
     columns: [
-      { title: 'Icebreaker', seq: 1, default_appearance: 'locked' },
+      {
+        title: 'Icebreaker',
+        seq: 1,
+        default_appearance: 'locked',
+        getDescription: getRandomIcebreakerQuestion
+      },
       { title: 'Issues to Discuss', seq: 2, default_appearance: 'spread' }
     ],
     scenes: [
@@ -326,6 +406,6 @@ export function getTemplateList() {
 }
 
 // Helper function to get full template data for setup
-export function getTemplate(templateId: string) {
-  return BOARD_TEMPLATES[templateId as keyof typeof BOARD_TEMPLATES] || BOARD_TEMPLATES.basic;
+export function getTemplate(templateId: string): BoardTemplate {
+  return BOARD_TEMPLATES[templateId] || BOARD_TEMPLATES.kafe;
 }

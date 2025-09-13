@@ -47,7 +47,7 @@ export const columns = sqliteTable('columns', {
   title: text('title').notNull(),
   description: text('description'),
   seq: integer('seq').notNull(),
-  defaultAppearance: text('default_appearance').notNull().default('shown').$type<'shown' | 'hidden' | 'fixed'>(),
+  defaultAppearance: text('default_appearance').notNull().default('shown'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
 

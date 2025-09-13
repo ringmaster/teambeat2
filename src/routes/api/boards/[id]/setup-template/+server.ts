@@ -62,13 +62,18 @@ export const POST: RequestHandler = async (event) => {
     db.transaction((tx) => {
       // Create columns from template
       for (const col of templateColumns) {
+        // Get description from function if available, otherwise use static description
+        const description = col.getDescription ? col.getDescription() : col.description;
+
         tx
           .insert(columns)
           .values({
             id: uuidv4(),
             boardId: board.id,
             title: col.title,
-            seq: col.seq
+            description: description || null,
+            seq: col.seq,
+            defaultAppearance: col.default_appearance || 'shown'
           })
           .run();
       }
