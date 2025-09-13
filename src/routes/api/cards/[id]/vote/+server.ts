@@ -2,21 +2,45 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById, getCardsForBoard } from '$lib/server/repositories/card.js';
-import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
+import { findBoardByColumnId, getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { castVote, checkVotingAllocation, calculateAggregateVotingStats } from '$lib/server/repositories/vote.js';
 import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVotingStatsUpdate } from '$lib/server/sse/broadcast.js';
+import { updatePresence } from '$lib/server/repositories/presence.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
     const user = requireUser(event);
     const cardId = event.params.id;
-    const { delta } = await event.request.json();
+
+    let requestBody;
+    try {
+      requestBody = await event.request.json();
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return json(
+        { success: false, error: 'Invalid JSON in request body', details: parseError.message },
+        { status: 400 }
+      );
+    }
+
+    const { delta } = requestBody;
+
+    // Validate delta parameter
+    if (delta !== 1 && delta !== -1) {
+      console.error('Invalid delta value:', delta);
+      return json(
+        { success: false, error: 'Invalid delta value. Must be 1 or -1', details: `Received: ${delta}` },
+        { status: 400 }
+      );
+    }
+    console.log('Vote delta:', delta, 'User:', user.userId);
 
     const card = await findCardById(cardId);
     if (!card) {
+      console.error('Card not found:', cardId);
       return json(
-        { success: false, error: 'Card not found' },
+        { success: false, error: 'Card not found', details: `Card ID: ${cardId}` },
         { status: 404 }
       );
     }
@@ -32,19 +56,25 @@ export const POST: RequestHandler = async (event) => {
     // Get board information
     const boardId = await findBoardByColumnId(card.columnId);
     if (!boardId) {
+      console.error('Column not found for card:', card.columnId);
       return json(
-        { success: false, error: 'Column not found' },
+        { success: false, error: 'Column not found', details: `Column ID: ${card.columnId}` },
         { status: 404 }
       );
     }
 
+    // Find the board this card belongs to
     const board = await getBoardWithDetails(boardId);
     if (!board) {
+      console.error('Board not found:', boardId);
       return json(
-        { success: false, error: 'Board not found' },
+        { success: false, error: 'Board not found for card', details: `Board ID: ${boardId}` },
         { status: 404 }
       );
     }
+
+    // Update user presence on this board
+    await updatePresence(user.userId, board.id);
 
     // Check if user has access to this board
     const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
@@ -80,7 +110,9 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Cast the vote
+    console.log('Casting vote:', { cardId, userId: user.userId, delta });
     const voteResult = await castVote(cardId, user.userId, delta);
+    console.log('Vote result:', voteResult);
 
     // Get updated card data with vote count
     const updatedCards = await getCardsForBoard(board.id);
@@ -124,8 +156,21 @@ export const POST: RequestHandler = async (event) => {
       throw error;
     }
 
+    console.error('Vote casting error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorStack = error instanceof Error ? error.stack : null;
+
     return json(
-      { success: false, error: 'Failed to cast vote' },
+      {
+        success: false,
+        error: 'Failed to cast vote',
+        details: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString(),
+        context: { cardId, userId: user.userId, delta: requestBody?.delta }
+      },
       { status: 500 }
     );
   }

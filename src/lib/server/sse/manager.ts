@@ -1,3 +1,6 @@
+import { PRESENCE_PING_INTERVAL_MS, SSE_HEARTBEAT_INTERVAL_MS, SSE_STALE_CONNECTION_TIMEOUT_MS } from '../constants.js';
+import { getUsersNearingTimeout } from '../repositories/presence.js';
+
 export interface SSEMessage {
   type: string;
   board_id: string;
@@ -10,6 +13,7 @@ export interface ConnectedSSEClient {
   userId: string | null;
   boardId: string | null;
   lastSeen: number;
+  lastPingSent?: number;
 }
 
 class SSEManager {
@@ -53,7 +57,7 @@ class SSEManager {
     if (client) {
       try {
         client.controller.close();
-      } catch (error) {
+      } catch {
         // Controller may already be closed
       }
     }
@@ -184,11 +188,51 @@ class SSEManager {
   }
 
   cleanupStaleConnections() {
-    const staleThreshold = Date.now() - (5 * 60 * 1000); // 5 minutes
+    const staleThreshold = Date.now() - SSE_STALE_CONNECTION_TIMEOUT_MS;
 
     for (const [clientId, client] of this.clients.entries()) {
       if (client.lastSeen < staleThreshold) {
         this.removeClient(clientId);
+      }
+    }
+  }
+
+  async sendPresencePings() {
+    const now = Date.now();
+    const boardIds = Array.from(this.boardClients.keys());
+
+    for (const boardId of boardIds) {
+      try {
+        // Get users who are nearing timeout
+        const nearTimeoutUsers = await getUsersNearingTimeout(boardId);
+        const nearTimeoutUserIds = new Set(nearTimeoutUsers.map(u => u.userId));
+
+        // Find clients for these users and send ping
+        const boardClients = this.boardClients.get(boardId);
+        if (!boardClients) continue;
+
+        for (const clientId of boardClients) {
+          const client = this.clients.get(clientId);
+          if (!client || !client.userId) continue;
+
+          // Only send ping if user is nearing timeout and we haven't sent a ping recently
+          if (nearTimeoutUserIds.has(client.userId)) {
+            const timeSinceLastPing = client.lastPingSent ? now - client.lastPingSent : Infinity;
+
+            if (timeSinceLastPing > PRESENCE_PING_INTERVAL_MS) {
+              const pingMessage: SSEMessage = {
+                type: 'presence_ping',
+                board_id: boardId,
+                timestamp: now
+              };
+
+              this.sendToClient(clientId, pingMessage);
+              client.lastPingSent = now;
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to send presence pings for board ${boardId}:`, err);
       }
     }
   }
@@ -199,11 +243,16 @@ export const sseManager = new SSEManager();
 // Cleanup stale connections every 5 minutes
 setInterval(() => {
   sseManager.cleanupStaleConnections();
-}, 5 * 60 * 1000);
+}, SSE_STALE_CONNECTION_TIMEOUT_MS);
 
 // Send heartbeat every 30 seconds to keep connections alive
 setInterval(() => {
   for (const [clientId] of sseManager['clients']) {
     sseManager.sendHeartbeat(clientId);
   }
-}, 30 * 1000);
+}, SSE_HEARTBEAT_INTERVAL_MS);
+
+// Send presence pings to users nearing timeout
+setInterval(() => {
+  sseManager.sendPresencePings();
+}, PRESENCE_PING_INTERVAL_MS);

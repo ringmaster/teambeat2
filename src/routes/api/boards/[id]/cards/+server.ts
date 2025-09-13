@@ -6,6 +6,7 @@ import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardCreated } from '$lib/server/sse/broadcast.js';
 import { handleApiError } from '$lib/server/api-utils.js';
+import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
 import { z } from 'zod';
 
 const createCardSchema = z.object({
@@ -18,7 +19,10 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boardId = event.params.id;
-		
+
+		// Update user presence on this board
+		await refreshPresenceOnBoardAction(event);
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
@@ -26,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Check if user has access to this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole) {
@@ -35,9 +39,9 @@ export const GET: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		const cards = await getCardsForBoard(boardId);
-		
+
 		return json({
 			success: true,
 			cards
@@ -53,7 +57,10 @@ export const POST: RequestHandler = async (event) => {
 		const boardId = event.params.id;
 		const body = await event.request.json();
 		const data = createCardSchema.parse(body);
-		
+
+		// Update user presence on this board
+		await refreshPresenceOnBoardAction(event);
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
@@ -61,7 +68,7 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Check if user has access to this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole) {
@@ -70,7 +77,7 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Check if current scene allows adding cards
 		const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
 		if (!currentScene || !currentScene.allowAddCards) {
@@ -79,15 +86,15 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		const card = await createCard({
 			...data,
 			userId: user.userId
 		});
-		
+
 		// Broadcast the new card to all clients
 		broadcastCardCreated(boardId, card);
-		
+
 		return json({
 			success: true,
 			card

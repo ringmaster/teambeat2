@@ -277,6 +277,20 @@
         }
     }
 
+    async function handlePresencePing() {
+        console.log("Received presence ping, sending pong");
+        try {
+            await fetch(`/api/boards/${boardId}/pong`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+        } catch (error) {
+            console.error("Failed to send presence pong:", error);
+        }
+    }
+
     function attemptReconnection() {
         if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
             console.error(
@@ -305,6 +319,10 @@
 
     function handleSSEMessage(data: any) {
         switch (data.type) {
+            case "presence_ping":
+                // Respond to ping with pong to refresh presence
+                handlePresencePing();
+                break;
             case "card_created":
                 cards = [...cards, data.card];
                 break;

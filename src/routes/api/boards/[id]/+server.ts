@@ -5,6 +5,7 @@ import { getBoardWithDetails, updateBoardStatus, updateBoardSettings, deleteBoar
 import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastBoardUpdated } from '$lib/server/sse/broadcast.js';
 import { handleApiError } from '$lib/server/api-utils.js';
+import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
 import { z } from 'zod';
 
 const updateBoardSchema = z.object({
@@ -20,6 +21,9 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boardId = event.params.id;
+
+		// Update user presence on this board
+		await refreshPresenceOnBoardAction(event);
 
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
@@ -55,12 +59,15 @@ export const GET: RequestHandler = async (event) => {
 	}
 };
 
-export const PUT: RequestHandler = async (event) => {
+export const PATCH: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boardId = event.params.id;
 		const body = await event.request.json();
 		const data = updateBoardSchema.parse(body);
+
+		// Update user presence on this board
+		await refreshPresenceOnBoardAction(event);
 
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
@@ -116,7 +123,7 @@ export const PUT: RequestHandler = async (event) => {
 	}
 };
 
-export const PATCH: RequestHandler = PUT;
+
 
 export const DELETE: RequestHandler = async (event) => {
 	try {

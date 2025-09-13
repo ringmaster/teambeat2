@@ -136,9 +136,19 @@
 
 ### WebSocket Integration
 - WebSocket server runs on port 8080 alongside main application
-- Presence tracking for collaborative features
+- Presence tracking for collaborative features with 30-second timeout
 - Real-time board updates and user activity monitoring
 - Connection handling designed for horizontal scaling preparation
+
+### Presence System
+- **30-second timeout** for user presence (configurable in `constants.ts`)
+- **Automatic presence refresh** on all board API calls via middleware
+- **Ping/Pong system** for active users:
+  - Server sends `presence_ping` SSE events to users approaching timeout (70% of timeout period)
+  - Client responds with POST to `/api/boards/[id]/pong` to refresh presence
+  - Prevents unnecessary presence timeouts for active users
+- **Cleanup intervals**: Stale presence records removed every minute
+- **API middleware**: `refreshPresenceOnBoardAction()` automatically updates presence for board-related requests
 
 ## Error Handling
 
@@ -172,9 +182,9 @@
 ```
 src/
 ├── app.less          # Design tokens + mixins only
-├── routes/           
+├── routes/
 │   └── +layout.svelte # Import app.less here
-└── lib/components/   
+└── lib/components/
     └── *.svelte      # Component styles in <style> blocks
 ```
 
@@ -197,7 +207,7 @@ src/
     .flex-between();
     padding: var(--spacing-4);
   }
-  
+
   .primary-action {
     .button-style(var(--color-teal-500));
   }
