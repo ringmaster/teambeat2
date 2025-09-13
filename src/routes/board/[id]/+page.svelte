@@ -665,9 +665,9 @@
 
                 console.log(
                     "Final state - votingAllocation:",
-                    votingAllocation,
+                    $state.snapshot(votingAllocation),
                     "hasVotes:",
-                    hasVotes,
+                    $state.snapshot(hasVotes),
                 );
             } else {
                 console.error(
