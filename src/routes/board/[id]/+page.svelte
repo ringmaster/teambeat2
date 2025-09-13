@@ -138,6 +138,11 @@
             board = boardData.board;
             userRole = boardData.userRole;
 
+            // Ensure board.columns contains all columns for proper client-side filtering
+            if (board.allColumns) {
+                board.columns = board.allColumns;
+            }
+
             // Update config form with board data
             configForm.name = board.name || "";
             configForm.blameFreeMode = board.blameFreeMode || false;
@@ -353,7 +358,9 @@
                 break;
             case "columns_updated":
                 if (board && data.columns) {
+                    // Update both columns and allColumns with the complete set from server
                     board.columns = data.columns;
+                    board.allColumns = data.columns;
                 }
                 break;
 
@@ -406,13 +413,15 @@
 
     // Filter columns based on current scene visibility settings
     let visibleColumns = $derived.by(() => {
-        if (!board?.columns || !board?.currentSceneId) {
-            return board?.columns || [];
+        // Use allColumns (complete set) if available, otherwise fall back to columns
+        const columnsToFilter = board?.allColumns || board?.columns;
+        if (!columnsToFilter || !board?.currentSceneId) {
+            return columnsToFilter || [];
         }
 
         const hiddenColumns =
             board.hiddenColumnsByScene?.[board.currentSceneId] || [];
-        return board.columns.filter(
+        return columnsToFilter.filter(
             (column: any) => !hiddenColumns.includes(column.id),
         );
     });
@@ -1043,11 +1052,20 @@
 
             if (response.ok) {
                 const responseData = await response.json();
+                // Update both columns and allColumns for optimistic update
                 const columnIndex = board.columns.findIndex(
                     (c: any) => c.id === columnId,
                 );
                 if (columnIndex !== -1) {
                     board.columns[columnIndex] = responseData.column;
+                }
+                if (board.allColumns) {
+                    const allColumnIndex = board.allColumns.findIndex(
+                        (c: any) => c.id === columnId,
+                    );
+                    if (allColumnIndex !== -1) {
+                        board.allColumns[allColumnIndex] = responseData.column;
+                    }
                 }
             }
         } catch (error) {
@@ -1072,9 +1090,15 @@
             );
 
             if (response.ok) {
+                // Remove from both columns and allColumns for optimistic update
                 board.columns = board.columns.filter(
                     (c: any) => c.id !== columnId,
                 );
+                if (board.allColumns) {
+                    board.allColumns = board.allColumns.filter(
+                        (c: any) => c.id !== columnId,
+                    );
+                }
             }
         } catch (error) {
             console.error("Failed to delete column:", error);
@@ -1301,7 +1325,9 @@
         position: string,
     ) {
         try {
-            const columns = [...board.columns];
+            // Use allColumns if available for reordering, otherwise fall back to columns
+            const sourceColumns = board.allColumns || board.columns;
+            const columns = [...sourceColumns];
             const draggedIndex = columns.findIndex((c) => c.id === draggedId);
             const targetIndex = columns.findIndex((c) => c.id === targetId);
 
@@ -1334,7 +1360,11 @@
             );
 
             if (response.ok) {
+                // Update both columns and allColumns for optimistic update
                 board.columns = columns;
+                if (board.allColumns) {
+                    board.allColumns = columns;
+                }
             }
         } catch (error) {
             console.error("Failed to reorder columns:", error);
@@ -1408,7 +1438,9 @@
 
     async function moveColumnToEnd(draggedId: string) {
         try {
-            const columns = [...board.columns];
+            // Use allColumns if available for reordering, otherwise fall back to columns
+            const sourceColumns = board.allColumns || board.columns;
+            const columns = [...sourceColumns];
             const draggedIndex = columns.findIndex((c) => c.id === draggedId);
 
             if (draggedIndex === -1) return;
@@ -1433,7 +1465,11 @@
             );
 
             if (response.ok) {
+                // Update both columns and allColumns for optimistic update
                 board.columns = columns;
+                if (board.allColumns) {
+                    board.allColumns = columns;
+                }
             }
         } catch (error) {
             console.error("Failed to move column to end:", error);
@@ -1629,7 +1665,7 @@
     {/if}
 
     <!-- Main content area that grows to fill available space -->
-    {#if (!board.columns || board.columns.length === 0) && (!board.scenes || board.scenes.length === 0)}
+    {#if (!(board.allColumns || board.columns) || (board.allColumns || board.columns)?.length === 0) && (!board.scenes || board.scenes.length === 0)}
         <BoardSetup
             bind:showTemplateSelector
             {templates}
