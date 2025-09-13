@@ -9,7 +9,7 @@
             id: string;
             name: string;
             votingEnabled: boolean;
-            votingAllocation?: number;
+            votingAllocation: number;
             blameFreeMode?: boolean;
         };
         userRole: string;
@@ -97,10 +97,8 @@
         ["admin", "facilitator"].includes(userRole),
     );
 
-    // Use activeUsers from votingStats when available, fallback to connectedUsers
-    let displayedConnectedUsers = $derived(
-        votingStats?.activeUsers ?? connectedUsers,
-    );
+    // Use activeUsers from votingStats
+    let displayedConnectedUsers = $derived(votingStats?.activeUsers || 0);
 
     function openUserStatusModal() {
         if (showAdminControls) {

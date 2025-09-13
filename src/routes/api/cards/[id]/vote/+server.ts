@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById, getCardsForBoard } from '$lib/server/repositories/card.js';
 import { findBoardByColumnId, getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { castVote, checkVotingAllocation } from '$lib/server/repositories/vote.js';
+import { castVote, getUserVoteCount } from '$lib/server/repositories/vote.js';
 import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVotingStatsUpdateExcludingUser } from '$lib/server/sse/broadcast.js';
 import { updatePresence } from '$lib/server/repositories/presence.js';
 import { buildComprehensiveVotingData } from '$lib/server/utils/voting-data.js';
@@ -95,19 +95,25 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    // Check voting allocation
-    const allocation = await checkVotingAllocation(user.userId, board.id, board.votingAllocation);
-    if (!allocation.canVote && delta > 0) {
-      return json(
-        { success: false, error: 'No votes remaining', allocation },
-        { status: 400 }
-      );
+    // Check voting allocation inline
+    if (delta > 0) {
+      const currentVotes = await getUserVoteCount(user.userId, board.id);
+      const maxVotes = board.votingAllocation;
+      if (currentVotes >= maxVotes) {
+        return json(
+          { success: false, error: 'No votes remaining' },
+          { status: 400 }
+        );
+      }
     }
-    if (delta < 0 && allocation.currentVotes <= 0) {
-      return json(
-        { success: false, error: 'No votes cast', allocation },
-        { status: 400 }
-      );
+    if (delta < 0) {
+      const currentVotes = await getUserVoteCount(user.userId, board.id);
+      if (currentVotes <= 0) {
+        return json(
+          { success: false, error: 'No votes to remove' },
+          { status: 400 }
+        );
+      }
     }
 
     // Cast the vote
@@ -141,16 +147,6 @@ export const POST: RequestHandler = async (event) => {
       // This ensures other users see updated voting statistics without revealing individual votes
       await broadcastVotingStatsUpdateExcludingUser(board.id, user.userId);
     }
-
-    // Test SSE with simple message first
-    console.log('Testing simple SSE broadcast');
-    const { sseManager } = await import('$lib/server/sse/manager.js');
-    sseManager.broadcastToBoard(board.id, {
-      type: 'test_message',
-      board_id: board.id,
-      message: 'Vote processed successfully',
-      timestamp: Date.now()
-    });
 
     // Get comprehensive voting data for the response
     const comprehensiveVotingData = await buildComprehensiveVotingData(board.id, user.userId);

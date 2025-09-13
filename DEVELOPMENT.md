@@ -145,7 +145,7 @@
 - **Automatic presence refresh** on all board API calls via middleware
 - **Ping/Pong system** for active users:
   - Server sends `presence_ping` SSE events to users approaching timeout (70% of timeout period)
-  - Client responds with POST to `/api/boards/[id]/pong` to refresh presence
+  - Client responds with PUT to `/api/boards/[id]/presence` with `activity: "pong"` to refresh presence
   - Prevents unnecessary presence timeouts for active users
 - **Cleanup intervals**: Stale presence records removed every minute
 - **API middleware**: `refreshPresenceOnBoardAction()` automatically updates presence for board-related requests

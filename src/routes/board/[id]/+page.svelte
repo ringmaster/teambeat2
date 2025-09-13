@@ -19,13 +19,8 @@
     }
 
     interface VotingData {
-        allocation?: {
-            currentVotes: number;
-            maxVotes: number;
-            remainingVotes: number;
-            canVote: boolean;
-        };
         votes_by_card?: Record<string, number>;
+        all_votes_by_card?: Record<string, number>;
         voting_stats?: {
             totalUsers: number;
             activeUsers: number;
@@ -36,7 +31,6 @@
             remainingVotes: number;
             maxVotesPerUser: number;
         };
-        connected_users_count?: number;
     }
 
     const { data }: Props = $props();
@@ -89,6 +83,7 @@
         canVote: boolean;
     } | null>(null);
     let userVotesByCard = $state(new Map<string, number>()); // cardId -> user votes on that card
+    let allVotesByCard = $state(new Map<string, number>()); // cardId -> total votes on that card (when votes visible)
 
     // Voting toolbar state
     let connectedUsers = $state(0);
@@ -117,7 +112,7 @@
     let configForm = $state({
         name: "",
         blameFreeMode: false,
-        votingAllocation: 3,
+        votingAllocation: 0,
         status: "draft",
     });
 
@@ -168,7 +163,7 @@
             // Update config form with board data
             configForm.name = board.name || "";
             configForm.blameFreeMode = board.blameFreeMode || false;
-            configForm.votingAllocation = board.votingAllocation || 3;
+            configForm.votingAllocation = board.votingAllocation;
             configForm.status = board.status || "draft";
 
             if (cardsResponse.ok) {
@@ -306,16 +301,17 @@
     }
 
     async function handlePresencePing() {
-        console.log("Received presence ping, sending pong");
+        console.log("Received presence ping, updating presence");
         try {
-            await fetch(`/api/boards/${boardId}/pong`, {
-                method: "POST",
+            await fetch(`/api/boards/${boardId}/presence`, {
+                method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                body: JSON.stringify({ activity: "pong" }),
             });
         } catch (error) {
-            console.error("Failed to send presence pong:", error);
+            console.error("Failed to update presence:", error);
         }
     }
 
@@ -339,11 +335,6 @@
     }
 
     function processVotingData(data: VotingData) {
-        // Update user vote allocation if provided
-        if (data.allocation) {
-            votingAllocation = data.allocation;
-        }
-
         // Update user votes by card map if provided
         if (data.votes_by_card) {
             const newUserVotes = new Map<string, number>();
@@ -353,14 +344,37 @@
             userVotesByCard = newUserVotes;
         }
 
+        // Update all users' votes by card map if provided
+        if (data.all_votes_by_card) {
+            const newAllVotes = new Map<string, number>();
+            Object.entries(data.all_votes_by_card).forEach(
+                ([cardId, count]) => {
+                    newAllVotes.set(cardId, count as number);
+                },
+            );
+            allVotesByCard = newAllVotes;
+        }
+
         // Update voting stats if provided
         if (data.voting_stats) {
             votingStats = data.voting_stats;
-        }
 
-        // Update connected users count if provided
-        if (data.connected_users_count !== undefined) {
-            connectedUsers = data.connected_users_count;
+            // Derive user allocation from voting stats and user votes
+            if (data.votes_by_card) {
+                const currentVotes = Object.values(data.votes_by_card).reduce(
+                    (sum, count) => sum + count,
+                    0,
+                );
+                const maxVotes = data.voting_stats.maxVotesPerUser;
+                const remainingVotes = Math.max(0, maxVotes - currentVotes);
+
+                votingAllocation = {
+                    currentVotes,
+                    maxVotes,
+                    remainingVotes,
+                    canVote: remainingVotes > 0,
+                };
+            }
         }
 
         // Voting stats now include presence data (activeUsers)
@@ -401,7 +415,7 @@
     function handleSSEMessage(data: any) {
         switch (data.type) {
             case "presence_ping":
-                // Respond to ping with pong to refresh presence
+                // Respond to ping by updating presence
                 handlePresencePing();
                 break;
             case "card_created":
@@ -445,13 +459,14 @@
                         (!wereVotesVisible && areVotesNowVisible)
                     ) {
                         console.log(
-                            "Voting features changed in new scene, refreshing presence",
+                            "Voting features changed in new scene, refreshing presence and loading vote data",
                             {
                                 votingEnabled: isVotingNowAllowed,
                                 votesVisible: areVotesNowVisible,
                             },
                         );
                         refreshPresence("voting_enabled");
+                        loadUserVotingData();
                     }
                 }
                 break;
@@ -493,7 +508,7 @@
                         configForm.blameFreeMode =
                             data.board.blameFreeMode || false;
                         configForm.votingAllocation =
-                            data.board.votingAllocation || 3;
+                            data.board.votingAllocation;
                         configForm.status = data.board.status || "draft";
                     }
                 }
@@ -539,7 +554,6 @@
                 // Process voting data using reusable function
                 {
                     const votingProcessData: VotingData = {
-                        allocation: data.user_voting_data?.allocation,
                         votes_by_card: data.user_voting_data?.votes_by_card,
                         voting_stats: data.voting_stats,
                     };
@@ -745,26 +759,12 @@
                 }
 
                 // Update voting data with comprehensive data from API response
+                // This includes updated vote counts, so no need for additional processing
                 const votingDataUpdate: VotingData = {
-                    allocation: data.user_voting_data?.allocation,
                     votes_by_card: data.user_voting_data?.votes_by_card,
                     voting_stats: data.voting_stats,
                 };
                 processVotingData(votingDataUpdate);
-
-                // Update user votes tracking based on vote result
-                if (data.voteResult) {
-                    const currentUserVotes = userVotesByCard.get(cardId) || 0;
-                    if (data.voteResult.action === "added") {
-                        userVotesByCard.set(cardId, currentUserVotes + 1); // Support multiple votes
-                    } else if (data.voteResult.action === "removed") {
-                        userVotesByCard.set(
-                            cardId,
-                            Math.max(0, currentUserVotes - 1),
-                        );
-                    }
-                    userVotesByCard = new Map(userVotesByCard);
-                }
             }
         } catch (error) {
             console.error("Failed to vote:", error);
@@ -786,25 +786,12 @@
             if (allocationResponse.ok) {
                 const allocationData = await allocationResponse.json();
 
-                console.log(
-                    "Final state - votingAllocation:",
-                    $state.snapshot(allocationData.allocation),
-                    "hasVotes:",
-                    $state.snapshot(
-                        Object.keys(
-                            allocationData.user_voting_data?.votes_by_card ||
-                                {},
-                        ).length > 0,
-                    ),
-                );
-
                 // Use reusable process function with new API format
                 processVotingData({
-                    allocation: allocationData.user_voting_data?.allocation,
                     votes_by_card:
                         allocationData.user_voting_data?.votes_by_card,
+                    all_votes_by_card: allocationData.all_votes_by_card,
                     voting_stats: allocationData.voting_stats,
-                    connected_users_count: allocationData.connected_users_count,
                 });
             } else {
                 console.error(
@@ -845,9 +832,8 @@
             const response = await fetch(`/api/boards/${boardId}/presence`);
             if (response.ok) {
                 const data = await response.json();
-                processVotingData({
-                    connected_users_count: data.presence?.length || 0,
-                });
+                // Connected users count is now handled through voting_stats.activeUsers
+                connectedUsers = data.presence?.length || 0;
             }
         } catch (error) {
             console.error("Failed to load connected users:", error);
@@ -1858,6 +1844,7 @@
             currentUserId={user?.id}
             {hasVotes}
             {userVotesByCard}
+            {allVotesByCard}
         />
     {/if}
 

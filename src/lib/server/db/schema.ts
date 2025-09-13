@@ -34,7 +34,7 @@ export const boards = sqliteTable('boards', {
   status: text('status').notNull().default('draft').$type<'draft' | 'active' | 'completed' | 'archived'>(),
   currentSceneId: text('current_scene_id'),
   blameFreeMode: integer('blame_free_mode', { mode: 'boolean' }).default(false),
-  votingAllocation: integer('voting_allocation').default(3),
+  votingAllocation: integer('voting_allocation').notNull().default(3),
   votingEnabled: integer('voting_enabled', { mode: 'boolean' }).default(true),
   meetingDate: text('meeting_date'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -68,8 +68,6 @@ export const scenes = sqliteTable('scenes', {
   allowVoting: integer('allow_voting', { mode: 'boolean' }).default(false),
   showComments: integer('show_comments', { mode: 'boolean' }).default(true),
   allowComments: integer('allow_comments', { mode: 'boolean' }).default(true),
-  // Legacy field for backward compatibility
-  multipleVotesPerCard: integer('multiple_votes_per_card', { mode: 'boolean' }).default(true),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
 

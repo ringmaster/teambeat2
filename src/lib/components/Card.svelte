@@ -15,6 +15,7 @@
         userRole: string;
         currentUserId: string;
         userVotesOnCard?: number; // Number of votes this user has on this card (0 or 1 for current system)
+        allUsersVotesOnCard?: number; // Total votes from all users on this card (when votes are visible)
         hasVotes?: boolean; // Whether user has votes available (same for all cards on board)
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleSelection: (cardId: string) => void;
@@ -36,6 +37,7 @@
         userRole,
         currentUserId,
         userVotesOnCard = 0,
+        allUsersVotesOnCard,
         hasVotes = false,
         onDragStart,
         onToggleSelection,
@@ -232,7 +234,7 @@
                 <div onclick={(e) => e.stopPropagation()}>
                     <Vote
                         votes={userVotesOnCard}
-                        total={card.voteCount || 0}
+                        total={allUsersVotesOnCard ?? card.voteCount ?? 0}
                         enabled={currentScene?.allowVoting ?? false}
                         {hasVotes}
                         view={getVoteViewMode(

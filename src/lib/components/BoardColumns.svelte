@@ -26,6 +26,7 @@
         currentUserId: string;
         hasVotes: boolean;
         userVotesByCard: Map<string, number>;
+        allVotesByCard: Map<string, number>;
     }
 
     let {
@@ -53,6 +54,7 @@
         currentUserId,
         hasVotes,
         userVotesByCard,
+        allVotesByCard,
     }: Props = $props();
 
     function columnCountClass(count: number) {
@@ -104,6 +106,7 @@
                 {currentUserId}
                 {hasVotes}
                 {userVotesByCard}
+                {allVotesByCard}
                 isSingleColumn={board.columns?.length === 1}
             />
         {/each}

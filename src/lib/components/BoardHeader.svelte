@@ -12,7 +12,7 @@
             status?: string;
             blameFreeMode?: boolean;
             votingEnabled?: boolean;
-            votingAllocation?: number;
+            votingAllocation: number;
             scenes?: Array<{
                 id: string;
                 name: string;

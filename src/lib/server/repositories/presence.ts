@@ -44,7 +44,6 @@ export async function getBoardPresence(boardId: string) {
 export async function getUsersNearingTimeout(boardId: string) {
 	const now = Date.now();
 	const nearTimeoutThreshold = now - (PRESENCE_TIMEOUT_MS * 0.7); // 70% of timeout
-	const activeThreshold = now - PRESENCE_TIMEOUT_MS;
 
 	const nearTimeoutUsers = await db
 		.select({
@@ -56,7 +55,6 @@ export async function getUsersNearingTimeout(boardId: string) {
 		.where(
 			and(
 				eq(presence.boardId, boardId),
-				gte(presence.lastSeen, activeThreshold),
 				lt(presence.lastSeen, nearTimeoutThreshold)
 			)
 		);
@@ -76,7 +74,7 @@ export async function removePresence(userId: string, boardId: string) {
 }
 
 export async function cleanupStalePresence() {
-	const staleThreshold = Date.now() - PRESENCE_TIMEOUT_MS;
+	const staleThreshold = Date.now() - PRESENCE_CLEANUP_INTERVAL_MS;
 
 	const deletedRows = await db
 		.delete(presence)

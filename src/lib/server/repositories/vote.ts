@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { votes, cards, seriesMembers, columns, users } from '../db/schema.js';
+import { votes, cards, columns, users } from '../db/schema.js';
 import { eq, and, count, desc, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { getBoardPresence } from './presence.js';
@@ -74,6 +74,22 @@ export async function getUserVotesForBoard(userId: string, boardId: string) {
   return userVotes;
 }
 
+export async function getAllUsersVotesForBoard(boardId: string) {
+  const allVotes = await db
+    .select({
+      voteId: votes.id,
+      cardId: votes.cardId,
+      userId: votes.userId,
+      createdAt: votes.createdAt
+    })
+    .from(votes)
+    .innerJoin(cards, eq(cards.id, votes.cardId))
+    .innerJoin(columns, eq(columns.id, cards.columnId))
+    .where(eq(columns.boardId, boardId));
+
+  return allVotes;
+}
+
 export async function getUserVoteCount(userId: string, boardId: string) {
   const [result] = await db
     .select({ count: count() })
@@ -90,7 +106,7 @@ export async function getUserVoteCount(userId: string, boardId: string) {
   return result.count;
 }
 
-export async function getBoardVotingStats(boardId: string, seriesId: string) {
+export async function getBoardVotingStats(boardId: string, _seriesId: string) {
   // Get currently active/present users on this board
   const activeUsers = await getBoardPresence(boardId);
 

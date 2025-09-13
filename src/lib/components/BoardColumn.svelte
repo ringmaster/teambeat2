@@ -29,6 +29,7 @@
         currentUserId: string;
         hasVotes: boolean;
         userVotesByCard: Map<string, number>;
+        allVotesByCard: Map<string, number>;
         isSingleColumn?: boolean;
     }
 
@@ -58,6 +59,7 @@
         currentUserId,
         hasVotes,
         userVotesByCard,
+        allVotesByCard,
         isSingleColumn = false,
     }: Props = $props();
 
@@ -142,6 +144,7 @@
                     {userRole}
                     {currentUserId}
                     userVotesOnCard={userVotesByCard.get(leadCard.id) || 0}
+                    allUsersVotesOnCard={allVotesByCard.get(leadCard.id)}
                     {hasVotes}
                     {onDragStart}
                     {onCardDrop}
@@ -167,6 +170,9 @@
                                 userVotesOnCard={userVotesByCard.get(
                                     subCard.id,
                                 ) || 0}
+                                allUsersVotesOnCard={allVotesByCard.get(
+                                    subCard.id,
+                                )}
                                 {hasVotes}
                                 {onDragStart}
                                 {onCardDrop}
@@ -192,6 +198,7 @@
                 {userRole}
                 {currentUserId}
                 userVotesOnCard={userVotesByCard.get(card.id) || 0}
+                allUsersVotesOnCard={allVotesByCard.get(card.id)}
                 {hasVotes}
                 {onDragStart}
                 {onCardDrop}

@@ -19,7 +19,6 @@ export interface VotingStats {
 }
 
 export interface UserVotingData {
-  allocation: VotingAllocation;
   votes_by_card: Record<string, number>;
 }
 
@@ -46,7 +45,7 @@ export interface VotingStatsUpdatedMessageData {
 /**
  * Constructs user voting data from raw votes
  */
-export function buildUserVotingData(allocation: VotingAllocation, userVotes: Array<{cardId: string}>): UserVotingData {
+export function buildUserVotingData(userVotes: Array<{cardId: string}>): UserVotingData {
   // Process user votes into votes by card map
   const votesByCard: Record<string, number> = {};
   userVotes.forEach(vote => {
@@ -54,7 +53,6 @@ export function buildUserVotingData(allocation: VotingAllocation, userVotes: Arr
   });
 
   return {
-    allocation,
     votes_by_card: votesByCard
   };
 }
@@ -70,7 +68,7 @@ export async function buildComprehensiveVotingData(
     console.log('Building comprehensive voting data:', { boardId, userId });
 
     const { getBoardWithDetails } = await import('../repositories/board.js');
-    const { checkVotingAllocation, getUserVotesForBoard } = await import('../repositories/vote.js');
+    const { getUserVotesForBoard } = await import('../repositories/vote.js');
 
     const board = await getBoardWithDetails(boardId);
     if (!board) {
@@ -84,12 +82,8 @@ export async function buildComprehensiveVotingData(
 
     if (userId) {
       console.log('Building user voting data for user:', userId);
-      const [allocation, userVotes] = await Promise.all([
-        checkVotingAllocation(userId, boardId, board.votingAllocation || 3),
-        getUserVotesForBoard(userId, boardId)
-      ]);
-
-      userVotingData = buildUserVotingData(allocation, userVotes);
+      const userVotes = await getUserVotesForBoard(userId, boardId);
+      userVotingData = buildUserVotingData(userVotes);
     }
 
     console.log('Comprehensive voting data built successfully');
@@ -125,7 +119,7 @@ export async function buildVotingStats(boardId: string): Promise<VotingStats> {
     const activeUserIds = new Set(presenceData.map(p => p.userId));
 
     // Pass activeUserIds to avoid duplicate presence queries
-    const comprehensiveStats = await calculateAggregateVotingStats(boardId, board.seriesId, board.votingAllocation || 3, activeUserIds);
+    const comprehensiveStats = await calculateAggregateVotingStats(boardId, board.seriesId, board.votingAllocation, activeUserIds);
 
     console.log('Comprehensive voting stats built successfully:', comprehensiveStats);
     return comprehensiveStats;
@@ -184,31 +178,17 @@ export async function buildVotingStatsUpdatedMessage(
  */
 export async function buildUserVotingApiResponse(
   boardId: string,
-  userId: string,
-  includeLegacyFields = true
+  userId: string
 ): Promise<{
   success: boolean;
   user_voting_data?: UserVotingData;
   voting_stats: VotingStats;
-  allocation?: VotingAllocation;
-  userVotes?: Array<{cardId: string}>;
 }> {
   const comprehensiveData = await buildComprehensiveVotingData(boardId, userId);
 
-  const response = {
+  return {
     success: true,
     user_voting_data: comprehensiveData.user_voting_data,
     voting_stats: comprehensiveData.voting_stats
   };
-
-  // Include legacy fields for backwards compatibility
-  if (includeLegacyFields && comprehensiveData.user_voting_data) {
-    const { getUserVotesForBoard } = await import('../repositories/vote.js');
-    const userVotes = await getUserVotesForBoard(userId, boardId);
-
-    (response as any).allocation = comprehensiveData.user_voting_data.allocation;
-    (response as any).userVotes = userVotes;
-  }
-
-  return response;
 }
