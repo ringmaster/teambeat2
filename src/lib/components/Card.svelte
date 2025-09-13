@@ -228,7 +228,7 @@
                 </button>
             {/if}
 
-            {#if currentScene?.showVotes || currentScene?.allowVoting}
+            {#if (currentScene?.showVotes || currentScene?.allowVoting) && !isSubordinate}
                 <div onclick={(e) => e.stopPropagation()}>
                     <Vote
                         votes={userVotesOnCard}

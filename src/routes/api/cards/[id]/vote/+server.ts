@@ -21,6 +21,14 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
+    // Check if card is a subordinate card (has groupId but is not group lead)
+    if (card.groupId && !card.isGroupLead) {
+      return json(
+        { success: false, error: 'Cannot vote on subordinate cards. Vote on the group lead card instead.' },
+        { status: 403 }
+      );
+    }
+
     // Get board information
     const boardId = await findBoardByColumnId(card.columnId);
     if (!boardId) {
