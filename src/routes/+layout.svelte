@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { page } from "$app/stores";
     import "../app.less";
     import Avatar from "$lib/components/ui/Avatar.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
@@ -33,6 +34,47 @@
 
 <svelte:head>
     <title>TeamBeat - Collaborative Retrospectives</title>
+    <meta
+        name="description"
+        content="Collaborative retrospective boards for agile teams. Run better retrospectives with real-time collaboration, voting, and action items."
+    />
+
+    <!-- OpenGraph tags -->
+    <meta
+        property="og:title"
+        content="TeamBeat - Collaborative Retrospectives"
+    />
+    <meta
+        property="og:description"
+        content="Collaborative retrospective boards for agile teams. Run better retrospectives with real-time collaboration, voting, and action items."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="{$page.url.origin}/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+        property="og:image:alt"
+        content="TeamBeat - Collaborative Retrospectives"
+    />
+    <meta property="og:site_name" content="TeamBeat" />
+
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+        name="twitter:title"
+        content="TeamBeat - Collaborative Retrospectives"
+    />
+    <meta
+        name="twitter:description"
+        content="Collaborative retrospective boards for agile teams. Run better retrospectives with real-time collaboration, voting, and action items."
+    />
+    <meta name="twitter:image" content="{$page.url.origin}/og-image.svg" />
+    <meta
+        name="twitter:image:alt"
+        content="TeamBeat - Collaborative Retrospectives"
+    />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </svelte:head>
 
 <div class="app-layout">

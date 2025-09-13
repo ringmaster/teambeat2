@@ -10,6 +10,16 @@
     import Icon from "$lib/components/ui/Icon.svelte";
     import { toastStore } from "$lib/stores/toast";
 
+    interface Props {
+        data: {
+            board: any;
+            pageTitle: string;
+            description: string;
+        };
+    }
+
+    const { data }: Props = $props();
+
     let board: any = $state(null);
     let cards: any[] = $state([]);
     let user: any = $state(null);
@@ -1412,6 +1422,35 @@
     });
 </script>
 
+<svelte:head>
+    <title>{data.pageTitle}</title>
+    <meta name="description" content={data.description} />
+
+    <!-- OpenGraph tags -->
+    <meta property="og:title" content={data.pageTitle} />
+    <meta property="og:description" content={data.description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={$page.url.toString()} />
+    <meta property="og:image" content="{$page.url.origin}/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+        property="og:image:alt"
+        content="TeamBeat - Collaborative Retrospectives"
+    />
+    <meta property="og:site_name" content="TeamBeat" />
+
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={data.pageTitle} />
+    <meta name="twitter:description" content={data.description} />
+    <meta name="twitter:image" content="{$page.url.origin}/og-image.svg" />
+    <meta
+        name="twitter:image:alt"
+        content="TeamBeat - Collaborative Retrospectives"
+    />
+</svelte:head>
+
 {#if loading}
     <div id="board-loading">
         <Icon name="loading" size="lg" />
@@ -1425,11 +1464,10 @@
             <h2 class="board-not-found-title">Board not found</h2>
             <p class="board-not-found-message">
                 The board you're looking for doesn't exist or you don't have
-                access.
+                permission to view it.
             </p>
             <p class="board-not-found-message-2">
-                If the board is in draft, your admin needs to make it active for
-                you to access it.
+                Please check the URL or contact the board creator.
             </p>
             <a href="/" class="btn-primary">Go to Dashboard</a>
         </div>
