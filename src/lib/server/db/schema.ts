@@ -165,3 +165,15 @@ export const timerExtensionVotes = sqliteTable('timer_extension_votes', {
 }, (table) => ({
   pk: primaryKey({ columns: [table.boardId, table.userId] })
 }));
+
+export const userAuthenticators = sqliteTable('user_authenticators', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  credentialId: text('credential_id').notNull().unique(),
+  credentialPublicKey: text('credential_public_key', { mode: 'text' }).notNull(),
+  counter: integer('counter').notNull().default(0),
+  credentialDeviceType: text('credential_device_type'),
+  credentialBackedUp: integer('credential_backed_up', { mode: 'boolean' }).default(false),
+  transports: text('transports'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
+});

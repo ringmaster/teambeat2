@@ -1,9 +1,13 @@
+<script lang="ts">
+</script>
+
 <div class="welcome-page">
     <div class="welcome-container">
         <h1 class="welcome-title">Welcome to TeamBeat</h1>
         <p class="welcome-subtitle">
             Please sign in to access your retrospectives
         </p>
+
         <div class="welcome-actions">
             <a href="/login" class="btn-primary">Sign In</a>
             <a href="/register" class="btn-secondary">Register</a>

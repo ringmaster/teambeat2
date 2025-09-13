@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
+    import PasskeyManager from "$lib/components/PasskeyManager.svelte";
 
     let user: any = $state(null);
     let loading = $state(true);
@@ -191,59 +192,65 @@
                 </button>
             </section>
 
-            <!-- Change Password -->
-            <section class="profile-section">
-                <h2 class="section-title">Change Password</h2>
-                <div class="form-group">
-                    <label for="current-password" class="form-label"
-                        >Current Password</label
-                    >
-                    <input
-                        type="password"
-                        id="current-password"
-                        class="input"
-                        bind:value={currentPassword}
-                        placeholder="Enter current password"
-                    />
-                </div>
+            <!-- Authentication Methods -->
+            <div class="auth-methods-grid">
+                <!-- Change Password -->
+                <section class="profile-section">
+                    <h2 class="section-title">Change Password</h2>
+                    <div class="form-group">
+                        <label for="current-password" class="form-label"
+                            >Current Password</label
+                        >
+                        <input
+                            type="password"
+                            id="current-password"
+                            class="input"
+                            bind:value={currentPassword}
+                            placeholder="Enter current password"
+                        />
+                    </div>
 
-                <div class="form-group">
-                    <label for="new-password" class="form-label"
-                        >New Password</label
-                    >
-                    <input
-                        type="password"
-                        id="new-password"
-                        class="input"
-                        bind:value={newPassword}
-                        placeholder="Enter new password (min. 8 characters)"
-                    />
-                </div>
+                    <div class="form-group">
+                        <label for="new-password" class="form-label"
+                            >New Password</label
+                        >
+                        <input
+                            type="password"
+                            id="new-password"
+                            class="input"
+                            bind:value={newPassword}
+                            placeholder="Enter new password (min. 8 characters)"
+                        />
+                    </div>
 
-                <div class="form-group">
-                    <label for="confirm-password" class="form-label"
-                        >Confirm New Password</label
-                    >
-                    <input
-                        type="password"
-                        id="confirm-password"
-                        class="input"
-                        bind:value={confirmPassword}
-                        placeholder="Confirm new password"
-                    />
-                </div>
+                    <div class="form-group">
+                        <label for="confirm-password" class="form-label"
+                            >Confirm New Password</label
+                        >
+                        <input
+                            type="password"
+                            id="confirm-password"
+                            class="input"
+                            bind:value={confirmPassword}
+                            placeholder="Confirm new password"
+                        />
+                    </div>
 
-                <button
-                    class="btn-primary"
-                    onclick={changePassword}
-                    disabled={saving ||
-                        !currentPassword ||
-                        !newPassword ||
-                        !confirmPassword}
-                >
-                    {saving ? "Changing..." : "Change Password"}
-                </button>
-            </section>
+                    <button
+                        class="btn-primary"
+                        onclick={changePassword}
+                        disabled={saving ||
+                            !currentPassword ||
+                            !newPassword ||
+                            !confirmPassword}
+                    >
+                        {saving ? "Changing..." : "Change Password"}
+                    </button>
+                </section>
+
+                <!-- Passkey Manager -->
+                <PasskeyManager />
+            </div>
 
             <!-- Delete Account -->
             <section class="profile-section danger-section">
@@ -308,6 +315,11 @@
         overflow-y: scroll;
         padding: var(--spacing-8) var(--spacing-4);
         background: var(--color-bg-primary);
+
+        .flex-center();
+        flex: 1;
+        padding: var(--spacing-4);
+        margin: auto;
     }
 
     .loading-container {
@@ -318,8 +330,10 @@
     }
 
     .profile-content {
-        max-width: 600px;
         margin: 0 auto;
+
+        .flex-column-center();
+        gap: var(--spacing-4);
     }
 
     .profile-title {
@@ -327,6 +341,19 @@
         font-weight: 700;
         color: var(--color-text-primary);
         margin-bottom: var(--spacing-8);
+    }
+
+    .auth-methods-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-6);
+        margin-bottom: var(--spacing-6);
+    }
+
+    @media (max-width: 768px) {
+        .auth-methods-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .profile-section {

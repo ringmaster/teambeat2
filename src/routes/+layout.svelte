@@ -25,18 +25,9 @@
         }
 
         // Click outside handler for dropdown
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (!target.closest(".avatar-dropdown-container")) {
-                showUserDropdown = false;
-            }
-        };
+        // Remove click outside handler since we're using hover
 
-        document.addEventListener("click", handleClickOutside);
-
-        return () => {
-            document.removeEventListener("click", handleClickOutside);
-        };
+        // No need for click event listeners with hover
     });
 </script>
 
@@ -83,11 +74,13 @@
                             ></div>
                         </div>
                     {:else if user}
-                        <div class="avatar-dropdown-container">
+                        <div
+                            class="avatar-dropdown-container"
+                            onmouseenter={() => (showUserDropdown = true)}
+                            onmouseleave={() => (showUserDropdown = false)}
+                        >
                             <button
                                 class="avatar-dropdown-trigger"
-                                onclick={() =>
-                                    (showUserDropdown = !showUserDropdown)}
                                 onkeydown={(e) =>
                                     e.key === "Escape" &&
                                     (showUserDropdown = false)}
@@ -96,6 +89,7 @@
                             </button>
 
                             {#if showUserDropdown}
+                                <div class="dropdown-bridge"></div>
                                 <div class="avatar-dropdown-menu">
                                     <div class="dropdown-user-info">
                                         <div class="dropdown-user-name">
@@ -106,21 +100,11 @@
                                         </div>
                                     </div>
                                     <div class="dropdown-divider"></div>
-                                    <a
-                                        href="/"
-                                        class="dropdown-item"
-                                        onclick={() =>
-                                            (showUserDropdown = false)}
-                                    >
+                                    <a href="/" class="dropdown-item">
                                         <Icon name="home" size="sm" />
                                         <span>Dashboard</span>
                                     </a>
-                                    <a
-                                        href="/profile"
-                                        class="dropdown-item"
-                                        onclick={() =>
-                                            (showUserDropdown = false)}
-                                    >
+                                    <a href="/profile" class="dropdown-item">
                                         <Icon name="user" size="sm" />
                                         <span>Profile</span>
                                     </a>
@@ -268,7 +252,7 @@
             </div>
         </div>
     </footer>
-    
+
     <!-- Toast Container -->
     <ToastContainer />
 </div>
@@ -285,6 +269,7 @@
     /* Avatar Dropdown Styles */
     .avatar-dropdown-container {
         position: relative;
+        display: inline-block;
     }
 
     .avatar-dropdown-trigger {
@@ -316,6 +301,16 @@
         min-width: 200px;
         z-index: 1000;
         overflow: hidden;
+    }
+
+    .dropdown-bridge {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 100%;
+        height: 8px;
+        background: transparent;
+        z-index: 999;
     }
 
     .dropdown-user-info {
@@ -359,6 +354,7 @@
 
     .dropdown-item:hover {
         background: var(--surface-elevated);
+        color: var(--color-text-primary);
     }
 
     .dropdown-item-danger {
