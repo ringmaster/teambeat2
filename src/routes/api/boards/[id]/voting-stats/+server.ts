@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { getBoardVotingStats } from '$lib/server/repositories/vote.js';
+import { buildComprehensiveVotingData } from '$lib/server/utils/voting-data.js';
 
 export const GET: RequestHandler = async (event) => {
 	try {
@@ -27,28 +27,12 @@ export const GET: RequestHandler = async (event) => {
 			);
 		}
 
-		const votingStats = await getBoardVotingStats(boardId, board.seriesId);
-
-		// Calculate summary statistics
-		const totalUsers = votingStats.length;
-		const usersWhoVoted = votingStats.filter(u => u.hasVoted).length;
-		const usersWhoHaventVoted = totalUsers - usersWhoVoted;
-		const totalVotesCast = votingStats.reduce((sum, u) => sum + u.voteCount, 0);
-		const maxPossibleVotes = totalUsers * board.votingAllocation;
-		const remainingVotes = maxPossibleVotes - totalVotesCast;
+		// Use centralized data construction for consistency
+		const { voting_stats } = await buildComprehensiveVotingData(boardId);
 
 		return json({
 			success: true,
-			stats: {
-				totalUsers,
-				usersWhoVoted,
-				usersWhoHaventVoted,
-				totalVotesCast,
-				maxPossibleVotes,
-				remainingVotes,
-				votingAllocation: board.votingAllocation
-			},
-			userStats: votingStats
+			voting_stats
 		});
 	} catch (error) {
 		if (error instanceof Response) {

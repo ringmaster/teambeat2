@@ -35,12 +35,13 @@
         };
         votingStats?: {
             totalUsers: number;
+            activeUsers: number;
             usersWhoVoted: number;
             usersWhoHaventVoted: number;
             totalVotesCast: number;
             maxPossibleVotes: number;
             remainingVotes: number;
-            votingAllocation: number;
+            maxVotesPerUser: number;
         };
         onConfigureClick: () => void;
         onShareClick: () => void;
@@ -146,6 +147,7 @@
             name: board.name,
             votingEnabled: board.votingEnabled,
             votingAllocation: board.votingAllocation,
+            blameFreeMode: board.blameFreeMode,
         }}
         {userRole}
         {connectedUsers}

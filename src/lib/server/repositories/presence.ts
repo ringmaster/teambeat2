@@ -35,10 +35,7 @@ export async function getBoardPresence(boardId: string) {
 		})
 		.from(presence)
 		.where(
-			and(
-				eq(presence.boardId, boardId),
-				gte(presence.lastSeen, activeThreshold)
-			)
+		  eq(presence.boardId, boardId)
 		);
 
 	return activeUsers;

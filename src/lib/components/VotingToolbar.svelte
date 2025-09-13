@@ -1,5 +1,6 @@
 <script lang="ts">
     import Icon from "./ui/Icon.svelte";
+    import UserStatusModal from "./UserStatusModal.svelte";
     import { toastStore } from "$lib/stores/toast";
     import { slide } from "svelte/transition";
 
@@ -9,6 +10,7 @@
             name: string;
             votingEnabled: boolean;
             votingAllocation?: number;
+            blameFreeMode?: boolean;
         };
         userRole: string;
         connectedUsers: number;
@@ -20,18 +22,20 @@
         };
         votingStats: {
             totalUsers: number;
+            activeUsers: number;
             usersWhoVoted: number;
             usersWhoHaventVoted: number;
             totalVotesCast: number;
             maxPossibleVotes: number;
             remainingVotes: number;
-            votingAllocation: number;
+            maxVotesPerUser: number;
         };
         onIncreaseAllocation?: () => Promise<void>;
         onResetVotes?: () => Promise<void>;
     }
 
     let {
+        board,
         userRole,
         connectedUsers,
         userVoteAllocation,
@@ -42,6 +46,7 @@
 
     let isIncreasing = $state(false);
     let isResetting = $state(false);
+    let showUserStatusModal = $state(false);
 
     async function handleIncreaseAllocation() {
         if (isIncreasing || !onIncreaseAllocation) return;
@@ -91,39 +96,90 @@
     let showAdminControls = $derived(
         ["admin", "facilitator"].includes(userRole),
     );
+
+    // Use activeUsers from votingStats when available, fallback to connectedUsers
+    let displayedConnectedUsers = $derived(
+        votingStats?.activeUsers ?? connectedUsers,
+    );
+
+    function openUserStatusModal() {
+        if (showAdminControls) {
+            showUserStatusModal = true;
+        }
+    }
 </script>
 
 <div class="voting-toolbar" transition:slide={{ duration: 300 }}>
     <div class="voting-toolbar-content page-width page-container">
         <!-- Users connected -->
-        <div class="stat-item">
-            <span class="stat-value">{connectedUsers}</span>
-            <svg class="users-icon" viewBox="0 0 164.49 119.26">
-                <path
-                    fill="currentColor"
-                    d="M82.24 0c14.75,0 26.73,11.98 26.73,26.73 0,14.75 -11.98,26.73 -26.73,26.73 -14.75,0 -26.73,-11.98 -26.73,-26.73 0,-14.75 11.98,-26.73 26.73,-26.73zm-57.57 18.51c10.23,0 18.51,8.28 18.51,18.5 0,10.23 -8.28,18.5 -18.51,18.5 -10.23,0 -18.5,-8.28 -18.5,-18.5 0,-10.23 8.28,-18.5 18.5,-18.5zm-24.67 84.3c0,-18.17 14.73,-32.9 32.9,-32.9 3.29,0 6.48,0.49 9.48,1.39 -8.46,9.46 -13.6,21.95 -13.6,35.62l0 4.11c0,2.93 0.62,5.71 1.72,8.22l-22.28 0c-4.55,0 -8.22,-3.68 -8.22,-8.22l0 -8.22zm133.98 16.45c1.11,-2.52 1.72,-5.29 1.72,-8.22l0 -4.11c0,-13.67 -5.14,-26.16 -13.6,-35.62 3.01,-0.9 6.19,-1.39 9.48,-1.39 18.17,0 32.9,14.73 32.9,32.9l0 8.22c0,4.55 -3.68,8.22 -8.22,8.22l-22.28 0zm-12.67 -82.24c0,-10.23 8.28,-18.5 18.51,-18.5 10.23,0 18.5,8.28 18.5,18.5 0,10.23 -8.28,18.5 -18.5,18.5 -10.23,0 -18.51,-8.28 -18.51,-18.5zm-80.19 69.91c0,-22.72 18.4,-41.12 41.12,-41.12 22.72,0 41.12,18.4 41.12,41.12l0 4.11c0,4.55 -3.68,8.22 -8.22,8.22l-65.8 0c-4.55,0 -8.22,-3.68 -8.22,-8.22l0 -4.11z"
-                />
-            </svg>
-        </div>
+        {#if showAdminControls}
+            <button
+                class="stat-item clickable"
+                onclick={openUserStatusModal}
+                title="Click to view user voting status"
+            >
+                <span class="stat-value">{displayedConnectedUsers}</span>
+                <svg class="users-icon" viewBox="0 0 164.49 119.26">
+                    <path
+                        fill="currentColor"
+                        d="M82.24 0c14.75,0 26.73,11.98 26.73,26.73 0,14.75 -11.98,26.73 -26.73,26.73 -14.75,0 -26.73,-11.98 -26.73,-26.73 0,-14.75 11.98,-26.73 26.73,-26.73zm-57.57 18.51c10.23,0 18.51,8.28 18.51,18.5 0,10.23 -8.28,18.5 -18.51,18.5 -10.23,0 -18.5,-8.28 -18.5,-18.5 0,-10.23 8.28,-18.5 18.5,-18.5zm-24.67 84.3c0,-18.17 14.73,-32.9 32.9,-32.9 3.29,0 6.48,0.49 9.48,1.39 -8.46,9.46 -13.6,21.95 -13.6,35.62l0 4.11c0,2.93 0.62,5.71 1.72,8.22l-22.28 0c-4.55,0 -8.22,-3.68 -8.22,-8.22l0 -8.22zm133.98 16.45c1.11,-2.52 1.72,-5.29 1.72,-8.22l0 -4.11c0,-13.67 -5.14,-26.16 -13.6,-35.62 3.01,-0.9 6.19,-1.39 9.48,-1.39 18.17,0 32.9,14.73 32.9,32.9l0 8.22c0,4.55 -3.68,8.22 -8.22,8.22l-22.28 0zm-12.67 -82.24c0,-10.23 8.28,-18.5 18.51,-18.5 10.23,0 18.5,8.28 18.5,18.5 0,10.23 -8.28,18.5 -18.5,18.5 -10.23,0 -18.51,-8.28 -18.51,-18.5zm-80.19 69.91c0,-22.72 18.4,-41.12 41.12,-41.12 22.72,0 41.12,18.4 41.12,41.12l0 4.11c0,4.55 -3.68,8.22 -8.22,8.22l-65.8 0c-4.55,0 -8.22,-3.68 -8.22,-8.22l0 -4.11z"
+                    />
+                </svg>
+            </button>
+        {:else}
+            <div class="stat-item" title="Connected users">
+                <span class="stat-value">{displayedConnectedUsers}</span>
+                <svg class="users-icon" viewBox="0 0 164.49 119.26">
+                    <path
+                        fill="currentColor"
+                        d="M82.24 0c14.75,0 26.73,11.98 26.73,26.73 0,14.75 -11.98,26.73 -26.73,26.73 -14.75,0 -26.73,-11.98 -26.73,-26.73 0,-14.75 11.98,-26.73 26.73,-26.73zm-57.57 18.51c10.23,0 18.51,8.28 18.51,18.5 0,10.23 -8.28,18.5 -18.51,18.5 -10.23,0 -18.5,-8.28 -18.5,-18.5 0,-10.23 8.28,-18.5 18.5,-18.5zm-24.67 84.3c0,-18.17 14.73,-32.9 32.9,-32.9 3.29,0 6.48,0.49 9.48,1.39 -8.46,9.46 -13.6,21.95 -13.6,35.62l0 4.11c0,2.93 0.62,5.71 1.72,8.22l-22.28 0c-4.55,0 -8.22,-3.68 -8.22,-8.22l0 -8.22zm133.98 16.45c1.11,-2.52 1.72,-5.29 1.72,-8.22l0 -4.11c0,-13.67 -5.14,-26.16 -13.6,-35.62 3.01,-0.9 6.19,-1.39 9.48,-1.39 18.17,0 32.9,14.73 32.9,32.9l0 8.22c0,4.55 -3.68,8.22 -8.22,8.22l-22.28 0zm-12.67 -82.24c0,-10.23 8.28,-18.5 18.51,-18.5 10.23,0 18.5,8.28 18.5,18.5 0,10.23 -8.28,18.5 -18.5,18.5 -10.23,0 -18.51,-8.28 -18.51,-18.5zm-80.19 69.91c0,-22.72 18.4,-41.12 41.12,-41.12 22.72,0 41.12,18.4 41.12,41.12l0 4.11c0,4.55 -3.68,8.22 -8.22,8.22l-65.8 0c-4.55,0 -8.22,-3.68 -8.22,-8.22l0 -4.11z"
+                    />
+                </svg>
+            </div>
+        {/if}
 
         <!-- Total remaining votes across all users -->
-        <div class="stat-item">
-            <span class="stat-value">{votingStats.remainingVotes}</span>
-            <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
-                <path
-                    fill="currentColor"
-                    d="M7.41 584.17c0,1861.94 -222.38,1606.48 1770.71,1606.48 552.07,0 436.83,-725.71 417.76,-1268.89 -440.38,226.34 92.11,1067.99 -454.28,1067.99 -284.61,0 -1270.84,38.26 -1478.6,-36.5 -94.71,-233.43 -96.22,-1481.84 0,-1715.83 235.04,-63.65 553.67,-37.22 821.5,-36.46 494.94,1.4 343.45,40.23 620.68,-191.8l-1204.95 -9.15c-386.93,0 -492.82,196.99 -492.82,584.17z"
-                />
-                <path
-                    fill="currentColor"
-                    d="M1240.96 1254.38c-133.58,-48.8 -242.66,-132.57 -372.64,-201.78l-114.28 94.15 505.54 679.08c110.59,-228.53 573.06,-848.02 761.79,-1026.27l252.79 -272.92c26.7,-29.04 16.63,-15.87 41.33,-48.46 -219.81,0 -214.36,0.03 -352.86,112.1l-485.84 434.37c-86.38,90.21 -132.43,146.9 -235.83,229.72z"
-                />
-                <path
-                    fill="currentColor"
-                    d="M616.43 1041.78c-100.92,-36.88 -183.33,-100.16 -281.54,-152.45l-86.34 71.13 381.94 513.06c83.55,-172.66 432.97,-640.69 575.55,-775.36l190.99 -206.21c20.17,-21.94 12.56,-12 31.22,-36.62 -166.07,0 -161.95,0.03 -266.6,84.7l-367.07 328.18c-65.25,68.15 -100.05,110.99 -178.17,173.56z"
-                />
-            </svg>
-        </div>
+        {#if showAdminControls}
+            <button
+                class="stat-item clickable"
+                onclick={openUserStatusModal}
+                title="Click to view detailed voting status"
+            >
+                <span class="stat-value">{votingStats.remainingVotes}</span>
+                <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
+                    <path
+                        fill="currentColor"
+                        d="M7.41 584.17c0,1861.94 -222.38,1606.48 1770.71,1606.48 552.07,0 436.83,-725.71 417.76,-1268.89 -440.38,226.34 92.11,1067.99 -454.28,1067.99 -284.61,0 -1270.84,38.26 -1478.6,-36.5 -94.71,-233.43 -96.22,-1481.84 0,-1715.83 235.04,-63.65 553.67,-37.22 821.5,-36.46 494.94,1.4 343.45,40.23 620.68,-191.8l-1204.95 -9.15c-386.93,0 -492.82,196.99 -492.82,584.17z"
+                    />
+                    <path
+                        fill="currentColor"
+                        d="M1240.96 1254.38c-133.58,-48.8 -242.66,-132.57 -372.64,-201.78l-114.28 94.15 505.54 679.08c110.59,-228.53 573.06,-848.02 761.79,-1026.27l252.79 -272.92c26.7,-29.04 16.63,-15.87 41.33,-48.46 -219.81,0 -214.36,0.03 -352.86,112.1l-485.84 434.37c-86.38,90.21 -132.43,146.9 -235.83,229.72z"
+                    />
+                    <path
+                        fill="currentColor"
+                        d="M616.43 1041.78c-100.92,-36.88 -183.33,-100.16 -281.54,-152.45l-86.34 71.13 381.94 513.06c83.55,-172.66 432.97,-640.69 575.55,-775.36l190.99 -206.21c20.17,-21.94 12.56,-12 31.22,-36.62 -166.07,0 -161.95,0.03 -266.6,84.7l-367.07 328.18c-65.25,68.15 -100.05,110.99 -178.17,173.56z"
+                    />
+                </svg>
+            </button>
+        {:else}
+            <div class="stat-item" title="Total votes remaining">
+                <span class="stat-value">{votingStats.remainingVotes}</span>
+                <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
+                    <path
+                        fill="currentColor"
+                        d="M7.41 584.17c0,1861.94 -222.38,1606.48 1770.71,1606.48 552.07,0 436.83,-725.71 417.76,-1268.89 -440.38,226.34 92.11,1067.99 -454.28,1067.99 -284.61,0 -1270.84,38.26 -1478.6,-36.5 -94.71,-233.43 -96.22,-1481.84 0,-1715.83 235.04,-63.65 553.67,-37.22 821.5,-36.46 494.94,1.4 343.45,40.23 620.68,-191.8l-1204.95 -9.15c-386.93,0 -492.82,196.99 -492.82,584.17z"
+                    />
+                    <path
+                        fill="currentColor"
+                        d="M1240.96 1254.38c-133.58,-48.8 -242.66,-132.57 -372.64,-201.78l-114.28 94.15 505.54 679.08c110.59,-228.53 573.06,-848.02 761.79,-1026.27l252.79 -272.92c26.7,-29.04 16.63,-15.87 41.33,-48.46 -219.81,0 -214.36,0.03 -352.86,112.1l-485.84 434.37c-86.38,90.21 -132.43,146.9 -235.83,229.72z"
+                    />
+                    <path
+                        fill="currentColor"
+                        d="M616.43 1041.78c-100.92,-36.88 -183.33,-100.16 -281.54,-152.45l-86.34 71.13 381.94 513.06c83.55,-172.66 432.97,-640.69 575.55,-775.36l190.99 -206.21c20.17,-21.94 12.56,-12 31.22,-36.62 -166.07,0 -161.95,0.03 -266.6,84.7l-367.07 328.18c-65.25,68.15 -100.05,110.99 -178.17,173.56z"
+                    />
+                </svg>
+            </div>
+        {/if}
 
         <!-- User's remaining votes / total allocation -->
         <div class="stat-item">
@@ -178,6 +234,14 @@
             {/if}
         </div>
     </div>
+
+    <!-- User Status Modal -->
+    <UserStatusModal
+        open={showUserStatusModal}
+        boardId={board.id}
+        blameFreeMode={board.blameFreeMode || false}
+        onClose={() => (showUserStatusModal = false)}
+    />
 </div>
 
 <style type="less">
@@ -199,6 +263,24 @@
         display: flex;
         align-items: center;
         color: var(--text-secondary);
+        transition: all 0.2s ease;
+
+        &.clickable {
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            padding: var(--spacing-2);
+            margin: calc(var(--spacing-2) * -1);
+
+            &:hover,
+            &:focus {
+                background-color: var(--surface-primary);
+                transform: translateY(-1px);
+                outline: 2px solid var(--color-primary);
+                outline-offset: 2px;
+            }
+        }
 
         .stat-value {
             font-weight: 600;

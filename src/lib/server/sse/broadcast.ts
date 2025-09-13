@@ -1,5 +1,6 @@
 import { sseManager } from './manager.js';
 import type { SSEMessage } from './manager.js';
+import { buildVotingStatsUpdatedMessage } from '../utils/voting-data.js';
 
 export function broadcastCardCreated(boardId: string, card: any) {
   const message: SSEMessage = {
@@ -34,28 +35,41 @@ export function broadcastCardDeleted(boardId: string, cardId: string) {
   sseManager.broadcastToBoard(boardId, message);
 }
 
-export function broadcastVoteChanged(boardId: string, cardId: string, voteCount: number) {
-  const message: SSEMessage = {
-    type: 'vote_changed',
-    board_id: boardId,
-    card_id: cardId,
-    vote_count: voteCount,
-    timestamp: Date.now()
-  };
-
-  sseManager.broadcastToBoard(boardId, message);
+export async function broadcastVoteChanged(boardId: string, cardId: string, voteCount: number, _userId?: string) {
+  try {
+    console.log('Broadcasting simple vote changed:', { boardId, cardId, voteCount });
+    const message: SSEMessage = {
+      type: 'vote_changed',
+      board_id: boardId,
+      card_id: cardId,
+      vote_count: voteCount,
+      timestamp: Date.now()
+    };
+    console.log('Simple vote changed message created');
+    sseManager.broadcastToBoard(boardId, message);
+  } catch (error) {
+    console.error('Failed to broadcast vote changed:', error);
+    throw error;
+  }
 }
 
-export function broadcastVoteChangedToUser(boardId: string, cardId: string, voteCount: number, userId: string) {
-  const message: SSEMessage = {
-    type: 'vote_changed',
-    board_id: boardId,
-    card_id: cardId,
-    vote_count: voteCount,
-    timestamp: Date.now()
-  };
-
-  sseManager.broadcastToUser(boardId, userId, message);
+export async function broadcastVoteChangedToUser(boardId: string, cardId: string, voteCount: number, userId: string) {
+  try {
+    console.log('Broadcasting simple vote changed to user:', { boardId, cardId, voteCount, userId });
+    const message: SSEMessage = {
+      type: 'vote_changed',
+      board_id: boardId,
+      card_id: cardId,
+      vote_count: voteCount,
+      user_id: userId,
+      timestamp: Date.now()
+    };
+    console.log('Simple vote changed to user message created');
+    sseManager.broadcastToUser(boardId, userId, message);
+  } catch (error) {
+    console.error('Failed to broadcast vote changed to user:', error);
+    throw error;
+  }
 }
 
 export function broadcastCommentAdded(boardId: string, comment: any) {
@@ -147,13 +161,26 @@ export function broadcastPresenceUpdate(boardId: string, userId: string, activit
   sseManager.broadcastToBoard(boardId, message);
 }
 
-export function broadcastVotingStatsUpdate(boardId: string, votingStats: any) {
-  const message: SSEMessage = {
-    type: 'voting_stats_updated',
-    board_id: boardId,
-    voting_stats: votingStats,
-    timestamp: Date.now()
-  };
+export async function broadcastVotingStatsUpdate(boardId: string, votingStats?: any) {
+  try {
+    console.log('Broadcasting voting stats update with full data:', { boardId });
+    const message = await buildVotingStatsUpdatedMessage(boardId, votingStats);
+    console.log('Full voting stats update message created');
+    sseManager.broadcastToBoard(boardId, message);
+  } catch (error) {
+    console.error('Failed to broadcast voting stats update:', error);
+    throw error;
+  }
+}
 
-  sseManager.broadcastToBoard(boardId, message);
+export async function broadcastVotingStatsUpdateExcludingUser(boardId: string, excludeUserId: string, votingStats?: any) {
+  try {
+    console.log('Broadcasting voting stats update with full data excluding user:', { boardId, excludeUserId });
+    const message = await buildVotingStatsUpdatedMessage(boardId, votingStats);
+    console.log('Full voting stats update message created, broadcasting excluding user');
+    sseManager.broadcastToBoard(boardId, message, excludeUserId);
+  } catch (error) {
+    console.error('Failed to broadcast voting stats update excluding user:', error);
+    throw error;
+  }
 }

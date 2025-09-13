@@ -155,16 +155,28 @@ export async function clearBoardVotes(boardId: string) {
   return { success: true, deletedCount: deleteResult.changes || 0 };
 }
 
-export async function calculateAggregateVotingStats(boardId: string, seriesId: string, votingAllocation: number) {
+export async function calculateAggregateVotingStats(boardId: string, seriesId: string, votingAllocation: number, activeUserIds?: Set<string>) {
   const votingStats = await getBoardVotingStats(boardId, seriesId);
+
+  // If activeUserIds not provided, fetch presence data
+  let activeUsers = 0;
+  if (activeUserIds) {
+    activeUsers = votingStats.filter(u => activeUserIds.has(u.userId)).length;
+  } else {
+    const { getBoardPresence } = await import('./presence.js');
+    const presenceData = await getBoardPresence(boardId);
+    const activeIds = new Set(presenceData.map(p => p.userId));
+    activeUsers = votingStats.filter(u => activeIds.has(u.userId)).length;
+  }
 
   return {
     totalUsers: votingStats.length,
+    activeUsers,
     usersWhoVoted: votingStats.filter(u => u.hasVoted).length,
     usersWhoHaventVoted: votingStats.length - votingStats.filter(u => u.hasVoted).length,
     totalVotesCast: votingStats.reduce((sum, u) => sum + u.voteCount, 0),
     maxPossibleVotes: votingStats.length * votingAllocation,
     remainingVotes: (votingStats.length * votingAllocation) - votingStats.reduce((sum, u) => sum + u.voteCount, 0),
-    votingAllocation: votingAllocation
+    maxVotesPerUser: votingAllocation
   };
 }

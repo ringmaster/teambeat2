@@ -94,17 +94,18 @@ class SSEManager {
     console.log(`SSE client ${clientId} joined board ${boardId}`);
   }
 
-  broadcastToBoard(boardId: string, message: SSEMessage, excludeClientId?: string) {
+  broadcastToBoard(boardId: string, message: SSEMessage, excludeUserId?: string) {
     const boardClients = this.boardClients.get(boardId);
     if (!boardClients) return;
 
     const messageString = `data: ${JSON.stringify(message)}\n\n`;
 
     for (const clientId of boardClients) {
-      if (excludeClientId && clientId === excludeClientId) continue;
-
       const client = this.clients.get(clientId);
       if (client) {
+        // Skip this client if we're excluding their userId
+        if (excludeUserId && client.userId === excludeUserId) continue;
+
         try {
           client.controller.enqueue(messageString);
           client.lastSeen = Date.now();

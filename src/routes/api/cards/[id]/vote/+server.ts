@@ -4,9 +4,10 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById, getCardsForBoard } from '$lib/server/repositories/card.js';
 import { findBoardByColumnId, getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { castVote, checkVotingAllocation, calculateAggregateVotingStats } from '$lib/server/repositories/vote.js';
-import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVotingStatsUpdate } from '$lib/server/sse/broadcast.js';
+import { castVote, checkVotingAllocation } from '$lib/server/repositories/vote.js';
+import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVotingStatsUpdateExcludingUser } from '$lib/server/sse/broadcast.js';
 import { updatePresence } from '$lib/server/repositories/presence.js';
+import { buildComprehensiveVotingData } from '$lib/server/utils/voting-data.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
@@ -130,26 +131,36 @@ export const POST: RequestHandler = async (event) => {
     // Broadcast vote changes based on scene settings
     if (currentScene.showVotes) {
       // If "show votes" is enabled, broadcast individual card vote totals to all users
-      broadcastVoteChanged(board.id, cardId, voteCount);
+      await broadcastVoteChanged(board.id, cardId, voteCount, user.userId);
     } else if (currentScene.allowVoting) {
       // If only "allow voting" is enabled, broadcast individual vote to the voting user
-      broadcastVoteChangedToUser(board.id, cardId, voteCount, user.userId);
+      // This now includes comprehensive voting data to avoid additional API calls
+      await broadcastVoteChangedToUser(board.id, cardId, voteCount, user.userId);
 
-      // For all users (including the voter), broadcast aggregate voting statistics
-      // This updates the voting toolbar without revealing individual card votes
-      try {
-        const aggregateStats = await calculateAggregateVotingStats(board.id, board.seriesId, board.votingAllocation);
-        broadcastVotingStatsUpdate(board.id, aggregateStats);
-      } catch (error) {
-        console.error('Failed to broadcast voting stats update:', error);
-      }
+      // Also broadcast aggregate voting stats to all other users (excluding the voter)
+      // This ensures other users see updated voting statistics without revealing individual votes
+      await broadcastVotingStatsUpdateExcludingUser(board.id, user.userId);
     }
+
+    // Test SSE with simple message first
+    console.log('Testing simple SSE broadcast');
+    const { sseManager } = await import('$lib/server/sse/manager.js');
+    sseManager.broadcastToBoard(board.id, {
+      type: 'test_message',
+      board_id: board.id,
+      message: 'Vote processed successfully',
+      timestamp: Date.now()
+    });
+
+    // Get comprehensive voting data for the response
+    const comprehensiveVotingData = await buildComprehensiveVotingData(board.id, user.userId);
 
     return json({
       success: true,
       card: updatedCard,
       voteResult,
-      allocation: await checkVotingAllocation(user.userId, board.id, board.votingAllocation)
+      user_voting_data: comprehensiveVotingData.user_voting_data,
+      voting_stats: comprehensiveVotingData.voting_stats
     });
   } catch (error) {
     if (error instanceof Response) {

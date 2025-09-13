@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardSettings } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { clearBoardVotes, calculateAggregateVotingStats } from '$lib/server/repositories/vote.js';
+import { clearBoardVotes } from '$lib/server/repositories/vote.js';
 import { broadcastBoardUpdated, broadcastVoteChanged, broadcastVotingStatsUpdate } from '$lib/server/sse/broadcast.js';
 
 export const DELETE: RequestHandler = async (event) => {
@@ -42,12 +42,8 @@ export const DELETE: RequestHandler = async (event) => {
 			broadcastBoardUpdated(boardId, updatedBoard);
 
 			// Broadcast aggregate voting statistics update
-			try {
-				const aggregateStats = await calculateAggregateVotingStats(boardId, updatedBoard.seriesId, updatedBoard.votingAllocation);
-				broadcastVotingStatsUpdate(boardId, aggregateStats);
-			} catch (error) {
-				console.error('Failed to broadcast voting stats after reset:', error);
-			}
+			// Broadcast updated voting stats to all users
+			await broadcastVotingStatsUpdate(boardId);
 		}
 
 		return json({

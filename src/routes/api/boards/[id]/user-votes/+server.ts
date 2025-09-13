@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { checkVotingAllocation, getUserVotesForBoard } from '$lib/server/repositories/vote.js';
+import { buildUserVotingApiResponse } from '$lib/server/utils/voting-data.js';
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -27,18 +27,9 @@ export const GET: RequestHandler = async (event) => {
       );
     }
 
-    // Get user's voting allocation
-    const allocation = await checkVotingAllocation(user.userId, boardId, board.votingAllocation);
-
-    // Get user's current votes on this board
-    const userVotes = await getUserVotesForBoard(user.userId, boardId);
-
-    return json({
-      success: true,
-      allocation,
-      userVotes,
-      votingAllocation: board.votingAllocation
-    });
+    // Use centralized data construction for consistency with SSE messages
+    const response = await buildUserVotingApiResponse(boardId, user.userId, true);
+    return json(response);
   } catch (error) {
     if (error instanceof Response) {
       throw error;

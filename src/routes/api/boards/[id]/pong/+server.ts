@@ -28,7 +28,7 @@ export const POST: RequestHandler = async (event) => {
 		}
 
 		// Update user presence to refresh their timeout
-		await updatePresence(user.userId, boardId);
+		await updatePresence(user.userId, boardId, 'pong');
 
 		return json({
 			success: true,

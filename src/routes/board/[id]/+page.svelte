@@ -18,6 +18,27 @@
         };
     }
 
+    interface VotingData {
+        allocation?: {
+            currentVotes: number;
+            maxVotes: number;
+            remainingVotes: number;
+            canVote: boolean;
+        };
+        votes_by_card?: Record<string, number>;
+        voting_stats?: {
+            totalUsers: number;
+            activeUsers: number;
+            usersWhoVoted: number;
+            usersWhoHaventVoted: number;
+            totalVotesCast: number;
+            maxPossibleVotes: number;
+            remainingVotes: number;
+            maxVotesPerUser: number;
+        };
+        connected_users_count?: number;
+    }
+
     const { data }: Props = $props();
 
     let board: any = $state(null);
@@ -78,7 +99,8 @@
         totalVotesCast: number;
         maxPossibleVotes: number;
         remainingVotes: number;
-        votingAllocation: number;
+        maxVotesPerUser: number;
+        activeUsers: number;
     } | null>(null);
 
     // Calculate if user has votes available (same value for all cards on the board)
@@ -209,6 +231,12 @@
             eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    console.log("SSE message received:", {
+                        type: data.type,
+                        board_id: data.board_id,
+                        timestamp: data.timestamp,
+                        data: data,
+                    });
                     handleSSEMessage(data);
                 } catch (error) {
                     console.error("Failed to parse SSE message:", error);
@@ -291,6 +319,59 @@
         }
     }
 
+    async function refreshPresence(reason = "scene_change") {
+        if (!boardId || !user?.id) return;
+
+        try {
+            await fetch(`/api/boards/${boardId}/presence`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    activity: `presence_refresh_${reason}`,
+                }),
+            });
+            console.log(`Presence refreshed due to: ${reason}`);
+        } catch (error) {
+            console.error("Failed to refresh presence:", error);
+        }
+    }
+
+    function processVotingData(data: VotingData) {
+        // Update user vote allocation if provided
+        if (data.allocation) {
+            votingAllocation = data.allocation;
+        }
+
+        // Update user votes by card map if provided
+        if (data.votes_by_card) {
+            const newUserVotes = new Map<string, number>();
+            Object.entries(data.votes_by_card).forEach(([cardId, count]) => {
+                newUserVotes.set(cardId, count as number);
+            });
+            userVotesByCard = newUserVotes;
+        }
+
+        // Update voting stats if provided
+        if (data.voting_stats) {
+            votingStats = data.voting_stats;
+        }
+
+        // Update connected users count if provided
+        if (data.connected_users_count !== undefined) {
+            connectedUsers = data.connected_users_count;
+        }
+
+        // Voting stats now include presence data (activeUsers)
+        if (data.voting_stats) {
+            console.log(
+                "Voting stats include active users:",
+                data.voting_stats.activeUsers,
+            );
+        }
+    }
+
     function attemptReconnection() {
         if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
             console.error(
@@ -336,6 +417,14 @@
                 break;
             case "scene_changed":
                 if (board && data.scene) {
+                    // Store previous scene voting and display state
+                    const previousScene = board.scenes?.find(
+                        (s) => s.id === board.currentSceneId,
+                    );
+                    const wasVotingAllowed =
+                        previousScene?.allowVoting || false;
+                    const wereVotesVisible = previousScene?.showVotes || false;
+
                     board.currentSceneId = data.scene.id;
                     // Update the scene data in the board's scenes array if it exists
                     if (board.scenes) {
@@ -346,16 +435,51 @@
                             board.scenes[sceneIndex] = data.scene;
                         }
                     }
+
+                    // Refresh presence if any voting-related feature changed
+                    const isVotingNowAllowed = data.scene.allowVoting || false;
+                    const areVotesNowVisible = data.scene.showVotes || false;
+
+                    if (
+                        (!wasVotingAllowed && isVotingNowAllowed) ||
+                        (!wereVotesVisible && areVotesNowVisible)
+                    ) {
+                        console.log(
+                            "Voting features changed in new scene, refreshing presence",
+                            {
+                                votingEnabled: isVotingNowAllowed,
+                                votesVisible: areVotesNowVisible,
+                            },
+                        );
+                        refreshPresence("voting_enabled");
+                    }
                 }
                 break;
             case "board_updated":
                 if (board && data.board) {
+                    // Store previous voting allocation
+                    const previousVotingAllocation = board.votingAllocation;
+
                     // Update board metadata while preserving reactive state
                     board.name = data.board.name;
                     board.blameFreeMode = data.board.blameFreeMode;
                     board.votingAllocation = data.board.votingAllocation;
                     board.status = data.board.status;
                     board.updatedAt = data.board.updatedAt;
+
+                    // If voting allocation changed, refresh presence
+                    if (
+                        previousVotingAllocation !== data.board.votingAllocation
+                    ) {
+                        console.log(
+                            "Voting allocation changed, refreshing presence",
+                            {
+                                from: previousVotingAllocation,
+                                to: data.board.votingAllocation,
+                            },
+                        );
+                        refreshPresence("voting_allocation_changed");
+                    }
 
                     // Update column visibility data if it exists
                     if (data.board.hiddenColumnsByScene) {
@@ -402,8 +526,7 @@
                 break;
             case "vote_changed":
                 console.log("Vote changed:", data);
-                // Refresh user voting data and stats
-                loadUserVotingData();
+
                 // Update card vote count when votes change
                 if (data.card_id && data.vote_count !== undefined) {
                     cards = cards.map((c) =>
@@ -412,15 +535,23 @@
                             : c,
                     );
                 }
+
+                // Process voting data using reusable function
+                {
+                    const votingProcessData: VotingData = {
+                        allocation: data.user_voting_data?.allocation,
+                        votes_by_card: data.user_voting_data?.votes_by_card,
+                        voting_stats: data.voting_stats,
+                    };
+                    processVotingData(votingProcessData);
+                }
                 break;
             case "voting_stats_updated":
                 console.log("Voting stats updated:", data);
-                // Update voting stats from broadcast (aggregate data only)
-                if (data.voting_stats) {
-                    votingStats = data.voting_stats;
-                    // Also refresh user vote allocation to keep toolbar in sync
-                    loadUserVotingData();
-                }
+                // Process voting stats using reusable function
+                processVotingData({
+                    voting_stats: data.voting_stats,
+                });
                 break;
         }
     }
@@ -613,10 +744,13 @@
                     cards = cards.map((c) => (c.id === cardId ? data.card : c));
                 }
 
-                // Update user voting allocation if returned by API
-                if (data.allocation) {
-                    votingAllocation = data.allocation;
-                }
+                // Update voting data with comprehensive data from API response
+                const votingDataUpdate: VotingData = {
+                    allocation: data.user_voting_data?.allocation,
+                    votes_by_card: data.user_voting_data?.votes_by_card,
+                    voting_stats: data.voting_stats,
+                };
+                processVotingData(votingDataUpdate);
 
                 // Update user votes tracking based on vote result
                 if (data.voteResult) {
@@ -651,24 +785,27 @@
             );
             if (allocationResponse.ok) {
                 const allocationData = await allocationResponse.json();
-                votingAllocation = allocationData.allocation;
-
-                // Load user's current votes on each card
-                if (allocationData.userVotes) {
-                    const newUserVotes = new Map<string, number>();
-                    allocationData.userVotes.forEach((vote: any) => {
-                        const currentCount = newUserVotes.get(vote.cardId) || 0;
-                        newUserVotes.set(vote.cardId, currentCount + 1);
-                    });
-                    userVotesByCard = newUserVotes;
-                }
 
                 console.log(
                     "Final state - votingAllocation:",
-                    $state.snapshot(votingAllocation),
+                    $state.snapshot(allocationData.allocation),
                     "hasVotes:",
-                    $state.snapshot(hasVotes),
+                    $state.snapshot(
+                        Object.keys(
+                            allocationData.user_voting_data?.votes_by_card ||
+                                {},
+                        ).length > 0,
+                    ),
                 );
+
+                // Use reusable process function with new API format
+                processVotingData({
+                    allocation: allocationData.user_voting_data?.allocation,
+                    votes_by_card:
+                        allocationData.user_voting_data?.votes_by_card,
+                    voting_stats: allocationData.voting_stats,
+                    connected_users_count: allocationData.connected_users_count,
+                });
             } else {
                 console.error(
                     "Failed to load voting allocation, status:",
@@ -678,11 +815,8 @@
                 console.error("Error response:", errorText);
             }
 
-            // Load voting statistics for toolbar (all users need this for display)
-            await loadVotingStats();
-
-            // Load presence/connected users
-            await loadConnectedUsers();
+            // Voting stats and connected users are now included in the main response
+            // No need for additional API calls - they're already processed above
         } catch (error) {
             console.error("Failed to load user voting data:", error);
         }
@@ -695,7 +829,9 @@
             const response = await fetch(`/api/boards/${boardId}/voting-stats`);
             if (response.ok) {
                 const data = await response.json();
-                votingStats = data.stats;
+                processVotingData({
+                    voting_stats: data.voting_stats,
+                });
             }
         } catch (error) {
             console.error("Failed to load voting stats:", error);
@@ -709,7 +845,9 @@
             const response = await fetch(`/api/boards/${boardId}/presence`);
             if (response.ok) {
                 const data = await response.json();
-                connectedUsers = data.presence?.length || 0;
+                processVotingData({
+                    connected_users_count: data.presence?.length || 0,
+                });
             }
         } catch (error) {
             console.error("Failed to load connected users:", error);
