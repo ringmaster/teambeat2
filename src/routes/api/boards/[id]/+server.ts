@@ -11,7 +11,7 @@ const updateBoardSchema = z.object({
 	status: z.enum(['draft', 'active', 'completed', 'archived']).optional(),
 	name: z.string().min(1).max(100).optional(),
 	blameFreeMode: z.boolean().optional(),
-	votingAllocation: z.number().int().min(1).max(20).optional(),
+	votingAllocation: z.number().int().min(0).max(20).optional(),
 	votingEnabled: z.boolean().optional(),
 	createdAt: z.string().datetime().optional()
 });
@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boardId = event.params.id;
-		
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
@@ -28,7 +28,7 @@ export const GET: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Check if user has access to this board
 		let userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole) {
@@ -36,7 +36,7 @@ export const GET: RequestHandler = async (event) => {
 			await addUserToSeries(board.seriesId, user.userId, 'member');
 			userRole = 'member';
 		}
-		
+
 		// Non-admin/facilitator users cannot access draft boards
 		if (board.status === 'draft' && !['admin', 'facilitator'].includes(userRole)) {
 			return json(
@@ -44,7 +44,7 @@ export const GET: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		return json({
 			success: true,
 			board,
@@ -61,7 +61,7 @@ export const PUT: RequestHandler = async (event) => {
 		const boardId = event.params.id;
 		const body = await event.request.json();
 		const data = updateBoardSchema.parse(body);
-		
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
@@ -69,7 +69,7 @@ export const PUT: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Check if user has permission to update this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
@@ -78,11 +78,11 @@ export const PUT: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		if (data.status) {
 			await updateBoardStatus(boardId, data.status);
 		}
-		
+
 		// Update board settings if provided
 		const settingsData = {
 			name: data.name,
@@ -91,22 +91,22 @@ export const PUT: RequestHandler = async (event) => {
 			votingEnabled: data.votingEnabled,
 			createdAt: data.createdAt
 		};
-		
+
 		// Filter out undefined values
 		const filteredSettingsData = Object.fromEntries(
 			Object.entries(settingsData).filter(([_, v]) => v !== undefined)
 		);
-		
+
 		if (Object.keys(filteredSettingsData).length > 0) {
 			await updateBoardSettings(boardId, filteredSettingsData);
 		}
-		
+
 		// Get updated board data and broadcast to all connected clients
 		const updatedBoard = await getBoardWithDetails(boardId);
 		if (updatedBoard) {
 			broadcastBoardUpdated(boardId, updatedBoard);
 		}
-		
+
 		return json({
 			success: true,
 			board: updatedBoard
@@ -122,7 +122,7 @@ export const DELETE: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boardId = event.params.id;
-		
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
@@ -130,7 +130,7 @@ export const DELETE: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Check if user has permission to delete this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
@@ -139,10 +139,10 @@ export const DELETE: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Delete the board and all its related data
 		await deleteBoard(boardId);
-		
+
 		return json({
 			success: true,
 			message: 'Board deleted successfully'

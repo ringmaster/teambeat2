@@ -4,8 +4,8 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { findCardById, getCardsForBoard } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { castVote, checkVotingAllocation } from '$lib/server/repositories/vote.js';
-import { broadcastVoteChanged, broadcastVoteChangedToUser } from '$lib/server/sse/broadcast.js';
+import { castVote, checkVotingAllocation, calculateAggregateVotingStats } from '$lib/server/repositories/vote.js';
+import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVotingStatsUpdate } from '$lib/server/sse/broadcast.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
@@ -57,7 +57,7 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Check voting allocation
-    const allocation = await checkVotingAllocation(user.userId, board.id, board.votingAllocation || 3);
+    const allocation = await checkVotingAllocation(user.userId, board.id, board.votingAllocation);
     if (!allocation.canVote && delta > 0) {
       return json(
         { success: false, error: 'No votes remaining', allocation },
@@ -89,18 +89,27 @@ export const POST: RequestHandler = async (event) => {
 
     // Broadcast vote changes based on scene settings
     if (currentScene.showVotes) {
-      // If "show votes" is enabled, broadcast totals to all users
+      // If "show votes" is enabled, broadcast individual card vote totals to all users
       broadcastVoteChanged(board.id, cardId, voteCount);
     } else if (currentScene.allowVoting) {
-      // If only "allow voting" is enabled, broadcast only to the voting user
+      // If only "allow voting" is enabled, broadcast individual vote to the voting user
       broadcastVoteChangedToUser(board.id, cardId, voteCount, user.userId);
+
+      // For all users (including the voter), broadcast aggregate voting statistics
+      // This updates the voting toolbar without revealing individual card votes
+      try {
+        const aggregateStats = await calculateAggregateVotingStats(board.id, board.seriesId, board.votingAllocation);
+        broadcastVotingStatsUpdate(board.id, aggregateStats);
+      } catch (error) {
+        console.error('Failed to broadcast voting stats update:', error);
+      }
     }
 
     return json({
       success: true,
       card: updatedCard,
       voteResult,
-      allocation: await checkVotingAllocation(user.userId, board.id, board.votingAllocation || 3)
+      allocation: await checkVotingAllocation(user.userId, board.id, board.votingAllocation)
     });
   } catch (error) {
     if (error instanceof Response) {

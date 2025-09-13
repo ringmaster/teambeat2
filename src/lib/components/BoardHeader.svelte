@@ -1,18 +1,53 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import SceneDropdown from "./SceneDropdown.svelte";
+    import VotingToolbar from "./VotingToolbar.svelte";
     import Pill from "./ui/Pill.svelte";
     import Icon from "./ui/Icon.svelte";
 
     interface Props {
-        board: any;
+        board: {
+            id: string;
+            name: string;
+            series?: string;
+            status?: string;
+            blameFreeMode?: boolean;
+            votingEnabled?: boolean;
+            votingAllocation?: number;
+            scenes?: Array<{
+                id: string;
+                name: string;
+                allowVoting?: boolean;
+            }>;
+        };
         userRole: string;
-        currentScene: any;
+        currentScene: {
+            id: string;
+            name: string;
+            allowVoting?: boolean;
+        } | null;
         showSceneDropdown: boolean;
+        connectedUsers?: number;
+        userVoteAllocation?: {
+            currentVotes: number;
+            maxVotes: number;
+            remainingVotes: number;
+            canVote: boolean;
+        };
+        votingStats?: {
+            totalUsers: number;
+            usersWhoVoted: number;
+            usersWhoHaventVoted: number;
+            totalVotesCast: number;
+            maxPossibleVotes: number;
+            remainingVotes: number;
+            votingAllocation: number;
+        };
         onConfigureClick: () => void;
         onShareClick: () => void;
         onSceneChange: (sceneId: string) => void;
         onShowSceneDropdown: (show: boolean) => void;
+        onIncreaseAllocation?: () => Promise<void>;
+        onResetVotes?: () => Promise<void>;
     }
 
     let {
@@ -20,10 +55,15 @@
         userRole,
         currentScene,
         showSceneDropdown,
+        connectedUsers = 0,
+        userVoteAllocation,
+        votingStats,
         onConfigureClick,
         onShareClick,
         onSceneChange,
         onShowSceneDropdown,
+        onIncreaseAllocation,
+        onResetVotes,
     }: Props = $props();
 </script>
 
@@ -46,7 +86,13 @@
                 <div class="board-name-row">
                     <h1>{board.name}</h1>
                     <div class="pills">
-                        <Pill size="sm" preset={userRole}>{userRole}</Pill>
+                        <Pill
+                            size="sm"
+                            preset={userRole as
+                                | "admin"
+                                | "member"
+                                | "facilitator"}>{userRole}</Pill
+                        >
                         {#if board.status && board.status !== "active"}
                             <Pill size="sm" preset={board.status}>
                                 {board.status}
@@ -64,7 +110,7 @@
         <div>
             {#if ["admin", "facilitator"].includes(userRole)}
                 <!-- Scene dropdown/button -->
-                {#if board?.scenes?.length > 0}
+                {#if board?.scenes && board.scenes.length > 0}
                     <SceneDropdown
                         {board}
                         {currentScene}
@@ -92,6 +138,27 @@
         </div>
     </div>
 </div>
+
+{#if board?.votingEnabled && currentScene?.allowVoting && userVoteAllocation && votingStats}
+    <VotingToolbar
+        board={{
+            id: board.id,
+            name: board.name,
+            votingEnabled: board.votingEnabled,
+            votingAllocation: board.votingAllocation,
+        }}
+        {userRole}
+        {connectedUsers}
+        {userVoteAllocation}
+        {votingStats}
+        onIncreaseAllocation={["admin", "facilitator"].includes(userRole)
+            ? onIncreaseAllocation
+            : undefined}
+        onResetVotes={["admin", "facilitator"].includes(userRole)
+            ? onResetVotes
+            : undefined}
+    />
+{/if}
 
 <style type="less">
     #board-header {

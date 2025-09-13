@@ -28,7 +28,7 @@ export const GET: RequestHandler = async (event) => {
     }
 
     // Get user's voting allocation
-    const allocation = await checkVotingAllocation(user.userId, boardId, board.votingAllocation || 3);
+    const allocation = await checkVotingAllocation(user.userId, boardId, board.votingAllocation);
 
     // Get user's current votes on this board
     const userVotes = await getUserVotesForBoard(user.userId, boardId);
@@ -37,7 +37,7 @@ export const GET: RequestHandler = async (event) => {
       success: true,
       allocation,
       userVotes,
-      votingAllocation: board.votingAllocation || 3
+      votingAllocation: board.votingAllocation
     });
   } catch (error) {
     if (error instanceof Response) {

@@ -9,7 +9,7 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boardId = event.params.id;
-		
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
@@ -17,26 +17,26 @@ export const GET: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
-		// Check if user has facilitator access to this board
+
+		// Check if user has access to this board (any role)
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
-		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
+		if (!userRole) {
 			return json(
 				{ success: false, error: 'Access denied' },
 				{ status: 403 }
 			);
 		}
-		
+
 		const votingStats = await getBoardVotingStats(boardId, board.seriesId);
-		
+
 		// Calculate summary statistics
 		const totalUsers = votingStats.length;
 		const usersWhoVoted = votingStats.filter(u => u.hasVoted).length;
 		const usersWhoHaventVoted = totalUsers - usersWhoVoted;
 		const totalVotesCast = votingStats.reduce((sum, u) => sum + u.voteCount, 0);
-		const maxPossibleVotes = totalUsers * (board.votingAllocation || 3);
+		const maxPossibleVotes = totalUsers * board.votingAllocation;
 		const remainingVotes = maxPossibleVotes - totalVotesCast;
-		
+
 		return json({
 			success: true,
 			stats: {
@@ -46,7 +46,7 @@ export const GET: RequestHandler = async (event) => {
 				totalVotesCast,
 				maxPossibleVotes,
 				remainingVotes,
-				votingAllocation: board.votingAllocation || 3
+				votingAllocation: board.votingAllocation
 			},
 			userStats: votingStats
 		});
@@ -54,7 +54,7 @@ export const GET: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to fetch voting stats' },
 			{ status: 500 }

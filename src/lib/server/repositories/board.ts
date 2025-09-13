@@ -21,7 +21,7 @@ export async function createBoard(data: CreateBoardData) {
       name: data.name,
       meetingDate: data.meetingDate,
       blameFreeMode: data.blameFreeMode || false,
-      votingAllocation: data.votingAllocation || 3,
+      votingAllocation: data.votingAllocation ?? 3,
       status: 'draft' as const,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

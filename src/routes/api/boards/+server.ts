@@ -10,14 +10,14 @@ const createBoardSchema = z.object({
 	seriesId: z.string().uuid(),
 	meetingDate: z.string().optional(),
 	blameFreeMode: z.boolean().optional(),
-	votingAllocation: z.number().int().min(1).max(10).optional()
+	votingAllocation: z.number().int().min(0).max(10).optional()
 });
 
 export const GET: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const boards = await findBoardsByUser(user.userId);
-		
+
 		return json({
 			success: true,
 			boards
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to fetch boards' },
 			{ status: 500 }
@@ -39,7 +39,7 @@ export const POST: RequestHandler = async (event) => {
 		const user = requireUser(event);
 		const body = await event.request.json();
 		const data = createBoardSchema.parse(body);
-		
+
 		// Check if user has access to this series, auto-add if not
 		let userRole = await getUserRoleInSeries(user.userId, data.seriesId);
 		if (!userRole) {
@@ -47,9 +47,9 @@ export const POST: RequestHandler = async (event) => {
 			await addUserToSeries(data.seriesId, user.userId, 'member');
 			userRole = 'member';
 		}
-		
+
 		const board = await createBoard(data);
-		
+
 		return json({
 			success: true,
 			board
@@ -58,14 +58,14 @@ export const POST: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		if (error instanceof z.ZodError) {
 			return json(
 				{ success: false, error: 'Invalid input', details: error.errors },
 				{ status: 400 }
 			);
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to create board' },
 			{ status: 500 }

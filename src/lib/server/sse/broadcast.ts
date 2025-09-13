@@ -146,3 +146,14 @@ export function broadcastPresenceUpdate(boardId: string, userId: string, activit
 
   sseManager.broadcastToBoard(boardId, message);
 }
+
+export function broadcastVotingStatsUpdate(boardId: string, votingStats: any) {
+  const message: SSEMessage = {
+    type: 'voting_stats_updated',
+    board_id: boardId,
+    voting_stats: votingStats,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}

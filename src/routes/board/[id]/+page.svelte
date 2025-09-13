@@ -62,10 +62,24 @@
 
     // Voting State
     let votingAllocation = $state<{
-        canVote: boolean;
+        currentVotes: number;
+        maxVotes: number;
         remainingVotes: number;
+        canVote: boolean;
     } | null>(null);
     let userVotesByCard = $state(new Map<string, number>()); // cardId -> user votes on that card
+
+    // Voting toolbar state
+    let connectedUsers = $state(0);
+    let votingStats = $state<{
+        totalUsers: number;
+        usersWhoVoted: number;
+        usersWhoHaventVoted: number;
+        totalVotesCast: number;
+        maxPossibleVotes: number;
+        remainingVotes: number;
+        votingAllocation: number;
+    } | null>(null);
 
     // Calculate if user has votes available (same value for all cards on the board)
     let hasVotes = $derived(votingAllocation?.canVote ?? false);
@@ -342,16 +356,29 @@
                     board.columns = data.columns;
                 }
                 break;
+
+            case "presence_update":
+                console.log("Presence update:", data.user_id, data.activity);
+                // Refresh connected users count and voting stats
+                loadConnectedUsers();
+                loadVotingStats();
+                break;
             case "user_joined":
                 console.log("User joined:", data.user_id);
+                // Refresh connected users count and voting stats
+                loadConnectedUsers();
+                loadVotingStats();
                 break;
             case "user_left":
                 console.log("User left:", data.user_id);
-                break;
-            case "presence_update":
-                console.log("Presence update:", data.user_id, data.activity);
+                // Refresh connected users count and voting stats
+                loadConnectedUsers();
+                loadVotingStats();
                 break;
             case "vote_changed":
+                console.log("Vote changed:", data);
+                // Refresh user voting data and stats
+                loadUserVotingData();
                 // Update card vote count when votes change
                 if (data.card_id && data.vote_count !== undefined) {
                     cards = cards.map((c) =>
@@ -359,6 +386,15 @@
                             ? { ...c, voteCount: data.vote_count }
                             : c,
                     );
+                }
+                break;
+            case "voting_stats_updated":
+                console.log("Voting stats updated:", data);
+                // Update voting stats from broadcast (aggregate data only)
+                if (data.voting_stats) {
+                    votingStats = data.voting_stats;
+                    // Also refresh user vote allocation to keep toolbar in sync
+                    loadUserVotingData();
                 }
                 break;
         }
@@ -614,8 +650,85 @@
                 const errorText = await allocationResponse.text();
                 console.error("Error response:", errorText);
             }
+
+            // Load voting statistics for toolbar (all users need this for display)
+            await loadVotingStats();
+
+            // Load presence/connected users
+            await loadConnectedUsers();
         } catch (error) {
             console.error("Failed to load user voting data:", error);
+        }
+    }
+
+    async function loadVotingStats() {
+        if (!boardId) return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/voting-stats`);
+            if (response.ok) {
+                const data = await response.json();
+                votingStats = data.stats;
+            }
+        } catch (error) {
+            console.error("Failed to load voting stats:", error);
+        }
+    }
+
+    async function loadConnectedUsers() {
+        if (!boardId) return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/presence`);
+            if (response.ok) {
+                const data = await response.json();
+                connectedUsers = data.presence?.length || 0;
+            }
+        } catch (error) {
+            console.error("Failed to load connected users:", error);
+        }
+    }
+
+    async function increaseVotingAllocation() {
+        if (!boardId) return;
+
+        try {
+            const response = await fetch(
+                `/api/boards/${boardId}/votes/increase-allocation`,
+                {
+                    method: "POST",
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to increase allocation");
+            }
+
+            // Refresh voting data
+            await loadUserVotingData();
+        } catch (error) {
+            console.error("Failed to increase voting allocation:", error);
+            throw error;
+        }
+    }
+
+    async function resetBoardVotes() {
+        if (!boardId) return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/votes/clear`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to reset votes");
+            }
+
+            // Refresh all voting-related data
+            await loadUserVotingData();
+        } catch (error) {
+            console.error("Failed to reset votes:", error);
+            throw error;
         }
     }
 
@@ -1478,10 +1591,15 @@
         {userRole}
         {currentScene}
         {showSceneDropdown}
+        {connectedUsers}
+        userVoteAllocation={votingAllocation || undefined}
+        votingStats={votingStats || undefined}
         onConfigureClick={() => (showBoardConfig = true)}
         onShareClick={handleShareBoard}
         onSceneChange={changeScene}
         onShowSceneDropdown={(show) => (showSceneDropdown = show)}
+        onIncreaseAllocation={increaseVotingAllocation}
+        onResetVotes={resetBoardVotes}
     />
 
     <!-- Connection Status Indicator -->

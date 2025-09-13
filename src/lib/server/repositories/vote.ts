@@ -1,7 +1,8 @@
 import { db } from '../db/index.js';
-import { votes, cards, seriesMembers, columns } from '../db/schema.js';
-import { eq, and, count, desc } from 'drizzle-orm';
+import { votes, cards, seriesMembers, columns, users } from '../db/schema.js';
+import { eq, and, count, desc, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { getBoardPresence } from './presence.js';
 
 export async function castVote(cardId: string, userId: string, delta: 1 | -1) {
   if (delta === 1) {
@@ -90,25 +91,26 @@ export async function getUserVoteCount(userId: string, boardId: string) {
 }
 
 export async function getBoardVotingStats(boardId: string, seriesId: string) {
-  // Get all series members
-  const members = await db
-    .select({
-      userId: seriesMembers.userId,
-      username: 'users.username',
-      name: 'users.name'
-    })
-    .from(seriesMembers)
-    .innerJoin('users', eq('users.id', seriesMembers.userId))
-    .where(eq(seriesMembers.seriesId, seriesId));
+  // Get currently active/present users on this board
+  const activeUsers = await getBoardPresence(boardId);
 
-  // Get vote counts for each member
+  // Get vote counts for each active user
   const votingStats = [];
-  for (const member of members) {
-    const voteCount = await getUserVoteCount(member.userId, boardId);
+  for (const activeUser of activeUsers) {
+    // Get user details
+    const [userDetails] = await db
+      .select({
+        name: users.name
+      })
+      .from(users)
+      .where(eq(users.id, activeUser.userId))
+      .limit(1);
+
+    const voteCount = await getUserVoteCount(activeUser.userId, boardId);
     votingStats.push({
-      userId: member.userId,
-      username: member.username,
-      name: member.name,
+      userId: activeUser.userId,
+      username: userDetails?.name || 'Unknown User',
+      name: userDetails?.name || 'Unknown User',
       voteCount,
       hasVoted: voteCount > 0
     });
@@ -124,5 +126,45 @@ export async function checkVotingAllocation(userId: string, boardId: string, vot
     maxVotes: votingAllocation,
     remainingVotes: Math.max(0, votingAllocation - currentVotes),
     canVote: currentVotes < votingAllocation
+  };
+}
+
+export async function clearBoardVotes(boardId: string) {
+  // Get all card IDs for this board first
+  const boardCards = await db
+    .select({ id: cards.id })
+    .from(cards)
+    .innerJoin(columns, eq(columns.id, cards.columnId))
+    .where(eq(columns.boardId, boardId));
+
+  if (boardCards.length === 0) {
+    return { success: true, deletedCount: 0 };
+  }
+
+  const cardIds = boardCards.map(card => card.id);
+
+  // Delete all votes for these cards using inArray
+  const deleteResult = await db
+    .delete(votes)
+    .where(
+      cardIds.length === 1
+        ? eq(votes.cardId, cardIds[0])
+        : inArray(votes.cardId, cardIds)
+    );
+
+  return { success: true, deletedCount: deleteResult.changes || 0 };
+}
+
+export async function calculateAggregateVotingStats(boardId: string, seriesId: string, votingAllocation: number) {
+  const votingStats = await getBoardVotingStats(boardId, seriesId);
+
+  return {
+    totalUsers: votingStats.length,
+    usersWhoVoted: votingStats.filter(u => u.hasVoted).length,
+    usersWhoHaventVoted: votingStats.length - votingStats.filter(u => u.hasVoted).length,
+    totalVotesCast: votingStats.reduce((sum, u) => sum + u.voteCount, 0),
+    maxPossibleVotes: votingStats.length * votingAllocation,
+    remainingVotes: (votingStats.length * votingAllocation) - votingStats.reduce((sum, u) => sum + u.voteCount, 0),
+    votingAllocation: votingAllocation
   };
 }
