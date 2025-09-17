@@ -59,6 +59,111 @@
   }
   ```
 
+### Data Consistency Between API and SSE
+
+#### DRY Principle for Response Generation
+- **MANDATORY: Same functions generate both API responses and SSE messages** - Avoid duplicating logic between HTTP endpoints and SSE broadcasts
+- **Shared data builders** - Extract response generation into reusable functions that both API and SSE can call
+- **Example pattern**:
+  ```typescript
+  // Shared function used by both API and SSE
+  export function buildCardResponse(card: Card) {
+    return {
+      id: card.id,
+      content: card.content,
+      columnId: card.columnId,
+      userId: card.userId,
+      voteCount: card.voteCount,
+      createdAt: card.createdAt,
+      // ... all fields consistently included
+    };
+  }
+
+  // API endpoint
+  const card = await createCard(data);
+  return json({ success: true, card: buildCardResponse(card) });
+
+  // SSE broadcast
+  broadcastCardCreated(boardId, buildCardResponse(card));
+  ```
+
+#### SSE Message Structure
+- **SSE events must include complete resource data** - Not just IDs or partial updates
+- **Match API response structure exactly** - Client code should handle both identically
+- **Include all relationships and computed fields** - If API returns user roles, SSE must too
+- **Timestamp all SSE messages** - For ordering and debugging
+
+#### SSE Data Completeness Principles
+
+##### Always Include Full Data (No Additional Requests Needed)
+- **Entity CRUD operations** - When a card/column/scene is created, updated, or deleted, include the complete entity
+- **Vote changes** - Include updated vote count, user's vote status, and remaining votes
+- **Board state changes** - Include all affected data (current scene, permissions, etc.)
+- **User presence updates** - Include user details (name, role) not just user ID
+- **Principle**: If the UI needs to update based on this event, include all data needed for that update
+
+##### When to Use Notification-Only Events
+- **Large dataset changes** - If updating would require sending massive amounts of data
+- **Security-sensitive updates** - When different users should see different subsets of data
+- **Rate-limited events** - High-frequency updates where full data would overwhelm clients
+- **Examples**:
+  ```typescript
+  // GOOD: Complete data for UI update
+  {
+    type: 'card_created',
+    card: {
+      id: '...',
+      content: 'Card text',
+      userId: '...',
+      userName: 'John Doe',
+      columnId: '...',
+      voteCount: 0,
+      userVoted: false,
+      createdAt: '...'
+    }
+  }
+
+  // AVOID: Notification requiring follow-up request
+  {
+    type: 'card_created',
+    cardId: '...',  // Forces client to GET /api/cards/:id
+  }
+  ```
+
+##### Data Parity Rule
+- **SSE data === API response data** - The exact same object structure should be returned
+- **Use shared builder functions** - One function creates the response for both SSE and API
+- **Example implementation**:
+  ```typescript
+  // Shared builder used by both API and SSE
+  async function buildCompleteCardData(card: DBCard, userId: string) {
+    const user = await getUser(card.userId);
+    const userVote = await getUserVoteForCard(card.id, userId);
+    return {
+      id: card.id,
+      content: card.content,
+      userId: card.userId,
+      userName: user.name,
+      columnId: card.columnId,
+      voteCount: card.voteCount,
+      userVoted: !!userVote,
+      createdAt: card.createdAt
+    };
+  }
+  ```
+
+##### Performance Considerations
+- **Denormalize for SSE** - Include user names, not just IDs, to avoid lookups
+- **Cache frequently used data** - Board metadata, user roles, etc.
+- **Batch related updates** - Send one message with multiple changes when possible
+- **Consider message size** - SSE has practical limits (~64KB per message)
+
+#### Client-Side Handling
+- **Single update function per resource type** - Same function processes API responses and SSE events
+- **Idempotent updates** - Applying same update multiple times should have same result
+- **Optimistic updates with SSE confirmation** - Update UI immediately, reconcile with SSE
+- **No follow-up requests on SSE** - Client should never need to fetch after receiving SSE event
+
 ### Critical: Repository Functions Must Return Values
 - **ALL repository functions MUST return a value** - Never leave a function without an explicit return statement
 - **Transactions must return results** - Database transactions should return success indicators or the affected data
@@ -134,11 +239,12 @@
 
 ## Real-time Features
 
-### WebSocket Integration
-- WebSocket server runs on port 8080 alongside main application
+### Server-Side Events (SSE) Integration
+- SSE endpoint at `/api/sse` runs on same port as main application (not separate port)
+- Uses EventSource API for real-time updates, not WebSockets
 - Presence tracking for collaborative features with 30-second timeout
 - Real-time board updates and user activity monitoring
-- Connection handling designed for horizontal scaling preparation
+- SSE chosen for simplicity: works through proxies, firewalls, and requires no special protocols
 
 ### Presence System
 - **30-second timeout** for user presence (configurable in `constants.ts`)
@@ -219,3 +325,134 @@ src/
 - **Move styles to components** - Global utilities become component-specific styles
 - **Use LESS mixins for patterns** - Reusable layout patterns become mixins
 - **Maintain design consistency** - Same visual result with better architecture
+
+## API Testing Strategy (Future Implementation)
+
+### Testing Approach
+- **Scenario-based tests** - Test complete user workflows, not just individual endpoints
+- **Precondition setup** - Database seeding with known test data states
+- **Response validation** - Verify both structure and content of API responses
+- **Side effect verification** - Check database state changes after API calls
+- **SSE event validation** - Ensure correct events are broadcast with API actions
+
+### Test Structure
+```typescript
+// Example test structure (not yet implemented)
+describe('Card Creation Flow', () => {
+  beforeEach(() => {
+    // Setup: Create test user, series, board
+    // Seed database with known state
+  });
+
+  test('POST /api/boards/:id/cards creates card and broadcasts SSE', async () => {
+    // Given: User has access to board in "brainstorm" scene
+    // When: POST request to create card
+    // Then:
+    //   - Returns 201 with complete card data
+    //   - Card exists in database with correct fields
+    //   - SSE event 'card_created' broadcast with identical data
+    //   - Vote count initialized to 0
+  });
+
+  test('POST /api/cards/:id/vote toggles vote and updates stats', async () => {
+    // Given: Card exists with 2 votes from other users
+    // When: User votes on card
+    // Then:
+    //   - Returns updated vote count (3)
+    //   - User's vote recorded in database
+    //   - SSE 'vote_changed' broadcast to all users
+    //   - SSE 'voting_stats_updated' sent to facilitators
+    //   - User's remaining votes decreased by 1
+  });
+});
+```
+
+### Test Data Management
+- **Isolated test database** - Separate SQLite file for tests
+- **Transaction rollback** - Each test runs in transaction, rolled back after
+- **Factory functions** - Create test data with sensible defaults
+- **Deterministic IDs** - Use predictable UUIDs for easier assertions
+
+### Coverage Goals
+- **Critical paths first** - Authentication, board creation, card management
+- **Edge cases** - Permission boundaries, vote limits, scene restrictions
+- **Error scenarios** - Invalid inputs, unauthorized access, race conditions
+- **Real-time sync** - Multiple users, concurrent updates, SSE delivery
+
+### Implementation Tools (Proposed)
+- **Vitest** - Fast, ESM-native test runner compatible with SvelteKit
+- **Supertest or native fetch** - HTTP request testing
+- **Database helpers** - Direct DB access for setup/verification
+- **SSE test client** - EventSource mock for validating broadcasts
+- **Playwright** - End-to-end testing with multi-user scenarios
+
+### Multi-User Interaction Testing with Playwright
+
+#### Real-time Collaboration Scenarios
+- **Multiple browser contexts** - Simulate concurrent users in same board
+- **SSE synchronization tests** - Verify real-time updates across sessions
+- **Race condition detection** - Test simultaneous card creation, voting, grouping
+- **Presence testing** - Validate user join/leave notifications
+
+#### Example Multi-User Test Patterns
+```typescript
+// Playwright multi-user test example (not yet implemented)
+test('Multiple users see real-time card updates', async ({ browser }) => {
+  // Create two browser contexts (two users)
+  const context1 = await browser.newContext();
+  const context2 = await browser.newContext();
+
+  const user1 = await context1.newPage();
+  const user2 = await context2.newPage();
+
+  // Both users join same board
+  await user1.goto('/board/test-board-id');
+  await user2.goto('/board/test-board-id');
+
+  // User 1 creates a card
+  await user1.fill('[data-testid="card-input"]', 'New idea');
+  await user1.click('[data-testid="add-card"]');
+
+  // User 2 should see the card appear without refresh
+  await expect(user2.locator('text=New idea')).toBeVisible({ timeout: 2000 });
+
+  // User 2 votes on the card
+  await user2.click('[data-testid="vote-card"]');
+
+  // User 1 should see vote count update
+  await expect(user1.locator('[data-testid="vote-count"]')).toHaveText('1');
+});
+
+test('Facilitator controls affect all users', async ({ browser }) => {
+  const facilitator = await browser.newContext();
+  const participant = await browser.newContext();
+
+  // Setup: Facilitator changes scene
+  // Verify: Participant sees scene change and UI updates
+  // Verify: Participant permissions change accordingly
+});
+```
+
+#### Testing Focus Areas
+- **Voting conflicts** - Multiple users voting simultaneously
+- **Card grouping** - Concurrent grouping operations
+- **Scene transitions** - Permission changes propagate correctly
+- **Presence accuracy** - Active user list stays synchronized
+- **Connection recovery** - SSE reconnection after network interruption
+- **Performance under load** - 10+ concurrent users on same board
+
+#### Browser Context Management
+- **Session isolation** - Each context has separate cookies/storage
+- **Parallel execution** - Run multiple user actions simultaneously
+- **Network conditions** - Simulate slow/interrupted connections
+- **Viewport testing** - Different screen sizes for responsive testing
+
+### Test Commands (Proposed)
+```bash
+npm run test           # Run all tests
+npm run test:api       # API tests only
+npm run test:e2e       # Playwright end-to-end tests
+npm run test:e2e:ui    # Playwright with UI mode
+npm run test:watch     # Watch mode for development
+npm run test:coverage  # Coverage report
+```
