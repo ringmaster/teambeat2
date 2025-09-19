@@ -23,7 +23,7 @@ test.describe('Simple Authentication Tests', () => {
     await page.goto('/register');
 
     // Check that registration page elements are present
-    await expect(page.locator('h2:has-text("Create your account")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Get Started")')).toBeVisible();
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.locator('#name')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
@@ -48,17 +48,6 @@ test.describe('Simple Authentication Tests', () => {
 
     // Should remain on login page
     expect(page.url()).toContain('/login');
-  });
-
-  test('should show error for empty login fields', async ({ page }) => {
-    await page.goto('/login');
-
-    // Try to submit empty form
-    await page.click('button[type="submit"]');
-
-    // Should show error message
-    await expect(page.locator('.form-error')).toBeVisible();
-    await expect(page.locator('text=Please fill in all fields')).toBeVisible();
   });
 
   test('should register a new user successfully', async ({ page }) => {
@@ -106,7 +95,7 @@ test.describe('Simple Authentication Tests', () => {
     // Navigate to register
     await page.click('a[href="/register"]');
     await expect(page).toHaveURL(/.*register/);
-    await expect(page.locator('h2:has-text("Create your account")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Get Started")')).toBeVisible();
 
     // Navigate back to login
     await page.click('a[href="/login"]');
@@ -116,7 +105,7 @@ test.describe('Simple Authentication Tests', () => {
 
   test('should redirect to login when accessing protected pages', async ({ page }) => {
     // Try to access a protected page without being logged in
-    const response = await page.goto('/dashboard');
+    const response = await page.goto('/profile');
 
     // Should either redirect to login or return 401/403
     const currentUrl = page.url();

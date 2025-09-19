@@ -5,16 +5,25 @@ import * as schema from '../../../src/lib/server/db/schema.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { eq, and, sql } from 'drizzle-orm';
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 export class TestDatabase {
   private db: any;
   private sqlite: Database.Database;
+  private dbPath: string;
 
   constructor() {
-    // Create in-memory database for tests
-    this.sqlite = new Database(':memory:');
+    // Use the same test database file that the application will use
+    this.dbPath = 'teambeat-test.db';
+
+    // Clean up any existing test database
+    if (existsSync(this.dbPath)) {
+      unlinkSync(this.dbPath);
+    }
+
+    this.sqlite = new Database(this.dbPath);
+    this.sqlite.pragma('journal_mode = WAL');
     this.db = drizzle(this.sqlite, { schema });
   }
 
@@ -81,6 +90,16 @@ export class TestDatabase {
 
   async cleanup() {
     this.sqlite.close();
+
+    // Clean up test database file
+    if (existsSync(this.dbPath)) {
+      try {
+        unlinkSync(this.dbPath);
+        console.log('✓ Test database file cleaned up');
+      } catch (error) {
+        console.warn(`Warning: Could not clean up test database file: ${error.message}`);
+      }
+    }
   }
 
   getDb() {

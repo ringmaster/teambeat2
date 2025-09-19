@@ -8,16 +8,15 @@ async function globalSetup(_config: FullConfig) {
   const testDb = new TestDatabase();
   await testDb.setup();
 
-  // Create test users and basic data structure
-  const scenario = await testDb.setupBasicScenario();
-
-  // Store test data for use in tests
-  process.env.TEST_FACILITATOR_ID = scenario.users.facilitator.id;
-  process.env.TEST_PARTICIPANT1_ID = scenario.users.participant1.id;
-  process.env.TEST_PARTICIPANT2_ID = scenario.users.participant2.id;
-  process.env.TEST_SERIES_ID = scenario.series.id;
-  process.env.TEST_BOARD_ID = scenario.board.id;
-  process.env.TEST_BOARD_SLUG = scenario.series.slug;
+  // Create a simple test user for basic testing
+  try {
+    const testUser = await testDb.createTestUser('test@example.com', 'password123');
+    process.env.TEST_USER_ID = testUser.id;
+    process.env.TEST_USER_EMAIL = testUser.email;
+    console.log('✓ Created test user');
+  } catch (error) {
+    console.warn('Could not create test user:', error);
+  }
 
   // Set up a browser context for pre-warming the application
   const browser = await chromium.launch();
@@ -26,7 +25,7 @@ async function globalSetup(_config: FullConfig) {
 
   try {
     // Pre-warm the application by making a request
-    const response = await page.goto('http://localhost:4173/');
+    const response = await page.goto('http://localhost:5173/');
     if (!response?.ok()) {
       console.warn('Application may not be fully ready yet');
     }
@@ -39,7 +38,6 @@ async function globalSetup(_config: FullConfig) {
   }
 
   console.log('Global test setup completed');
-  console.log(`Test board available at: /board/${scenario.series.slug}`);
 }
 
 export default globalSetup;

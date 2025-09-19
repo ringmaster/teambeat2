@@ -38,3 +38,8 @@ ngrok.yml
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Test databases
+teambeat-test.db
+teambeat-test.db-shm
+teambeat-test.db-wal

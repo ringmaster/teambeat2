@@ -16,8 +16,8 @@ export class AuthHelper {
   async login(email: string, password: string) {
     await this.page.goto('/login');
 
-    await this.page.fill('input[name="email"]', email);
-    await this.page.fill('input[name="password"]', password);
+    await this.page.fill('input#email', email);
+    await this.page.fill('input#password', password);
     await this.page.click('button[type="submit"]');
 
     // Wait for redirect to dashboard or home
@@ -30,10 +30,10 @@ export class AuthHelper {
   async register(email: string, password: string, name: string) {
     await this.page.goto('/register');
 
-    await this.page.fill('input[name="email"]', email);
-    await this.page.fill('input[name="name"]', name);
-    await this.page.fill('input[name="password"]', password);
-    await this.page.fill('input[name="confirmPassword"]', password);
+    await this.page.fill('input#email', email);
+    await this.page.fill('input#name', name);
+    await this.page.fill('input#password"]', password);
+    await this.page.fill('input#confirmPassword', password);
     await this.page.click('button[type="submit"]');
 
     // Wait for redirect to dashboard after successful registration
