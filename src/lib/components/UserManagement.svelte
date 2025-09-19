@@ -148,7 +148,11 @@
                                 <div class="user-name">
                                     {user.userName || "Unknown User"}
                                 </div>
-                                <div class="role-badge role-{user.role}">
+                                <div
+                                    class="role-badge role-{user.role} {getRoleBadgeClass(
+                                        user.role,
+                                    )}"
+                                >
                                     {user.role}
                                 </div>
                             </div>
@@ -273,7 +277,8 @@
     .email-input:focus {
         outline: none;
         border-color: var(--color-primary);
-        ring: 2px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+        ring: 2px solid
+            color-mix(in srgb, var(--color-primary) 20%, transparent);
     }
 
     .email-input:disabled {

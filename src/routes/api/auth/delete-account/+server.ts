@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { users, sessions, boards, cards, votes, comments, seriesUsers } from '$lib/server/db/schema';
+import { users, seriesMembers, cards, votes, comments } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getSessionFromCookie } from '$lib/server/repositories/session';
 
@@ -18,27 +18,21 @@ export const DELETE: RequestHandler = async ({ cookies }) => {
 
     try {
         // Start a transaction to delete all user data
-        await db.transaction(async (tx) => {
-            // Delete all user's sessions
-            await tx.delete(sessions).where(eq(sessions.userId, session.userId));
-            
+        await db.transaction((tx) => {
             // Delete user's votes
-            await tx.delete(votes).where(eq(votes.userId, session.userId));
-            
+            tx.delete(votes).where(eq(votes.userId, session.userId)).run();
+
             // Delete user's comments
-            await tx.delete(comments).where(eq(comments.userId, session.userId));
-            
+            tx.delete(comments).where(eq(comments.userId, session.userId)).run();
+
             // Delete user's cards
-            await tx.delete(cards).where(eq(cards.userId, session.userId));
-            
-            // Delete user's boards
-            await tx.delete(boards).where(eq(boards.createdBy, session.userId));
-            
+            tx.delete(cards).where(eq(cards.userId, session.userId)).run();
+
             // Remove user from series
-            await tx.delete(seriesUsers).where(eq(seriesUsers.userId, session.userId));
-            
+            tx.delete(seriesMembers).where(eq(seriesMembers.userId, session.userId)).run();
+
             // Finally, delete the user
-            await tx.delete(users).where(eq(users.id, session.userId));
+            tx.delete(users).where(eq(users.id, session.userId)).run();
         });
 
         // Clear the session cookie

@@ -51,7 +51,6 @@
         onVoteCard,
         onCommentCard,
         onAddCard,
-        onGroupCards,
         onGetColumnContent,
         onSetColumnContent,
         onDeleteCard,

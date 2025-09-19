@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
-import { cards, votes, comments, columns, users } from '../db/schema.js';
-import { eq, and, count } from 'drizzle-orm';
+import { cards, votes, columns, users } from '../db/schema.js';
+import { eq, count } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface CreateCardData {
@@ -291,11 +291,11 @@ export async function groupCardOntoTarget(draggedCardId: string, targetCardId: s
         updatedAt: new Date().toISOString()
       })
       .where(eq(cards.groupId, draggedCard.groupId));
-    
+
     return { targetGroupId, affectedCardIds: [] };
   } else {
     let affectedCardIds: string[] = [];
-    
+
     // If the dragged card is part of a group (subordinate), use ungroupCard for proper cleanup
     if (draggedCard.groupId) {
       const ungroupResult = await ungroupCard(draggedCardId);

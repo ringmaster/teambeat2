@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { boards, columns, scenes, cards, votes, comments, scenesColumns, boardSeries } from '../db/schema.js';
+import { boards, columns, scenes, cards, scenesColumns, boardSeries } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
