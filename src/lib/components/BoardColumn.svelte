@@ -113,6 +113,7 @@
                 rows={2}
                 buttonVariant="light"
                 onButtonClick={() => onAddCard(column.id)}
+                class="add-card-textarea"
             >
                 {#snippet buttonContent()}
                     <Icon name="plus" size="sm" />

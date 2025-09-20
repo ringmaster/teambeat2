@@ -87,23 +87,33 @@ test.describe('Board Functionality', () => {
 
   test('should allow adding cards in brainstorm scene', async ({ page }) => {
     const auth = new AuthHelper(page);
-    const participant = await getTestUser('participant1');
-    await auth.loginViaAPI(participant.email, participant.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
-    await page.goto('/board/test-board-slug');
+    // Create test data using TestDatabase
+    const testDb = getTestDb();
+
+    // Create series and board for the test (facilitator should already exist from global setup)
+    const series = await testDb.createTestSeries('Test Board Series', facilitator.email);
+    const board = await testDb.createTestBoard(series.id, 'Test Board Display');
+
+    // Navigate to the created board
+    await page.goto(`/board/${board.id}`);
 
     // Add card to "What Went Well" column
-    const firstColumn = page.locator('[data-testid="column"]').first();
-    await firstColumn.locator('[data-testid="card-input"]').fill('Great team collaboration');
-    await firstColumn.locator('[data-testid="add-card-button"]').click();
+    const firstColumn = page.locator('.column').first();
+    await firstColumn.locator('.add-card-textarea textarea').fill('Great team collaboration');
+    await firstColumn.locator('.add-card-textarea textarea').press('Enter');
+    await firstColumn.locator('.add-card-textarea button').click();
 
     // Card should appear
     await expect(page.locator('text=Great team collaboration')).toBeVisible();
 
     // Add another card to different column
-    const secondColumn = page.locator('[data-testid="column"]').nth(1);
-    await secondColumn.locator('[data-testid="card-input"]').fill('Need better testing');
-    await secondColumn.locator('[data-testid="add-card-button"]').click();
+    const secondColumn = page.locator('.column').nth(1);
+    await secondColumn.locator('.add-card-textarea textarea').fill('Need better testing');
+    await secondColumn.locator('.add-card-textarea textarea').press('Enter');
+    await secondColumn.locator('.add-card-textarea button').click();
 
     await expect(page.locator('text=Need better testing')).toBeVisible();
   });
