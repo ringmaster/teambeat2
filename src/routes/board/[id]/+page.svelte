@@ -8,6 +8,7 @@
     import BoardColumns from "$lib/components/BoardColumns.svelte";
     import BoardConfigDialog from "$lib/components/BoardConfigDialog.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
+    import Modal from "$lib/components/ui/Modal.svelte";
     import { toastStore } from "$lib/stores/toast";
 
     interface Props {
@@ -58,6 +59,11 @@
     let showBoardConfig = $state(false);
     let configActiveTab = $state("general");
     let showTemplateSelector = $state(false);
+
+    // Edit Card Modal State
+    let showEditCardModal = $state(false);
+    let editingCard = $state<any>(null);
+    let editCardContent = $state("");
 
     // Drag and Drop State
     let draggedCardId = $state("");
@@ -942,6 +948,52 @@
         } catch (error) {
             console.error("Failed to delete card:", error);
             alert("Failed to delete card. Please try again.");
+        }
+    }
+
+    async function editCard(cardId: string) {
+        const card = cards.find((c) => c.id === cardId);
+        if (!card) return;
+
+        editingCard = card;
+        editCardContent = card.content;
+        showEditCardModal = true;
+    }
+
+    function cancelEditCard() {
+        showEditCardModal = false;
+        editingCard = null;
+        editCardContent = "";
+    }
+
+    async function saveEditCard() {
+        if (!editingCard || !editCardContent.trim()) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/cards/${editingCard.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: editCardContent.trim() }),
+            });
+
+            if (response.ok) {
+                // Update local state
+                cards = cards.map((card) =>
+                    card.id === editingCard.id
+                        ? { ...card, content: editCardContent.trim() }
+                        : card,
+                );
+                console.log(`Card ${editingCard.id} updated successfully`);
+                cancelEditCard();
+            } else {
+                console.error("Failed to update card:", response.status);
+                alert("Failed to update card. Please try again.");
+            }
+        } catch (error) {
+            console.error("Failed to update card:", error);
+            alert("Failed to update card. Please try again.");
         }
     }
 
@@ -1881,6 +1933,7 @@
             onGetColumnContent={getColumnContent}
             onSetColumnContent={setColumnContent}
             onDeleteCard={deleteCard}
+            onEditCard={editCard}
             {userRole}
             currentUserId={user?.id}
             {hasVotes}
@@ -1913,6 +1966,55 @@
         {dragState}
     />
 {/if}
+
+<!-- Edit Card Modal -->
+<Modal
+    show={showEditCardModal}
+    title="Edit Card"
+    onClose={cancelEditCard}
+    size="md"
+>
+    {#snippet children()}
+        <div class="edit-card-form">
+            <div class="form-group">
+                <label for="card-content">Card Content</label>
+                <textarea
+                    id="card-content"
+                    bind:value={editCardContent}
+                    placeholder="Enter card content..."
+                    rows="4"
+                    class="input"
+                    onkeydown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            if (editCardContent.trim()) {
+                                saveEditCard();
+                            }
+                        }
+                    }}
+                ></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button
+                    onclick={cancelEditCard}
+                    class="btn-secondary"
+                    type="button"
+                >
+                    Cancel
+                </button>
+                <button
+                    onclick={saveEditCard}
+                    class="btn-primary"
+                    type="button"
+                    disabled={!editCardContent.trim()}
+                >
+                    Save
+                </button>
+            </div>
+        </div>
+    {/snippet}
+</Modal>
 
 <style type="less">
     .connection-status {
@@ -1953,6 +2055,20 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
+    }
+
+    /* Edit card form styles */
+    .edit-card-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .edit-card-form label {
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin-bottom: 0.5rem;
+        display: block;
     }
 
     .connection-status__indicator {

@@ -22,6 +22,7 @@
         onGetColumnContent: (columnId: string) => string;
         onSetColumnContent: (columnId: string, content: string) => void;
         onDeleteCard: (cardId: string) => void;
+        onEditCard: (cardId: string) => void;
         userRole: string;
         currentUserId: string;
         hasVotes: boolean;
@@ -50,6 +51,7 @@
         onGetColumnContent,
         onSetColumnContent,
         onDeleteCard,
+        onEditCard,
         userRole,
         currentUserId,
         hasVotes,
@@ -102,6 +104,7 @@
                 {onGetColumnContent}
                 {onSetColumnContent}
                 {onDeleteCard}
+                {onEditCard}
                 {userRole}
                 {currentUserId}
                 {hasVotes}

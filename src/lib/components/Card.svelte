@@ -22,12 +22,13 @@
         onVote: (cardId: string, delta: 1 | -1) => void;
         onComment: (cardId: string) => void;
         onDelete: (cardId: string) => void;
+        onEdit: (cardId: string) => void;
         onCardDrop?: (e: DragEvent, targetCardId: string) => void;
     }
 
     let {
         card,
-        isGrouped: _ = false,
+        isGrouped = false,
         isGroupLead = false,
         isSubordinate = false,
         groupingMode,
@@ -44,6 +45,7 @@
         onVote,
         onComment,
         onDelete,
+        onEdit,
         onCardDrop,
     }: Props = $props();
 
@@ -71,6 +73,24 @@
         return ["admin", "facilitator"].includes(userRole);
     });
 
+    // Check if user can edit this card
+    let canEdit = $derived.by(() => {
+        // Only allow editing if the current scene allows it
+        if (!currentScene?.allowEditCards) return false;
+
+        // Author can always edit their own cards
+        if (card.userId === currentUserId) {
+            return true;
+        }
+        // Admin and facilitator can always edit
+        return ["admin", "facilitator"].includes(userRole);
+    });
+
+    // Check if card should be obscured
+    let isObscured = $derived.by(() => {
+        return currentScene?.allowObscureCards && card.userId !== currentUserId;
+    });
+
     // Check if card can be moved/dragged
     let canMove = $derived(
         (currentScene?.allowMoveCards ?? false) && !isObscured,
@@ -81,11 +101,6 @@
 
     // State for drag targeting
     let isDragTarget = $state(false);
-
-    // Check if card should be obscured
-    let isObscured = $derived.by(() => {
-        return currentScene?.allowObscureCards && card.userId !== currentUserId;
-    });
 
     // Drag and drop handlers for grouping
     function handleDragOver(e: DragEvent) {
@@ -105,7 +120,12 @@
     function handleDragLeave(e: DragEvent) {
         if (canGroup && onCardDrop && !isObscured) {
             // Only clear target if leaving the card element itself, not its children
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            const currentTarget = e.currentTarget as HTMLElement;
+            const relatedTarget = e.relatedTarget as Node;
+            if (
+                currentTarget &&
+                (!relatedTarget || !currentTarget.contains(relatedTarget))
+            ) {
                 isDragTarget = false;
             }
         }
@@ -185,7 +205,7 @@
         : ''} {isSubordinate ? 'subordinate' : ''} {isDragTarget
         ? 'drag-target'
         : ''}"
-    role="button"
+    role={groupingMode ? "button" : "article"}
     aria-label={isObscured
         ? "Obscured card content"
         : `Card: ${card.content.substring(0, 50)}${card.content.length > 50 ? "..." : ""}`}
@@ -216,6 +236,20 @@
 
     <div class="card-footer">
         <div class="card-actions">
+            {#if canEdit}
+                <button
+                    onclick={(e) => {
+                        e.stopPropagation();
+                        onEdit(card.id);
+                    }}
+                    class="edit-button"
+                    title="Edit card"
+                    aria-label="Edit card"
+                >
+                    <Icon name="edit" size="sm" />
+                </button>
+            {/if}
+
             {#if canDelete}
                 <button
                     onclick={(e) => {
@@ -373,6 +407,22 @@
     /* Button styles */
     .card button {
         transition: all 0.2s ease;
+    }
+
+    /* Edit button */
+    .edit-button {
+        padding: 4px;
+        color: var(--card-text-secondary);
+        border-radius: 4px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .edit-button:hover {
+        color: var(--card-text-primary);
+        background-color: var(--surface-secondary);
     }
 
     /* Delete button */
