@@ -123,16 +123,21 @@
             {/if}
 
             {#if ["admin", "facilitator"].includes(userRole)}
-                <button onclick={onConfigureClick} class="toolbar-button">
+                <button
+                    onclick={onConfigureClick}
+                    class="toolbar-button facilitator-configure"
+                >
                     <Icon name="settings" size="sm" />
                 </button>
             {/if}
 
             {#if ["admin", "facilitator"].includes(userRole)}
-                <button class="toolbar-button"> Timer </button>
+                <button class="toolbar-button facilitator-timer">
+                    Timer
+                </button>
             {/if}
 
-            <button onclick={onShareClick} class="toolbar-button">
+            <button onclick={onShareClick} class="toolbar-button share-board">
                 <Icon name="share" class="icon-sm" />
                 <span>Share</span>
             </button>

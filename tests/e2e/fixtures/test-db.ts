@@ -1,6 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import bcrypt from 'bcryptjs';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { existsSync, unlinkSync } from 'fs';
 import { execSync } from 'child_process';
 import * as schema from '../../../src/lib/server/db/schema.js';
@@ -40,7 +39,7 @@ export class TestDatabase {
 
     } catch (error) {
       console.error('Failed to setup test database:', error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -65,7 +64,7 @@ export class TestDatabase {
 
       console.log('✓ Test database schema verified');
     } catch (error) {
-      throw new Error(`Schema verification failed: ${error.message}`);
+      throw new Error(`Schema verification failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -81,7 +80,7 @@ export class TestDatabase {
       if (existsSync(file)) {
         try {
           unlinkSync(file);
-        } catch (error) {
+        } catch {
           // Ignore cleanup errors
         }
       }
@@ -94,9 +93,16 @@ export class TestDatabase {
   }
 
   // Test data factory methods
-  async createTestUser(email: string = 'test@example.com', password: string = 'password123', name?: string) {
+
+  /**
+   * Create a test user and return the database-generated ID.
+   * In the future, this will work with auto-generated IDs.
+   */
+  async createTestUser(email: string = 'test@example.com', password: string = 'password123', name?: string): Promise<string> {
     const { db } = await import('../../../src/lib/server/db/index.js');
     const { hashPassword } = await import('../../../src/lib/server/auth/password.js');
+
+    // For now we still generate the ID, but this could be removed if schema changes to auto-generated IDs
     const userId = `usr_${uuid()}`;
     const passwordHash = hashPassword(password);
 
@@ -107,10 +113,56 @@ export class TestDatabase {
       passwordHash
     }).returning();
 
-    return { ...user, password }; // Return password for test login
+    return user.id;
   }
 
-  async createTestSeries(name: string = 'Test Series', createdByUserId?: string) {
+  /**
+   * Get a test user from the database by email.
+   * This allows us to retrieve user info without relying on in-memory caching.
+   */
+  async getTestUserByEmail(email: string): Promise<{ id: string; email: string; name: string; password?: string } | null> {
+    const { db } = await import('../../../src/lib/server/db/index.js');
+
+    const [user] = await db.select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || '',
+      // Note: we don't return the actual password hash, but tests can use known password
+    };
+  }
+
+  /**
+   * Get a test user from the database by ID.
+   */
+  async getTestUserById(id: string): Promise<{ id: string; email: string; name: string } | null> {
+    const { db } = await import('../../../src/lib/server/db/index.js');
+
+    const [user] = await db.select()
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+      .limit(1);
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || ''
+    };
+  }
+
+  async createTestSeries(name: string = 'Test Series', createdByUserEmail?: string): Promise<any> {
     const { db } = await import('../../../src/lib/server/db/index.js');
     const seriesId = `srs_${uuid()}`;
     const slug = `${name.toLowerCase().replace(/\s+/g, '-')}-${uuid().slice(0, 8)}`;
@@ -122,11 +174,16 @@ export class TestDatabase {
       description: `Test series: ${name}`
     }).returning();
 
-    // If user provided, add them as admin
-    if (createdByUserId) {
+    // If user email provided, look up their ID and add them as admin
+    if (createdByUserEmail) {
+      const user = await this.getTestUserByEmail(createdByUserEmail);
+      if (!user) {
+        throw new Error(`Cannot find user with email: ${createdByUserEmail}. Make sure to call createTestUser first.`);
+      }
+
       await db.insert(schema.seriesMembers).values({
         seriesId,
-        userId: createdByUserId,
+        userId: user.id,
         role: 'admin'
       });
     }
@@ -134,7 +191,7 @@ export class TestDatabase {
     return series;
   }
 
-  async createTestBoard(seriesId: string, name: string = 'Test Board') {
+  async createTestBoard(seriesId: string, name: string = 'Test Board'): Promise<any> {
     const { db } = await import('../../../src/lib/server/db/index.js');
     const boardId = `brd_${uuid()}`;
 
@@ -249,10 +306,15 @@ export class TestDatabase {
     };
   }
 
-  async addUserToSeries(userId: string, seriesId: string, role: 'admin' | 'facilitator' | 'member' = 'member') {
+  async addUserToSeries(userEmail: string, seriesId: string, role: 'admin' | 'facilitator' | 'member' = 'member'): Promise<void> {
+    const user = await this.getTestUserByEmail(userEmail);
+    if (!user) {
+      throw new Error(`Cannot find user with email: ${userEmail}. Make sure to call createTestUser first.`);
+    }
+
     const { db } = await import('../../../src/lib/server/db/index.js');
     await db.insert(schema.seriesMembers).values({
-      userId,
+      userId: user.id,
       seriesId,
       role
     });
@@ -279,22 +341,33 @@ export class TestDatabase {
 
   // Complete test scenario setup
   async setupBasicScenario() {
-    // Use predefined test users (should already exist from global setup)
-    const { getAllTestUsers } = await import('./auth-helpers.js');
-    const testUsers = await getAllTestUsers();
+    // Create test users
+    await this.createTestUser('facilitator@test.com', 'password123', 'Test Facilitator');
+    await this.createTestUser('participant1@test.com', 'password123', 'Participant One');
+    await this.createTestUser('participant2@test.com', 'password123', 'Participant Two');
 
-    const facilitator = testUsers.facilitator;
-    const participant1 = testUsers.participant1;
-    const participant2 = testUsers.participant2;
+    // Get user data from database
+    const facilitator = await this.getTestUserByEmail('facilitator@test.com');
+    const participant1 = await this.getTestUserByEmail('participant1@test.com');
+    const participant2 = await this.getTestUserByEmail('participant2@test.com');
+
+    if (!facilitator || !participant1 || !participant2) {
+      throw new Error('Failed to create or retrieve test users');
+    }
+
+    // Add known passwords for test login
+    facilitator.password = 'password123';
+    participant1.password = 'password123';
+    participant2.password = 'password123';
 
     // Create series and board
-    const series = await this.createTestSeries('Retro Series', facilitator.id);
+    const series = await this.createTestSeries('Retro Series', 'facilitator@test.com');
     const board = await this.createTestBoard(series.id, 'Sprint 1 Retro');
 
     // Add users to series
-    await this.addUserToSeries(facilitator.id, series.id, 'facilitator');
-    await this.addUserToSeries(participant1.id, series.id, 'member');
-    await this.addUserToSeries(participant2.id, series.id, 'member');
+    await this.addUserToSeries('facilitator@test.com', series.id, 'facilitator');
+    await this.addUserToSeries('participant1@test.com', series.id, 'member');
+    await this.addUserToSeries('participant2@test.com', series.id, 'member');
 
     return {
       users: { facilitator, participant1, participant2 },

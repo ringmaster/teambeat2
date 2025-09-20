@@ -1,4 +1,4 @@
-import { Page, BrowserContext } from '@playwright/test';
+import type { Page, BrowserContext } from '@playwright/test';
 
 export interface TestUser {
   email: string;
@@ -8,7 +8,7 @@ export interface TestUser {
 }
 
 export class AuthHelper {
-  constructor(private page: Page) {}
+  constructor(private page: Page) { }
 
   /**
    * Login via the login form
@@ -196,6 +196,15 @@ export async function getTestUser(userKey: keyof typeof TestUsers): Promise<Test
   const userData = TestUsers[userKey];
 
   try {
+    // First try to get from stored user IDs (from global setup)
+    if (storedUserIds && storedUserIds[userKey]) {
+      return {
+        ...userData,
+        id: storedUserIds[userKey]
+      };
+    }
+
+    // Fallback to database query
     const { db } = await import('../../../src/lib/server/db/index.js');
     const { users } = await import('../../../src/lib/server/db/schema.js');
     const { eq } = await import('drizzle-orm');
@@ -211,7 +220,7 @@ export async function getTestUser(userKey: keyof typeof TestUsers): Promise<Test
       id: user.id
     };
   } catch (error) {
-    throw new Error(`Failed to get test user ${userKey}: ${error.message}`);
+    throw new Error(`Failed to get test user ${userKey}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -228,9 +237,12 @@ export async function getAllTestUsers(): Promise<Record<string, TestUser & { id:
   return result;
 }
 
+// Storage for user IDs from global setup
+let storedUserIds: Record<string, string> | null = null;
+
 /**
- * Store the created test user IDs (called from global setup) - deprecated, kept for compatibility
+ * Store the created test user IDs (called from global setup)
  */
 export function setTestUserIds(userIds: Record<string, string>) {
-  // No-op - we now query the database instead
+  storedUserIds = userIds;
 }

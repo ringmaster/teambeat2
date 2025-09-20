@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from '@playwright/test';
-import { AuthHelper, TestUsers, createAuthenticatedContext, getTestUser } from './fixtures/auth-helpers';
+import { AuthHelper, createAuthenticatedContext, getTestUser } from './fixtures/auth-helpers';
+import { getTestDb } from './fixtures/test-db';
 
 test.describe('Board Functionality', () => {
   let facilitatorContext: BrowserContext;
@@ -36,11 +37,11 @@ test.describe('Board Functionality', () => {
     await page.click('#newSeriesInput + button');
 
     // Should show success message and series card
-    await expect(page.locator('text=Test Retro Series')).toBeVisible();
+    await expect(page.locator('.series-card:has-text("Test Retro Series")')).toBeVisible();
 
     // Create board within series
-    await page.getByRole('textbox', { name: 'Board name...' }).fill('Sprint 1 Retrospective');
-    await page.getByRole('textbox', { name: 'Board name...' }).press('Enter');
+    await page.locator('.series-card:has-text("Test Retro Series") input.input-field').fill('Sprint 1 Retrospective');
+    await page.locator('.series-card:has-text("Test Retro Series") input.input-field').press('Enter');
 
 
     // Should navigate to new board
@@ -61,20 +62,27 @@ test.describe('Board Functionality', () => {
     const facilitator = await getTestUser('facilitator');
     await auth.loginViaAPI(facilitator.email, facilitator.password);
 
-    // Navigate to a test board (assuming it exists from previous test)
-    await page.goto('/board/test-board-slug');
+    // Create test data using TestDatabase
+    const testDb = getTestDb();
+
+    // Create series and board for the test (facilitator should already exist from global setup)
+    const series = await testDb.createTestSeries('Test Board Series', facilitator.email);
+    const board = await testDb.createTestBoard(series.id, 'Test Board Display');
+
+    // Navigate to the created board
+    await page.goto(`/board/${board.id}`);
 
     // Should show board title and current scene
-    await expect(page.locator('[data-testid="board-title"]')).toBeVisible();
-    await expect(page.locator('[data-testid="current-scene"]')).toContainText('Brainstorm');
+    await expect(page.getByRole('heading', { name: 'Test Board Display' })).toBeVisible();
+    await expect(page.locator('.scene-dropdown-container')).toContainText('Brainstorm');
 
-    // Should show all columns
-    const columns = page.locator('[data-testid="column"]');
+    // Should show all columns (default setup creates 3 columns)
+    const columns = page.locator('.column');
     await expect(columns).toHaveCount(3);
 
     // Should show facilitator controls
-    await expect(page.locator('[data-testid="scene-controls"]')).toBeVisible();
-    await expect(page.locator('[data-testid="next-scene-button"]')).toBeVisible();
+    await expect(page.locator('.facilitator-configure')).toBeVisible();
+    await expect(page.locator('.facilitator-timer')).toBeVisible();
   });
 
   test('should allow adding cards in brainstorm scene', async ({ page }) => {
