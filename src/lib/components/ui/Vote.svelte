@@ -293,9 +293,14 @@
         text-align: center;
     }
 
-    .vote-container.voted .vote-number {
-        color: var(--color-primary);
+    .vote-container.voted .vote-count-container {
+        .vote-icon,
+        .vote-number {
+            color: var(--color-text-inverse);
+        }
         font-weight: 600;
+        background-color: var(--color-info);
+        border-radius: 20px;
     }
 
     .vote-number-animating {
