@@ -167,7 +167,7 @@
     />
 {/if}
 
-<style type="less">
+<style lang="less">
     #board-header {
         padding: 0 var(--spacing-4);
     }

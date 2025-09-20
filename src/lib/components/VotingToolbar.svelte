@@ -63,34 +63,38 @@
         }
     }
 
-    let showResetConfirmation = $state(false);
-
     async function handleResetVotes() {
         if (isResetting || !onResetVotes) return;
 
-        if (!showResetConfirmation) {
-            showResetConfirmation = true;
-            toastStore.warning(
-                "Click reset again to confirm. This will delete all votes and set allocation to 0.",
-            );
-            // Reset confirmation after 5 seconds
-            setTimeout(() => {
-                showResetConfirmation = false;
-            }, 5000);
-            return;
-        }
-
-        try {
-            isResetting = true;
-            showResetConfirmation = false;
-            await onResetVotes();
-            toastStore.success("All votes have been reset");
-        } catch (error) {
-            console.error("Failed to reset votes:", error);
-            toastStore.error("Failed to reset votes");
-        } finally {
-            isResetting = false;
-        }
+        toastStore.warning(
+            "This will delete all votes and set allocation to 0. Are you sure?",
+            {
+                autoHide: false,
+                actions: [
+                    {
+                        label: "Reset Votes",
+                        onClick: async () => {
+                            try {
+                                isResetting = true;
+                                await onResetVotes();
+                                toastStore.success("All votes have been reset");
+                            } catch (error) {
+                                console.error("Failed to reset votes:", error);
+                                toastStore.error("Failed to reset votes");
+                            } finally {
+                                isResetting = false;
+                            }
+                        },
+                        variant: "primary",
+                    },
+                    {
+                        label: "Cancel",
+                        onClick: () => {},
+                        variant: "secondary",
+                    },
+                ],
+            },
+        );
     }
 
     let showAdminControls = $derived(
@@ -215,12 +219,9 @@
                     <!-- Reset votes button -->
                     <button
                         class="toolbar-action reset-votes"
-                        class:confirming={showResetConfirmation}
                         onclick={handleResetVotes}
                         disabled={isResetting}
-                        title={showResetConfirmation
-                            ? "Click again to confirm reset"
-                            : "Reset all votes and set allocation to 0"}
+                        title="Reset all votes and set allocation to 0"
                     >
                         {#if isResetting}
                             <Icon name="loading" size="sm" />
@@ -242,7 +243,8 @@
     />
 </div>
 
-<style type="less">
+<style lang="less">
+    @import "../../app.less";
     .voting-toolbar {
         background-color: var(--surface-secondary);
         border-top: 1px solid var(--surface-tertiary);
@@ -294,7 +296,7 @@
         justify-content: center;
         width: 2rem;
         height: 2rem;
-        border: 1px solid lighten(var(--surface-secondary), 10%);
+        border: 1px solid lighten(@neutral-gray, 10%);
         border-radius: var(--radius-md);
         background-color: transparent;
         cursor: pointer;
@@ -334,30 +336,6 @@
                 var(--color-danger) 30%,
                 transparent
             );
-        }
-
-        &.reset-votes.confirming {
-            background-color: color-mix(
-                in srgb,
-                var(--color-danger) 20%,
-                transparent
-            );
-            border-color: color-mix(
-                in srgb,
-                var(--color-danger) 50%,
-                transparent
-            );
-            animation: pulse 2s infinite;
-        }
-    }
-
-    @keyframes pulse {
-        0%,
-        100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.7;
         }
     }
 

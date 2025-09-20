@@ -1,11 +1,15 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
-    import Icon from './Icon.svelte';
+    import { createEventDispatcher } from "svelte";
+    import Icon from "./Icon.svelte";
 
     interface Props {
-        type: 'success' | 'error' | 'warning' | 'info';
+        type: "success" | "error" | "warning" | "info";
         message: string;
-        actions?: Array<{ label: string; onClick: () => void; variant?: 'primary' | 'secondary' }>;
+        actions?: Array<{
+            label: string;
+            onClick: () => void;
+            variant?: "primary" | "secondary";
+        }>;
         autoHide?: boolean;
         duration?: number;
         visible?: boolean;
@@ -17,12 +21,12 @@
         actions = [],
         autoHide = true,
         duration = 4000,
-        visible = true
+        visible = true,
     }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
-    let timeoutId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     $effect(() => {
         if (visible && autoHide && actions.length === 0) {
@@ -40,50 +44,57 @@
 
     function handleClose() {
         visible = false;
-        dispatch('close');
+        dispatch("close");
     }
 
-    function handleAction(action: { label: string; onClick: () => void; variant?: 'primary' | 'secondary' }) {
+    function handleAction(action: {
+        label: string;
+        onClick: () => void;
+        variant?: "primary" | "secondary";
+    }) {
         action.onClick();
         // Don't auto-close when action is taken - let the container handle it
     }
 
     const iconMap = {
-        success: 'check-circle',
-        error: 'x-circle',
-        warning: 'alert-triangle',
-        info: 'info'
+        success: "check-circle",
+        error: "x-circle",
+        warning: "alert-triangle",
+        info: "info",
     };
 </script>
 
 {#if visible}
-    <div class="toast toast--{type}" role="alert" aria-live="polite">
+    <div class="toast toast-{type}" role="alert" aria-live="polite">
         <div class="toast__content">
             <div class="toast__icon">
                 <Icon name={iconMap[type]} class="icon-sm" />
             </div>
-            
-            <div class="toast__message">
-                {message}
-            </div>
 
-            {#if actions.length > 0}
-                <div class="toast__actions">
-                    {#each actions as action}
-                        <button 
-                            class="toast__action toast__action--{action.variant || 'primary'}"
-                            onclick={() => handleAction(action)}
-                        >
-                            {action.label}
-                        </button>
-                    {/each}
+            <div class="toast__text-container">
+                <div class="toast__message">
+                    {message}
                 </div>
-            {/if}
+
+                {#if actions.length > 0}
+                    <div class="toast__actions">
+                        {#each actions as action (action.label)}
+                            <button
+                                class="toast__action toast-action-{action.variant ||
+                                    'primary'}"
+                                onclick={() => handleAction(action)}
+                            >
+                                {action.label}
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
         </div>
 
-        <button 
-            class="toast__close" 
-            onclick={handleClose} 
+        <button
+            class="toast__close"
+            onclick={handleClose}
             aria-label="Close notification"
         >
             <Icon name="x" class="icon-sm" />
@@ -91,7 +102,30 @@
     </div>
 {/if}
 
-<style type="less">
+<style lang="less">
+    @import "../../../app.less";
+
+    // Mixin for toast types
+    .toast-type(@border-color, @icon-color) {
+        border-color: @border-color;
+
+        .toast__icon {
+            color: @icon-color;
+        }
+    }
+
+    // Mixin for action button variants
+    .action-variant(@bg-color, @border-color, @text-color, @hover-bg, @hover-border) {
+        background: @bg-color;
+        border-color: @border-color;
+        color: @text-color;
+
+        &:hover {
+            background: @hover-bg;
+            border-color: @hover-border;
+        }
+    }
+
     .toast {
         position: fixed;
         top: var(--spacing-4);
@@ -109,38 +143,22 @@
         gap: var(--spacing-3);
         animation: slide-in 0.3s ease-out;
         transition: all var(--transition-fast);
+    }
 
-        &--success {
-            border-color: var(--color-success);
-            
-            .toast__icon {
-                color: var(--color-success);
-            }
-        }
+    .toast-success {
+        .toast-type(var(--color-success), var(--color-success));
+    }
 
-        &--error {
-            border-color: var(--color-danger);
-            
-            .toast__icon {
-                color: var(--color-danger);
-            }
-        }
+    .toast-error {
+        .toast-type(var(--color-danger), var(--color-danger));
+    }
 
-        &--warning {
-            border-color: var(--color-warning);
-            
-            .toast__icon {
-                color: var(--color-warning);
-            }
-        }
+    .toast-warning {
+        .toast-type(var(--color-warning), var(--color-warning));
+    }
 
-        &--info {
-            border-color: var(--color-info);
-            
-            .toast__icon {
-                color: var(--color-info);
-            }
-        }
+    .toast-info {
+        .toast-type(var(--color-info), var(--color-info));
     }
 
     .toast__content {
@@ -155,8 +173,14 @@
         margin-top: 0.125rem;
     }
 
-    .toast__message {
+    .toast__text-container {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-3);
+    }
+
+    .toast__message {
         font-size: 0.875rem;
         line-height: 1.5;
         color: var(--color-text-primary);
@@ -165,7 +189,7 @@
     .toast__actions {
         display: flex;
         gap: var(--spacing-2);
-        margin-top: var(--spacing-2);
+        justify-content: flex-end;
         flex-wrap: wrap;
     }
 
@@ -178,28 +202,26 @@
         cursor: pointer;
         transition: all var(--transition-fast);
         white-space: nowrap;
+    }
 
-        &--primary {
-            background: var(--color-primary);
-            border-color: var(--color-primary);
-            color: white;
+    .toast-action-primary {
+        .action-variant(
+            var(--color-primary),
+            var(--color-primary),
+            white,
+            var(--color-primary-hover),
+            var(--color-primary-hover)
+        );
+    }
 
-            &:hover {
-                background: var(--color-primary-hover);
-                border-color: var(--color-primary-hover);
-            }
-        }
-
-        &--secondary {
-            background: white;
-            border-color: var(--color-border);
-            color: var(--color-text-primary);
-
-            &:hover {
-                background: var(--surface-elevated);
-                border-color: var(--color-border-hover);
-            }
-        }
+    .toast-action-secondary {
+        .action-variant(
+            white,
+            var(--color-border),
+            var(--color-text-primary),
+            var(--surface-elevated),
+            var(--color-border-hover)
+        );
     }
 
     .toast__close {

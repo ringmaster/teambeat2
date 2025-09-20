@@ -2016,7 +2016,8 @@
     {/snippet}
 </Modal>
 
-<style type="less">
+<style lang="less">
+    @import "../../../app.less";
     .connection-status {
         position: fixed;
         top: 1rem;

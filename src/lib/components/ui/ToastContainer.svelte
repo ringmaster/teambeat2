@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { toastStore, type ToastMessage } from '$lib/stores/toast';
-    import Toast from './Toast.svelte';
+    import { toastStore, type ToastMessage } from "$lib/stores/toast";
+    import Toast from "./Toast.svelte";
 
     let toasts: ToastMessage[] = $state([]);
 
     $effect(() => {
-        const unsubscribe = toastStore.subscribe(value => {
+        const unsubscribe = toastStore.subscribe((value) => {
             toasts = value;
         });
         return unsubscribe;
@@ -15,7 +15,14 @@
         toastStore.removeToast(toastId);
     }
 
-    function handleAction(toastId: string, action: { label: string; onClick: () => void; variant?: 'primary' | 'secondary' }) {
+    function handleAction(
+        toastId: string,
+        action: {
+            label: string;
+            onClick: () => void;
+            variant?: "primary" | "secondary";
+        },
+    ) {
         action.onClick();
         // Remove the toast after action is taken
         toastStore.removeToast(toastId);
@@ -27,9 +34,9 @@
         <Toast
             type={toast.type}
             message={toast.message}
-            actions={toast.actions?.map(action => ({
+            actions={toast.actions?.map((action) => ({
                 ...action,
-                onClick: () => handleAction(toast.id, action)
+                onClick: () => handleAction(toast.id, action),
             }))}
             autoHide={toast.autoHide}
             duration={toast.duration}
@@ -38,7 +45,7 @@
     {/each}
 </div>
 
-<style type="less">
+<style lang="less">
     .toast-container {
         position: fixed;
         top: var(--spacing-4);

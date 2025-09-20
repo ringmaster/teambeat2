@@ -309,7 +309,8 @@
     {/if}
 </div>
 
-<style>
+<style lang="less">
+    @import "../../../app.less";
     .profile-container {
         height: 100%;
         overflow-y: scroll;
