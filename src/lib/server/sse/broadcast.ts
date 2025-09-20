@@ -184,3 +184,65 @@ export async function broadcastVotingStatsUpdateExcludingUser(boardId: string, e
     throw error;
   }
 }
+
+/**
+ * Broadcasts vote-related updates based on scene settings
+ * This is a reusable function that handles all vote broadcasting logic
+ * @param boardId - The board ID
+ * @param currentScene - The current scene with showVotes and allowVoting settings
+ * @param triggeringUserId - Optional user ID who triggered the change (for exclusion in some broadcasts)
+ * @param votesCleared - If true, includes a signal that all votes have been cleared
+ */
+export async function broadcastVoteUpdatesBasedOnScene(
+  boardId: string,
+  currentScene: { showVotes?: boolean; allowVoting?: boolean } | null,
+  triggeringUserId?: string,
+  votesCleared?: boolean
+) {
+  try {
+    if (!currentScene) return;
+
+    if (currentScene.showVotes) {
+      // If "show votes" is enabled, broadcast all vote totals to all users
+      const { getAllUsersVotesForBoard } = await import('../repositories/vote.js');
+      const allVotes = await getAllUsersVotesForBoard(boardId);
+
+      // Build vote counts by card
+      const allVoteCountsByCard: Record<string, number> = {};
+      allVotes.forEach(vote => {
+        allVoteCountsByCard[vote.cardId] = (allVoteCountsByCard[vote.cardId] || 0) + 1;
+      });
+
+      // Also get voting stats
+      const votingStats = await buildVotingStatsUpdatedMessage(boardId);
+
+      // Broadcast all vote counts and stats to all users
+      const allVotesMessage: SSEMessage = {
+        type: 'all_votes_updated',
+        board_id: boardId,
+        all_votes_by_card: allVoteCountsByCard,
+        voting_stats: votingStats.voting_stats,
+        votes_cleared: votesCleared,
+        timestamp: Date.now()
+      };
+
+      sseManager.broadcastToBoard(boardId, allVotesMessage);
+
+    } else if (currentScene.allowVoting) {
+      // If only "allow voting" is enabled, broadcast aggregate voting stats
+      // Include votes_cleared flag if votes were cleared
+      if (votesCleared) {
+        const statsMessage = await buildVotingStatsUpdatedMessage(boardId);
+        (statsMessage as any).votes_cleared = true;
+        sseManager.broadcastToBoard(boardId, statsMessage);
+      } else if (triggeringUserId) {
+        await broadcastVotingStatsUpdateExcludingUser(boardId, triggeringUserId);
+      } else {
+        await broadcastVotingStatsUpdate(boardId);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to broadcast vote updates based on scene:', error);
+    throw error;
+  }
+}

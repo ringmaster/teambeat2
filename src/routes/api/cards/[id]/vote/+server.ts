@@ -5,7 +5,7 @@ import { findCardById, getCardsForBoard } from '$lib/server/repositories/card.js
 import { findBoardByColumnId, getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { castVote, getUserVoteCount } from '$lib/server/repositories/vote.js';
-import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVotingStatsUpdateExcludingUser } from '$lib/server/sse/broadcast.js';
+import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVoteUpdatesBasedOnScene } from '$lib/server/sse/broadcast.js';
 import { updatePresence } from '$lib/server/repositories/presence.js';
 import { buildComprehensiveVotingData } from '$lib/server/utils/voting-data.js';
 
@@ -20,7 +20,7 @@ export const POST: RequestHandler = async (event) => {
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return json(
-        { success: false, error: 'Invalid JSON in request body', details: parseError.message },
+        { success: false, error: 'Invalid JSON in request body', details: parseError instanceof Error ? parseError.message : 'Parse error' },
         { status: 400 }
       );
     }
@@ -134,30 +134,45 @@ export const POST: RequestHandler = async (event) => {
 
     const voteCount = updatedCard.voteCount;
 
-    // Broadcast vote changes based on scene settings
-    if (currentScene.showVotes) {
-      // If "show votes" is enabled, broadcast individual card vote totals to all users
-      await broadcastVoteChanged(board.id, cardId, voteCount, user.userId);
-    } else if (currentScene.allowVoting) {
-      // If only "allow voting" is enabled, broadcast individual vote to the voting user
-      // This now includes comprehensive voting data to avoid additional API calls
-      await broadcastVoteChangedToUser(board.id, cardId, voteCount, user.userId);
-
-      // Also broadcast aggregate voting stats to all other users (excluding the voter)
-      // This ensures other users see updated voting statistics without revealing individual votes
-      await broadcastVotingStatsUpdateExcludingUser(board.id, user.userId);
-    }
-
     // Get comprehensive voting data for the response
     const comprehensiveVotingData = await buildComprehensiveVotingData(board.id, user.userId);
 
-    return json({
+    // Build the response with user's voting data
+    const response: any = {
       success: true,
       card: updatedCard,
       voteResult,
       user_voting_data: comprehensiveVotingData.user_voting_data,
       voting_stats: comprehensiveVotingData.voting_stats
-    });
+    };
+
+    // If "show votes" is enabled, include total votes for all cards
+    if (currentScene.showVotes) {
+      const { getAllUsersVotesForBoard } = await import('$lib/server/repositories/vote.js');
+      const allVotes = await getAllUsersVotesForBoard(board.id);
+
+      // Build vote counts by card (card_id -> total_votes)
+      const voteCountsByCard: Record<string, number> = {};
+      allVotes.forEach(vote => {
+        voteCountsByCard[vote.cardId] = (voteCountsByCard[vote.cardId] || 0) + 1;
+      });
+
+      response.all_votes_by_card = voteCountsByCard;
+    }
+
+    // Broadcast vote changes based on scene settings
+    if (currentScene.showVotes) {
+      // Broadcast the specific card vote count update first for immediate UI feedback
+      await broadcastVoteChanged(board.id, cardId, voteCount, user.userId);
+    } else if (currentScene.allowVoting) {
+      // Broadcast individual vote to the voting user for immediate feedback
+      await broadcastVoteChangedToUser(board.id, cardId, voteCount, user.userId);
+    }
+
+    // Then broadcast comprehensive updates based on scene settings
+    await broadcastVoteUpdatesBasedOnScene(board.id, currentScene, user.userId);
+
+    return json(response);
   } catch (error) {
     if (error instanceof Response) {
       throw error;
@@ -176,7 +191,7 @@ export const POST: RequestHandler = async (event) => {
         details: errorMessage,
         stack: errorStack,
         timestamp: new Date().toISOString(),
-        context: { cardId, userId: user.userId, delta: requestBody?.delta }
+        context: { cardId: event.params.id }
       },
       { status: 500 }
     );

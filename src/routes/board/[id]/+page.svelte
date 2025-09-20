@@ -353,6 +353,12 @@
                 },
             );
             allVotesByCard = newAllVotes;
+
+            // Also update the cards array with the new vote counts
+            cards = cards.map((card) => ({
+                ...card,
+                voteCount: data.all_votes_by_card![card.id] || 0,
+            }));
         }
 
         // Update voting stats if provided
@@ -360,21 +366,30 @@
             votingStats = data.voting_stats;
 
             // Derive user allocation from voting stats and user votes
+            // Calculate current votes from either new data or existing userVotesByCard
+            let currentVotes = 0;
             if (data.votes_by_card) {
-                const currentVotes = Object.values(data.votes_by_card).reduce(
+                currentVotes = Object.values(data.votes_by_card).reduce(
                     (sum, count) => sum + count,
                     0,
                 );
-                const maxVotes = data.voting_stats.maxVotesPerUser;
-                const remainingVotes = Math.max(0, maxVotes - currentVotes);
-
-                votingAllocation = {
-                    currentVotes,
-                    maxVotes,
-                    remainingVotes,
-                    canVote: remainingVotes > 0,
-                };
+            } else {
+                // Use existing userVotesByCard when votes_by_card not provided
+                currentVotes = Array.from(userVotesByCard.values()).reduce(
+                    (sum, count) => sum + count,
+                    0,
+                );
             }
+
+            const maxVotes = data.voting_stats.maxVotesPerUser;
+            const remainingVotes = Math.max(0, maxVotes - currentVotes);
+
+            votingAllocation = {
+                currentVotes,
+                maxVotes,
+                remainingVotes,
+                canVote: remainingVotes > 0,
+            };
         }
 
         // Voting stats now include presence data (activeUsers)
@@ -566,6 +581,30 @@
                 processVotingData({
                     voting_stats: data.voting_stats,
                 });
+
+                // If votes were cleared, clear the user's own votes
+                if (data.votes_cleared) {
+                    userVotesByCard = new Map<string, number>();
+                    // Also reset all card vote counts to 0
+                    cards = cards.map((card) => ({
+                        ...card,
+                        voteCount: 0,
+                    }));
+                    allVotesByCard = new Map<string, number>();
+                }
+                break;
+            case "all_votes_updated":
+                console.log("All votes updated:", data);
+                // Process all voting data including stats
+                processVotingData({
+                    all_votes_by_card: data.all_votes_by_card,
+                    voting_stats: data.voting_stats,
+                });
+
+                // If votes were cleared, clear the user's own votes
+                if (data.votes_cleared) {
+                    userVotesByCard = new Map<string, number>();
+                }
                 break;
         }
     }
@@ -763,6 +802,8 @@
                 const votingDataUpdate: VotingData = {
                     votes_by_card: data.user_voting_data?.votes_by_card,
                     voting_stats: data.voting_stats,
+                    // Include all votes by card if showVotes is enabled
+                    all_votes_by_card: data.all_votes_by_card,
                 };
                 processVotingData(votingDataUpdate);
             }
