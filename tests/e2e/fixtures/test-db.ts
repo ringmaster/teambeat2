@@ -1,87 +1,68 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import * as schema from '../../../src/lib/server/db/schema.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { eq, and, sql } from 'drizzle-orm';
-import { readFileSync, readdirSync, existsSync, unlinkSync } from 'fs';
-import { join } from 'path';
+import { existsSync, unlinkSync } from 'fs';
+import { execSync } from 'child_process';
+import * as schema from '../../../src/lib/server/db/schema.js';
 
 export class TestDatabase {
-  private db: any;
-  private sqlite: Database.Database;
-  private dbPath: string;
+  private testDbPath: string;
 
-  constructor() {
-    // Use the same test database file that the application will use
-    this.dbPath = 'teambeat-test.db';
-
-    // Clean up any existing test database
-    if (existsSync(this.dbPath)) {
-      unlinkSync(this.dbPath);
+  constructor(customPath?: string) {
+    if (customPath) {
+      this.testDbPath = customPath;
+    } else {
+      // Create unique test database file path
+      this.testDbPath = `/tmp/teambeat-test-${Date.now()}-${uuid().slice(0, 8)}.db`;
     }
-
-    this.sqlite = new Database(this.dbPath);
-    this.sqlite.pragma('journal_mode = WAL');
-    this.db = drizzle(this.sqlite, { schema });
+    console.log('Test database path:', this.testDbPath);
   }
 
   async setup() {
     try {
-      // Use actual Drizzle migrations instead of manual schema creation
-      await migrate(this.db, { migrationsFolder: './drizzle' });
-      console.log('✓ Applied Drizzle migrations to test database');
-    } catch (error) {
-      // If migration fails, fall back to applying SQL files directly
-      console.warn('Migration via Drizzle failed, applying SQL files directly:', error);
-      this.applyMigrationsManually();
-    }
+      // Set environment variable for both Drizzle and application
+      process.env.DATABASE_URL = this.testDbPath;
 
-    // Verify the schema was applied correctly
-    this.verifySchema();
-  }
-
-  private applyMigrationsManually() {
-    try {
-      const migrationsDir = './drizzle';
-      const migrationFiles = readdirSync(migrationsDir)
-        .filter(file => file.endsWith('.sql'))
-        .sort(); // Apply migrations in order
-
-      if (migrationFiles.length === 0) {
-        throw new Error(`No migration files found in ${migrationsDir}`);
-      }
-
-      for (const file of migrationFiles) {
-        const migrationPath = join(migrationsDir, file);
-        const migrationSQL = readFileSync(migrationPath, 'utf8');
-
-        console.log(`✓ Applying migration: ${file}`);
-        // Split on statement breakpoints and execute each statement separately
-        const statements = migrationSQL.split('--> statement-breakpoint').filter(stmt => stmt.trim());
-
-        for (const statement of statements) {
-          const cleanStatement = statement.trim();
-          if (cleanStatement) {
-            this.sqlite.exec(cleanStatement);
-          }
+      // Run actual Drizzle migrations using the CLI
+      console.log('Running Drizzle migrations on test database...');
+      execSync('npm run db:migrate', {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DATABASE_URL: this.testDbPath
         }
-      }
-      console.log(`✓ Applied ${migrationFiles.length} migration files manually`);
+      });
+
+      console.log('✓ Applied Drizzle migrations to test database');
+
+      // Verify schema was applied correctly
+      await this.verifySchema();
+
     } catch (error) {
-      console.error('Failed to apply migrations:', error);
-      throw new Error(`Could not set up test database: ${error.message}`);
+      console.error('Failed to setup test database:', error);
+      throw error;
     }
   }
 
-  // Verify that the schema was applied correctly
-  private verifySchema() {
+  private async verifySchema() {
     try {
-      // Test that key tables exist by running a simple query
-      this.sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").get();
-      this.sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='board_series'").get();
-      this.sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='boards'").get();
+      // Import the application's database instance (now using our test DB)
+      const { db } = await import('../../../src/lib/server/db/index.js');
+
+      // Check user count (should be 0 in fresh database)
+      const userCountResult = db.select({ count: sql`count(*)` }).from(schema.users).all();
+      const userCount = userCountResult[0].count;
+      console.log('  User count:', userCount, '(expected: 0)');
+
+      // Check that user_authenticators table exists from migration 0003
+      const authCountResult = db.select({ count: sql`count(*)` }).from(schema.userAuthenticators).all();
+      const authCount = authCountResult[0].count;
+      console.log('  user_authenticators count:', authCount, '(table exists: ✓)');
+
+      // Test other key tables exist
+      db.select().from(schema.boardSeries).limit(0).all();
+      db.select().from(schema.boards).limit(0).all();
+
       console.log('✓ Test database schema verified');
     } catch (error) {
       throw new Error(`Schema verification failed: ${error.message}`);
@@ -89,32 +70,40 @@ export class TestDatabase {
   }
 
   async cleanup() {
-    this.sqlite.close();
+    // Clean up test database file and related files
+    const filesToClean = [
+      this.testDbPath,
+      this.testDbPath + '-shm',
+      this.testDbPath + '-wal'
+    ];
 
-    // Clean up test database file
-    if (existsSync(this.dbPath)) {
-      try {
-        unlinkSync(this.dbPath);
-        console.log('✓ Test database file cleaned up');
-      } catch (error) {
-        console.warn(`Warning: Could not clean up test database file: ${error.message}`);
+    for (const file of filesToClean) {
+      if (existsSync(file)) {
+        try {
+          unlinkSync(file);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
       }
     }
-  }
 
-  getDb() {
-    return this.db;
+    // Clear environment variable
+    delete process.env.DATABASE_URL;
+
+    console.log('✓ Test database cleaned up');
   }
 
   // Test data factory methods
-  async createTestUser(email: string = 'test@example.com', password: string = 'password123') {
+  async createTestUser(email: string = 'test@example.com', password: string = 'password123', name?: string) {
+    const { db } = await import('../../../src/lib/server/db/index.js');
+    const { hashPassword } = await import('../../../src/lib/server/auth/password.js');
     const userId = `usr_${uuid()}`;
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = hashPassword(password);
 
-    const [user] = await this.db.insert(schema.users).values({
+    const [user] = await db.insert(schema.users).values({
       id: userId,
       email,
-      name: email.split('@')[0],
+      name: name || email.split('@')[0],
       passwordHash
     }).returning();
 
@@ -122,10 +111,11 @@ export class TestDatabase {
   }
 
   async createTestSeries(name: string = 'Test Series', createdByUserId?: string) {
+    const { db } = await import('../../../src/lib/server/db/index.js');
     const seriesId = `srs_${uuid()}`;
     const slug = `${name.toLowerCase().replace(/\s+/g, '-')}-${uuid().slice(0, 8)}`;
 
-    const [series] = await this.db.insert(schema.boardSeries).values({
+    const [series] = await db.insert(schema.boardSeries).values({
       id: seriesId,
       name,
       slug,
@@ -134,7 +124,7 @@ export class TestDatabase {
 
     // If user provided, add them as admin
     if (createdByUserId) {
-      await this.db.insert(schema.seriesMembers).values({
+      await db.insert(schema.seriesMembers).values({
         seriesId,
         userId: createdByUserId,
         role: 'admin'
@@ -145,9 +135,10 @@ export class TestDatabase {
   }
 
   async createTestBoard(seriesId: string, name: string = 'Test Board') {
+    const { db } = await import('../../../src/lib/server/db/index.js');
     const boardId = `brd_${uuid()}`;
 
-    const [board] = await this.db.insert(schema.boards).values({
+    const [board] = await db.insert(schema.boards).values({
       id: boardId,
       seriesId,
       name,
@@ -162,7 +153,7 @@ export class TestDatabase {
     const whatCanImproveId = `col_${uuid()}`;
     const actionItemsId = `col_${uuid()}`;
 
-    await this.db.insert(schema.columns).values([
+    await db.insert(schema.columns).values([
       {
         id: whatWentWellId,
         boardId,
@@ -193,7 +184,7 @@ export class TestDatabase {
     const brainstormSceneId = `scn_${uuid()}`;
     const reviewSceneId = `scn_${uuid()}`;
 
-    await this.db.insert(schema.scenes).values([
+    await db.insert(schema.scenes).values([
       {
         id: brainstormSceneId,
         boardId,
@@ -232,16 +223,16 @@ export class TestDatabase {
 
     // Link scenes to columns
     for (const columnId of [whatWentWellId, whatCanImproveId, actionItemsId]) {
-      await this.db.insert(schema.scenesColumns).values([
+      await db.insert(schema.scenesColumns).values([
         { sceneId: brainstormSceneId, columnId, state: 'visible' },
         { sceneId: reviewSceneId, columnId, state: 'visible' }
       ]);
     }
 
     // Set current scene
-    await this.db.update(schema.boards)
+    await db.update(schema.boards)
       .set({ currentSceneId: brainstormSceneId })
-      .where({ id: boardId });
+      .where(eq(schema.boards.id, boardId));
 
     return {
       ...board,
@@ -258,33 +249,43 @@ export class TestDatabase {
     };
   }
 
-  async createTestCard(columnId: string, userId: string, content: string = 'Test card content') {
-    const cardId = `crd_${uuid()}`;
-
-    const [card] = await this.db.insert(schema.cards).values({
-      id: cardId,
-      columnId,
-      userId,
-      content
-    }).returning();
-
-    return card;
-  }
-
   async addUserToSeries(userId: string, seriesId: string, role: 'admin' | 'facilitator' | 'member' = 'member') {
-    await this.db.insert(schema.seriesMembers).values({
+    const { db } = await import('../../../src/lib/server/db/index.js');
+    await db.insert(schema.seriesMembers).values({
       userId,
       seriesId,
       role
     });
   }
 
+  async clearAllData() {
+    const { db } = await import('../../../src/lib/server/db/index.js');
+
+    // Delete in reverse order to respect foreign key constraints
+    await db.delete(schema.votes);
+    await db.delete(schema.comments);
+    await db.delete(schema.cards);
+    await db.delete(schema.scenesColumns);
+    await db.delete(schema.scenes);
+    await db.delete(schema.columns);
+    await db.delete(schema.boards);
+    await db.delete(schema.seriesMembers);
+    await db.delete(schema.boardSeries);
+    await db.delete(schema.userAuthenticators);
+    await db.delete(schema.users);
+
+    console.log('✓ Cleared all test data');
+  }
+
   // Complete test scenario setup
   async setupBasicScenario() {
-    // Create users
-    const facilitator = await this.createTestUser('facilitator@test.com', 'password123');
-    const participant1 = await this.createTestUser('participant1@test.com', 'password123');
-    const participant2 = await this.createTestUser('participant2@test.com', 'password123');
+    // Use predefined test users (should already exist from global setup)
+    const { getAllTestUsers } = await import('./auth-helpers.js');
+    const testUsers = await getAllTestUsers();
+
+    const facilitator = testUsers.facilitator;
+    const participant1 = testUsers.participant1;
+    const participant2 = testUsers.participant2;
 
     // Create series and board
     const series = await this.createTestSeries('Retro Series', facilitator.id);
@@ -301,39 +302,7 @@ export class TestDatabase {
       board
     };
   }
-
-  // Helper methods for test verification
-  async getCardCount(columnId: string): Promise<number> {
-    const result = await this.db
-      .select({ count: sql`count(*)` })
-      .from(schema.cards)
-      .where(eq(schema.cards.columnId, columnId));
-    return result[0].count;
-  }
-
-  async getVoteCount(cardId: string): Promise<number> {
-    const result = await this.db
-      .select({ count: sql`count(*)` })
-      .from(schema.votes)
-      .where(eq(schema.votes.cardId, cardId));
-    return result[0].count;
-  }
-
-  async getUserVoteCount(userId: string, boardId: string): Promise<number> {
-    const result = await this.db
-      .select({ count: sql`count(*)` })
-      .from(schema.votes)
-      .innerJoin(schema.cards, eq(schema.votes.cardId, schema.cards.id))
-      .innerJoin(schema.columns, eq(schema.cards.columnId, schema.columns.id))
-      .where(and(
-        eq(schema.votes.userId, userId),
-        eq(schema.columns.boardId, boardId)
-      ));
-    return result[0].count;
-  }
 }
-
-// Helper functions are now imported at the top
 
 // Global test database instance
 let globalTestDb: TestDatabase | null = null;

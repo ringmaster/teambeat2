@@ -12,7 +12,7 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 4,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Global setup and teardown */
@@ -21,7 +21,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5174',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -34,6 +34,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
+    /* // Test against other browsers (disaled for faster local dev)
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
@@ -43,6 +44,7 @@ export default defineConfig({
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
+    //*/
 
     /* Test against mobile viewports. */
     // {
@@ -67,12 +69,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'NODE_ENV=test npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    command: 'DATABASE_URL=./teambeat-test.db npm run dev -- --port 5174',
+    url: 'http://localhost:5174',
+    reuseExistingServer: false,
     timeout: 120 * 1000,
-    env: {
-      NODE_ENV: 'test',
-    },
   },
 });

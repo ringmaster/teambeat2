@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { goto } from "$app/navigation";
     import Input from "$lib/components/ui/Input.svelte";
     import Button from "$lib/components/ui/Button.svelte";
@@ -8,6 +9,20 @@
     let password: string = $state("");
     let error: string = $state("");
     let loading: boolean = $state(false);
+
+    // Check if user is already logged in and redirect to dashboard
+    onMount(async () => {
+        try {
+            const response = await fetch("/api/auth/me");
+            if (response.ok) {
+                // User is already authenticated, redirect to dashboard
+                goto("/");
+            }
+        } catch (err) {
+            // User not authenticated, show login form
+            console.log("User not authenticated, showing login form");
+        }
+    });
 
     async function handleLogin() {
         if (!email || !password) {

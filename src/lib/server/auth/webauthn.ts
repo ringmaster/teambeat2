@@ -218,14 +218,10 @@ export async function generatePasskeyAuthenticationOptions(userEmail?: string, r
       }));
     }
   } else {
-    console.log('No email provided, checking if ANY passkeys exist in system');
-    // If no email provided, check if there are ANY passkeys in the system
-    const anyPasskeys = await db.select().from(userAuthenticators).limit(1);
-    console.log('System has any passkeys:', anyPasskeys.length > 0 ? 'yes' : 'no');
-
-    if (anyPasskeys.length === 0) {
-      throw new Error('No passkeys available in system');
-    }
+    console.log('No email provided, will allow any registered passkeys');
+    // If no email provided, don't restrict allowCredentials
+    // This allows any registered passkey to be used for authentication
+    allowCredentials = undefined;
   }
 
   console.log('Generating authentication options with allowCredentials:', allowCredentials ? allowCredentials.length : 'none');

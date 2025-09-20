@@ -39,7 +39,4 @@ ngrok.yml
 /playwright-report/
 /playwright/.cache/
 
-# Test databases
-teambeat-test.db
-teambeat-test.db-shm
-teambeat-test.db-wal
+# Test databases (now using in-memory, so no files to ignore)

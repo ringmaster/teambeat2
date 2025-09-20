@@ -60,8 +60,9 @@ export class AuthHelper {
    * Logout via UI
    */
   async logout() {
-    // Look for logout button/link in navigation
-    await this.page.click('[data-testid="logout-button"], a[href*="logout"]');
+    // Hover over avatar to show dropdown, then click Sign Out
+    await this.page.hover('.avatar-dropdown-trigger');
+    await this.page.click('text=Sign Out');
 
     // Wait for redirect to login or welcome page
     await this.page.waitForURL(/\/(login|welcome)?$/);
@@ -187,3 +188,49 @@ export const TestUsers = {
     name: 'Test Admin'
   }
 } as const;
+
+/**
+ * Get a test user with their database ID (queries database by email)
+ */
+export async function getTestUser(userKey: keyof typeof TestUsers): Promise<TestUser & { id: string }> {
+  const userData = TestUsers[userKey];
+
+  try {
+    const { db } = await import('../../../src/lib/server/db/index.js');
+    const { users } = await import('../../../src/lib/server/db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    const [user] = await db.select().from(users).where(eq(users.email, userData.email));
+
+    if (!user) {
+      throw new Error(`Test user not found in database for ${userKey} (${userData.email}). Make sure global setup has run.`);
+    }
+
+    return {
+      ...userData,
+      id: user.id
+    };
+  } catch (error) {
+    throw new Error(`Failed to get test user ${userKey}: ${error.message}`);
+  }
+}
+
+/**
+ * Get all test users with their database IDs
+ */
+export async function getAllTestUsers(): Promise<Record<string, TestUser & { id: string }>> {
+  const result: Record<string, TestUser & { id: string }> = {};
+
+  for (const key of Object.keys(TestUsers) as (keyof typeof TestUsers)[]) {
+    result[key] = await getTestUser(key);
+  }
+
+  return result;
+}
+
+/**
+ * Store the created test user IDs (called from global setup) - deprecated, kept for compatibility
+ */
+export function setTestUserIds(userIds: Record<string, string>) {
+  // No-op - we now query the database instead
+}

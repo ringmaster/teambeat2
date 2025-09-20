@@ -1,21 +1,21 @@
-import { test, expect } from '@playwright/test';
-import { AuthHelper, TestUsers, createAuthenticatedContext } from './fixtures/auth-helpers';
+import { test, expect, type BrowserContext } from '@playwright/test';
+import { AuthHelper, TestUsers, createAuthenticatedContext, getTestUser } from './fixtures/auth-helpers';
 
 test.describe('Board Functionality', () => {
-  let facilitatorContext: any;
-  let participantContext: any;
+  let facilitatorContext: BrowserContext;
+  let participantContext: BrowserContext;
 
   test.beforeAll(async ({ browser }) => {
     // Setup authenticated contexts for multi-user tests
     facilitatorContext = await createAuthenticatedContext(
       browser,
-      TestUsers.facilitator,
-      'http://localhost:4173'
+      await getTestUser('facilitator'),
+      'http://localhost:5174'
     );
     participantContext = await createAuthenticatedContext(
       browser,
-      TestUsers.participant1,
-      'http://localhost:4173'
+      await getTestUser('participant1'),
+      'http://localhost:5174'
     );
   });
 
@@ -24,36 +24,42 @@ test.describe('Board Functionality', () => {
     await participantContext?.close();
   });
 
-  test('should create a new series and board', async ({ page }) => {
+  test('should create a new series and board via UI', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     await page.goto('/');
 
     // Create new series
-    await page.fill('[data-testid="series-name-input"]', 'Test Retro Series');
-    await page.click('[data-testid="create-series-button"]');
+    await page.fill('#newSeriesInput', 'Test Retro Series');
+    await page.click('#newSeriesInput + button');
 
     // Should show success message and series card
     await expect(page.locator('text=Test Retro Series')).toBeVisible();
 
     // Create board within series
-    await page.fill('[data-testid="board-name-input"]', 'Sprint 1 Retrospective');
-    await page.click('[data-testid="create-board-button"]');
+    await page.getByRole('textbox', { name: 'Board name...' }).fill('Sprint 1 Retrospective');
+    await page.getByRole('textbox', { name: 'Board name...' }).press('Enter');
+
 
     // Should navigate to new board
     await page.waitForURL(/\/board\/.+/);
     await expect(page.locator('h1:has-text("Sprint 1 Retrospective")')).toBeVisible();
 
-    // Should show default columns
-    await expect(page.locator('text=What Went Well')).toBeVisible();
-    await expect(page.locator('text=What Can We Improve')).toBeVisible();
-    await expect(page.locator('text=Action Items')).toBeVisible();
+    // Define board
+    await page.getByRole('button', { name: 'Quick Setup with Templates' }).click();
+    await page.getByRole('button', { name: 'KAFE (Kvetches, Appreciations' }).click();
+    await page.waitForSelector('.column-header')
+    await expect(page.locator('h1:has-text("Sprint 1 Retrospective")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Kvetches")')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Column: Kvetches' }).getByPlaceholder('Add a card...')).toBeVisible();
   });
 
   test('should display board with correct initial state', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     // Navigate to a test board (assuming it exists from previous test)
     await page.goto('/board/test-board-slug');
@@ -73,7 +79,8 @@ test.describe('Board Functionality', () => {
 
   test('should allow adding cards in brainstorm scene', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.participant1.email, TestUsers.participant1.password);
+    const participant = await getTestUser('participant1');
+    await auth.loginViaAPI(participant.email, participant.password);
 
     await page.goto('/board/test-board-slug');
 
@@ -119,7 +126,8 @@ test.describe('Board Functionality', () => {
 
   test('should enforce scene permissions correctly', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     await page.goto('/board/test-board-slug');
 
@@ -140,7 +148,8 @@ test.describe('Board Functionality', () => {
 
   test('should handle voting in review scene', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.participant1.email, TestUsers.participant1.password);
+    const participant = await getTestUser('participant1');
+    await auth.loginViaAPI(participant.email, participant.password);
 
     await page.goto('/board/test-board-slug');
 
@@ -189,7 +198,8 @@ test.describe('Board Functionality', () => {
 
   test('should prevent voting beyond allocation limit', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.participant1.email, TestUsers.participant1.password);
+    const participant = await getTestUser('participant1');
+    await auth.loginViaAPI(participant.email, participant.password);
 
     await page.goto('/board/test-board-slug?scene=review');
 
@@ -233,7 +243,8 @@ test.describe('Board Functionality', () => {
 
   test('should handle connection interruptions gracefully', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.participant1.email, TestUsers.participant1.password);
+    const participant = await getTestUser('participant1');
+    await auth.loginViaAPI(participant.email, participant.password);
 
     await page.goto('/board/test-board-slug');
 
@@ -263,7 +274,8 @@ test.describe('Board Functionality', () => {
 
   test('should allow facilitator to control timer', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     await page.goto('/board/test-board-slug');
 
@@ -307,7 +319,8 @@ test.describe('Board Functionality', () => {
 
   test('should handle card grouping in review scene', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     await page.goto('/board/test-board-slug?scene=review');
 
@@ -336,7 +349,8 @@ test.describe('Board Functionality', () => {
 
   test('should export board data', async ({ page }) => {
     const auth = new AuthHelper(page);
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     await page.goto('/board/test-board-slug');
 

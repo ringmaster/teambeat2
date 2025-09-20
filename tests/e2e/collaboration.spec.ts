@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { TestUsers, setupMultiUserContexts } from './fixtures/auth-helpers';
+import { TestUsers, setupMultiUserContexts, getTestUser } from './fixtures/auth-helpers';
 
 test.describe('Multi-User Collaboration', () => {
   test('should show real-time card creation across multiple users', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1'), await getTestUser('participant2')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
@@ -53,8 +53,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should handle concurrent voting with real-time updates', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1'), await getTestUser('participant2')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
@@ -98,8 +98,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should synchronize presence indicators correctly', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1'), await getTestUser('participant2')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
@@ -144,8 +144,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should handle facilitator scene changes for all users', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1'), await getTestUser('participant2')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
@@ -191,8 +191,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should handle timer synchronization across users', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1'), await getTestUser('participant2')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
@@ -240,8 +240,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should handle card grouping with real-time updates', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
@@ -283,8 +283,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should handle rapid concurrent card creation', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.participant1, TestUsers.participant2],
-      'http://localhost:4173'
+      [await getTestUser('participant1'), await getTestUser('participant2')],
+      'http://localhost:5174'
     );
 
     const [participant1Page, participant2Page] = await Promise.all(
@@ -333,8 +333,8 @@ test.describe('Multi-User Collaboration', () => {
   test('should handle user disconnection and reconnection', async ({ browser }) => {
     const { contexts } = await setupMultiUserContexts(
       browser,
-      [TestUsers.facilitator, TestUsers.participant1],
-      'http://localhost:4173'
+      [await getTestUser('facilitator'), await getTestUser('participant1')],
+      'http://localhost:5174'
     );
 
     const [facilitatorPage, participant1Page] = await Promise.all(

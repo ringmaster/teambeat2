@@ -5,6 +5,6 @@ export default defineConfig({
 	schema: './src/lib/server/db/schema.ts',
 	dialect: 'sqlite',
 	dbCredentials: {
-		url: './teambeat.db',
+		url: process.env.DATABASE_URL || './teambeat.db',
 	},
 });

@@ -1,12 +1,28 @@
 import { FullConfig } from '@playwright/test';
-import { cleanupTestDb } from './fixtures/test-db';
+import { existsSync, unlinkSync } from 'fs';
 
 async function globalTeardown(_config: FullConfig) {
   console.log('Cleaning up global test environment...');
 
   try {
-    // Cleanup test database
-    await cleanupTestDb();
+    // Clean up the specific test database file
+    const testDbPath = './teambeat-test.db';
+    const filesToClean = [
+      testDbPath,
+      testDbPath + '-shm',
+      testDbPath + '-wal'
+    ];
+
+    for (const file of filesToClean) {
+      if (existsSync(file)) {
+        try {
+          unlinkSync(file);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      }
+    }
+
     console.log('Test database cleaned up');
   } catch (error) {
     console.warn('Error during test database cleanup:', error);

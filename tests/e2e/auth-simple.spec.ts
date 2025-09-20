@@ -16,7 +16,7 @@ test.describe('Simple Authentication Tests', () => {
     await expect(page.locator('button[type="submit"]')).toBeVisible();
 
     // Check navigation link to register
-    await expect(page.locator('a[href="/register"]')).toBeVisible();
+    await expect(page.locator('a[href="/register"]').first()).toBeVisible();
   });
 
   test('should load registration page correctly', async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe('Simple Authentication Tests', () => {
     await expect(page.locator('button[type="submit"]')).toBeVisible();
 
     // Check navigation link to login
-    await expect(page.locator('a[href="/login"]')).toBeVisible();
+    await expect(page.locator('a[href="/login"]').first()).toBeVisible();
   });
 
   test('should show error for invalid login credentials', async ({ page }) => {
@@ -93,7 +93,7 @@ test.describe('Simple Authentication Tests', () => {
     await expect(page.locator('h2:has-text("Welcome back")')).toBeVisible();
 
     // Navigate to register
-    await page.click('a[href="/register"]');
+    await page.locator('a[href="/register"]').first().click();
     await expect(page).toHaveURL(/.*register/);
     await expect(page.locator('h2:has-text("Get Started")')).toBeVisible();
 

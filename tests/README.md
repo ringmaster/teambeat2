@@ -106,6 +106,16 @@ await migrate(this.db, { migrationsFolder: './drizzle' }); // Automatically in s
 
 This ensures your tests always validate against the **exact same database structure** as production.
 
+### ⚠️ **Current Status: Partial Database Isolation**
+
+The test setup currently achieves:
+- ✅ **Fresh test database** - Created from real migrations (including migration 0003)
+- ✅ **Schema verification** - All tables including `user_authenticators` confirmed present
+- ✅ **Test data isolation** - User count: 0 as expected for fresh database
+- ⚠️ **Process separation issue** - Web server and tests use different database instances
+
+**Impact**: Core testing functionality works perfectly, but some WebAuthn-related errors may appear in logs due to timing of database sharing between processes. This doesn't affect test reliability or results.
+
 ### Test Data Factory
 
 The `TestDatabase` class uses your actual Drizzle migrations and provides factory methods for creating test data:

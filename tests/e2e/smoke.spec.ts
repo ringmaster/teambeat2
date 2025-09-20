@@ -33,7 +33,7 @@ test.describe('Smoke Tests', () => {
     await expect(page.locator('button[type="submit"]')).toBeVisible();
 
     // Should have link to registration
-    await expect(page.locator('a[href="/register"]')).toBeVisible();
+    await expect(page.locator('a[href="/register"]').first()).toBeVisible();
   });
 
   test('registration page loads correctly', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('Smoke Tests', () => {
     await expect(page.locator('button[type="submit"]')).toBeVisible();
 
     // Should have link to login
-    await expect(page.locator('a[href="/login"]')).toBeVisible();
+    await expect(page.locator('a[href="/login"]').first()).toBeVisible();
   });
 
   test('API health check responds correctly', async ({ request }) => {

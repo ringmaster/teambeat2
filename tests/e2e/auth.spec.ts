@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { AuthHelper, TestUsers } from './fixtures/auth-helpers';
+import { AuthHelper, TestUsers, getTestUser } from './fixtures/auth-helpers';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
@@ -21,18 +21,19 @@ test.describe('Authentication', () => {
     await page.goto('/login');
 
     // Fill and submit login form
-    await page.fill('input#email', TestUsers.facilitator.email);
-    await page.fill('input#password', TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await page.fill('input#email', facilitator.email);
+    await page.fill('input#password', facilitator.password);
     await page.click('button[type="submit"]');
 
-    // Should redirect to dashboard
-    await page.waitForURL(/\/(dashboard)?$/);
+    // Should redirect to root/dashboard
+    await page.waitForURL(/\/$/);
 
     // Verify user is logged in
     expect(await auth.isLoggedIn()).toBe(true);
 
-    // Should show dashboard content
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+    // Should show dashboard content (Your Series heading)
+    await expect(page.locator('text=Your Series')).toBeVisible();
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
@@ -88,7 +89,8 @@ test.describe('Authentication', () => {
     await page.goto('/register');
 
     // Try to register with existing email
-    await page.fill('input#email', TestUsers.facilitator.email);
+    const facilitator = await getTestUser('facilitator');
+    await page.fill('input#email', facilitator.email);
     await page.fill('input#name', 'Another User');
     await page.fill('input#password', 'password123abc');
     await page.fill('input#confirmPassword', 'password123abc');
@@ -102,17 +104,19 @@ test.describe('Authentication', () => {
     const auth = new AuthHelper(page);
 
     // Login first
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
     await page.goto('/');
 
     // Should show dashboard
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+    await expect(page.locator('text=Your Series')).toBeVisible();
 
-    // Find and click logout button
-    await page.click('[data-testid="logout-button"]');
+    // Hover over avatar to show dropdown, then click Sign Out
+    await page.hover('.avatar-dropdown-trigger');
+    await page.click('text=Sign Out');
 
     // Should redirect to welcome page
-    await page.waitForURL(/\/(login|welcome)?$/);
+    await page.waitForURL(/\/$/);
     await expect(page.locator('text=Welcome')).toBeVisible();
 
     // Verify user is logged out
@@ -132,29 +136,31 @@ test.describe('Authentication', () => {
     const auth = new AuthHelper(page);
 
     // Login first
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
 
     // Try to access login page
     await page.goto('/login');
 
     // Should redirect to dashboard
-    await page.waitForURL(/\/(dashboard)?$/);
+    await page.waitForURL(/\/$/);
   });
 
   test('should maintain session across page refreshes', async ({ page }) => {
     const auth = new AuthHelper(page);
 
     // Login and navigate to dashboard
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
     await page.goto('/');
 
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+    await expect(page.locator('text=Your Series')).toBeVisible();
 
     // Refresh the page
     await page.reload();
 
     // Should still be logged in
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+    await expect(page.locator('text=Your Series')).toBeVisible();
     expect(await auth.isLoggedIn()).toBe(true);
   });
 
@@ -162,7 +168,8 @@ test.describe('Authentication', () => {
     const auth = new AuthHelper(page);
 
     // Login first
-    await auth.loginViaAPI(TestUsers.facilitator.email, TestUsers.facilitator.password);
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
     await page.goto('/');
 
     // Manually expire session by calling logout API
@@ -173,7 +180,7 @@ test.describe('Authentication', () => {
     expect(response.status()).toBe(401);
 
     // Navigation to protected page should redirect to login
-    await page.goto('/dashboard');
+    await page.goto('/profile');
     await page.waitForURL('/login');
   });
 });

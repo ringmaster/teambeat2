@@ -1,43 +1,44 @@
 import { chromium, FullConfig } from '@playwright/test';
 import { TestDatabase } from './fixtures/test-db';
+import { TestUsers, setTestUserIds } from './fixtures/auth-helpers';
 
 async function globalSetup(_config: FullConfig) {
   console.log('Setting up global test environment...');
 
-  // Initialize test database
-  const testDb = new TestDatabase();
+  // Create a consistent test database path that the web server will use
+  const testDbPath = './teambeat-test.db';
+  process.env.DATABASE_URL = testDbPath;
+
+  // Initialize test database and run migrations
+  const testDb = new TestDatabase(testDbPath);
   await testDb.setup();
 
-  // Create a simple test user for basic testing
+  // Create all predefined test users
   try {
-    const testUser = await testDb.createTestUser('test@example.com', 'password123');
-    process.env.TEST_USER_ID = testUser.id;
-    process.env.TEST_USER_EMAIL = testUser.email;
-    console.log('✓ Created test user');
-  } catch (error) {
-    console.warn('Could not create test user:', error);
-  }
+    const createdUsers: Record<string, any> = {};
+    const userIds: Record<string, string> = {};
 
-  // Set up a browser context for pre-warming the application
-  const browser = await chromium.launch();
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
-  try {
-    // Pre-warm the application by making a request
-    const response = await page.goto('http://localhost:5173/');
-    if (!response?.ok()) {
-      console.warn('Application may not be fully ready yet');
+    for (const [key, userData] of Object.entries(TestUsers)) {
+      const testUser = await testDb.createTestUser(userData.email, userData.password, userData.name);
+      createdUsers[key] = testUser;
+      userIds[key] = testUser.id;
+      console.log(`✓ Created test user: ${userData.email}`);
     }
+
+    // Store user IDs for use in tests
+    setTestUserIds(userIds);
+
+    // Store primary test user info in environment for backward compatibility
+    process.env.TEST_USER_ID = createdUsers.facilitator.id;
+    process.env.TEST_USER_EMAIL = createdUsers.facilitator.email;
+
+    console.log('✓ Created all test users');
   } catch (error) {
-    console.warn('Could not pre-warm application:', error);
-  } finally {
-    await page.close();
-    await context.close();
-    await browser.close();
+    console.warn('Could not create test users:', error);
   }
 
   console.log('Global test setup completed');
+  console.log('Application and tests will use the same migrated test database');
 }
 
 export default globalSetup;
