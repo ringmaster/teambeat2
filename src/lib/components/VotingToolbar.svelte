@@ -67,7 +67,7 @@
         if (isResetting || !onResetVotes) return;
 
         toastStore.warning(
-            "This will delete all votes and set allocation to 0. Are you sure?",
+            "Delete all votes and set allocation to 0? You will need to manually increase vote allocations.",
             {
                 autoHide: false,
                 actions: [
