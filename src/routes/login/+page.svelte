@@ -4,6 +4,7 @@
     import Input from "$lib/components/ui/Input.svelte";
     import Button from "$lib/components/ui/Button.svelte";
     import PasskeyLogin from "$lib/components/PasskeyLogin.svelte";
+    import { resolve } from "$app/paths";
 
     let email: string = $state("");
     let password: string = $state("");
@@ -16,7 +17,7 @@
             const response = await fetch("/api/auth/me");
             if (response.ok) {
                 // User is already authenticated, redirect to dashboard
-                goto("/");
+                goto(resolve("/"));
             }
         } catch (err) {
             // User not authenticated, show login form
@@ -199,13 +200,15 @@
         <div class="login-footer">
             <p class="text-muted">
                 Don't have an account?
-                <a href="/register" class="login-signup-link">Sign up</a>
+                <a href={resolve("/register")} class="login-signup-link"
+                    >Sign up</a
+                >
             </p>
         </div>
     </div>
 </div>
 
-<style>
+<style lang="less">
     .login-page {
         min-height: 100vh;
         background: var(--color-bg-primary);
@@ -262,7 +265,7 @@
         color: var(--color-text-secondary);
     }
 
-    .login-submit-button {
+    :global(.login-submit-button) {
         width: 100%;
     }
 

@@ -5,6 +5,7 @@
     import Avatar from "$lib/components/ui/Avatar.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import ToastContainer from "$lib/components/ui/ToastContainer.svelte";
+    import { resolve } from "$app/paths";
 
     let user: any = $state(null);
     let loading = $state(true);
@@ -83,7 +84,7 @@
         <div class="page-container">
             <div class="header-layout">
                 <div class="button-group">
-                    <a href="/" class="nav-brand">
+                    <a href={resolve("/")} class="nav-brand">
                         <svg
                             class="teambeat-logo"
                             aria-hidden="true"
@@ -118,6 +119,8 @@
                     {:else if user}
                         <div
                             class="avatar-dropdown-container"
+                            role="button"
+                            tabindex="0"
                             onmouseenter={() => (showUserDropdown = true)}
                             onmouseleave={() => (showUserDropdown = false)}
                         >
@@ -142,11 +145,19 @@
                                         </div>
                                     </div>
                                     <div class="dropdown-divider"></div>
-                                    <a href="/" class="dropdown-item">
+                                    <a
+                                        href={resolve("/")}
+                                        class="dropdown-item"
+                                        data-sveltekit-preload-data="hover"
+                                    >
                                         <Icon name="home" size="sm" />
                                         <span>Dashboard</span>
                                     </a>
-                                    <a href="/profile" class="dropdown-item">
+                                    <a
+                                        href={resolve("/profile")}
+                                        class="dropdown-item"
+                                        data-sveltekit-preload-data="hover"
+                                    >
                                         <Icon name="user" size="sm" />
                                         <span>Profile</span>
                                     </a>
@@ -167,8 +178,12 @@
                             {/if}
                         </div>
                     {:else}
-                        <a href="/login" class="btn-secondary">Sign In</a>
-                        <a href="/register" class="btn-primary">Register</a>
+                        <a href={resolve("/login")} class="btn-secondary"
+                            >Sign In</a
+                        >
+                        <a href={resolve("/register")} class="btn-primary"
+                            >Register</a
+                        >
                     {/if}
                 </div>
 
@@ -220,13 +235,13 @@
                             >
                         </div>
                         <a
-                            href="/"
+                            href={resolve("/")}
                             class="text-interactive text-muted text-medium"
                             onclick={() => (mobileMenuOpen = false)}
                             >Dashboard</a
                         >
                         <a
-                            href="/profile"
+                            href={resolve("/profile")}
                             class="text-interactive text-muted text-medium"
                             onclick={() => (mobileMenuOpen = false)}>Profile</a
                         >
@@ -244,12 +259,12 @@
                         </button>
                     {:else}
                         <a
-                            href="/login"
+                            href={resolve("/login")}
                             class="btn-secondary"
                             style="width: 100%;">Sign In</a
                         >
                         <a
-                            href="/register"
+                            href={resolve("/register")}
                             class="btn-primary"
                             style="width: 100%;">Register</a
                         >
@@ -287,9 +302,15 @@
                     >
                 </div>
                 <div class="footer-right">
-                    <a href="/privacy" class="footer-link">Privacy</a>
-                    <a href="/terms" class="footer-link">Terms</a>
-                    <a href="/support" class="footer-link">Support</a>
+                    <a href={resolve("/pages/privacy")} class="footer-link"
+                        >Privacy</a
+                    >
+                    <a href={resolve("/pages/terms")} class="footer-link"
+                        >Terms</a
+                    >
+                    <a href={resolve("/pages/support")} class="footer-link"
+                        >Support</a
+                    >
                 </div>
             </div>
         </div>

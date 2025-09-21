@@ -1,0 +1,84 @@
+/* ==================================
+   LESS Mixins - Minimal Set for Components
+   ================================== */
+
+// Flexbox Layout Mixins
+.flex-center() {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between() {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-start() {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.flex-column() {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-column-center() {
+    .flex-column();
+    align-items: center;
+}
+
+.flex-row-gap(@gap: var(--spacing-2)) {
+    display: flex;
+    gap: @gap;
+}
+
+.flex-column-gap(@gap: var(--spacing-3)) {
+    .flex-column();
+    gap: @gap;
+}
+
+// Typography Mixins
+.text-style(@size, @weight: 400, @line-height: 1.5) {
+    font-size: @size;
+    font-weight: @weight;
+    line-height: @line-height;
+}
+
+.heading(@level: 1) when (@level = 1) {
+    .text-style(1.875rem, 700, 2.25rem);
+}
+
+.heading(@level: 2) when (@level = 2) {
+    .text-style(1.5rem, 600, 2rem);
+}
+
+.heading(@level: 3) when (@level = 3) {
+    .text-style(1.25rem, 600, 1.75rem);
+}
+
+// Interactive Elements Mixins
+.button-base() {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.button-style(@bg, @color: white, @hover-bg: darken(@bg, 10%)) {
+    .button-base();
+    background-color: @bg;
+    color: @color;
+
+    &:hover {
+        background-color: @hover-bg;
+        box-shadow: var(--shadow-sm);
+    }
+}

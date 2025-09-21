@@ -310,7 +310,7 @@
 </div>
 
 <style lang="less">
-    @import "../../../app.less";
+    @import "../../_mixins.less";
     .profile-container {
         height: 100%;
         overflow-y: scroll;
