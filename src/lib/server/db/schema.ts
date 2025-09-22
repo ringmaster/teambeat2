@@ -58,6 +58,7 @@ export const scenes = sqliteTable('scenes', {
   description: text('description'),
   mode: text('mode').notNull().$type<'columns' | 'present' | 'review'>(),
   seq: integer('seq').notNull(),
+  selectedCardId: text('selected_card_id').references(() => cards.id, { onDelete: 'set null' }),
   // Permission fields
   allowAddCards: integer('allow_add_cards', { mode: 'boolean' }).default(true),
   allowEditCards: integer('allow_edit_cards', { mode: 'boolean' }).default(true),
@@ -84,6 +85,7 @@ export const cards = sqliteTable('cards', {
   columnId: text('column_id').notNull().references(() => columns.id, { onDelete: 'cascade' }),
   userId: text('user_id').references(() => users.id),
   content: text('content').notNull(),
+  notes: text('notes'),
   groupId: text('group_id'),
   isGroupLead: integer('is_group_lead', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),

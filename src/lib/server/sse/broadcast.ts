@@ -161,6 +161,30 @@ export function broadcastPresenceUpdate(boardId: string, userId: string, activit
   sseManager.broadcastToBoard(boardId, message);
 }
 
+export function broadcastPresentationCardChanged(boardId: string, cardId: string | null) {
+  const message: SSEMessage = {
+    type: 'presentation_card_changed',
+    board_id: boardId,
+    card_id: cardId,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastCommentAgreementToggled(boardId: string, commentId: string, isAgreement: boolean, cardId: string) {
+  const message: SSEMessage = {
+    type: 'comment_agreement_toggled',
+    board_id: boardId,
+    comment_id: commentId,
+    is_agreement: isAgreement,
+    card_id: cardId,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}
+
 export async function broadcastVotingStatsUpdate(boardId: string, votingStats?: any) {
   try {
     console.log('Broadcasting voting stats update with full data:', { boardId });

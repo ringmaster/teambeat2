@@ -7,6 +7,7 @@
     import BoardSetup from "$lib/components/BoardSetup.svelte";
     import BoardColumns from "$lib/components/BoardColumns.svelte";
     import BoardConfigDialog from "$lib/components/BoardConfigDialog.svelte";
+    import PresentMode from "$lib/components/PresentMode.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import { toastStore } from "$lib/stores/toast";
@@ -489,6 +490,27 @@
                         refreshPresence("voting_enabled");
                         loadUserVotingData();
                     }
+                    // If switching to present mode, load present data
+                    if (data.scene.mode === "present") {
+                        loadPresentModeData();
+                    }
+                }
+                break;
+            case "presentation_card_changed":
+                if (currentScene) {
+                    // Update the selected card ID
+                    currentScene.selectedCardId = data.card_id;
+                    // If in present mode, reload the present data to get the full card details
+                    if (currentScene.mode === "present") {
+                        loadPresentModeData();
+                    }
+                }
+                break;
+            case "comment_agreement_toggled":
+                // Will be handled when we load comments
+                // For now, just trigger a reload of present data if in present mode
+                if (currentScene?.mode === "present") {
+                    loadPresentModeData();
                 }
                 break;
             case "board_updated":
@@ -820,6 +842,37 @@
 
     async function commentCard(cardId: string) {
         console.log("Comment on card:", cardId);
+    }
+
+    async function loadPresentModeData() {
+        if (!boardId || !currentScene || currentScene.mode !== "present")
+            return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/present-data`);
+            if (response.ok) {
+                const data = await response.json();
+
+                // Update cards with filtered and sorted cards
+                if (data.visible_cards) {
+                    cards = data.visible_cards;
+                }
+
+                // Update selected card
+                if (data.selected_card) {
+                    currentScene.selectedCardId = data.selected_card.id;
+                }
+
+                // TODO: Load comments and agreements
+            } else {
+                console.error(
+                    "Failed to load present mode data:",
+                    response.status,
+                );
+            }
+        } catch (error) {
+            console.error("Error loading present mode data:", error);
+        }
     }
 
     async function loadUserVotingData() {
@@ -1910,6 +1963,20 @@
             onSetupTemplate={setupTemplate}
             onConfigureClick={() => (showBoardConfig = true)}
             onCloneBoard={cloneBoard}
+        />
+    {:else if currentScene?.mode === "present"}
+        <PresentMode
+            {board}
+            scene={currentScene}
+            currentUser={user}
+            {cards}
+            selectedCard={cards.find(
+                (c) => c.id === currentScene.selectedCardId,
+            ) || null}
+            comments={[]}
+            agreements={[]}
+            isAdmin={userRole === "admin"}
+            isFacilitator={userRole === "facilitator"}
         />
     {:else}
         <BoardColumns
