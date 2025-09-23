@@ -768,8 +768,28 @@
             });
 
             if (response.ok) {
-                // Don't update state immediately - wait for SSE broadcast
-                // This ensures the initiating user gets the same data as other clients
+                const data = await response.json();
+
+                // Update scene immediately with API response data (now matches SSE)
+                board.currentSceneId = sceneId;
+                if (data.scene) {
+                    currentScene = data.scene;
+                }
+
+                // Handle scene-specific data from API response
+                if (
+                    data.present_mode_data &&
+                    currentScene?.mode === "present"
+                ) {
+                    cards = data.present_mode_data.visible_cards;
+                    if (data.present_mode_data.selected_card) {
+                        currentScene.selectedCardId =
+                            data.present_mode_data.selected_card.id;
+                    }
+                } else if (data.all_cards) {
+                    cards = data.all_cards;
+                }
+
                 showSceneDropdown = false;
             } else {
                 const errorData = await response.json();

@@ -119,6 +119,10 @@
   - Both now include user-specific present mode data in SSE - eliminates `loadPresentModeData()` API calls
   - Semantic naming: `update_presentation` handles any changes to present mode display (mirrors `board_updated` for columns mode)
 - **Scene changes to present mode**: Now send user-specific present mode data to each connected user
+- **API-SSE Data Consistency**: Fixed scene change inconsistency where initiating user received different data than SSE recipients
+  - **Problem**: API response contained only `{success: true, scene}` while SSE broadcast included additional data (`present_mode_data` or `all_cards`)
+  - **Solution**: Made scene change API return identical data to SSE broadcast - same data builders, same structure
+  - **Result**: Initiating user and SSE recipients now get identical data, eliminating missing cards issue
 - **Board state changes** - Include all affected data (current scene, permissions, etc.)
 - **User presence updates** - Include user details (name, role) not just user ID
 - **Principle**: If the UI needs to update based on this event, include all data needed for that update
