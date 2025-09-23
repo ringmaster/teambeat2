@@ -768,12 +768,8 @@
             });
 
             if (response.ok) {
-                const data = await response.json();
-                board.currentSceneId = sceneId;
-                // Update the current scene object too
-                if (data.scene) {
-                    currentScene = data.scene;
-                }
+                // Don't update state immediately - wait for SSE broadcast
+                // This ensures the initiating user gets the same data as other clients
                 showSceneDropdown = false;
             } else {
                 const errorData = await response.json();
