@@ -162,6 +162,21 @@
             board = boardData.board;
             userRole = boardData.userRole;
 
+            // Set current scene if available
+            if (board.currentSceneId) {
+                const sceneResponse = await fetch(
+                    `/api/boards/${boardId}/scenes`,
+                );
+                if (sceneResponse.ok) {
+                    const scenesData = await sceneResponse.json();
+                    const scenes = scenesData.scenes || [];
+                    currentScene =
+                        scenes.find(
+                            (s: any) => s.id === board.currentSceneId,
+                        ) || null;
+                }
+            }
+
             // Ensure board.columns contains all columns for proper client-side filtering
             if (board.allColumns) {
                 board.columns = board.allColumns;
@@ -173,9 +188,16 @@
             configForm.votingAllocation = board.votingAllocation;
             configForm.status = board.status || "draft";
 
-            if (cardsResponse.ok) {
-                const cardsData = await cardsResponse.json();
-                cards = cardsData.cards || [];
+            // Load cards based on the current scene mode
+            if (currentScene?.mode === "present") {
+                // For Present mode, only load filtered/sorted cards
+                await loadPresentModeData();
+            } else {
+                // For Column mode and other modes, load all cards
+                if (cardsResponse.ok) {
+                    const cardsData = await cardsResponse.json();
+                    cards = cardsData.cards || [];
+                }
             }
 
             // Set up SSE connection
@@ -454,14 +476,15 @@
             case "scene_changed":
                 if (board && data.scene) {
                     // Store previous scene voting and display state
-                    const previousScene = board.scenes?.find(
-                        (s) => s.id === board.currentSceneId,
-                    );
+                    const previousScene = currentScene;
                     const wasVotingAllowed =
                         previousScene?.allowVoting || false;
                     const wereVotesVisible = previousScene?.showVotes || false;
 
+                    // Update current scene BEFORE checking mode
+                    currentScene = data.scene;
                     board.currentSceneId = data.scene.id;
+
                     // Update the scene data in the board's scenes array if it exists
                     if (board.scenes) {
                         const sceneIndex = board.scenes.findIndex(
@@ -490,9 +513,28 @@
                         refreshPresence("voting_enabled");
                         loadUserVotingData();
                     }
-                    // If switching to present mode, load present data
+                    // Handle mode switching
+                    console.log("Scene mode change:", {
+                        previousMode: previousScene?.mode,
+                        newMode: data.scene.mode,
+                        currentSceneId: currentScene?.id,
+                    });
+
                     if (data.scene.mode === "present") {
+                        // Switching to present mode - load filtered/sorted cards
+                        console.log("Loading Present mode data...");
                         loadPresentModeData();
+                    } else if (
+                        previousScene?.mode === "present" &&
+                        data.scene.mode !== "present"
+                    ) {
+                        // Switching from present mode to another mode - reload all cards
+                        console.log(
+                            "Switching from Present to",
+                            data.scene.mode,
+                            "- reloading all cards",
+                        );
+                        reloadAllCards();
                     }
                 }
                 break;
@@ -872,6 +914,23 @@
             }
         } catch (error) {
             console.error("Error loading present mode data:", error);
+        }
+    }
+
+    async function reloadAllCards() {
+        if (!boardId) return;
+        console.log("Reloading all cards for board:", boardId);
+        try {
+            const response = await fetch(`/api/boards/${boardId}/cards`);
+            if (response.ok) {
+                const data = await response.json();
+                cards = data.cards || [];
+                console.log("Cards reloaded:", cards.length, "cards");
+            } else {
+                console.error("Failed to reload cards:", response.status);
+            }
+        } catch (error) {
+            console.error("Error reloading cards:", error);
         }
     }
 

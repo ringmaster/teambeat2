@@ -332,14 +332,30 @@
                         <Card
                             {card}
                             {board}
-                            {scene}
-                            {currentUser}
+                            currentScene={scene}
+                            currentUserId={currentUser.id}
+                            userRole={isAdmin
+                                ? "admin"
+                                : isFacilitator
+                                  ? "facilitator"
+                                  : "member"}
                             readOnly={true}
                             isGroupLead={!!card.isGroupLead}
                             isSubordinate={!!(
                                 card.groupId && !card.isGroupLead
                             )}
                             groupingMode={false}
+                            isSelected={false}
+                            userVotesOnCard={card.userVoted ? 1 : 0}
+                            allUsersVotesOnCard={card.voteCount}
+                            hasVotes={true}
+                            onDragStart={() => {}}
+                            onToggleSelection={() => {}}
+                            onVote={() => {}}
+                            onComment={() => {}}
+                            onDelete={() => {}}
+                            onEdit={() => {}}
+                            onCardDrop={() => {}}
                         />
                     </div>
                 </div>
