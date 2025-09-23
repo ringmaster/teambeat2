@@ -123,26 +123,23 @@ export async function broadcastSceneChanged(boardId: string, sceneData: any) {
     // If switching to present mode, send user-specific data
     if (sceneData.mode === 'present') {
       const connectedUsers = sseManager.getConnectedUsers(boardId);
+      const { buildPresentModeData } = await import('../utils/present-mode-data.js');
 
-      for (const { userId } of connectedUsers) {
+      // Send messages to each user as soon as their data is ready
+      connectedUsers.forEach(async ({ userId }) => {
         try {
-          // Build user-specific present mode data
-          const { buildPresentModeData } = await import('../utils/present-mode-data.js');
           const presentModeData = await buildPresentModeData(boardId, userId);
-
-          const message: any = {
+          const message = {
             type: 'scene_changed',
             board_id: boardId,
             scene: sceneData,
             timestamp: Date.now(),
             present_mode_data: presentModeData
           };
-
           sseManager.broadcastToUser(boardId, userId, message);
         } catch (error) {
           console.error(`Failed to build present mode data for user ${userId}:`, error);
-          // Fallback to simple message for this user
-          const fallbackMessage: SSEMessage = {
+          const fallbackMessage = {
             type: 'scene_changed',
             board_id: boardId,
             scene: sceneData,
@@ -150,7 +147,7 @@ export async function broadcastSceneChanged(boardId: string, sceneData: any) {
           };
           sseManager.broadcastToUser(boardId, userId, fallbackMessage);
         }
-      }
+      });
     } else {
       // If switching from present mode to another mode, include all cards
       const message: any = {
@@ -274,26 +271,23 @@ export async function broadcastUpdatePresentation(
   try {
     // Get all connected users for this board to send user-specific data
     const connectedUsers = sseManager.getConnectedUsers(boardId);
+    const { buildPresentModeData } = await import('../utils/present-mode-data.js');
 
-    for (const { userId } of connectedUsers) {
+    // Send messages to each user as soon as their data is ready
+    connectedUsers.forEach(async ({ userId }) => {
       try {
-        // Build user-specific present mode data
-        const { buildPresentModeData } = await import('../utils/present-mode-data.js');
         const presentModeData = await buildPresentModeData(boardId, userId);
-
-        const message: any = {
+        const message = {
           type: 'update_presentation',
           board_id: boardId,
           timestamp: Date.now(),
           present_mode_data: presentModeData,
           ...updateData
         };
-
         sseManager.broadcastToUser(boardId, userId, message);
       } catch (error) {
         console.error(`Failed to build present mode data for user ${userId}:`, error);
-        // Fallback to simple message for this user
-        const fallbackMessage: SSEMessage = {
+        const fallbackMessage = {
           type: 'update_presentation',
           board_id: boardId,
           timestamp: Date.now(),
@@ -301,7 +295,7 @@ export async function broadcastUpdatePresentation(
         };
         sseManager.broadcastToUser(boardId, userId, fallbackMessage);
       }
-    }
+    });
   } catch (error) {
     console.error('Failed to broadcast presentation update with user-specific data:', error);
     // Fallback to simple broadcast

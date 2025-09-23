@@ -123,6 +123,10 @@
   - **Problem**: API response contained only `{success: true, scene}` while SSE broadcast included additional data (`present_mode_data` or `all_cards`)
   - **Solution**: Made scene change API return identical data to SSE broadcast - same data builders, same structure
   - **Result**: Initiating user and SSE recipients now get identical data, eliminating missing cards issue
+- **Concurrent User-Specific Broadcasting**: Optimized performance for user-specific SSE messages
+  - **Problem**: Sequential `for` loops building user data caused delays with many connected users
+  - **Solution**: Use concurrent `forEach` with async callbacks - send each message immediately when data is ready
+  - **Impact**: Users receive messages as soon as their data is built, not waiting for slowest user query
 - **Board state changes** - Include all affected data (current scene, permissions, etc.)
 - **User presence updates** - Include user details (name, role) not just user ID
 - **Principle**: If the UI needs to update based on this event, include all data needed for that update
