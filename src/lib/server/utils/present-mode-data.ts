@@ -117,10 +117,34 @@ export async function buildPresentModeData(
 
     const userVotedCardIds = new Set(userVotes.map(v => v.cardId));
 
-    visibleCards = cardsWithVotes.map((card) => ({
+    const cardsWithUserVotes = cardsWithVotes.map((card) => ({
       ...card,
       userVoted: userVotedCardIds.has(card.id)
     }));
+
+    // Group cards so child cards appear immediately after their lead cards
+    visibleCards = [];
+    const processedCardIds = new Set<string>();
+
+    for (const card of cardsWithUserVotes) {
+      if (processedCardIds.has(card.id)) continue;
+
+      // Add the card (whether it's a lead card or ungrouped card)
+      visibleCards.push(card);
+      processedCardIds.add(card.id);
+
+      // If this is a lead card, add its child cards immediately after it
+      if (card.isGroupLead && card.groupId) {
+        const childCards = cardsWithUserVotes.filter(
+          c => c.groupId === card.groupId && !c.isGroupLead && !processedCardIds.has(c.id)
+        );
+
+        for (const childCard of childCards) {
+          visibleCards.push(childCard);
+          processedCardIds.add(childCard.id);
+        }
+      }
+    }
   }
 
   // Get the selected card if any
