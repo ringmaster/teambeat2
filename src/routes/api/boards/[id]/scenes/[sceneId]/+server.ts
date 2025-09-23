@@ -54,7 +54,7 @@ export const PATCH: RequestHandler = async (event) => {
 
     // If this is the current scene for the board, broadcast the change
     if (board.currentSceneId === sceneId) {
-      broadcastSceneChanged(boardId, updatedScene);
+      await broadcastSceneChanged(boardId, updatedScene);
     }
 
     return json({
@@ -135,7 +135,7 @@ export const DELETE: RequestHandler = async (event) => {
 
     // If we switched to a new scene, broadcast the change
     if (newCurrentScene) {
-      broadcastSceneChanged(boardId, newCurrentScene);
+      await broadcastSceneChanged(boardId, newCurrentScene);
     }
 
     return json({

@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db/index.js';
 import { scenes, boards, seriesMembers, cards } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import { broadcastPresentationCardChanged } from '$lib/server/sse/broadcast.js';
+import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
 
 export const PUT: RequestHandler = async (event) => {
   try {
@@ -60,7 +60,7 @@ export const PUT: RequestHandler = async (event) => {
       .where(eq(scenes.id, sceneId));
 
     // Broadcast the change to all users
-    await broadcastPresentationCardChanged(board.id, card_id);
+    await broadcastUpdatePresentation(board.id, { card_id });
 
     return json({
       success: true,

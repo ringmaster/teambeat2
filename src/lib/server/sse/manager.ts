@@ -175,6 +175,20 @@ class SSEManager {
     return this.clients.get(clientId);
   }
 
+  getConnectedUsers(boardId: string): { userId: string; clientId: string }[] {
+    const boardClients = this.boardClients.get(boardId);
+    if (!boardClients) return [];
+
+    const users: { userId: string; clientId: string }[] = [];
+    for (const clientId of boardClients) {
+      const client = this.clients.get(clientId);
+      if (client && client.userId) {
+        users.push({ userId: client.userId, clientId });
+      }
+    }
+    return users;
+  }
+
   sendHeartbeat(clientId: string) {
     const client = this.clients.get(clientId);
     if (client) {

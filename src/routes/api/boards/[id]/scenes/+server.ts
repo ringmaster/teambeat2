@@ -93,7 +93,7 @@ export const POST: RequestHandler = async (event) => {
         .where(eq(boards.id, boardId));
 
       // Broadcast the scene change
-      broadcastSceneChanged(boardId, newScene);
+      await broadcastSceneChanged(boardId, newScene);
     }
 
     return json({

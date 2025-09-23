@@ -1,6 +1,8 @@
 import { sseManager } from './manager.js';
 import type { SSEMessage } from './manager.js';
 import { buildVotingStatsUpdatedMessage } from '../utils/voting-data.js';
+import { buildAllCardsData } from '../utils/cards-data.js';
+import { buildPresenceData } from '../utils/presence-data.js';
 
 export function broadcastCardCreated(boardId: string, card: any) {
   const message: SSEMessage = {
@@ -116,74 +118,204 @@ export function broadcastColumnsUpdated(boardId: string, columns: any[]) {
   sseManager.broadcastToBoard(boardId, message);
 }
 
-export function broadcastSceneChanged(boardId: string, sceneData: any) {
-  const message: SSEMessage = {
-    type: 'scene_changed',
-    board_id: boardId,
-    scene: sceneData,
-    timestamp: Date.now()
-  };
+export async function broadcastSceneChanged(boardId: string, sceneData: any) {
+  try {
+    // If switching to present mode, send user-specific data
+    if (sceneData.mode === 'present') {
+      const connectedUsers = sseManager.getConnectedUsers(boardId);
 
-  sseManager.broadcastToBoard(boardId, message);
+      for (const { userId } of connectedUsers) {
+        try {
+          // Build user-specific present mode data
+          const { buildPresentModeData } = await import('../utils/present-mode-data.js');
+          const presentModeData = await buildPresentModeData(boardId, userId);
+
+          const message: any = {
+            type: 'scene_changed',
+            board_id: boardId,
+            scene: sceneData,
+            timestamp: Date.now(),
+            present_mode_data: presentModeData
+          };
+
+          sseManager.broadcastToUser(boardId, userId, message);
+        } catch (error) {
+          console.error(`Failed to build present mode data for user ${userId}:`, error);
+          // Fallback to simple message for this user
+          const fallbackMessage: SSEMessage = {
+            type: 'scene_changed',
+            board_id: boardId,
+            scene: sceneData,
+            timestamp: Date.now()
+          };
+          sseManager.broadcastToUser(boardId, userId, fallbackMessage);
+        }
+      }
+    } else {
+      // If switching from present mode to another mode, include all cards
+      const message: any = {
+        type: 'scene_changed',
+        board_id: boardId,
+        scene: sceneData,
+        timestamp: Date.now()
+      };
+
+      try {
+        const allCards = await buildAllCardsData(boardId);
+        message.all_cards = allCards;
+      } catch (error) {
+        console.error('Failed to build cards data for scene change:', error);
+        // Continue without cards data - client will fallback to API call
+      }
+
+      sseManager.broadcastToBoard(boardId, message);
+    }
+  } catch (error) {
+    console.error('Failed to broadcast scene changed:', error);
+    // Fallback to simple broadcast
+    const message: SSEMessage = {
+      type: 'scene_changed',
+      board_id: boardId,
+      scene: sceneData,
+      timestamp: Date.now()
+    };
+    sseManager.broadcastToBoard(boardId, message);
+  }
 }
 
-export function broadcastUserJoined(boardId: string, userId: string) {
-  const message: SSEMessage = {
-    type: 'user_joined',
-    board_id: boardId,
-    user_id: userId,
-    timestamp: Date.now()
-  };
+export async function broadcastUserJoined(boardId: string, userId: string) {
+  try {
+    const presenceData = await buildPresenceData(boardId);
 
-  sseManager.broadcastToBoard(boardId, message);
+    const message: any = {
+      type: 'user_joined',
+      board_id: boardId,
+      user_id: userId,
+      timestamp: Date.now(),
+      presence_data: presenceData
+    };
+
+    sseManager.broadcastToBoard(boardId, message);
+  } catch (error) {
+    console.error('Failed to build presence data for user joined:', error);
+    // Fallback to simple broadcast
+    const message: SSEMessage = {
+      type: 'user_joined',
+      board_id: boardId,
+      user_id: userId,
+      timestamp: Date.now()
+    };
+    sseManager.broadcastToBoard(boardId, message);
+  }
 }
 
-export function broadcastUserLeft(boardId: string, userId: string) {
-  const message: SSEMessage = {
-    type: 'user_left',
-    board_id: boardId,
-    user_id: userId,
-    timestamp: Date.now()
-  };
+export async function broadcastUserLeft(boardId: string, userId: string) {
+  try {
+    const presenceData = await buildPresenceData(boardId);
 
-  sseManager.broadcastToBoard(boardId, message);
+    const message: any = {
+      type: 'user_left',
+      board_id: boardId,
+      user_id: userId,
+      timestamp: Date.now(),
+      presence_data: presenceData
+    };
+
+    sseManager.broadcastToBoard(boardId, message);
+  } catch (error) {
+    console.error('Failed to build presence data for user left:', error);
+    // Fallback to simple broadcast
+    const message: SSEMessage = {
+      type: 'user_left',
+      board_id: boardId,
+      user_id: userId,
+      timestamp: Date.now()
+    };
+    sseManager.broadcastToBoard(boardId, message);
+  }
 }
 
-export function broadcastPresenceUpdate(boardId: string, userId: string, activity: any) {
-  const message: SSEMessage = {
-    type: 'presence_update',
-    board_id: boardId,
-    user_id: userId,
-    activity,
-    timestamp: Date.now()
-  };
+export async function broadcastPresenceUpdate(boardId: string, userId: string, activity: any) {
+  try {
+    const presenceData = await buildPresenceData(boardId);
 
-  sseManager.broadcastToBoard(boardId, message);
+    const message: any = {
+      type: 'presence_update',
+      board_id: boardId,
+      user_id: userId,
+      activity,
+      timestamp: Date.now(),
+      presence_data: presenceData
+    };
+
+    sseManager.broadcastToBoard(boardId, message);
+  } catch (error) {
+    console.error('Failed to build presence data for presence update:', error);
+    // Fallback to simple broadcast
+    const message: SSEMessage = {
+      type: 'presence_update',
+      board_id: boardId,
+      user_id: userId,
+      activity,
+      timestamp: Date.now()
+    };
+    sseManager.broadcastToBoard(boardId, message);
+  }
 }
 
-export function broadcastPresentationCardChanged(boardId: string, cardId: string | null) {
-  const message: SSEMessage = {
-    type: 'presentation_card_changed',
-    board_id: boardId,
-    card_id: cardId,
-    timestamp: Date.now()
-  };
+export async function broadcastUpdatePresentation(
+  boardId: string,
+  updateData: {
+    card_id?: string | null;
+    comment_id?: string;
+    is_agreement?: boolean;
+  }
+) {
+  try {
+    // Get all connected users for this board to send user-specific data
+    const connectedUsers = sseManager.getConnectedUsers(boardId);
 
-  sseManager.broadcastToBoard(boardId, message);
+    for (const { userId } of connectedUsers) {
+      try {
+        // Build user-specific present mode data
+        const { buildPresentModeData } = await import('../utils/present-mode-data.js');
+        const presentModeData = await buildPresentModeData(boardId, userId);
+
+        const message: any = {
+          type: 'update_presentation',
+          board_id: boardId,
+          timestamp: Date.now(),
+          present_mode_data: presentModeData,
+          ...updateData
+        };
+
+        sseManager.broadcastToUser(boardId, userId, message);
+      } catch (error) {
+        console.error(`Failed to build present mode data for user ${userId}:`, error);
+        // Fallback to simple message for this user
+        const fallbackMessage: SSEMessage = {
+          type: 'update_presentation',
+          board_id: boardId,
+          timestamp: Date.now(),
+          ...updateData
+        };
+        sseManager.broadcastToUser(boardId, userId, fallbackMessage);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to broadcast presentation update with user-specific data:', error);
+    // Fallback to simple broadcast
+    const message: SSEMessage = {
+      type: 'update_presentation',
+      board_id: boardId,
+      timestamp: Date.now(),
+      ...updateData
+    };
+    sseManager.broadcastToBoard(boardId, message);
+  }
 }
 
-export function broadcastCommentAgreementToggled(boardId: string, commentId: string, isAgreement: boolean, cardId: string) {
-  const message: SSEMessage = {
-    type: 'comment_agreement_toggled',
-    board_id: boardId,
-    comment_id: commentId,
-    is_agreement: isAgreement,
-    card_id: cardId,
-    timestamp: Date.now()
-  };
 
-  sseManager.broadcastToBoard(boardId, message);
-}
 
 export async function broadcastVotingStatsUpdate(boardId: string, votingStats?: any) {
   try {

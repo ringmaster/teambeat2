@@ -92,12 +92,33 @@
 - **Match API response structure exactly** - Client code should handle both identically
 - **Include all relationships and computed fields** - If API returns user roles, SSE must too
 - **Timestamp all SSE messages** - For ordering and debugging
+- **Semantic message consolidation** - Group related updates into single message types (e.g., `update_presentation` for all present mode changes)
 
 #### SSE Data Completeness Principles
 
 ##### Always Include Full Data (No Additional Requests Needed)
 - **Entity CRUD operations** - When a card/column/scene is created, updated, or deleted, include the complete entity
 - **Vote changes** - Include updated vote count, user's vote status, and remaining votes
+- **Scene changes** - When switching modes, include all necessary data (cards for non-present mode, scene permissions for present mode)
+- **Presence updates** - Include complete presence data (user count, voting stats) to avoid separate API calls
+
+##### Implemented SSE Data Completeness (2024-12)
+- **Scene changes**: Now include `all_cards` when switching from present mode to avoid `reloadAllCards()` API call
+- **User presence**: `user_joined`, `user_left`, and `presence_update` events now include `presence_data` with user count and voting stats
+- **Shared data builders**: Created utility functions in `src/lib/server/utils/` for consistent data between API and SSE:
+  - `buildAllCardsData()` - Used by both `/api/boards/[id]/cards` and scene change broadcasts
+  - `buildPresentModeData()` - Used by both `/api/boards/[id]/present-data` and user-specific SSE broadcasts
+  - `buildPresenceData()` - Used by both `/api/boards/[id]/presence` and presence broadcasts
+  - `buildVotingStats()` - Already existed, now used consistently across voting endpoints and broadcasts
+- **User-specific SSE broadcasts**: Enhanced SSE manager with `getConnectedUsers()` and per-user message sending
+- **Complete API call elimination**: All SSE events now include necessary data to update UI without additional requests
+
+##### Eliminated API Dependencies (2024-12 Update)
+- **Present mode data**: Now sent as user-specific SSE messages - no more API calls needed
+- **Presentation updates**: Consolidated `presentation_card_changed` and `comment_agreement_toggled` into single `update_presentation` message
+  - Both now include user-specific present mode data in SSE - eliminates `loadPresentModeData()` API calls
+  - Semantic naming: `update_presentation` handles any changes to present mode display (mirrors `board_updated` for columns mode)
+- **Scene changes to present mode**: Now send user-specific present mode data to each connected user
 - **Board state changes** - Include all affected data (current scene, permissions, etc.)
 - **User presence updates** - Include user details (name, role) not just user ID
 - **Principle**: If the UI needs to update based on this event, include all data needed for that update

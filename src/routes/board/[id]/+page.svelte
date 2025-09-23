@@ -521,38 +521,65 @@
                     });
 
                     if (data.scene.mode === "present") {
-                        // Switching to present mode - load filtered/sorted cards
+                        // Switching to present mode - check if data included in SSE
                         console.log("Loading Present mode data...");
-                        loadPresentModeData();
+                        if (data.present_mode_data) {
+                            console.log("Using present mode data from SSE");
+                            cards = data.present_mode_data.visible_cards;
+                            if (data.present_mode_data.selected_card) {
+                                currentScene.selectedCardId =
+                                    data.present_mode_data.selected_card.id;
+                            }
+                        } else {
+                            console.log(
+                                "No present mode data in SSE, loading from API",
+                            );
+                            loadPresentModeData();
+                        }
                     } else if (
                         previousScene?.mode === "present" &&
                         data.scene.mode !== "present"
                     ) {
-                        // Switching from present mode to another mode - reload all cards
+                        // Switching from present mode to another mode
                         console.log(
                             "Switching from Present to",
                             data.scene.mode,
-                            "- reloading all cards",
                         );
-                        reloadAllCards();
+                        if (data.all_cards) {
+                            console.log("Using cards data from SSE");
+                            cards = data.all_cards;
+                        } else {
+                            console.log(
+                                "No cards data in SSE, loading from API",
+                            );
+                            reloadAllCards();
+                        }
                     }
                 }
                 break;
-            case "presentation_card_changed":
-                if (currentScene) {
-                    // Update the selected card ID
-                    currentScene.selectedCardId = data.card_id;
-                    // If in present mode, reload the present data to get the full card details
-                    if (currentScene.mode === "present") {
+            case "update_presentation":
+                if (currentScene?.mode === "present") {
+                    // Update the selected card ID if provided
+                    if (data.card_id !== undefined) {
+                        currentScene.selectedCardId = data.card_id;
+                    }
+
+                    // Use present mode data from SSE if available
+                    if (data.present_mode_data) {
+                        console.log(
+                            "Using present mode data from SSE for presentation update",
+                        );
+                        cards = data.present_mode_data.visible_cards;
+                        if (data.present_mode_data.selected_card) {
+                            currentScene.selectedCardId =
+                                data.present_mode_data.selected_card.id;
+                        }
+                    } else {
+                        console.log(
+                            "No present mode data in SSE, loading from API",
+                        );
                         loadPresentModeData();
                     }
-                }
-                break;
-            case "comment_agreement_toggled":
-                // Will be handled when we load comments
-                // For now, just trigger a reload of present data if in present mode
-                if (currentScene?.mode === "present") {
-                    loadPresentModeData();
                 }
                 break;
             case "board_updated":
@@ -608,21 +635,45 @@
 
             case "presence_update":
                 console.log("Presence update:", data.user_id, data.activity);
-                // Refresh connected users count and voting stats
-                loadConnectedUsers();
-                loadVotingStats();
+                if (data.presence_data) {
+                    console.log("Using presence data from SSE");
+                    connectedUsers = data.presence_data.connected_users_count;
+                    processVotingData({
+                        voting_stats: data.presence_data.voting_stats,
+                    });
+                } else {
+                    console.log("No presence data in SSE, loading from API");
+                    loadConnectedUsers();
+                    loadVotingStats();
+                }
                 break;
             case "user_joined":
                 console.log("User joined:", data.user_id);
-                // Refresh connected users count and voting stats
-                loadConnectedUsers();
-                loadVotingStats();
+                if (data.presence_data) {
+                    console.log("Using presence data from SSE for user joined");
+                    connectedUsers = data.presence_data.connected_users_count;
+                    processVotingData({
+                        voting_stats: data.presence_data.voting_stats,
+                    });
+                } else {
+                    console.log("No presence data in SSE, loading from API");
+                    loadConnectedUsers();
+                    loadVotingStats();
+                }
                 break;
             case "user_left":
                 console.log("User left:", data.user_id);
-                // Refresh connected users count and voting stats
-                loadConnectedUsers();
-                loadVotingStats();
+                if (data.presence_data) {
+                    console.log("Using presence data from SSE for user left");
+                    connectedUsers = data.presence_data.connected_users_count;
+                    processVotingData({
+                        voting_stats: data.presence_data.voting_stats,
+                    });
+                } else {
+                    console.log("No presence data in SSE, loading from API");
+                    loadConnectedUsers();
+                    loadVotingStats();
+                }
                 break;
             case "vote_changed":
                 console.log("Vote changed:", data);

@@ -4,7 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db';
 import { comments, cards, boards } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { broadcastCommentAgreementToggled } from '$lib/server/sse/broadcast.js';
+import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
 
 export const PUT: RequestHandler = async (event) => {
   try {
@@ -36,12 +36,11 @@ export const PUT: RequestHandler = async (event) => {
       .returning();
 
     // Broadcast the change to all users
-    await broadcastCommentAgreementToggled(
-      commentData.board.id,
-      commentId,
-      is_agreement,
-      commentData.card.id
-    );
+    await broadcastUpdatePresentation(commentData.board.id, {
+      comment_id: commentId,
+      is_agreement: is_agreement,
+      card_id: commentData.card.id
+    });
 
     return json({
       success: true,
