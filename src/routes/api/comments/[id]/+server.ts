@@ -6,11 +6,10 @@ import { comments, cards, boards, columns, seriesMembers } from '$lib/server/db/
 import { eq, and } from 'drizzle-orm';
 import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
 
-export const PUT: RequestHandler = async (event) => {
+export const DELETE: RequestHandler = async (event) => {
   try {
     const user = requireUser(event);
     const { id: commentId } = event.params;
-    const { is_agreement } = await event.request.json();
 
     // Get comment with card and board info
     const [commentData] = await db
@@ -30,6 +29,9 @@ export const PUT: RequestHandler = async (event) => {
       return json({ success: false, error: 'Comment not found' }, { status: 404 });
     }
 
+    // Check permissions: user must be either the comment author, admin, or facilitator
+    const isCommentAuthor = commentData.comment.userId === user.userId;
+
     // Check if user is admin or facilitator in the series
     const [membership] = await db
       .select()
@@ -41,37 +43,36 @@ export const PUT: RequestHandler = async (event) => {
         )
       );
 
-    if (!membership || (membership.role !== 'admin' && membership.role !== 'facilitator')) {
+    const isAdminOrFacilitator = membership && (membership.role === 'admin' || membership.role === 'facilitator');
+
+    if (!isCommentAuthor && !isAdminOrFacilitator) {
       return json(
-        { success: false, error: 'Only admins and facilitators can promote/demote comments' },
+        { success: false, error: 'You do not have permission to delete this comment' },
         { status: 403 }
       );
     }
 
-    // Update the comment's is_agreement field
-    const [updated] = await db
-      .update(comments)
-      .set({ isAgreement: is_agreement })
-      .where(eq(comments.id, commentId))
-      .returning();
+    // Delete the comment
+    await db
+      .delete(comments)
+      .where(eq(comments.id, commentId));
 
-    // Broadcast the change to all users
+    // Broadcast the deletion to all users
     await broadcastUpdatePresentation(commentData.board.id, {
-      comment_id: commentId,
-      is_agreement: is_agreement,
+      deleted_comment_id: commentId,
       card_id: commentData.card.id
     });
 
     return json({
       success: true,
-      comment: updated
+      message: 'Comment deleted successfully'
     });
   } catch (error) {
-    console.error('Error toggling comment agreement:', error);
+    console.error('Error deleting comment:', error);
     return json(
       {
         success: false,
-        error: 'Failed to toggle comment agreement',
+        error: 'Failed to delete comment',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

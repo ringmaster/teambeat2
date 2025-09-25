@@ -1,7 +1,8 @@
 import { db } from '../db/index.js';
-import { cards, columns, votes, scenesColumns, scenes, users } from '../db/schema.js';
+import { cards, columns, votes, scenesColumns, scenes, users, comments } from '../db/schema.js';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { getBoardWithDetails } from '../repositories/board.js';
+import { getUserDisplayName } from '../../utils/animalNames.js';
 
 export interface PresentModeCard {
   id: string;
@@ -18,9 +19,21 @@ export interface PresentModeCard {
   userVoted: boolean;
 }
 
+export interface PresentModeComment {
+  id: string;
+  cardId: string;
+  userId: string | null;
+  userName: string | null;
+  content: string;
+  isAgreement: boolean | null;
+  createdAt: string | null;
+}
+
 export interface PresentModeData {
   visible_cards: PresentModeCard[];
   selected_card: PresentModeCard | null;
+  comments: PresentModeComment[];
+  agreements: PresentModeComment[];
   scene_permissions: {
     allow_comments: boolean | null;
     allow_voting: boolean | null;
@@ -161,6 +174,52 @@ export async function buildPresentModeData(
     }
   }
 
+  // Get comments for selected card
+  let cardComments: PresentModeComment[] = [];
+  let cardAgreements: PresentModeComment[] = [];
+
+  if (selectedCard) {
+    const allComments = await db
+      .select({
+        id: comments.id,
+        cardId: comments.cardId,
+        userId: comments.userId,
+        userName: users.name,
+        content: comments.content,
+        isAgreement: comments.isAgreement,
+        createdAt: comments.createdAt
+      })
+      .from(comments)
+      .leftJoin(users, eq(users.id, comments.userId))
+      .where(eq(comments.cardId, selectedCard.id))
+      .orderBy(sql`${comments.createdAt} DESC`);
+
+    // Separate comments and agreements, applying blame-free mode if needed
+    const blameFreeMode = board.blameFreeMode || false;
+
+    cardComments = allComments
+      .filter(c => !c.isAgreement)
+      .map(c => ({
+        ...c,
+        userName: getUserDisplayName(
+          c.userName || 'Anonymous',
+          boardId,
+          blameFreeMode
+        )
+      }));
+
+    cardAgreements = allComments
+      .filter(c => c.isAgreement)
+      .map(c => ({
+        ...c,
+        userName: getUserDisplayName(
+          c.userName || 'Anonymous',
+          boardId,
+          blameFreeMode
+        )
+      }));
+  }
+
   // Get notes lock status for selected card if any
   let notesLock = null;
   if (selectedCard) {
@@ -184,6 +243,8 @@ export async function buildPresentModeData(
   const result = {
     visible_cards: visibleCards,
     selected_card: selectedCard,
+    comments: cardComments,
+    agreements: cardAgreements,
     scene_permissions: {
       allow_comments: currentScene.allowComments || false,
       allow_voting: currentScene.allowVoting || false,

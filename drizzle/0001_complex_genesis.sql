@@ -1,1 +1,0 @@
-ALTER TABLE `cards` ADD `is_group_lead` integer DEFAULT false;

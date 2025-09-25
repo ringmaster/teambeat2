@@ -1,19 +1,3 @@
-CREATE TABLE `action_item_assignments` (
-	`comment_id` text NOT NULL,
-	`user_id` text NOT NULL,
-	PRIMARY KEY(`comment_id`, `user_id`),
-	FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `action_item_status` (
-	`comment_id` text PRIMARY KEY NOT NULL,
-	`status` text DEFAULT 'open' NOT NULL,
-	`due_date` text,
-	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
 CREATE TABLE `board_series` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -38,7 +22,7 @@ CREATE TABLE `boards` (
 	`status` text DEFAULT 'draft' NOT NULL,
 	`current_scene_id` text,
 	`blame_free_mode` integer DEFAULT false,
-	`voting_allocation` integer DEFAULT 3,
+	`voting_allocation` integer DEFAULT 3 NOT NULL,
 	`voting_enabled` integer DEFAULT true,
 	`meeting_date` text,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
@@ -51,7 +35,9 @@ CREATE TABLE `cards` (
 	`column_id` text NOT NULL,
 	`user_id` text,
 	`content` text NOT NULL,
+	`notes` text,
 	`group_id` text,
+	`is_group_lead` integer DEFAULT false,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`column_id`) REFERENCES `columns`(`id`) ON UPDATE no action ON DELETE cascade,
@@ -74,7 +60,7 @@ CREATE TABLE `comments` (
 	`card_id` text NOT NULL,
 	`user_id` text,
 	`content` text NOT NULL,
-	`is_action_item` integer DEFAULT false,
+	`is_agreement` integer DEFAULT false,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`card_id`) REFERENCES `cards`(`id`) ON UPDATE no action ON DELETE cascade,
@@ -118,6 +104,7 @@ CREATE TABLE `scenes` (
 	`description` text,
 	`mode` text NOT NULL,
 	`seq` integer NOT NULL,
+	`selected_card_id` text,
 	`allow_add_cards` integer DEFAULT true,
 	`allow_edit_cards` integer DEFAULT true,
 	`allow_obscure_cards` integer DEFAULT false,
@@ -127,9 +114,9 @@ CREATE TABLE `scenes` (
 	`allow_voting` integer DEFAULT false,
 	`show_comments` integer DEFAULT true,
 	`allow_comments` integer DEFAULT true,
-	`multiple_votes_per_card` integer DEFAULT false,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`selected_card_id`) REFERENCES `cards`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE TABLE `scenes_columns` (
@@ -161,6 +148,20 @@ CREATE TABLE `timer_extension_votes` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `user_authenticators` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`credential_id` text NOT NULL,
+	`credential_public_key` text NOT NULL,
+	`counter` integer DEFAULT 0 NOT NULL,
+	`credential_device_type` text,
+	`credential_backed_up` integer DEFAULT false,
+	`transports` text,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `user_authenticators_credential_id_unique` ON `user_authenticators` (`credential_id`);--> statement-breakpoint
 CREATE TABLE `users` (
 	`id` text PRIMARY KEY NOT NULL,
 	`email` text NOT NULL,

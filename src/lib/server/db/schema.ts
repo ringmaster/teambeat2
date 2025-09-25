@@ -104,24 +104,12 @@ export const comments = sqliteTable('comments', {
   cardId: text('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
   userId: text('user_id').references(() => users.id),
   content: text('content').notNull(),
-  isActionItem: integer('is_action_item', { mode: 'boolean' }).default(false),
+  isAgreement: integer('is_agreement', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
-export const actionItemAssignments = sqliteTable('action_item_assignments', {
-  commentId: text('comment_id').notNull().references(() => comments.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' })
-}, (table) => ({
-  pk: primaryKey({ columns: [table.commentId, table.userId] })
-}));
 
-export const actionItemStatus = sqliteTable('action_item_status', {
-  commentId: text('comment_id').primaryKey().references(() => comments.id, { onDelete: 'cascade' }),
-  status: text('status').notNull().default('open').$type<'open' | 'in_progress' | 'completed' | 'cancelled'>(),
-  dueDate: text('due_date'),
-  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
-});
 
 export const healthQuestions = sqliteTable('health_questions', {
   id: text('id').primaryKey(),

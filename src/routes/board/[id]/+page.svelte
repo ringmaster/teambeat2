@@ -107,6 +107,10 @@
         activeUsers: number;
     } | null>(null);
 
+    // Comment state for present mode
+    let comments = $state<any[]>([]);
+    let agreements = $state<any[]>([]);
+
     // Calculate if user has votes available (same value for all cards on the board)
     let hasVotes = $derived(votingAllocation?.canVote ?? false);
 
@@ -573,6 +577,13 @@
                         }
                         // Update notes lock status
                         notesLockStatus = data.present_mode_data.notes_lock;
+                        // Update comments and agreements
+                        if (data.present_mode_data.comments) {
+                            comments = data.present_mode_data.comments;
+                        }
+                        if (data.present_mode_data.agreements) {
+                            agreements = data.present_mode_data.agreements;
+                        }
                     } else {
                         loadPresentModeData();
                     }
@@ -968,7 +979,13 @@
                 // Update notes lock status
                 notesLockStatus = data.notes_lock;
 
-                // TODO: Load comments and agreements
+                // Update comments and agreements
+                if (data.comments) {
+                    comments = data.comments;
+                }
+                if (data.agreements) {
+                    agreements = data.agreements;
+                }
             } else {
                 console.error(
                     "Failed to load present mode data:",
@@ -2095,8 +2112,8 @@
             selectedCard={cards.find(
                 (c) => c.id === currentScene.selectedCardId,
             ) || null}
-            comments={[]}
-            agreements={[]}
+            {comments}
+            {agreements}
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
             {notesLockStatus}

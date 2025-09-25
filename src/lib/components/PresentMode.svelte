@@ -282,6 +282,21 @@
             console.error("Error adding comment:", error);
         }
     }
+
+    async function deleteComment(commentId: string) {
+        try {
+            const response = await fetch(`/api/comments/${commentId}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error("Failed to delete comment:", error.error);
+            }
+        } catch (error) {
+            console.error("Error deleting comment:", error);
+        }
+    }
 </script>
 
 <div class="present-mode">
@@ -353,14 +368,31 @@
                                     <span class="comment-author"
                                         >{comment.userName}</span
                                     >
-                                    <button
-                                        class="agreement-toggle"
-                                        onclick={() =>
-                                            toggleAgreement(comment.id, false)}
-                                        title="Promote to Agreement"
-                                    >
-                                        ↑ Promote
-                                    </button>
+                                    <div class="comment-actions">
+                                        {#if isAdmin || isFacilitator}
+                                            <button
+                                                class="agreement-toggle"
+                                                onclick={() =>
+                                                    toggleAgreement(
+                                                        comment.id,
+                                                        false,
+                                                    )}
+                                                title="Promote to Agreement"
+                                            >
+                                                ↑ Promote
+                                            </button>
+                                        {/if}
+                                        {#if isAdmin || isFacilitator || comment.userId === currentUser.id}
+                                            <button
+                                                class="delete-button"
+                                                onclick={() =>
+                                                    deleteComment(comment.id)}
+                                                title="Delete Comment"
+                                            >
+                                                ×
+                                            </button>
+                                        {/if}
+                                    </div>
                                 </div>
                             </div>
                         {/each}
@@ -389,17 +421,33 @@
                                         <span class="agreement-author"
                                             >{agreement.userName}</span
                                         >
-                                        <button
-                                            class="agreement-toggle"
-                                            onclick={() =>
-                                                toggleAgreement(
-                                                    agreement.id,
-                                                    true,
-                                                )}
-                                            title="Demote to Comment"
-                                        >
-                                            ↓ Demote
-                                        </button>
+                                        <div class="comment-actions">
+                                            {#if isAdmin || isFacilitator}
+                                                <button
+                                                    class="agreement-toggle"
+                                                    onclick={() =>
+                                                        toggleAgreement(
+                                                            agreement.id,
+                                                            true,
+                                                        )}
+                                                    title="Demote to Comment"
+                                                >
+                                                    ↓ Demote
+                                                </button>
+                                            {/if}
+                                            {#if isAdmin || isFacilitator || agreement.userId === currentUser.id}
+                                                <button
+                                                    class="delete-button"
+                                                    onclick={() =>
+                                                        deleteComment(
+                                                            agreement.id,
+                                                        )}
+                                                    title="Delete Agreement"
+                                                >
+                                                    ×
+                                                </button>
+                                            {/if}
+                                        </div>
                                     </div>
                                 </div>
                             {/each}
@@ -634,6 +682,7 @@
         // Style adjustments for grouped cards in present mode
         :global(.card.group-lead) {
             // Group lead cards can have a visual indicator if needed
+            display: inherit;
         }
 
         :global(.card.subordinate) {
@@ -833,6 +882,12 @@
         color: var(--color-text-muted);
     }
 
+    .comment-actions {
+        display: flex;
+        gap: var(--spacing-2);
+        align-items: center;
+    }
+
     .agreement-toggle {
         padding: var(--spacing-1) var(--spacing-3);
         background: white;
@@ -846,6 +901,30 @@
         &:hover {
             background: var(--surface-hover);
             border-color: var(--color-border-hover);
+        }
+    }
+
+    .delete-button {
+        padding: var(--spacing-1) var(--spacing-2);
+        background: transparent;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 1.125rem;
+        line-height: 1;
+        font-weight: 500;
+        color: var(--color-text-muted);
+        min-width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            background: var(--status-danger-bg);
+            border-color: var(--color-danger);
+            color: var(--color-danger);
         }
     }
 
