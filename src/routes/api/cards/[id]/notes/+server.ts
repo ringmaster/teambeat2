@@ -5,6 +5,8 @@ import { db } from '$lib/server/db';
 import { cards } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { releaseNotesLock } from '$lib/server/notes-lock.js';
+import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
+import { columns } from '$lib/server/db/schema';
 
 export const PUT: RequestHandler = async (event) => {
   try {
@@ -26,7 +28,25 @@ export const PUT: RequestHandler = async (event) => {
     // Release the lock after saving
     releaseNotesLock(cardId, user.userId);
 
-    // TODO: Broadcast notes updated event if needed
+    // Get board ID to broadcast the update
+    const cardWithBoard = await db
+      .select({ boardId: columns.boardId })
+      .from(cards)
+      .innerJoin(columns, eq(cards.columnId, columns.id))
+      .where(eq(cards.id, cardId))
+      .limit(1);
+
+    if (cardWithBoard.length > 0) {
+      const boardId = cardWithBoard[0].boardId;
+
+      // Add small delay to ensure database changes are reflected
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Broadcast the presentation update with lock status change
+      await broadcastUpdatePresentation(boardId, {
+        card_id: cardId
+      });
+    }
 
     return json({
       success: true,

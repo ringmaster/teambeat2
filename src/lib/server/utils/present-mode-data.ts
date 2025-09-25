@@ -28,6 +28,10 @@ export interface PresentModeData {
     show_votes: boolean | null;
     show_comments: boolean | null;
   };
+  notes_lock: {
+    locked: boolean;
+    locked_by: string | null;
+  } | null;
 }
 
 /**
@@ -153,10 +157,31 @@ export async function buildPresentModeData(
     const selectedCardData = visibleCards.find(c => c.id === currentScene.selectedCardId);
     if (selectedCardData) {
       selectedCard = selectedCardData;
+
     }
   }
 
-  return {
+  // Get notes lock status for selected card if any
+  let notesLock = null;
+  if (selectedCard) {
+    const { getNotesLock } = await import('../notes-lock.js');
+    const lock = getNotesLock(selectedCard.id);
+    if (lock) {
+      notesLock = {
+        locked: true,
+        locked_by: lock.userName
+      };
+
+    } else {
+      notesLock = {
+        locked: false,
+        locked_by: null
+      };
+
+    }
+  }
+
+  const result = {
     visible_cards: visibleCards,
     selected_card: selectedCard,
     scene_permissions: {
@@ -165,6 +190,9 @@ export async function buildPresentModeData(
       allow_edit_cards: currentScene.allowEditCards || false,
       show_votes: currentScene.showVotes || false,
       show_comments: currentScene.showComments || false
-    }
+    },
+    notes_lock: notesLock
   };
+
+  return result;
 }

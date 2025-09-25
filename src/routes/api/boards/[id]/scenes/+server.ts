@@ -6,8 +6,54 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
 import { db } from '$lib/server/db/index.js';
 import { scenes, boards } from '$lib/server/db/schema.js';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, asc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+
+export const GET: RequestHandler = async (event) => {
+  try {
+    const user = requireUser(event);
+    const boardId = event.params.id;
+
+    const board = await findBoardById(boardId);
+    if (!board) {
+      return json(
+        { success: false, error: 'Board not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has access to the board
+    const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+    if (!userRole) {
+      return json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    // Get all scenes for the board, ordered by sequence
+    const boardScenes = await db
+      .select()
+      .from(scenes)
+      .where(eq(scenes.boardId, boardId))
+      .orderBy(asc(scenes.seq));
+
+    return json({
+      success: true,
+      scenes: boardScenes
+    });
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    console.error('Failed to fetch scenes:', error);
+    return json(
+      { success: false, error: 'Failed to fetch scenes' },
+      { status: 500 }
+    );
+  }
+};
 
 export const POST: RequestHandler = async (event) => {
   try {
@@ -16,7 +62,7 @@ export const POST: RequestHandler = async (event) => {
     const body = await event.request.json();
 
     // Validate input
-    const { title, description, mode, allowAddCards, allowEditCards, allowComments, allowVoting, multipleVotesPerCard } = body;
+    const { title, description, mode, allowAddCards, allowEditCards, allowComments, allowVoting } = body;
 
     if (!title?.trim()) {
       return json(
@@ -73,8 +119,7 @@ export const POST: RequestHandler = async (event) => {
         allowAddCards: allowAddCards ?? true,
         allowEditCards: allowEditCards ?? true,
         allowComments: allowComments ?? true,
-        allowVoting: allowVoting ?? false,
-        multipleVotesPerCard: multipleVotesPerCard ?? true
+        allowVoting: allowVoting ?? false
       });
 
     // Get the created scene with all its details

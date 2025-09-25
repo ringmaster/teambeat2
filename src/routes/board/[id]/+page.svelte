@@ -41,6 +41,7 @@
     let cards: any[] = $state([]);
     let user: any = $state(null);
     let userRole = $state("");
+    let notesLockStatus = $state(null);
     let loading = $state(true);
     let eventSource: EventSource | null = null;
     let boardId = $state("");
@@ -566,18 +567,14 @@
 
                     // Use present mode data from SSE if available
                     if (data.present_mode_data) {
-                        console.log(
-                            "Using present mode data from SSE for presentation update",
-                        );
                         cards = data.present_mode_data.visible_cards;
                         if (data.present_mode_data.selected_card) {
                             currentScene.selectedCardId =
                                 data.present_mode_data.selected_card.id;
                         }
+                        // Update notes lock status
+                        notesLockStatus = data.present_mode_data.notes_lock;
                     } else {
-                        console.log(
-                            "No present mode data in SSE, loading from API",
-                        );
                         loadPresentModeData();
                     }
                 }
@@ -971,6 +968,9 @@
                 if (data.selected_card) {
                     currentScene.selectedCardId = data.selected_card.id;
                 }
+
+                // Update notes lock status
+                notesLockStatus = data.notes_lock;
 
                 // TODO: Load comments and agreements
             } else {
@@ -2103,6 +2103,7 @@
             agreements={[]}
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
+            {notesLockStatus}
         />
     {:else}
         <BoardColumns

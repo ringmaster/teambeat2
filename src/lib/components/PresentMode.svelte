@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
+    import { onMount } from "svelte";
     import Card from "$lib/components/Card.svelte";
     import type {
         Board,
@@ -9,40 +9,120 @@
         User,
     } from "$lib/types";
 
-    export let board: Board;
-    export let scene: Scene;
-    export let currentUser: User;
-    export let cards: CardType[] = [];
-    export let selectedCard: CardType | null = null;
-    export let comments: Comment[] = [];
-    export let agreements: Comment[] = [];
-    export let isAdmin: boolean = false;
-    export let isFacilitator: boolean = false;
+    interface Props {
+        board: Board;
+        scene: Scene;
+        currentUser: User;
+        cards?: CardType[];
+        selectedCard?: CardType | null;
+        comments?: Comment[];
+        agreements?: Comment[];
+        isAdmin?: boolean;
+        isFacilitator?: boolean;
+        notesLockStatus?: {
+            locked: boolean;
+            locked_by: string | null;
+        } | null;
+    }
 
-    let notesContent: string = "";
-    let notesLocked: boolean = false;
-    let notesLockedBy: string | null = null;
-    let editingNotes: boolean = false;
-    let newCommentContent: string = "";
-    let cardsListElement: HTMLElement;
+    let {
+        board,
+        scene,
+        currentUser,
+        cards = [],
+        selectedCard = null,
+        comments = [],
+        agreements = [],
+        isAdmin = false,
+        isFacilitator = false,
+        notesLockStatus = null,
+    }: Props = $props();
+
+    let notesContent = $state("");
+    let notesLocked = $state(false);
+    let notesLockedBy = $state<string | null>(null);
+    let hasTyped = $state(false);
+    let acquiringLock = $state(false);
+    let textareaHasFocus = $state(false);
+    let newCommentContent = $state("");
+    let cardsListElement = $state<HTMLElement>();
+    let notesTextarea = $state<HTMLTextAreaElement>();
 
     const canSelectCards = isAdmin || isFacilitator;
 
-    function scrollCardsList(direction: "up" | "down") {
-        if (!cardsListElement) return;
-        const scrollAmount = 200;
-        if (direction === "up") {
-            cardsListElement.scrollBy({
-                top: -scrollAmount,
-                behavior: "smooth",
-            });
-        } else {
-            cardsListElement.scrollBy({
-                top: scrollAmount,
-                behavior: "smooth",
-            });
+    // Initialize notes content when selected card changes (only if user isn't actively editing)
+    $effect(() => {
+        if (selectedCard && !hasTyped && !acquiringLock && !textareaHasFocus) {
+            notesContent = selectedCard.notes || "";
+            notesLocked = false;
+            notesLockedBy = null;
         }
-    }
+    });
+
+    // Auto-resize textarea when content changes
+    $effect(() => {
+        if (notesTextarea && notesContent !== undefined) {
+            setTimeout(() => {
+                if (notesTextarea) {
+                    autoResizeTextarea(notesTextarea);
+                }
+            }, 0);
+        }
+    });
+
+    // Update lock state from SSE messages - NEVER update notesContent if user is typing
+    $effect(() => {
+        if (notesLockStatus !== null && selectedCard) {
+            const lockOwner = notesLockStatus.locked_by;
+            const isCurrentUserLock =
+                lockOwner === (currentUser.name || currentUser.email);
+
+            if (notesLockStatus.locked) {
+                if (isCurrentUserLock) {
+                    // Current user has the lock - they can edit freely
+                    notesLocked = false;
+                    notesLockedBy = null;
+                    if (!hasTyped && !acquiringLock) {
+                        hasTyped = true;
+                    }
+                    // ABSOLUTELY NEVER update notesContent when current user has the lock
+                } else {
+                    // Someone else has the lock - force readonly
+                    notesLocked = true;
+                    notesLockedBy = lockOwner;
+                    hasTyped = false;
+                    // Only update content if we're switching from no lock to locked by other
+                    // and user wasn't in the middle of typing
+                    if (!acquiringLock) {
+                        notesContent = selectedCard.notes || "";
+                    }
+                }
+            } else {
+                // No lock active
+                notesLocked = false;
+                notesLockedBy = null;
+                // NEVER update content if user is typing, acquiring lock, or has focus
+                // Only update if user has completely finished their session
+                if (
+                    !hasTyped &&
+                    !acquiringLock &&
+                    !notesLocked &&
+                    !textareaHasFocus
+                ) {
+                    notesContent = selectedCard.notes || "";
+                }
+                // Only reset hasTyped if user has completely stopped editing
+                if (
+                    hasTyped &&
+                    !acquiringLock &&
+                    !notesLocked &&
+                    !textareaHasFocus
+                ) {
+                    hasTyped = false;
+                }
+            }
+        }
+    });
 
     async function selectCard(cardId: string) {
         if (!canSelectCards) return;
@@ -66,10 +146,11 @@
         }
     }
 
-    async function startEditingNotes() {
-        if (!selectedCard || notesLocked) return;
+    async function acquireNotesLock() {
+        if (!selectedCard || notesLocked || hasTyped || acquiringLock) return;
 
         try {
+            acquiringLock = true;
             const response = await fetch(
                 `/api/cards/${selectedCard.id}/notes/lock`,
                 {
@@ -79,19 +160,59 @@
 
             const result = await response.json();
             if (result.success) {
-                editingNotes = true;
-                notesContent = selectedCard.notes || "";
+                // Current user now has the lock - they can edit freely
+                notesLocked = false;
+                notesLockedBy = null;
+                hasTyped = true;
+                // DO NOT update notesContent - preserve user's input
             } else {
-                notesLocked = true;
-                notesLockedBy = result.locked_by;
+                // Someone else has the lock (403 response)
+                if (
+                    result.present_mode_data &&
+                    result.present_mode_data.notes_lock
+                ) {
+                    notesLocked = result.present_mode_data.notes_lock.locked;
+                    notesLockedBy =
+                        result.present_mode_data.notes_lock.locked_by;
+                } else {
+                    notesLocked = true;
+                    notesLockedBy = result.locked_by;
+                }
+                hasTyped = false;
+                // Force overwrite content when lock acquisition fails - show server state
+                notesContent = selectedCard?.notes || "";
             }
         } catch (error) {
             console.error("Error acquiring notes lock:", error);
+        } finally {
+            acquiringLock = false;
         }
     }
 
+    function autoResizeTextarea(textarea: HTMLTextAreaElement) {
+        textarea.style.height = "auto";
+        textarea.style.height = Math.max(textarea.scrollHeight, 150) + "px";
+    }
+
+    async function onNotesInput(event: Event) {
+        // Auto-resize textarea
+        const textarea = event.target as HTMLTextAreaElement;
+        autoResizeTextarea(textarea);
+
+        // Acquire lock on first keystroke
+        if (!hasTyped && !notesLocked && !acquiringLock) {
+            await acquireNotesLock();
+        }
+    }
+
+    onMount(() => {
+        if (notesTextarea && notesContent) {
+            autoResizeTextarea(notesTextarea);
+        }
+    });
+
     async function saveNotes() {
-        if (!selectedCard || !editingNotes) return;
+        if (!selectedCard || !hasTyped) return;
 
         try {
             const response = await fetch(
@@ -104,10 +225,15 @@
             );
 
             if (response.ok) {
-                editingNotes = false;
+                // Reset editing state - user must type again to edit
+                hasTyped = false;
+                notesLocked = false;
+                notesLockedBy = null;
+
                 if (selectedCard) {
                     selectedCard.notes = notesContent;
                 }
+                // Content and lock status will be updated via SSE broadcast
             }
         } catch (error) {
             console.error("Error saving notes:", error);
@@ -170,30 +296,29 @@
 
             <div class="notes-section">
                 <h3 class="section-title">Notes:</h3>
-                {#if editingNotes}
+                <div class="notes-editor-container">
                     <textarea
                         class="notes-editor"
+                        bind:this={notesTextarea}
                         bind:value={notesContent}
-                        on:blur={saveNotes}
+                        oninput={onNotesInput}
+                        onfocus={() => (textareaHasFocus = true)}
+                        onblur={() => (textareaHasFocus = false)}
                         placeholder="Add notes..."
+                        readonly={notesLocked}
                         rows="6"
-                    />
-                {:else if notesLocked}
-                    <div class="notes-locked">
-                        <span class="lock-icon">🔒</span>
-                        Locked by {notesLockedBy}
-                    </div>
-                    <div class="notes-display" on:click={startEditingNotes}>
-                        {selectedCard.notes || "Click to add notes..."}
-                    </div>
-                {:else}
-                    <div
-                        class="notes-display editable"
-                        on:click={startEditingNotes}
-                    >
-                        {selectedCard.notes || "Click to add notes..."}
-                    </div>
-                {/if}
+                        style="resize: none; overflow: hidden; min-height: 150px;"
+                    ></textarea>
+                    {#if hasTyped}
+                        <button class="notes-save-button" onclick={saveNotes}>
+                            Save
+                        </button>
+                    {:else if notesLocked && notesLockedBy}
+                        <div class="notes-lock-indicator">
+                            {notesLockedBy} is editing...
+                        </div>
+                    {/if}
+                </div>
             </div>
 
             {#if scene.showComments}
@@ -205,13 +330,14 @@
                                 type="text"
                                 class="comment-input"
                                 bind:value={newCommentContent}
-                                on:keydown={(e) =>
-                                    e.key === "Enter" && addComment()}
+                                onkeydown={(e) => {
+                                    if (e.key === "Enter") addComment();
+                                }}
                                 placeholder="Add a comment..."
                             />
                             <button
                                 class="add-comment-button"
-                                on:click={addComment}
+                                onclick={addComment}
                             >
                                 Add
                             </button>
@@ -229,7 +355,7 @@
                                     >
                                     <button
                                         class="agreement-toggle"
-                                        on:click={() =>
+                                        onclick={() =>
                                             toggleAgreement(comment.id, false)}
                                         title="Promote to Agreement"
                                     >
@@ -265,7 +391,7 @@
                                         >
                                         <button
                                             class="agreement-toggle"
-                                            on:click={() =>
+                                            onclick={() =>
                                                 toggleAgreement(
                                                     agreement.id,
                                                     true,
@@ -313,7 +439,7 @@
                                 aria-label="Select Card"
                                 class="selection-button"
                                 class:active={selectedCard?.id === card.id}
-                                on:click={() => selectCard(card.id)}
+                                onclick={() => selectCard(card.id)}
                             >
                                 <span class="selection-indicator">‹</span>
                             </button>
@@ -339,7 +465,6 @@
                                 : isFacilitator
                                   ? "facilitator"
                                   : "member"}
-                            readOnly={true}
                             isGroupLead={!!card.isGroupLead}
                             isSubordinate={!!(
                                 card.groupId && !card.isGroupLead
@@ -586,28 +711,60 @@
         }
     }
 
+    .notes-editor-container {
+        position: relative;
+        width: 100%;
+    }
+
     .notes-editor {
         width: 100%;
         min-height: 150px;
-        padding: var(--spacing-4);
+        padding: var(--spacing-4) var(--spacing-4) 2rem var(--spacing-4);
         border: 2px solid var(--color-accent);
         border-radius: var(--radius-md);
         font-family: inherit;
         font-size: 1rem;
         line-height: 1.6;
         resize: vertical;
+
+        &[readonly] {
+            background: var(--surface-disabled);
+            cursor: not-allowed;
+            border-color: var(--color-border);
+        }
     }
 
-    .notes-locked {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-        padding: var(--spacing-3);
+    .notes-save-button {
+        position: absolute;
+        bottom: var(--spacing-2);
+        right: 0px;
+        padding: var(--spacing-2) var(--spacing-3);
+        background: var(--color-accent);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        z-index: 10;
+
+        &:hover {
+            background: var(--color-accent-hover);
+        }
+    }
+
+    .notes-lock-indicator {
+        position: absolute;
+        bottom: var(--spacing-2);
+        right: var(--spacing-2);
+        padding: var(--spacing-2) var(--spacing-3);
         background: var(--status-warning-bg);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--spacing-3);
         color: var(--status-warning-text);
-        font-size: 0.9375rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 500;
+        z-index: 10;
     }
 
     .add-comment {
