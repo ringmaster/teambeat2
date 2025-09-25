@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import Icon from "./Icon.svelte";
 
     interface Props {
@@ -13,6 +12,7 @@
         autoHide?: boolean;
         duration?: number;
         visible?: boolean;
+        onClose?: () => void;
     }
 
     let {
@@ -22,16 +22,15 @@
         autoHide = true,
         duration = 4000,
         visible = true,
+        onClose,
     }: Props = $props();
-
-    const dispatch = createEventDispatcher();
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     $effect(() => {
         if (visible && autoHide && actions.length === 0) {
             timeoutId = setTimeout(() => {
-                handleClose();
+                onClose?.();
             }, duration);
         }
 
@@ -44,7 +43,7 @@
 
     function handleClose() {
         visible = false;
-        dispatch("close");
+        onClose?.();
     }
 
     function handleAction(action: {

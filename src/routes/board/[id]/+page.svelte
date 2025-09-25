@@ -2,6 +2,7 @@
     import { onMount, onDestroy } from "svelte";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
+    import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
     import BoardHeader from "$lib/components/BoardHeader.svelte";
     import BoardSetup from "$lib/components/BoardSetup.svelte";
@@ -56,7 +57,7 @@
     let sseReconnectTimeout: number | null = null;
 
     // UI State
-    let newCardContentByColumn = $state(new Map<string, string>());
+    let newCardContentByColumn = new SvelteMap<string, string>();
     let showSceneDropdown = $state(false);
     let showBoardConfig = $state(false);
     let configActiveTab = $state("general");
@@ -81,7 +82,7 @@
 
     // Grouping State
     let groupingMode = $state(false);
-    let selectedCards = $state(new Set<string>());
+    let selectedCards = new SvelteSet<string>();
 
     // Voting State
     let votingAllocation = $state<{
@@ -90,8 +91,8 @@
         remainingVotes: number;
         canVote: boolean;
     } | null>(null);
-    let userVotesByCard = $state(new Map<string, number>()); // cardId -> user votes on that card
-    let allVotesByCard = $state(new Map<string, number>()); // cardId -> total votes on that card (when votes visible)
+    let userVotesByCard = new SvelteMap<string, number>(); // cardId -> user votes on that card
+    let allVotesByCard = new SvelteMap<string, number>(); // cardId -> total votes on that card (when votes visible)
 
     // Voting toolbar state
     let connectedUsers = $state(0);
@@ -367,22 +368,20 @@
     function processVotingData(data: VotingData) {
         // Update user votes by card map if provided
         if (data.votes_by_card) {
-            const newUserVotes = new Map<string, number>();
+            userVotesByCard.clear();
             Object.entries(data.votes_by_card).forEach(([cardId, count]) => {
-                newUserVotes.set(cardId, count as number);
+                userVotesByCard.set(cardId, count as number);
             });
-            userVotesByCard = newUserVotes;
         }
 
         // Update all users' votes by card map if provided
         if (data.all_votes_by_card) {
-            const newAllVotes = new Map<string, number>();
+            allVotesByCard.clear();
             Object.entries(data.all_votes_by_card).forEach(
                 ([cardId, count]) => {
-                    newAllVotes.set(cardId, count as number);
+                    allVotesByCard.set(cardId, count as number);
                 },
             );
-            allVotesByCard = newAllVotes;
 
             // Also update the cards array with the new vote counts
             cards = cards.map((card) => ({
@@ -702,13 +701,13 @@
 
                 // If votes were cleared, clear the user's own votes
                 if (data.votes_cleared) {
-                    userVotesByCard = new Map<string, number>();
+                    userVotesByCard.clear();
                     // Also reset all card vote counts to 0
                     cards = cards.map((card) => ({
                         ...card,
                         voteCount: 0,
                     }));
-                    allVotesByCard = new Map<string, number>();
+                    allVotesByCard.clear();
                 }
                 break;
             case "all_votes_updated":
@@ -721,7 +720,7 @@
 
                 // If votes were cleared, clear the user's own votes
                 if (data.votes_cleared) {
-                    userVotesByCard = new Map<string, number>();
+                    userVotesByCard.clear();
                 }
                 break;
         }
@@ -890,7 +889,6 @@
 
             if (response.ok) {
                 newCardContentByColumn.set(columnId, "");
-                newCardContentByColumn = new Map(newCardContentByColumn); // Trigger reactivity
             }
         } catch (error) {
             console.error("Failed to add card:", error);
@@ -903,7 +901,6 @@
 
     function setColumnContent(columnId: string, content: string) {
         newCardContentByColumn.set(columnId, content);
-        newCardContentByColumn = new Map(newCardContentByColumn); // Trigger reactivity
     }
 
     function toggleCardSelection(cardId: string) {
@@ -912,7 +909,6 @@
         } else {
             selectedCards.add(cardId);
         }
-        selectedCards = new Set(selectedCards);
     }
 
     async function voteCard(cardId: string, delta: 1 | -1) {

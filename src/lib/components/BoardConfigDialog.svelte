@@ -78,7 +78,7 @@
 
     // Date picker instance
     let datePickerInstance: any = null;
-    let datePickerElement: HTMLInputElement;
+    let datePickerElement = $state<HTMLInputElement>();
 
     // Load users when the users tab is opened
     $effect(async () => {
@@ -313,7 +313,10 @@
                         <div class="general-form">
                             <div class="general-form-row">
                                 <div class="general-form-label">
-                                    <label for="board-name-input" class="text-medium text-secondary">
+                                    <label
+                                        for="board-name-input"
+                                        class="text-medium text-secondary"
+                                    >
                                         Board Name
                                     </label>
                                 </div>
@@ -337,7 +340,8 @@
                                         Blame-free Mode
                                     </span>
                                     <p class="caption text-muted">
-                                        Hide user names on cards to encourage open feedback
+                                        Hide user names on cards to encourage
+                                        open feedback
                                     </p>
                                 </div>
                                 <div class="general-form-control">
@@ -346,7 +350,8 @@
                                         bind:checked={configForm.blameFreeMode}
                                         onchange={() =>
                                             onUpdateBoardConfig({
-                                                blameFreeMode: configForm.blameFreeMode,
+                                                blameFreeMode:
+                                                    configForm.blameFreeMode,
                                             })}
                                         class="general-checkbox"
                                     />
@@ -355,11 +360,15 @@
 
                             <div class="general-form-row">
                                 <div class="general-form-label">
-                                    <label for="board-status-select" class="text-medium text-secondary">
+                                    <label
+                                        for="board-status-select"
+                                        class="text-medium text-secondary"
+                                    >
                                         Board Status
                                     </label>
                                     <p class="caption text-muted">
-                                        Controls board visibility and accessibility
+                                        Controls board visibility and
+                                        accessibility
                                     </p>
                                 </div>
                                 <div class="general-form-control">
@@ -374,19 +383,27 @@
                                     >
                                         <option value="draft">Draft</option>
                                         <option value="active">Active</option>
-                                        <option value="completed">Completed</option>
-                                        <option value="archived">Archived</option>
+                                        <option value="completed"
+                                            >Completed</option
+                                        >
+                                        <option value="archived"
+                                            >Archived</option
+                                        >
                                     </select>
                                 </div>
                             </div>
 
                             <div class="general-form-row">
                                 <div class="general-form-label">
-                                    <label for="board-creation-date" class="text-medium text-secondary">
+                                    <label
+                                        for="board-creation-date"
+                                        class="text-medium text-secondary"
+                                    >
                                         Retrospective Date
                                     </label>
                                     <p class="caption text-muted">
-                                        When this retrospective is meant to take place
+                                        When this retrospective is meant to take
+                                        place
                                     </p>
                                 </div>
                                 <div class="general-form-control">
@@ -411,7 +428,9 @@
                                             Delete Board
                                         </span>
                                         <p class="caption text-muted">
-                                            Permanently delete this board and all its contents. This action cannot be undone.
+                                            Permanently delete this board and
+                                            all its contents. This action cannot
+                                            be undone.
                                         </p>
                                     </div>
                                     <div class="general-form-control">

@@ -19,8 +19,8 @@
         onVote,
     }: Props = $props();
 
-    let isAnimating = false;
-    let animationDirection: "up" | "down" | null = null;
+    let isAnimating = $state(false);
+    let animationDirection = $state<"up" | "down" | null>(null);
     let previousVotes = $state(votes);
     let previousTotal = $state(total);
 

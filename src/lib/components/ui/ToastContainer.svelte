@@ -1,15 +1,6 @@
 <script lang="ts">
-    import { toastStore, type ToastMessage } from "$lib/stores/toast";
+    import { toastStore } from "$lib/stores/toast";
     import Toast from "./Toast.svelte";
-
-    let toasts: ToastMessage[] = $state([]);
-
-    $effect(() => {
-        const unsubscribe = toastStore.subscribe((value) => {
-            toasts = value;
-        });
-        return unsubscribe;
-    });
 
     function handleToastClose(toastId: string) {
         toastStore.removeToast(toastId);
@@ -30,7 +21,7 @@
 </script>
 
 <div class="toast-container">
-    {#each toasts as toast (toast.id)}
+    {#each $toastStore as toast (toast.id)}
         <Toast
             type={toast.type}
             message={toast.message}
@@ -40,7 +31,7 @@
             }))}
             autoHide={toast.autoHide}
             duration={toast.duration}
-            onclose={() => handleToastClose(toast.id)}
+            onClose={() => handleToastClose(toast.id)}
         />
     {/each}
 </div>
