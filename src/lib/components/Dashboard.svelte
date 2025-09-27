@@ -191,15 +191,27 @@
             "Lock",
         ];
 
-        let hash = 0;
+        // Improved hash function with better distribution
+        // Uses a larger prime multiplier and incorporates position
+        let hash1 = 5381;
+        let hash2 = 2166136261;
+
         for (let i = 0; i < seed.length; i++) {
             const char = seed.charCodeAt(i);
-            hash = (hash << 5) - hash + char;
-            hash = hash & hash;
+            // Mix character with its position for more entropy
+            const positionMix = char * (i + 1) * 31;
+
+            // Two different hash calculations for better distribution
+            hash1 = ((hash1 << 5) + hash1) ^ positionMix;
+            hash2 = (hash2 * 16777619) ^ positionMix;
         }
 
-        const colorIndex = Math.abs(hash) % colors.length;
-        const objectIndex = Math.abs(hash >> 8) % objects.length;
+        // Ensure positive values
+        hash1 = Math.abs(hash1);
+        hash2 = Math.abs(hash2);
+
+        const colorIndex = hash1 % colors.length;
+        const objectIndex = hash2 % objects.length;
 
         return `${colors[colorIndex]} ${objects[objectIndex]}`;
     }
@@ -527,7 +539,10 @@
                                                 title="Manage users"
                                                 aria-label="Manage users"
                                             >
-                                                <Icon name="users" size="sm" />
+                                                <Icon
+                                                    name="users-cog"
+                                                    size="sm"
+                                                />
                                             </button>
                                             <button
                                                 onclick={() =>
