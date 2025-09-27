@@ -24,6 +24,7 @@
         onDelete: (cardId: string) => void;
         onEdit: (cardId: string) => void;
         onCardDrop?: (e: DragEvent, targetCardId: string) => void;
+        onReaction?: (cardId: string, emoji: string) => void;
     }
 
     let {
@@ -47,6 +48,7 @@
         onDelete,
         onEdit,
         onCardDrop,
+        onReaction,
     }: Props = $props();
 
     // Helper function to determine vote view mode based on scene settings
@@ -101,6 +103,40 @@
 
     // State for drag targeting
     let isDragTarget = $state(false);
+
+    // State for menu dropdown
+    let isMenuOpen = $state(false);
+
+    // Handle menu toggle
+    function toggleMenu(e: Event) {
+        e.stopPropagation();
+        isMenuOpen = !isMenuOpen;
+    }
+
+    // Close menu when clicking outside
+    function handleClickOutside(e: MouseEvent) {
+        const target = e.target as HTMLElement;
+        if (!target.closest(".card-menu-container")) {
+            isMenuOpen = false;
+        }
+    }
+
+    // Handle emoji reaction
+    function handleReaction(emoji: string) {
+        if (onReaction) {
+            onReaction(card.id, emoji);
+            isMenuOpen = false;
+        }
+    }
+
+    // Add/remove click listener for closing menu
+    $effect(() => {
+        if (isMenuOpen) {
+            document.addEventListener("click", handleClickOutside);
+            return () =>
+                document.removeEventListener("click", handleClickOutside);
+        }
+    });
 
     // Drag and drop handlers for grouping
     function handleDragOver(e: DragEvent) {
@@ -204,12 +240,12 @@
         ? 'group-lead'
         : ''} {isSubordinate ? 'subordinate' : ''} {isDragTarget
         ? 'drag-target'
-        : ''}"
+        : ''} {isMenuOpen ? 'menu-open' : ''}"
     role={groupingMode ? "button" : "article"}
     aria-label={isObscured
         ? "Obscured card content"
         : `Card: ${card.content.substring(0, 50)}${card.content.length > 50 ? "..." : ""}`}
-    tabindex="0"
+    tabindex="-1"
     draggable={canMove}
     ondragstart={(e) => canMove && onDragStart(e, card.id)}
     ondragover={handleDragOver}
@@ -226,44 +262,181 @@
         }
     }}
 >
-    <p class="card-content {isObscured ? 'obscured' : ''}">
-        {#if isObscured}
-            {greekText(card.content)}
-        {:else}
-            {card.content}
-        {/if}
-    </p>
+    <div class="card-main">
+        <p class="card-content {isObscured ? 'obscured' : ''}">
+            {#if isObscured}
+                {greekText(card.content)}
+            {:else}
+                {card.content}
+            {/if}
+        </p>
+
+        <div class="card-sidebar">
+            <div
+                class="user-avatar"
+                title={getUserDisplayName(
+                    card.userName || "Unknown",
+                    board.id,
+                    board.blameFreeMode,
+                )}
+            >
+                <img
+                    src="https://api.dicebear.com/9.x/adventurer/svg?seed={card.userId}-{board.id}"
+                    alt="User avatar"
+                    width="24"
+                    height="24"
+                />
+            </div>
+
+            <div class="card-menu-container">
+                <button
+                    class="menu-button"
+                    onclick={toggleMenu}
+                    aria-label="Card menu"
+                    title="Card menu"
+                >
+                    <span class="hamburger">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </button>
+
+                {#if isMenuOpen}
+                    <div class="card-menu">
+                        {#if currentScene?.allowComments}
+                            <div class="card-menu-button-row">
+                                <button
+                                    title="Add Comment"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        onComment(card.id);
+                                        isMenuOpen = false;
+                                    }}
+                                >
+                                    💬 Add Comment
+                                </button>
+                            </div>
+                            <div class="card-menu-button-row">
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("👍");
+                                    }}
+                                    title="Like">👍</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("❤️");
+                                    }}
+                                    title="Love">❤️</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("👎");
+                                    }}
+                                    title="Dislike">👎</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("🎉");
+                                    }}
+                                    title="Celebrate">🎉</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("🔥");
+                                    }}
+                                    title="Fire">🔥</button
+                                >
+                            </div>
+                            <div class="card-menu-button-row">
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("😬");
+                                    }}
+                                    title="Grimace">😬</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("😯");
+                                    }}
+                                    title="Surprised">😯</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("🤔");
+                                    }}
+                                    title="Thinking">🤔</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("😡");
+                                    }}
+                                    title="Angry">😡</button
+                                >
+                                <button
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        handleReaction("😢");
+                                    }}
+                                    title="Sad">😢</button
+                                >
+                            </div>
+                        {/if}
+                        {#if (canDelete || canEdit) && currentScene?.allowComments}
+                            <hr class="menu-separator" />
+                        {/if}
+                        {#if canDelete || canEdit}
+                            <div class="card-menu-action-row">
+                                {#if canEdit}
+                                    <button
+                                        onclick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(card.id);
+                                            isMenuOpen = false;
+                                        }}
+                                        class="action-button edit-button"
+                                        title="Edit card"
+                                        aria-label="Edit card"
+                                    >
+                                        <Icon name="edit" size="sm" />
+                                        <span>Edit</span>
+                                    </button>
+                                {/if}
+                                {#if canDelete}
+                                    <button
+                                        onclick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete(card.id);
+                                            isMenuOpen = false;
+                                        }}
+                                        class="action-button delete-button"
+                                        title="Delete card"
+                                        aria-label="Delete card"
+                                    >
+                                        <Icon name="trash" size="sm" />
+                                        <span>Delete</span>
+                                    </button>
+                                {/if}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
+        </div>
+    </div>
 
     <div class="card-footer">
-        <div class="card-actions">
-            {#if canEdit}
-                <button
-                    onclick={(e) => {
-                        e.stopPropagation();
-                        onEdit(card.id);
-                    }}
-                    class="edit-button"
-                    title="Edit card"
-                    aria-label="Edit card"
-                >
-                    <Icon name="edit" size="sm" />
-                </button>
-            {/if}
-
-            {#if canDelete}
-                <button
-                    onclick={(e) => {
-                        e.stopPropagation();
-                        onDelete(card.id);
-                    }}
-                    class="delete-button"
-                    title="Delete card"
-                    aria-label="Delete card"
-                >
-                    <Icon name="trash" size="sm" />
-                </button>
-            {/if}
-
+        <div class="card-footer-left">
             {#if (currentScene?.showVotes || currentScene?.allowVoting) && !isSubordinate}
                 <div onclick={(e) => e.stopPropagation()}>
                     <Vote
@@ -280,14 +453,35 @@
                     />
                 </div>
             {/if}
+        </div>
 
-            {#if currentScene?.allowComments}
+        <div class="card-footer-right">
+            {#if card.reactions && Object.keys(card.reactions).length > 0}
+                <div class="reaction-pills">
+                    {#each Object.entries(card.reactions) as [emoji, count]}
+                        <span
+                            class="reaction-pill"
+                            title="{count} {emoji} reaction{count !== 1
+                                ? 's'
+                                : ''}"
+                        >
+                            <span class="reaction-emoji">{emoji}</span>
+                            <span class="reaction-count">{count}</span>
+                        </span>
+                    {/each}
+                </div>
+            {/if}
+
+            {#if currentScene?.allowComments && card.commentCount > 0}
                 <button
                     onclick={(e) => {
                         e.stopPropagation();
                         onComment(card.id);
                     }}
-                    class="comment-button"
+                    class="comment-pill"
+                    title="{card.commentCount} comment{card.commentCount !== 1
+                        ? 's'
+                        : ''}"
                 >
                     <svg
                         class="icon-xs"
@@ -298,17 +492,9 @@
                             d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
                         />
                     </svg>
-                    <span>{card._count?.comments || 0}</span>
+                    <span>{card.commentCount}</span>
                 </button>
             {/if}
-        </div>
-
-        <div class="author-text">
-            {getUserDisplayName(
-                card.userName || "Unknown",
-                board.id,
-                board.blameFreeMode,
-            )}
         </div>
     </div>
 </div>
@@ -325,6 +511,11 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         border-top: 3px solid var(--card-border-color);
         position: relative;
+        z-index: 1;
+    }
+
+    .card:has(.card-menu) {
+        z-index: 999;
     }
 
     .card:hover {
@@ -367,9 +558,10 @@
     /* Text styles */
     .card-content {
         color: var(--card-text-primary);
-        margin-bottom: 8px;
         font-size: 0.875rem;
         line-height: 1.5;
+        display: flex;
+        flex-direction: column;
     }
 
     .card-content.obscured {
@@ -396,6 +588,72 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .card-footer-left {
+        display: flex;
+        align-items: center;
+    }
+
+    .card-footer-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .reaction-pills {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .reaction-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 6px;
+        background-color: var(--surface-secondary);
+        border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+        border-radius: 12px;
+        font-size: 0.75rem;
+        cursor: default;
+    }
+
+    .reaction-emoji {
+        font-size: 0.875rem;
+        line-height: 1;
+    }
+
+    .reaction-count {
+        color: var(--card-text-secondary);
+        font-weight: 500;
+    }
+
+    .comment-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        background-color: var(--surface-secondary);
+        color: var(--card-text-primary);
+        font-size: 0.75rem;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .comment-pill:hover {
+        background-color: var(--surface-elevated);
+    }
+
+    .comment-pill svg {
+        width: 14px;
+        height: 14px;
     }
 
     .card-actions {
@@ -463,5 +721,185 @@
     .author-text {
         font-size: 0.75rem;
         color: var(--card-text-secondary);
+    }
+
+    /* Card main container */
+    .card-main {
+        display: flex;
+        position: relative;
+        min-height: 60px; /* Ensure minimum height for sidebar */
+    }
+
+    /* Card sidebar */
+    .card-sidebar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin-left: 12px;
+        flex-shrink: 0;
+    }
+
+    /* User avatar */
+    .user-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: var(--surface-secondary);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+    }
+
+    .user-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Menu container */
+    .card-menu-container {
+        position: relative;
+    }
+
+    /* Hamburger menu button */
+    .menu-button {
+        width: 24px;
+        height: 24px;
+        padding: 4px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+
+    .menu-button:hover {
+        background-color: var(--surface-secondary);
+    }
+
+    .hamburger {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        width: 16px;
+    }
+
+    .hamburger span {
+        display: block;
+        width: 100%;
+        height: 2px;
+        background-color: var(--card-text-secondary);
+        border-radius: 1px;
+        transition: background-color 0.2s;
+    }
+
+    .menu-button:hover .hamburger span {
+        background-color: var(--card-text-primary);
+    }
+
+    /* Dropdown menu */
+    .card-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 4px);
+        background: var(--card-background);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 8px;
+        z-index: 10000;
+        min-width: 200px;
+        border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    }
+
+    /* Menu button rows */
+    .card-menu-button-row {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .card-menu-button-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .card-menu-button-row button {
+        flex: 1;
+        padding: 6px;
+        border: none;
+        background: inherit;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.2s;
+        min-width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .card-menu-button-row button:hover {
+        background: var(--surface-elevated);
+        transform: scale(1.1);
+    }
+
+    /* Menu separator */
+    .menu-separator {
+        margin: 8px 0;
+        border: none;
+        border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    }
+
+    /* Action buttons row */
+    .card-menu-action-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .action-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        width: 100%;
+        text-align: left;
+    }
+
+    .action-button:hover {
+        background: var(--surface-secondary);
+    }
+
+    .action-button.edit-button {
+        color: var(--card-text-primary);
+    }
+
+    .action-button.delete-button {
+        color: var(--card-delete-button-color);
+    }
+
+    .action-button.delete-button:hover {
+        background: var(--card-delete-button-background);
+        color: var(--card-delete-button-hover);
+    }
+
+    .action-button span {
+        flex: 1;
+    }
+
+    /* Adjust card content */
+    .card-main .card-content {
+        flex: 1;
+        min-width: 0; /* Allow text to wrap properly */
     }
 </style>

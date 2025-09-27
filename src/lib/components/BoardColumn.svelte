@@ -26,6 +26,7 @@
         onSetColumnContent: (columnId: string, content: string) => void;
         onDeleteCard: (cardId: string) => void;
         onEditCard: (cardId: string) => void;
+        onReaction?: (cardId: string, emoji: string) => void;
         userRole: string;
         currentUserId: string;
         hasVotes: boolean;
@@ -56,6 +57,7 @@
         onSetColumnContent,
         onDeleteCard,
         onEditCard,
+        onReaction,
         userRole,
         currentUserId,
         hasVotes,
@@ -155,6 +157,7 @@
                     onComment={onCommentCard}
                     onDelete={onDeleteCard}
                     onEdit={onEditCard}
+                    {onReaction}
                 />
 
                 <!-- Subordinate cards inside the lead card -->
@@ -184,6 +187,7 @@
                                 onComment={onCommentCard}
                                 onDelete={onDeleteCard}
                                 onEdit={onEditCard}
+                                {onReaction}
                             />
                         {/each}
                     </div>
@@ -211,6 +215,7 @@
                 onComment={onCommentCard}
                 onDelete={onDeleteCard}
                 onEdit={onEditCard}
+                {onReaction}
             />
         {/each}
     </div>

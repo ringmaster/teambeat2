@@ -957,6 +957,40 @@
         console.log("Comment on card:", cardId);
     }
 
+    async function addReaction(cardId: string, emoji: string) {
+        if (!boardId) return;
+
+        try {
+            const response = await fetch(`/api/comments`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    card_id: cardId,
+                    content: emoji,
+                    is_reaction: true,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Reaction added:", data);
+                // The SSE event will handle updating the UI
+            } else {
+                console.error("Failed to add reaction:", response.status);
+                toastStore.add({
+                    message: "Failed to add reaction",
+                    type: "error",
+                });
+            }
+        } catch (error) {
+            console.error("Error adding reaction:", error);
+            toastStore.add({
+                message: "Error adding reaction",
+                type: "error",
+            });
+        }
+    }
+
     async function loadPresentModeData() {
         if (!boardId || !currentScene || currentScene.mode !== "present")
             return;
@@ -2141,6 +2175,7 @@
             onSetColumnContent={setColumnContent}
             onDeleteCard={deleteCard}
             onEditCard={editCard}
+            onReaction={addReaction}
             {userRole}
             currentUserId={user?.id}
             {hasVotes}

@@ -61,6 +61,7 @@ CREATE TABLE `comments` (
 	`user_id` text,
 	`content` text NOT NULL,
 	`is_agreement` integer DEFAULT false,
+	`is_reaction` integer DEFAULT false,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`card_id`) REFERENCES `cards`(`id`) ON UPDATE no action ON DELETE cascade,

@@ -105,6 +105,7 @@ export const comments = sqliteTable('comments', {
   userId: text('user_id').references(() => users.id),
   content: text('content').notNull(),
   isAgreement: integer('is_agreement', { mode: 'boolean' }).default(false),
+  isReaction: integer('is_reaction', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });

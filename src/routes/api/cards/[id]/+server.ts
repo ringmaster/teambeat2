@@ -5,6 +5,7 @@ import { findCardById, updateCard, deleteCard } from '$lib/server/repositories/c
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated, broadcastCardDeleted } from '$lib/server/sse/broadcast.js';
+import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
 import { z } from 'zod';
 
 const updateCardSchema = z.object({
@@ -71,12 +72,15 @@ export const PUT: RequestHandler = async (event) => {
 
     const updatedCard = await updateCard(cardId, { content: data.content });
 
+    // Enrich the card with reaction and comment counts
+    const enrichedCard = await enrichCardWithCounts(updatedCard);
+
     // Broadcast the updated card to all clients
-    broadcastCardUpdated(board.id, updatedCard);
+    broadcastCardUpdated(board.id, enrichedCard);
 
     return json({
       success: true,
-      card: updatedCard
+      card: enrichedCard
     });
   } catch (error) {
     if (error instanceof Response) {

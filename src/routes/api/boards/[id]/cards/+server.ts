@@ -7,7 +7,7 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardCreated } from '$lib/server/sse/broadcast.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
-import { buildAllCardsData } from '$lib/server/utils/cards-data.js';
+import { buildAllCardsData, enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
 import { z } from 'zod';
 
 const createCardSchema = z.object({
@@ -93,12 +93,15 @@ export const POST: RequestHandler = async (event) => {
       userId: user.userId
     });
 
+    // Enrich card with counts (new cards will have 0 counts but keeps consistency)
+    const enrichedCard = await enrichCardWithCounts(card);
+
     // Broadcast the new card to all clients
-    broadcastCardCreated(boardId, card);
+    broadcastCardCreated(boardId, enrichedCard);
 
     return json({
       success: true,
-      card
+      card: enrichedCard
     });
   } catch (error) {
     return handleApiError(error, 'Failed to create card');
