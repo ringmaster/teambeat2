@@ -459,15 +459,17 @@
             {#if card.reactions && Object.keys(card.reactions).length > 0}
                 <div class="reaction-pills">
                     {#each Object.entries(card.reactions) as [emoji, count]}
-                        <span
+                        <button
                             class="reaction-pill"
-                            title="{count} {emoji} reaction{count !== 1
-                                ? 's'
-                                : ''}"
+                            title="Click to add {emoji} reaction ({count} total)"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                handleReaction(emoji);
+                            }}
                         >
                             <span class="reaction-emoji">{emoji}</span>
                             <span class="reaction-count">{count}</span>
-                        </span>
+                        </button>
                     {/each}
                 </div>
             {/if}
@@ -620,7 +622,19 @@
         border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
         border-radius: 12px;
         font-size: 0.75rem;
-        cursor: default;
+        cursor: pointer;
+        transition:
+            background-color 0.2s,
+            transform 0.1s;
+    }
+
+    .reaction-pill:hover {
+        background-color: var(--surface-tertiary, #e0e0e0);
+        transform: scale(1.05);
+    }
+
+    .reaction-pill:active {
+        transform: scale(0.98);
     }
 
     .reaction-emoji {
