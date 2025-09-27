@@ -336,6 +336,51 @@
                 </div>
             </div>
 
+            {#if scene.showComments && agreements.length > 0}
+                <div class="agreements-section">
+                    <h3 class="section-title">Agreements:</h3>
+                    <div class="agreements-list">
+                        {#each agreements as agreement (agreement.id)}
+                            <div class="agreement">
+                                <div class="agreement-content">
+                                    {agreement.content}
+                                </div>
+                                <div class="agreement-meta">
+                                    <span class="agreement-author"
+                                        >{agreement.userName}</span
+                                    >
+                                    <div class="comment-actions">
+                                        {#if isAdmin || isFacilitator}
+                                            <button
+                                                class="agreement-toggle"
+                                                onclick={() =>
+                                                    toggleAgreement(
+                                                        agreement.id,
+                                                        true,
+                                                    )}
+                                                title="Demote to Comment"
+                                            >
+                                                ↓ Demote
+                                            </button>
+                                        {/if}
+                                        {#if isAdmin || isFacilitator || agreement.userId === currentUser.id}
+                                            <button
+                                                class="delete-button"
+                                                onclick={() =>
+                                                    deleteComment(agreement.id)}
+                                                title="Delete Agreement"
+                                            >
+                                                ×
+                                            </button>
+                                        {/if}
+                                    </div>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
+
             {#if scene.showComments}
                 <div class="comments-section">
                     <h3 class="section-title">Comments:</h3>
@@ -397,62 +442,6 @@
                             </div>
                         {/each}
                     </div>
-                </div>
-            {/if}
-
-            {#if scene.showComments}
-                <div class="agreements-section">
-                    <h3 class="section-title">Agreements:</h3>
-                    {#if agreements.length === 0}
-                        <div class="empty-agreements">
-                            <div class="empty-agreements-box">
-                                <span class="plus-icon">+</span>
-                            </div>
-                            <p class="empty-text">No agreements yet.</p>
-                        </div>
-                    {:else}
-                        <div class="agreements-list">
-                            {#each agreements as agreement (agreement.id)}
-                                <div class="agreement">
-                                    <div class="agreement-content">
-                                        {agreement.content}
-                                    </div>
-                                    <div class="agreement-meta">
-                                        <span class="agreement-author"
-                                            >{agreement.userName}</span
-                                        >
-                                        <div class="comment-actions">
-                                            {#if isAdmin || isFacilitator}
-                                                <button
-                                                    class="agreement-toggle"
-                                                    onclick={() =>
-                                                        toggleAgreement(
-                                                            agreement.id,
-                                                            true,
-                                                        )}
-                                                    title="Demote to Comment"
-                                                >
-                                                    ↓ Demote
-                                                </button>
-                                            {/if}
-                                            {#if isAdmin || isFacilitator || agreement.userId === currentUser.id}
-                                                <button
-                                                    class="delete-button"
-                                                    onclick={() =>
-                                                        deleteComment(
-                                                            agreement.id,
-                                                        )}
-                                                    title="Delete Agreement"
-                                                >
-                                                    ×
-                                                </button>
-                                            {/if}
-                                        </div>
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
-                    {/if}
                 </div>
             {/if}
         {:else}
@@ -644,6 +633,7 @@
         align-items: center;
         justify-content: center;
         pointer-events: none;
+        display: none;
 
         .selection-indicator {
             color: var(--color-text-muted);
@@ -652,6 +642,10 @@
                 color: var(--color-accent);
             }
         }
+    }
+
+    .selected .selection-indicator-static {
+        display: flex;
     }
 
     .selection-indicator {
@@ -958,34 +952,6 @@
         font-size: 1rem;
         color: var(--color-text-muted);
         max-width: 400px;
-    }
-
-    .empty-agreements {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 2rem;
-
-        .empty-agreements-box {
-            width: 3rem;
-            height: 3rem;
-            border: 2px dashed var(--color-border);
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            .plus-icon {
-                font-size: 1.5rem;
-                color: var(--color-text-muted);
-            }
-        }
-
-        .empty-text {
-            color: var(--color-text-muted);
-            font-size: 0.875rem;
-        }
     }
 
     .nav-arrow {
