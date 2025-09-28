@@ -128,6 +128,7 @@
         if (remaining === 0) {
             running = false;
             _stopTick();
+            new Audio("/alarmding1.mp3").play();
         }
         _updateVotingState(false);
     }
