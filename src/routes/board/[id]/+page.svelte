@@ -119,6 +119,9 @@
 
     // Timer state
     let timerVisible = $state(false);
+    let hasActiveTimer = $derived(
+        board?.timerStart && board?.timerDuration ? true : false,
+    );
     let timerRef: any = $state(null);
     let timerVotesA = $state(0);
     let timerVotesB = $state(0);
@@ -1245,10 +1248,10 @@
         if (userRole !== "admin" && userRole !== "facilitator") return;
 
         // Just show the timer at 0 seconds - user can add time via menu
-        timerVisible = true;
         if (timerRef) {
             timerRef.setTimer(0, 0);
         }
+        timerVisible = true;
     }
 
     async function increaseVotingAllocation() {
@@ -2422,6 +2425,7 @@
     onvote={handleTimerVote}
     onaddtime={handleTimerAdd}
     onstopTimer={handleTimerStop}
+    {hasActiveTimer}
 />
 
 <style lang="less">

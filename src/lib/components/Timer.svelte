@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
+    import { fly } from "svelte/transition";
 
     interface Props {
         visible?: boolean;
@@ -34,7 +35,7 @@
     let showVotes = $state(false);
     let hoverMenuOpen = $state(false);
     let animKey = $state(0);
-    let menuCloseTimeout: number | null = null;
+    let menuCloseTimeout: number | ReturnType<typeof setTimeout> | null = null;
 
     let _tickId: number | null = null;
     let _lastAt = performance.now();
@@ -73,6 +74,12 @@
     export function setTimer(rem: number, pas: number = 0) {
         if (rem < 0) rem = 0;
         if (pas < 0) pas = 0;
+        if (rem == 0 && pas == 0) {
+            showVotes = false;
+            running = false;
+            _stopTick();
+            return;
+        }
         remaining = rem;
         passed = pas;
         total = Math.max(1, remaining + passed);
@@ -125,7 +132,7 @@
         _updateVotingState(false);
     }
 
-    function _updateVotingState(fromSetTimer: boolean) {
+    function _updateVotingState(_fromSetTimer: boolean) {
         const was = showVotes;
         showVotes =
             remaining <= 10 ? true : remaining >= 11 ? false : showVotes;
@@ -188,6 +195,7 @@
     }
 
     function handleStopClick() {
+        hoverMenuOpen = false;
         if (onstopTimer) {
             onstopTimer();
         }
@@ -209,7 +217,7 @@
 </script>
 
 {#if visible}
-    <div class="timer-root">
+    <div class="timer-root" transition:fly={{ y: 200, duration: 500 }}>
         <div
             class="timerbox {showVotes ? 'expanded' : ''}"
             data-anim-key={animKey}
@@ -257,6 +265,10 @@
 
             <div
                 class="dial-container"
+                role={enableMenu ? "button" : undefined}
+                aria-haspopup={enableMenu ? "true" : "false"}
+                aria-expanded={hoverMenuOpen ? "true" : "false"}
+                tabindex="-1"
                 onmouseenter={handleDialMouseEnter}
                 onmouseleave={handleDialMouseLeave}
             >
@@ -288,6 +300,8 @@
                 {#if enableMenu && hoverMenuOpen}
                     <div
                         class="menu"
+                        role="menu"
+                        tabindex="-1"
                         onmouseenter={handleMenuMouseEnter}
                         onmouseleave={handleMenuMouseLeave}
                     >
@@ -321,7 +335,7 @@
 
     .timer-root {
         position: fixed;
-        bottom: 1rem;
+        bottom: 4rem;
         right: 1rem;
         z-index: 100;
     }
@@ -333,7 +347,7 @@
         border: 1px solid var(--timer-border);
         display: flex;
         justify-content: flex-end;
-        align-items: center;
+        align-items: flex-end;
         background: var(--timer-bg);
         box-shadow: var(--timer-shadow);
         transition:
@@ -347,8 +361,9 @@
         height: auto;
         min-height: 60px;
         border-radius: 8px 8px 30px 8px;
-        padding: 8px;
+        padding: 0px;
         gap: 8px;
+        align-items: end;
     }
 
     .timerdetail {
@@ -357,6 +372,7 @@
         flex-direction: column;
         gap: 6px;
         animation: slideIn 400ms cubic-bezier(0.4, 0, 0.2, 1) 300ms both;
+        margin: 8px;
     }
 
     @keyframes slideIn {
