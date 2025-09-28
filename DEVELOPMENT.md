@@ -483,5 +483,72 @@ npm run test:api       # API tests only
 npm run test:e2e       # Playwright end-to-end tests
 npm run test:e2e:ui    # Playwright with UI mode
 npm run test:watch     # Watch mode for development
-npm run test:coverage  # Coverage report
 ```
+
+## Comment Permission System
+
+### Two-Level Permission Structure
+
+The comment system uses two distinct permissions that control different aspects of comment functionality:
+
+#### Show Comments (`showComments`)
+Controls **visibility** of comment-related UI elements:
+- Comment and reaction counts on cards (pills/badges)
+- Comments section in present mode
+- Agreement section in present mode
+- All comment-related content display
+
+When disabled:
+- Comment counts are hidden from all users
+- Reaction counts are hidden from all users
+- Comments section is not visible in present mode
+- Existing comments and reactions are preserved in database but not displayed
+
+#### Edit Comments (`allowComments`)
+Controls **interactivity** with comment-related features:
+- Clicking on comment and reaction menu items in card menus
+- Clicking on reaction pill buttons
+- Clicking on comment pill buttons
+- Comment creation input field in present mode
+- Comment promotion/demotion buttons (admin/facilitator only)
+- Comment deletion buttons
+
+When disabled:
+- All comment/reaction buttons become non-interactive (display only)
+- Comment creation input is hidden
+- Promotion/demotion buttons are hidden
+- Users cannot add, edit, or delete comments/reactions
+
+### Implementation Pattern
+
+UI elements follow this conditional pattern:
+
+```javascript
+// For visibility (counts, sections)
+{#if scene.showComments && hasContent}
+  <!-- Display comment/reaction content -->
+{/if}
+
+// For interactivity (buttons, inputs)
+{#if scene.showComments && scene.allowComments}
+  <button><!-- Interactive element --></button>
+{:else if scene.showComments}
+  <span><!-- Display-only version --></span>
+{/if}
+
+// For admin/facilitator actions
+{#if (isAdmin || isFacilitator) && scene.allowComments}
+  <!-- Promotion/deletion buttons -->
+{/if}
+```
+
+### Component Implementation
+
+- **Card.svelte**: Handles comment/reaction pills and menu items
+- **PresentMode.svelte**: Manages comment creation, promotion, and display
+- **ConfigScenesTable.svelte**: Provides permission toggle controls
+
+This two-level system allows flexible control where facilitators can:
+1. Show comments read-only (`showComments: true, allowComments: false`)
+2. Hide comments entirely (`showComments: false`)
+3. Enable full comment interaction (`showComments: true, allowComments: true`)

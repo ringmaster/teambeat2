@@ -438,64 +438,93 @@
     <div class="card-footer">
         <div class="card-footer-left">
             {#if (currentScene?.showVotes || currentScene?.allowVoting) && !isSubordinate}
-                <div onclick={(e) => e.stopPropagation()}>
-                    <Vote
-                        votes={userVotesOnCard}
-                        total={allUsersVotesOnCard ?? card.voteCount ?? 0}
-                        enabled={currentScene?.allowVoting ?? false}
-                        {hasVotes}
-                        view={getVoteViewMode(
-                            currentScene?.showVotes ?? false,
-                            currentScene?.allowVoting ?? false,
-                        )}
-                        itemID={card.id}
-                        onVote={(itemID, delta) => onVote(itemID, delta)}
-                    />
-                </div>
+                <Vote
+                    votes={userVotesOnCard}
+                    total={allUsersVotesOnCard ?? card.voteCount ?? 0}
+                    enabled={currentScene?.allowVoting ?? false}
+                    {hasVotes}
+                    view={getVoteViewMode(
+                        currentScene?.showVotes ?? false,
+                        currentScene?.allowVoting ?? false,
+                    )}
+                    itemID={card.id}
+                    onVote={(itemID, delta) => onVote(itemID, delta)}
+                />
             {/if}
         </div>
 
         <div class="card-footer-right">
-            {#if card.reactions && Object.keys(card.reactions).length > 0}
+            {#if currentScene?.showComments && card.reactions && Object.keys(card.reactions).length > 0}
                 <div class="reaction-pills">
                     {#each Object.entries(card.reactions) as [emoji, count]}
-                        <button
-                            class="reaction-pill"
-                            title="Click to add {emoji} reaction ({count} total)"
-                            onclick={(e) => {
-                                e.stopPropagation();
-                                handleReaction(emoji);
-                            }}
-                        >
-                            <span class="reaction-emoji">{emoji}</span>
-                            <span class="reaction-count">{count}</span>
-                        </button>
+                        {#if currentScene?.allowComments}
+                            <button
+                                class="reaction-pill clickable"
+                                title="Click to add {emoji} reaction ({count} total)"
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    handleReaction(emoji);
+                                }}
+                            >
+                                <span class="reaction-emoji">{emoji}</span>
+                                <span class="reaction-count">{count}</span>
+                            </button>
+                        {:else}
+                            <span
+                                class="reaction-pill"
+                                title="{count} {emoji} reaction{count !== 1
+                                    ? 's'
+                                    : ''}"
+                            >
+                                <span class="reaction-emoji">{emoji}</span>
+                                <span class="reaction-count">{count}</span>
+                            </span>
+                        {/if}
                     {/each}
                 </div>
             {/if}
 
-            {#if currentScene?.allowComments && card.commentCount > 0}
-                <button
-                    onclick={(e) => {
-                        e.stopPropagation();
-                        onComment(card.id);
-                    }}
-                    class="comment-pill"
-                    title="{card.commentCount} comment{card.commentCount !== 1
-                        ? 's'
-                        : ''}"
-                >
-                    <svg
-                        class="icon-xs"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
+            {#if currentScene?.showComments && card.commentCount > 0}
+                {#if currentScene?.allowComments}
+                    <button
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            onComment(card.id);
+                        }}
+                        class="comment-pill clickable"
+                        title="Click to view/add comments ({card.commentCount} total)"
                     >
-                        <path
-                            d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
-                        />
-                    </svg>
-                    <span>{card.commentCount}</span>
-                </button>
+                        <svg
+                            class="icon-xs"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+                            />
+                        </svg>
+                        <span>{card.commentCount}</span>
+                    </button>
+                {:else}
+                    <span
+                        class="comment-pill"
+                        title="{card.commentCount} comment{card.commentCount !==
+                        1
+                            ? 's'
+                            : ''}"
+                    >
+                        <svg
+                            class="icon-xs"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+                            />
+                        </svg>
+                        <span>{card.commentCount}</span>
+                    </span>
+                {/if}
             {/if}
         </div>
     </div>

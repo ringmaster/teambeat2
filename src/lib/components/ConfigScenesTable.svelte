@@ -490,7 +490,7 @@
                                 ? 'permission-active'
                                 : ''}"
                         >
-                            Enable Comments
+                            Edit Comments
                             <Icon
                                 name="check"
                                 size="md"

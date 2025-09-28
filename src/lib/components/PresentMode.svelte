@@ -350,7 +350,7 @@
                                         >{agreement.userName}</span
                                     >
                                     <div class="comment-actions">
-                                        {#if isAdmin || isFacilitator}
+                                        {#if (isAdmin || isFacilitator) && scene.allowComments}
                                             <button
                                                 class="agreement-toggle"
                                                 onclick={() =>
@@ -363,7 +363,7 @@
                                                 ↓ Demote
                                             </button>
                                         {/if}
-                                        {#if isAdmin || isFacilitator || agreement.userId === currentUser.id}
+                                        {#if (isAdmin || isFacilitator || agreement.userId === currentUser.id) && scene.allowComments}
                                             <button
                                                 class="delete-button"
                                                 onclick={() =>
@@ -414,7 +414,7 @@
                                         >{comment.userName}</span
                                     >
                                     <div class="comment-actions">
-                                        {#if isAdmin || isFacilitator}
+                                        {#if (isAdmin || isFacilitator) && scene.allowComments}
                                             <button
                                                 class="agreement-toggle"
                                                 onclick={() =>
@@ -427,7 +427,7 @@
                                                 ↑ Promote
                                             </button>
                                         {/if}
-                                        {#if isAdmin || isFacilitator || comment.userId === currentUser.id}
+                                        {#if (isAdmin || isFacilitator || comment.userId === currentUser.id) && scene.allowComments}
                                             <button
                                                 class="delete-button"
                                                 onclick={() =>
