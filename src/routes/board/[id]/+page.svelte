@@ -14,6 +14,7 @@
     import CommentModal from "$lib/components/CommentModal.svelte";
     import Timer from "$lib/components/Timer.svelte";
     import { toastStore } from "$lib/stores/toast";
+    import { resolve } from "$app/paths";
 
     interface Props {
         data: {
@@ -56,7 +57,8 @@
     >("disconnected");
     let sseReconnectAttempts = $state(0);
     let sseMaxReconnectAttempts = 5;
-    let sseReconnectTimeout: number | null = null;
+    let sseReconnectTimeout: number | ReturnType<typeof setTimeout> | null =
+        null;
 
     // UI State
     let newCardContentByColumn = new SvelteMap<string, string>();
@@ -171,7 +173,7 @@
             // Load user info
             const userResponse = await fetch("/api/auth/me");
             if (!userResponse.ok) {
-                goto("/login");
+                goto(resolve("/login"));
                 return;
             }
             const userData = await userResponse.json();
@@ -781,17 +783,19 @@
                 }
                 break;
             case "timer_update":
-                console.log("Timer update:", data.data || data.timer);
-                const timerData = data.data || data.timer;
-                if (timerData) {
-                    if (timerData.active && timerRef) {
-                        timerVisible = true;
-                        const remaining = timerData.timer_remaining || 0;
-                        const passed = timerData.timer_passed || 0;
-                        timerRef.setTimer(remaining, passed);
-                    } else if (!timerData.active && timerRef) {
-                        timerRef.stop();
-                        timerVisible = false;
+                {
+                    console.log("Timer update:", data.data || data.timer);
+                    const timerData = data.data || data.timer;
+                    if (timerData) {
+                        if (timerData.active && timerRef) {
+                            timerVisible = true;
+                            const remaining = timerData.timer_remaining || 0;
+                            const passed = timerData.timer_passed || 0;
+                            timerRef.setTimer(remaining, passed);
+                        } else if (!timerData.active && timerRef) {
+                            timerRef.stop();
+                            timerVisible = false;
+                        }
                     }
                 }
                 break;
@@ -1042,7 +1046,7 @@
                 // The SSE event will handle updating the UI
             } else {
                 console.error("Failed to add reaction:", response.status);
-                toastStore.add({
+                toastStore.addToast({
                     message: "Failed to add reaction",
                     type: "error",
                 });
@@ -1569,7 +1573,7 @@
             if (response.ok) {
                 toastStore.success("Board deleted successfully");
                 // Navigate back to dashboard
-                goto("/");
+                goto(resolve("/"));
             } else {
                 const data = await response.json();
                 toastStore.error(data.error || "Failed to delete board");
@@ -1620,7 +1624,6 @@
             });
             if (response.ok) {
                 // Don't update local state - let the websocket handle it to avoid duplicates
-                const data = await response.json();
             } else {
                 const errorData = await response.json();
                 console.error("Failed to create column:", errorData);
@@ -1743,7 +1746,7 @@
                 alert(data.error || "Failed to create scene");
                 return false;
             }
-        } catch (error) {
+        } catch {
             alert("Failed to create scene");
             return false;
         }
@@ -2425,7 +2428,6 @@
     onvote={handleTimerVote}
     onaddtime={handleTimerAdd}
     onstopTimer={handleTimerStop}
-    {hasActiveTimer}
 />
 
 <style lang="less">
