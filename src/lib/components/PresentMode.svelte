@@ -530,10 +530,11 @@
     @import "../../_mixins.less";
     .present-mode {
         display: flex;
-        height: 100%;
         gap: var(--spacing-6);
-        padding: var(--spacing-6);
+        padding: 0 var(--spacing-6);
         background: var(--color-bg-primary);
+        flex: 1;
+        overflow-y: auto;
     }
 
     // Left panel - 70% width for presentation
@@ -544,6 +545,7 @@
         padding: 40px;
         overflow-y: auto;
         border: 1px solid var(--color-border);
+        margin: var(--spacing-4) 0;
     }
 
     // Right panel - 30% width for card selection
