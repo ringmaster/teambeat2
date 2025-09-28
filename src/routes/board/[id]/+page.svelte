@@ -11,6 +11,7 @@
     import PresentMode from "$lib/components/PresentMode.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
+    import CommentModal from "$lib/components/CommentModal.svelte";
     import { toastStore } from "$lib/stores/toast";
 
     interface Props {
@@ -67,6 +68,10 @@
     let showEditCardModal = $state(false);
     let editingCard = $state<any>(null);
     let editCardContent = $state("");
+
+    // Comment Modal State
+    let showCommentModal = $state(false);
+    let commentingCard = $state<any>(null);
 
     // Drag and Drop State
     let draggedCardId = $state("");
@@ -954,7 +959,11 @@
     }
 
     async function commentCard(cardId: string) {
-        console.log("Comment on card:", cardId);
+        const card = cards.find((c) => c.id === cardId);
+        if (!card) return;
+
+        commentingCard = card;
+        showCommentModal = true;
     }
 
     async function addReaction(cardId: string, emoji: string) {
@@ -2257,6 +2266,18 @@
         </div>
     {/snippet}
 </Modal>
+
+<!-- Comment Modal -->
+<CommentModal
+    show={showCommentModal}
+    card={commentingCard}
+    {boardId}
+    blameFreeMode={board?.blameFreeMode || false}
+    onClose={() => {
+        showCommentModal = false;
+        commentingCard = null;
+    }}
+/>
 
 <style lang="less">
     @import "../../../app.less";
