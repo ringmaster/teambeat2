@@ -1049,7 +1049,7 @@
             }
         } catch (error) {
             console.error("Error adding reaction:", error);
-            toastStore.add({
+            toastStore.addToast({
                 message: "Error adding reaction",
                 type: "error",
             });
@@ -1248,7 +1248,7 @@
         if (userRole !== "admin" && userRole !== "facilitator") return;
 
         // Just show the timer at 0 seconds - user can add time via menu
-        if (timerRef) {
+        if (timerRef && !hasActiveTimer) {
             timerRef.setTimer(0, 0);
         }
         timerVisible = true;
