@@ -2,6 +2,8 @@
     import { getUserDisplayName } from "$lib/utils/animalNames";
     import Icon from "./ui/Icon.svelte";
     import Vote from "./ui/Vote.svelte";
+    import { createAvatar } from "@dicebear/core";
+    import { adventurer } from "@dicebear/collection";
 
     interface Props {
         card: any;
@@ -273,8 +275,13 @@
 
         <div class="card-sidebar">
             <div
-                class="user-avatar"
+                class="user-avatar cooltipz--left"
                 title={getUserDisplayName(
+                    card.userName || "Unknown",
+                    board.id,
+                    board.blameFreeMode,
+                )}
+                aria-label={getUserDisplayName(
                     card.userName || "Unknown",
                     board.id,
                     board.blameFreeMode,
@@ -282,17 +289,29 @@
             >
                 {#if isObscured}
                     <img
-                        src="https://api.dicebear.com/9.x/adventurer/svg?seed={board.id}"
-                        alt="User avatar"
+                        src="/masked.svg"
+                        alt="Obscured user avatar"
                         width="24"
                         height="24"
+                        class="cooltipz--left"
+                        aria-label="Obscured user avatar"
                     />
                 {:else}
                     <img
-                        src="https://api.dicebear.com/9.x/adventurer/svg?seed={card.userId}-{board.id}"
+                        src={createAvatar(adventurer, {
+                            seed: `${card.userId}-${board.id}`,
+                            size: 24,
+                            radius: 12,
+                        }).toDataUri()}
                         alt="User avatar"
                         width="24"
                         height="24"
+                        class="cooltipz--left"
+                        aria-label={getUserDisplayName(
+                            card.userName || "Unknown",
+                            board.id,
+                            board.blameFreeMode,
+                        )}
                     />
                 {/if}
             </div>

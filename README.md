@@ -178,3 +178,9 @@ This is a functional MVP implementation covering all core retrospective features
 - [ ] SSO/OAuth integration
 
 Built according to CLAUDE.md development guidelines emphasizing explicit over implicit code, libraries over custom solutions, and human-maintainable architecture.
+
+## License
+
+MIT License. See `LICENSE` file for details.
+
+The DiceBear avatar style [Adventurer](https://www.dicebear.com/styles/adventurer/) is a remix of: [Adventurer](https://www.figma.com/community/file/1184595184137881796) by [Lisa Wischofsky](https://www.instagram.com/lischi_art/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
