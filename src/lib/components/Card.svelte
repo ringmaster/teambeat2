@@ -289,20 +289,22 @@
             </div>
 
             <div class="card-menu-container">
-                <button
-                    class="menu-button"
-                    onclick={toggleMenu}
-                    aria-label="Card menu"
-                    title="Card menu"
-                >
-                    <span class="hamburger">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </span>
-                </button>
+                {#if currentScene?.allowComments || canEdit || canDelete}
+                    <button
+                        class="menu-button"
+                        onclick={toggleMenu}
+                        aria-label="Card menu"
+                        title="Card menu"
+                    >
+                        <span class="hamburger">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </span>
+                    </button>
+                {/if}
 
-                {#if isMenuOpen}
+                {#if isMenuOpen && (currentScene?.allowComments || canEdit || canDelete)}
                     <div class="card-menu">
                         {#if currentScene?.allowComments}
                             <div class="card-menu-button-row">

@@ -548,6 +548,20 @@ UI elements follow this conditional pattern:
 - **PresentMode.svelte**: Manages comment creation, promotion, and display
 - **ConfigScenesTable.svelte**: Provides permission toggle controls
 
+#### Menu Button Visibility
+
+The card menu button is only displayed when at least one menu option is available:
+
+```javascript
+{#if currentScene?.allowComments || canEdit || canDelete}
+  <!-- Show menu button -->
+{/if}
+```
+
+This ensures users don't see an empty or useless menu button when they have no available actions.
+
+### Flexible Permission Combinations
+
 This two-level system allows flexible control where facilitators can:
 1. Show comments read-only (`showComments: true, allowComments: false`)
 2. Hide comments entirely (`showComments: false`)
