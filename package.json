@@ -28,6 +28,7 @@
     "@sveltejs/adapter-auto": "^6.0.0",
     "@sveltejs/kit": "^2.22.0",
     "@sveltejs/vite-plugin-svelte": "^6.0.0",
+    "drizzle-kit": "^0.31.5",
     "eslint": "^9.35.0",
     "eslint-plugin-svelte": "^3.12.1",
     "eventsource": "^4.0.0",

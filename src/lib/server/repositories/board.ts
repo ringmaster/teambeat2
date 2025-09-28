@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { boards, columns, scenes, cards, scenesColumns, boardSeries } from '../db/schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface CreateBoardData {
@@ -90,6 +90,8 @@ export async function getBoardWithDetails(boardId: string) {
       votingAllocation: boards.votingAllocation,
       votingEnabled: boards.votingEnabled,
       meetingDate: boards.meetingDate,
+      timerStart: boards.timerStart,
+      timerDuration: boards.timerDuration,
       createdAt: boards.createdAt,
       updatedAt: boards.updatedAt,
       series: boardSeries.name
@@ -191,6 +193,104 @@ export async function updateBoardStatus(boardId: string, status: 'draft' | 'acti
       updatedAt: new Date().toISOString()
     })
     .where(eq(boards.id, boardId));
+}
+
+export async function startBoardTimer(boardId: string, duration: number) {
+  const now = new Date().toISOString();
+  const [result] = await db
+    .update(boards)
+    .set({
+      timerStart: now,
+      timerDuration: duration,
+      updatedAt: sql`CURRENT_TIMESTAMP`
+    })
+    .where(eq(boards.id, boardId))
+    .returning();
+
+  return result;
+}
+
+export async function updateBoardTimer(boardId: string, addSeconds: number) {
+  // First get the current timer state
+  const [board] = await db
+    .select({
+      timerStart: boards.timerStart,
+      timerDuration: boards.timerDuration
+    })
+    .from(boards)
+    .where(eq(boards.id, boardId));
+
+  let updateData: any = {
+    updatedAt: sql`CURRENT_TIMESTAMP`
+  };
+
+  if (!board || !board.timerStart || !board.timerDuration) {
+    // No timer exists - create new one
+    updateData.timerStart = new Date().toISOString();
+    updateData.timerDuration = addSeconds;
+  } else {
+    // Check if timer is expired
+    const start = new Date(board.timerStart).getTime();
+    const now = Date.now();
+    const elapsed = Math.floor((now - start) / 1000);
+    const remaining = board.timerDuration - elapsed;
+
+    if (remaining <= 0) {
+      // Timer has expired - restart with new duration
+      updateData.timerStart = new Date().toISOString();
+      updateData.timerDuration = addSeconds;
+    } else {
+      // Timer is still active - just add to duration, keep start time
+      updateData.timerDuration = board.timerDuration + addSeconds;
+    }
+  }
+
+  const [result] = await db
+    .update(boards)
+    .set(updateData)
+    .where(eq(boards.id, boardId))
+    .returning();
+
+  return result;
+}
+
+export async function stopBoardTimer(boardId: string) {
+  const [result] = await db
+    .update(boards)
+    .set({
+      timerStart: null,
+      timerDuration: null,
+      updatedAt: sql`CURRENT_TIMESTAMP`
+    })
+    .where(eq(boards.id, boardId))
+    .returning();
+
+  return result;
+}
+
+export async function getBoardTimer(boardId: string) {
+  const [board] = await db
+    .select({
+      timerStart: boards.timerStart,
+      timerDuration: boards.timerDuration
+    })
+    .from(boards)
+    .where(eq(boards.id, boardId));
+
+  if (!board || !board.timerStart || !board.timerDuration) {
+    return null;
+  }
+
+  const start = new Date(board.timerStart).getTime();
+  const now = Date.now();
+  const elapsed = Math.floor((now - start) / 1000);
+  const remaining = Math.max(0, board.timerDuration - elapsed);
+
+  return {
+    timer_passed: elapsed,
+    timer_remaining: remaining,
+    active: remaining > 0
+  };
 }
 
 export interface UpdateBoardSettingsData {

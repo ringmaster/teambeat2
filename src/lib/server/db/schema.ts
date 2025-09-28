@@ -37,6 +37,8 @@ export const boards = sqliteTable('boards', {
   votingAllocation: integer('voting_allocation').notNull().default(3),
   votingEnabled: integer('voting_enabled', { mode: 'boolean' }).default(true),
   meetingDate: text('meeting_date'),
+  timerStart: text('timer_start'), // datetime when timer was started
+  timerDuration: integer('timer_duration'), // duration in seconds
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
@@ -139,21 +141,9 @@ export const presence = sqliteTable('presence', {
   pk: primaryKey({ columns: [table.userId, table.boardId] })
 }));
 
-export const boardTimers = sqliteTable('board_timers', {
-  boardId: text('board_id').primaryKey().references(() => boards.id, { onDelete: 'cascade' }),
-  durationSeconds: integer('duration_seconds').notNull(),
-  startedAt: integer('started_at').notNull(),
-  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
-});
+// Timer fields moved to boards table (timerStart, timerDuration)
 
-export const timerExtensionVotes = sqliteTable('timer_extension_votes', {
-  boardId: text('board_id').notNull().references(() => boardTimers.boardId, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  vote: text('vote').notNull().$type<'done' | 'more_time'>(),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
-}, (table) => ({
-  pk: primaryKey({ columns: [table.boardId, table.userId] })
-}));
+// Timer extension votes removed - handled in client state
 
 export const userAuthenticators = sqliteTable('user_authenticators', {
   id: text('id').primaryKey(),

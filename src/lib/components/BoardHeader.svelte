@@ -49,6 +49,7 @@
         onShowSceneDropdown: (show: boolean) => void;
         onIncreaseAllocation?: () => Promise<void>;
         onResetVotes?: () => Promise<void>;
+        onStartTimer?: () => void;
     }
 
     let {
@@ -65,6 +66,7 @@
         onShowSceneDropdown,
         onIncreaseAllocation,
         onResetVotes,
+        onStartTimer,
     }: Props = $props();
 </script>
 
@@ -131,9 +133,13 @@
                 </button>
             {/if}
 
-            {#if ["admin", "facilitator"].includes(userRole)}
-                <button class="toolbar-button facilitator-timer">
-                    Timer
+            {#if ["admin", "facilitator"].includes(userRole) && onStartTimer}
+                <button
+                    class="toolbar-button facilitator-timer"
+                    onclick={onStartTimer}
+                >
+                    <Icon name="clock" size="sm" />
+                    <span>Timer</span>
                 </button>
             {/if}
 

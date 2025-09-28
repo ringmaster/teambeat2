@@ -4,6 +4,10 @@ import { buildVotingStatsUpdatedMessage } from '../utils/voting-data.js';
 import { buildAllCardsData } from '../utils/cards-data.js';
 import { buildPresenceData } from '../utils/presence-data.js';
 
+export function broadcastToBoardUsers(boardId: string, message: SSEMessage) {
+  sseManager.broadcastToBoard(boardId, message);
+}
+
 export function broadcastCardCreated(boardId: string, card: any) {
   const message: SSEMessage = {
     type: 'card_created',

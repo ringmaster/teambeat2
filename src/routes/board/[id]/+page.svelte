@@ -12,6 +12,7 @@
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
+    import Timer from "$lib/components/Timer.svelte";
     import { toastStore } from "$lib/stores/toast";
 
     interface Props {
@@ -116,6 +117,17 @@
     let comments = $state<any[]>([]);
     let agreements = $state<any[]>([]);
 
+    // Timer state
+    let timerVisible = $state(false);
+    let timerRef: any = $state(null);
+    let timerVotesA = $state(0);
+    let timerVotesB = $state(0);
+    let timerTotalVotes = $state(0);
+    let pendingTimerInit = $state<{
+        remaining: number;
+        elapsed: number;
+    } | null>(null);
+
     // Calculate if user has votes available (same value for all cards on the board)
     let hasVotes = $derived(votingAllocation?.canVote ?? false);
 
@@ -123,6 +135,18 @@
     $effect(() => {
         if (boardId && user?.id && !loading) {
             loadUserVotingData();
+        }
+    });
+
+    // Initialize timer when component is ready
+    $effect(() => {
+        // If we have a pending timer initialization and the timer ref is now available, initialize it
+        if (pendingTimerInit && timerRef) {
+            timerRef.setTimer(
+                pendingTimerInit.remaining,
+                pendingTimerInit.elapsed,
+            );
+            pendingTimerInit = null;
         }
     });
 
@@ -208,6 +232,20 @@
                 if (cardsResponse.ok) {
                     const cardsData = await cardsResponse.json();
                     cards = cardsData.cards || [];
+                }
+            }
+
+            // Initialize timer from board data if active
+            if (board.timerStart && board.timerDuration) {
+                const start = new Date(board.timerStart).getTime();
+                const now = Date.now();
+                const elapsed = Math.floor((now - start) / 1000);
+                const remaining = Math.max(0, board.timerDuration - elapsed);
+
+                if (remaining > 0) {
+                    timerVisible = true;
+                    // Store the timer init data to be used when the Timer component is ready
+                    pendingTimerInit = { remaining, elapsed };
                 }
             }
 
@@ -739,6 +777,21 @@
                     userVotesByCard.clear();
                 }
                 break;
+            case "timer_update":
+                console.log("Timer update:", data.data || data.timer);
+                const timerData = data.data || data.timer;
+                if (timerData) {
+                    if (timerData.active && timerRef) {
+                        timerVisible = true;
+                        const remaining = timerData.timer_remaining || 0;
+                        const passed = timerData.timer_passed || 0;
+                        timerRef.setTimer(remaining, passed);
+                    } else if (!timerData.active && timerRef) {
+                        timerRef.stop();
+                        timerVisible = false;
+                    }
+                }
+                break;
         }
     }
 
@@ -1119,6 +1172,82 @@
             }
         } catch (error) {
             console.error("Failed to load connected users:", error);
+        }
+    }
+
+    async function handleTimerVote(choice: "A" | "B") {
+        // Timer voting will be handled in future implementation
+        console.log("Timer vote:", choice);
+    }
+
+    async function handleTimerAdd(seconds: number) {
+        if (!boardId || (userRole !== "admin" && userRole !== "facilitator"))
+            return;
+
+        // If timer is not running, start it with the specified duration
+        if (timerRef && !board?.timerStart) {
+            try {
+                const response = await fetch(`/api/boards/${boardId}/timer`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ duration: seconds }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.timer && timerRef) {
+                        timerRef.setTimer(
+                            data.timer.timer_remaining,
+                            data.timer.timer_passed,
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to start timer:", error);
+            }
+        } else {
+            // Timer is running, add time to it
+            try {
+                const response = await fetch(`/api/boards/${boardId}/timer`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ addSeconds: seconds }),
+                });
+                if (!response.ok) {
+                    console.error("Failed to add time to timer");
+                }
+            } catch (error) {
+                console.error("Failed to add time:", error);
+            }
+        }
+    }
+
+    async function handleTimerStop() {
+        if (!boardId || (userRole !== "admin" && userRole !== "facilitator"))
+            return;
+        try {
+            const response = await fetch(`/api/boards/${boardId}/timer`, {
+                method: "DELETE",
+            });
+            if (response.ok) {
+                timerVisible = false;
+                if (timerRef) {
+                    timerRef.stop();
+                }
+            } else {
+                console.error("Failed to stop timer");
+            }
+        } catch (error) {
+            console.error("Failed to stop timer:", error);
+        }
+    }
+
+    function showTimer() {
+        if (userRole !== "admin" && userRole !== "facilitator") return;
+
+        // Just show the timer at 0 seconds - user can add time via menu
+        timerVisible = true;
+        if (timerRef) {
+            timerRef.setTimer(0, 0);
         }
     }
 
@@ -2106,6 +2235,7 @@
         onShowSceneDropdown={(show) => (showSceneDropdown = show)}
         onIncreaseAllocation={increaseVotingAllocation}
         onResetVotes={resetBoardVotes}
+        onStartTimer={() => showTimer()}
     />
 
     <!-- Connection Status Indicator -->
@@ -2277,6 +2407,21 @@
         showCommentModal = false;
         commentingCard = null;
     }}
+/>
+
+<!-- Timer Component -->
+<Timer
+    bind:this={timerRef}
+    visible={timerVisible}
+    enableMenu={userRole === "admin" || userRole === "facilitator"}
+    labelA="More Time"
+    labelB="Move On"
+    votesA={timerVotesA}
+    votesB={timerVotesB}
+    totalVotes={timerTotalVotes}
+    onvote={handleTimerVote}
+    onaddtime={handleTimerAdd}
+    onstopTimer={handleTimerStop}
 />
 
 <style lang="less">

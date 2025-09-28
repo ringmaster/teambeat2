@@ -15,6 +15,13 @@
       "when": 1759013699589,
       "tag": "0001_odd_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1759076246143,
+      "tag": "0002_petite_rafael_vega",
+      "breakpoints": true
     }
   ]
 }
