@@ -280,12 +280,21 @@
                     board.blameFreeMode,
                 )}
             >
-                <img
-                    src="https://api.dicebear.com/9.x/adventurer/svg?seed={card.userId}-{board.id}"
-                    alt="User avatar"
-                    width="24"
-                    height="24"
-                />
+                {#if isObscured}
+                    <img
+                        src="https://api.dicebear.com/9.x/adventurer/svg?seed={board.id}"
+                        alt="User avatar"
+                        width="24"
+                        height="24"
+                    />
+                {:else}
+                    <img
+                        src="https://api.dicebear.com/9.x/adventurer/svg?seed={card.userId}-{board.id}"
+                        alt="User avatar"
+                        width="24"
+                        height="24"
+                    />
+                {/if}
             </div>
 
             <div class="card-menu-container">

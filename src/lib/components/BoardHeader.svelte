@@ -91,18 +91,28 @@
                     <div class="pills">
                         <Pill
                             size="sm"
+                            tip="Your role on this board"
                             preset={userRole as
                                 | "admin"
                                 | "member"
                                 | "facilitator"}>{userRole}</Pill
                         >
                         {#if board.status && board.status !== "active"}
-                            <Pill size="sm" preset={board.status}>
+                            <Pill
+                                size="sm"
+                                preset={board.status}
+                                tip="Board status"
+                            >
                                 {board.status}
                             </Pill>
                         {/if}
                         {#if board.blameFreeMode}
-                            <Pill size="sm" variant="success">Blame-free</Pill>
+                            <Pill
+                                size="sm"
+                                variant="success"
+                                tip="Usernames are replaced with animal names"
+                                >Blame-free</Pill
+                            >
                         {/if}
                     </div>
                 </div>
@@ -127,7 +137,8 @@
             {#if ["admin", "facilitator"].includes(userRole)}
                 <button
                     onclick={onConfigureClick}
-                    class="toolbar-button facilitator-configure"
+                    class="toolbar-button facilitator-configure cooltipz--bottom"
+                    aria-label="Configure board settings"
                 >
                     <Icon name="settings" size="sm" />
                 </button>
@@ -135,7 +146,8 @@
 
             {#if ["admin", "facilitator"].includes(userRole) && onStartTimer}
                 <button
-                    class="toolbar-button facilitator-timer"
+                    class="toolbar-button facilitator-timer cooltipz--bottom"
+                    aria-label="Start a timer for this board"
                     onclick={onStartTimer}
                 >
                     <Icon name="clock" size="sm" />
@@ -143,7 +155,11 @@
                 </button>
             {/if}
 
-            <button onclick={onShareClick} class="toolbar-button share-board">
+            <button
+                onclick={onShareClick}
+                class="toolbar-button share-board cooltipz--bottom"
+                aria-label="Copy board URL"
+            >
                 <Icon name="share" class="icon-sm" />
                 <span>Share</span>
             </button>

@@ -116,7 +116,8 @@
         <!-- Users connected -->
         {#if showAdminControls}
             <button
-                class="stat-item clickable"
+                class="stat-item clickable cooltipz--bottom"
+                aria-label="Click to view user voting status"
                 onclick={openUserStatusModal}
                 title="Click to view user voting status"
             >
@@ -140,48 +141,23 @@
             </div>
         {/if}
 
-        <!-- Total remaining votes across all users -->
-        {#if showAdminControls}
-            <button
-                class="stat-item clickable"
-                onclick={openUserStatusModal}
-                title="Click to view detailed voting status"
-            >
-                <span class="stat-value">{votingStats.remainingVotes}</span>
-                <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
-                    <path
-                        fill="currentColor"
-                        d="M7.41 584.17c0,1861.94 -222.38,1606.48 1770.71,1606.48 552.07,0 436.83,-725.71 417.76,-1268.89 -440.38,226.34 92.11,1067.99 -454.28,1067.99 -284.61,0 -1270.84,38.26 -1478.6,-36.5 -94.71,-233.43 -96.22,-1481.84 0,-1715.83 235.04,-63.65 553.67,-37.22 821.5,-36.46 494.94,1.4 343.45,40.23 620.68,-191.8l-1204.95 -9.15c-386.93,0 -492.82,196.99 -492.82,584.17z"
-                    />
-                    <path
-                        fill="currentColor"
-                        d="M1240.96 1254.38c-133.58,-48.8 -242.66,-132.57 -372.64,-201.78l-114.28 94.15 505.54 679.08c110.59,-228.53 573.06,-848.02 761.79,-1026.27l252.79 -272.92c26.7,-29.04 16.63,-15.87 41.33,-48.46 -219.81,0 -214.36,0.03 -352.86,112.1l-485.84 434.37c-86.38,90.21 -132.43,146.9 -235.83,229.72z"
-                    />
-                    <path
-                        fill="currentColor"
-                        d="M616.43 1041.78c-100.92,-36.88 -183.33,-100.16 -281.54,-152.45l-86.34 71.13 381.94 513.06c83.55,-172.66 432.97,-640.69 575.55,-775.36l190.99 -206.21c20.17,-21.94 12.56,-12 31.22,-36.62 -166.07,0 -161.95,0.03 -266.6,84.7l-367.07 328.18c-65.25,68.15 -100.05,110.99 -178.17,173.56z"
-                    />
-                </svg>
-            </button>
-        {:else}
-            <div class="stat-item" title="Total votes remaining">
-                <span class="stat-value">{votingStats.remainingVotes}</span>
-                <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
-                    <path
-                        fill="currentColor"
-                        d="M7.41 584.17c0,1861.94 -222.38,1606.48 1770.71,1606.48 552.07,0 436.83,-725.71 417.76,-1268.89 -440.38,226.34 92.11,1067.99 -454.28,1067.99 -284.61,0 -1270.84,38.26 -1478.6,-36.5 -94.71,-233.43 -96.22,-1481.84 0,-1715.83 235.04,-63.65 553.67,-37.22 821.5,-36.46 494.94,1.4 343.45,40.23 620.68,-191.8l-1204.95 -9.15c-386.93,0 -492.82,196.99 -492.82,584.17z"
-                    />
-                    <path
-                        fill="currentColor"
-                        d="M1240.96 1254.38c-133.58,-48.8 -242.66,-132.57 -372.64,-201.78l-114.28 94.15 505.54 679.08c110.59,-228.53 573.06,-848.02 761.79,-1026.27l252.79 -272.92c26.7,-29.04 16.63,-15.87 41.33,-48.46 -219.81,0 -214.36,0.03 -352.86,112.1l-485.84 434.37c-86.38,90.21 -132.43,146.9 -235.83,229.72z"
-                    />
-                    <path
-                        fill="currentColor"
-                        d="M616.43 1041.78c-100.92,-36.88 -183.33,-100.16 -281.54,-152.45l-86.34 71.13 381.94 513.06c83.55,-172.66 432.97,-640.69 575.55,-775.36l190.99 -206.21c20.17,-21.94 12.56,-12 31.22,-36.62 -166.07,0 -161.95,0.03 -266.6,84.7l-367.07 328.18c-65.25,68.15 -100.05,110.99 -178.17,173.56z"
-                    />
-                </svg>
-            </div>
-        {/if}
+        <div class="stat-item" title="Total votes remaining">
+            <span class="stat-value">{votingStats.remainingVotes}</span>
+            <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
+                <path
+                    fill="currentColor"
+                    d="M7.41 584.17c0,1861.94 -222.38,1606.48 1770.71,1606.48 552.07,0 436.83,-725.71 417.76,-1268.89 -440.38,226.34 92.11,1067.99 -454.28,1067.99 -284.61,0 -1270.84,38.26 -1478.6,-36.5 -94.71,-233.43 -96.22,-1481.84 0,-1715.83 235.04,-63.65 553.67,-37.22 821.5,-36.46 494.94,1.4 343.45,40.23 620.68,-191.8l-1204.95 -9.15c-386.93,0 -492.82,196.99 -492.82,584.17z"
+                />
+                <path
+                    fill="currentColor"
+                    d="M1240.96 1254.38c-133.58,-48.8 -242.66,-132.57 -372.64,-201.78l-114.28 94.15 505.54 679.08c110.59,-228.53 573.06,-848.02 761.79,-1026.27l252.79 -272.92c26.7,-29.04 16.63,-15.87 41.33,-48.46 -219.81,0 -214.36,0.03 -352.86,112.1l-485.84 434.37c-86.38,90.21 -132.43,146.9 -235.83,229.72z"
+                />
+                <path
+                    fill="currentColor"
+                    d="M616.43 1041.78c-100.92,-36.88 -183.33,-100.16 -281.54,-152.45l-86.34 71.13 381.94 513.06c83.55,-172.66 432.97,-640.69 575.55,-775.36l190.99 -206.21c20.17,-21.94 12.56,-12 31.22,-36.62 -166.07,0 -161.95,0.03 -266.6,84.7l-367.07 328.18c-65.25,68.15 -100.05,110.99 -178.17,173.56z"
+                />
+            </svg>
+        </div>
 
         <!-- User's remaining votes / total allocation -->
         <div class="stat-item">
@@ -199,10 +175,10 @@
                 <div class="admin-actions">
                     <!-- Increase allocation button -->
                     <button
-                        class="toolbar-action increase-votes"
+                        class="toolbar-action increase-votes cooltipz--bottom"
+                        aria-label="Increase vote allocation by 1"
                         onclick={handleIncreaseAllocation}
                         disabled={isIncreasing}
-                        title="Increase voting allocation by 1"
                     >
                         {#if isIncreasing}
                             <Icon name="loading" size="sm" />
@@ -218,10 +194,10 @@
 
                     <!-- Reset votes button -->
                     <button
-                        class="toolbar-action reset-votes"
+                        class="toolbar-action reset-votes cooltipz--bottom"
                         onclick={handleResetVotes}
                         disabled={isResetting}
-                        title="Reset all votes and set allocation to 0"
+                        aria-label="Reset all votes and set allocation to 0"
                     >
                         {#if isResetting}
                             <Icon name="loading" size="sm" />

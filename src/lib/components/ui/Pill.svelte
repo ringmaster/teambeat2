@@ -19,6 +19,8 @@
         size?: "sm" | "md" | "lg";
         class?: string;
         children?: any;
+        tip?: string;
+        tipDirection?: "top" | "right" | "bottom" | "left";
     }
 
     let {
@@ -27,6 +29,8 @@
         size = "sm",
         class: className = "",
         children,
+        tip,
+        tipDirection = "bottom",
     }: Props = $props();
 
     // Map presets to variants
@@ -51,11 +55,15 @@
             classes.push(className);
         }
 
+        if (tip) {
+            classes.push("cooltipz--" + tipDirection);
+        }
+
         return classes.join(" ");
     });
 </script>
 
-<span class={pillClass}>
+<span class={pillClass} aria-label={tip}>
     {#if false}
         <!-- Force these classes to exist for the component -->
         <span

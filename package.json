@@ -43,12 +43,12 @@
   "dependencies": {
     "@simplewebauthn/browser": "^13.1.2",
     "@simplewebauthn/server": "^13.1.2",
-    "@svelte-plugins/tooltips": "^3.0.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^12.2.0",
+    "cooltipz-css": "^2.4.0",
     "drizzle-orm": "^0.44.5",
     "flatpickr": "^4.6.13",
     "node-fetch": "^3.3.2",

@@ -321,6 +321,14 @@
 </div>
 
 <style>
+    :global {
+        @import "../../node_modules/cooltipz-css/cooltipz.css";
+        html,
+        body {
+            overscroll-behavior-x: none;
+        }
+    }
+
     .teambeat-logo {
         width: 1.5em;
         height: 1.5em;
