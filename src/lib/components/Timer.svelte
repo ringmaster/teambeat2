@@ -239,7 +239,7 @@
                                         votesA,
                                         votesB,
                                         totalVotes,
-                                    )}; background-color: {currentColor}"
+                                    )};"
                                 ></div>
                             </div>
                         </button>
@@ -256,7 +256,7 @@
                                         votesB,
                                         votesA,
                                         totalVotes,
-                                    )}; background-color: {currentColor}"
+                                    )};"
                                 ></div>
                             </div>
                         </button>
@@ -332,6 +332,7 @@
         --timer-button-bg: #f8f9fa;
         --timer-button-text: #333;
         --timer-bar-bg: #e9ecef;
+        --timer-bar-fill: #3c495b;
     }
 
     .timer-root {
@@ -423,6 +424,7 @@
     .fill {
         height: 100%;
         transition: width 300ms ease;
+        background-color: var(--timer-bar-fill);
     }
 
     .dial-container {

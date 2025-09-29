@@ -1,7 +1,46 @@
 import { db } from '../db/index.js';
+import { sseManager } from '$lib/server/sse/manager';
+import { broadcastToBoardUsers } from '$lib/server/sse/broadcast';
+
 import { boards, columns, scenes, cards, scenesColumns, boardSeries } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+
+// In-memory store for timer votes
+const timerVotes = new Map<string, { A: Set<string>; B: Set<string> }>();
+
+export function recordTimerVote(timerId: string, userId: string, choice: 'A' | 'B') {
+  if (!timerVotes.has(timerId)) {
+    timerVotes.set(timerId, { A: new Set(), B: new Set() });
+  }
+  const votes = timerVotes.get(timerId)!;
+
+  if (choice === 'A') {
+    votes.B.delete(userId);
+    votes.A.add(userId);
+  } else {
+    votes.A.delete(userId);
+    votes.B.add(userId);
+  }
+  timerVotes.set(timerId, votes);
+  console.log(`Recording choice ${choice} for timer ${timerId} for board ${userId}`);
+  console.log(votes);
+}
+
+export function getTimerVotes(timerId: string) {
+  if (!timerVotes.has(timerId)) {
+    return { A: 0, B: 0 };
+  }
+  const votes = timerVotes.get(timerId)!;
+  return {
+    A: votes.A.size,
+    B: votes.B.size,
+  };
+}
+
+export function clearTimerVotes(timerId: string) {
+  timerVotes.delete(timerId);
+}
+
 
 export interface CreateBoardData {
   name: string;
@@ -287,10 +326,37 @@ export async function getBoardTimer(boardId: string) {
   const remaining = Math.max(0, board.timerDuration - elapsed);
 
   return {
+    timer_start: board.timerStart,
     timer_passed: elapsed,
     timer_remaining: remaining,
-    active: remaining > 0
+    active: !!board.timerStart //remaining > 0
   };
+}
+
+export async function broadcastTimerUpdate(boardId: string) {
+  const timerData = await getBoardTimer(boardId);
+  let voteData = null;
+  let totalUsers = 0;
+
+  if (timerData && timerData.timer_start) {
+    voteData = getTimerVotes(timerData.timer_start);
+    totalUsers = sseManager.getConnectedUsers(boardId).length;
+  }
+
+  const message = {
+    type: 'timer_update',
+    data: {
+      ...(timerData || { active: false }),
+      votes: voteData,
+      totalUsers: totalUsers
+    }
+  };
+
+  console.log(`Broadcasting timer ${timerData?.timer_start} update`, message);
+
+  broadcastToBoardUsers(boardId, message);
+
+  return message;
 }
 
 export interface UpdateBoardSettingsData {

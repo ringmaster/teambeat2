@@ -89,17 +89,6 @@ export function broadcastCommentAdded(boardId: string, comment: any) {
   sseManager.broadcastToBoard(boardId, message);
 }
 
-export function broadcastTimerUpdate(boardId: string, timer: any) {
-  const message: SSEMessage = {
-    type: 'timer_update',
-    board_id: boardId,
-    timer,
-    timestamp: Date.now()
-  };
-
-  sseManager.broadcastToBoard(boardId, message);
-}
-
 export function broadcastBoardUpdated(boardId: string, board: any) {
   const message: SSEMessage = {
     type: 'board_updated',

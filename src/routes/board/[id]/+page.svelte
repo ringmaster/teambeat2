@@ -509,6 +509,7 @@
     }
 
     function handleSSEMessage(data: any) {
+        console.log("Handling SSE Message", data);
         switch (data.type) {
             case "presence_ping":
                 // Respond to ping by updating presence
@@ -782,23 +783,46 @@
                     userVotesByCard.clear();
                 }
                 break;
-            case "timer_update":
-                {
-                    console.log("Timer update:", data.data || data.timer);
-                    const timerData = data.data || data.timer;
-                    if (timerData) {
-                        if (timerData.active && timerRef) {
-                            timerVisible = true;
-                            const remaining = timerData.timer_remaining || 0;
-                            const passed = timerData.timer_passed || 0;
-                            timerRef.setTimer(remaining, passed);
-                        } else if (!timerData.active && timerRef) {
-                            timerRef.stop();
-                            timerVisible = false;
+            case "timer_update": {
+                const payload = data.data;
+                console.log("Timer Update Received", payload);
+
+                if (payload) {
+                    // Update votes and total users
+                    timerVotesA = payload.votes?.A || 0;
+                    timerVotesB = payload.votes?.B || 0;
+                    timerTotalVotes = payload.totalUsers || 0;
+
+                    // Update timer display state
+                    if (payload.active) {
+                        timerVisible = true;
+                        if (timerRef) {
+                            timerRef.setTimer(
+                                payload.timer_remaining,
+                                payload.timer_passed,
+                            );
+                        } else {
+                            // If timer component isn't mounted yet, cache the values.
+                            pendingTimerInit = {
+                                remaining: payload.timer_remaining,
+                                elapsed: payload.timer_passed,
+                            };
                         }
+                    } else {
+                        timerVisible = false;
+                        if (timerRef) {
+                            timerRef.stop();
+                        }
+                        pendingTimerInit = null;
                     }
+
+                    // Update local board state for consistency
+                    board.timerStart = payload.timer_start;
+                    board.timerDuration =
+                        payload.timer_passed + payload.timer_remaining;
                 }
                 break;
+            }
         }
     }
 
@@ -1183,8 +1207,28 @@
     }
 
     async function handleTimerVote(choice: "A" | "B") {
-        // Timer voting will be handled in future implementation
-        console.log("Timer vote:", choice);
+        if (!boardId || !board.timerStart) return;
+
+        try {
+            const response = await fetch(`/api/timer/vote`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    boardId,
+                    timerId: board.timerStart,
+                    choice,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                timerTotalVotes = data.totalUsers;
+            } else {
+                console.error("Failed to submit timer vote:", response.status);
+            }
+        } catch (error) {
+            console.error("Error submitting timer vote:", error);
+        }
     }
 
     async function handleTimerAdd(seconds: number) {

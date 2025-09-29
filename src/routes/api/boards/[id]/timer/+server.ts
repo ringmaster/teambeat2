@@ -1,12 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth';
-import { findBoardById, startBoardTimer, stopBoardTimer, getBoardTimer, updateBoardTimer } from '$lib/server/repositories/board';
+import { findBoardById, startBoardTimer, stopBoardTimer, getBoardTimer, updateBoardTimer, clearTimerVotes, broadcastTimerUpdate } from '$lib/server/repositories/board';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series';
-import { broadcastToBoardUsers } from '$lib/server/sse/broadcast';
 
 export const POST: RequestHandler = async (event) => {
-  const user = await requireUser(event);
+  const user = requireUser(event);
   const boardId = event.params.id;
 
   try {
@@ -29,17 +28,15 @@ export const POST: RequestHandler = async (event) => {
     // Start the timer
     const updatedBoard = await startBoardTimer(boardId, duration);
 
-    // Broadcast to all users
-    const timerData = {
-      timer_passed: 0,
-      timer_remaining: duration,
-      active: true
-    };
+    // Clear any previous votes for this new timer session
+    if (updatedBoard.timerStart) {
+      clearTimerVotes(updatedBoard.timerStart);
+    }
 
-    broadcastToBoardUsers(boardId, {
-      type: 'timer_update',
-      data: timerData
-    });
+    // Broadcast to all users
+    await broadcastTimerUpdate(boardId);
+
+    const timerData = await getBoardTimer(boardId);
 
     return json({ success: true, timer: timerData });
   } catch (error) {
@@ -49,7 +46,7 @@ export const POST: RequestHandler = async (event) => {
 };
 
 export const PUT: RequestHandler = async (event) => {
-  const user = await requireUser(event);
+  const user = requireUser(event);
   const boardId = event.params.id;
 
   try {
@@ -70,16 +67,12 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     // Update the timer (handles both creating new and updating existing)
-    const updatedBoard = await updateBoardTimer(boardId, addSeconds);
-
-    // Get updated timer state
-    const timerData = await getBoardTimer(boardId);
+    await updateBoardTimer(boardId, addSeconds);
 
     // Broadcast to all users
-    broadcastToBoardUsers(boardId, {
-      type: 'timer_update',
-      data: timerData
-    });
+    await broadcastTimerUpdate(boardId);
+
+    const timerData = await getBoardTimer(boardId);
 
     return json({ success: true, timer: timerData });
   } catch (error) {
@@ -89,7 +82,7 @@ export const PUT: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-  const user = await requireUser(event);
+  const user = requireUser(event);
   const boardId = event.params.id;
 
   try {
@@ -105,19 +98,15 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     // Stop the timer
-    await stopBoardTimer(boardId);
+    const updatedBoard = await stopBoardTimer(boardId);
+
+    // Clear votes when timer stops
+    if (board.timerStart) {
+      clearTimerVotes(board.timerStart);
+    }
 
     // Broadcast to all users
-    const timerData = {
-      timer_passed: 0,
-      timer_remaining: 0,
-      active: false
-    };
-
-    broadcastToBoardUsers(boardId, {
-      type: 'timer_update',
-      data: timerData
-    });
+    await broadcastTimerUpdate(boardId);
 
     return json({ success: true });
   } catch (error) {
