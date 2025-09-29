@@ -384,7 +384,6 @@
     }
 
     async function handlePresencePing() {
-        console.log("Received presence ping, updating presence");
         try {
             await fetch(`/api/boards/${boardId}/presence`, {
                 method: "PUT",
@@ -411,7 +410,6 @@
                     activity: `presence_refresh_${reason}`,
                 }),
             });
-            console.log(`Presence refreshed due to: ${reason}`);
         } catch (error) {
             console.error("Failed to refresh presence:", error);
         }
@@ -556,37 +554,19 @@
                         (!wasVotingAllowed && isVotingNowAllowed) ||
                         (!wereVotesVisible && areVotesNowVisible)
                     ) {
-                        console.log(
-                            "Voting features changed in new scene, refreshing presence and loading vote data",
-                            {
-                                votingEnabled: isVotingNowAllowed,
-                                votesVisible: areVotesNowVisible,
-                            },
-                        );
                         refreshPresence("voting_enabled");
                         loadUserVotingData();
                     }
-                    // Handle mode switching
-                    console.log("Scene mode change:", {
-                        previousMode: previousScene?.mode,
-                        newMode: data.scene.mode,
-                        currentSceneId: currentScene?.id,
-                    });
-
+                    // Handle mode switching logic
                     if (data.scene.mode === "present") {
                         // Switching to present mode - check if data included in SSE
-                        console.log("Loading Present mode data...");
                         if (data.present_mode_data) {
-                            console.log("Using present mode data from SSE");
                             cards = data.present_mode_data.visible_cards;
                             if (data.present_mode_data.selected_card) {
                                 currentScene.selectedCardId =
                                     data.present_mode_data.selected_card.id;
                             }
                         } else {
-                            console.log(
-                                "No present mode data in SSE, loading from API",
-                            );
                             loadPresentModeData();
                         }
                     } else if (
@@ -594,17 +574,9 @@
                         data.scene.mode !== "present"
                     ) {
                         // Switching from present mode to another mode
-                        console.log(
-                            "Switching from Present to",
-                            data.scene.mode,
-                        );
                         if (data.all_cards) {
-                            console.log("Using cards data from SSE");
                             cards = data.all_cards;
                         } else {
-                            console.log(
-                                "No cards data in SSE, loading from API",
-                            );
                             reloadAllCards();
                         }
                     }
@@ -654,13 +626,6 @@
                     if (
                         previousVotingAllocation !== data.board.votingAllocation
                     ) {
-                        console.log(
-                            "Voting allocation changed, refreshing presence",
-                            {
-                                from: previousVotingAllocation,
-                                to: data.board.votingAllocation,
-                            },
-                        );
                         refreshPresence("voting_allocation_changed");
                     }
 
@@ -690,50 +655,39 @@
                 break;
 
             case "presence_update":
-                console.log("Presence update:", data.user_id, data.activity);
                 if (data.presence_data) {
-                    console.log("Using presence data from SSE");
                     connectedUsers = data.presence_data.connected_users_count;
                     processVotingData({
                         voting_stats: data.presence_data.voting_stats,
                     });
                 } else {
-                    console.log("No presence data in SSE, loading from API");
                     loadConnectedUsers();
                     loadVotingStats();
                 }
                 break;
             case "user_joined":
-                console.log("User joined:", data.user_id);
                 if (data.presence_data) {
-                    console.log("Using presence data from SSE for user joined");
                     connectedUsers = data.presence_data.connected_users_count;
                     processVotingData({
                         voting_stats: data.presence_data.voting_stats,
                     });
                 } else {
-                    console.log("No presence data in SSE, loading from API");
                     loadConnectedUsers();
                     loadVotingStats();
                 }
                 break;
             case "user_left":
-                console.log("User left:", data.user_id);
                 if (data.presence_data) {
-                    console.log("Using presence data from SSE for user left");
                     connectedUsers = data.presence_data.connected_users_count;
                     processVotingData({
                         voting_stats: data.presence_data.voting_stats,
                     });
                 } else {
-                    console.log("No presence data in SSE, loading from API");
                     loadConnectedUsers();
                     loadVotingStats();
                 }
                 break;
             case "vote_changed":
-                console.log("Vote changed:", data);
-
                 // Update card vote count when votes change
                 if (data.card_id && data.vote_count !== undefined) {
                     cards = cards.map((c) =>
@@ -753,7 +707,6 @@
                 }
                 break;
             case "voting_stats_updated":
-                console.log("Voting stats updated:", data);
                 // Process voting stats using reusable function
                 processVotingData({
                     voting_stats: data.voting_stats,
@@ -771,7 +724,6 @@
                 }
                 break;
             case "all_votes_updated":
-                console.log("All votes updated:", data);
                 // Process all voting data including stats
                 processVotingData({
                     all_votes_by_card: data.all_votes_by_card,
@@ -785,7 +737,6 @@
                 break;
             case "timer_update": {
                 const payload = data.data;
-                console.log("Timer Update Received", payload);
 
                 if (payload) {
                     // Update votes and total users
@@ -1064,12 +1015,7 @@
                 }),
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Reaction added:", data);
-                // The SSE event will handle updating the UI
-            } else {
-                console.error("Failed to add reaction:", response.status);
+            if (!response.ok) {
                 toastStore.addToast({
                     message: "Failed to add reaction",
                     type: "error",
@@ -1126,13 +1072,11 @@
 
     async function reloadAllCards() {
         if (!boardId) return;
-        console.log("Reloading all cards for board:", boardId);
         try {
             const response = await fetch(`/api/boards/${boardId}/cards`);
             if (response.ok) {
                 const data = await response.json();
                 cards = data.cards || [];
-                console.log("Cards reloaded:", cards.length, "cards");
             } else {
                 console.error("Failed to reload cards:", response.status);
             }
@@ -1355,7 +1299,6 @@
             if (response.ok) {
                 // Remove card from local state
                 cards = cards.filter((card) => card.id !== cardId);
-                console.log(`Card ${cardId} deleted successfully`);
             } else {
                 console.error("Failed to delete card:", response.status);
                 alert("Failed to delete card. Please try again.");
@@ -1400,7 +1343,6 @@
                         ? { ...card, content: editCardContent.trim() }
                         : card,
                 );
-                console.log(`Card ${editingCard.id} updated successfully`);
                 cancelEditCard();
             } else {
                 console.error("Failed to update card:", response.status);
@@ -1527,10 +1469,7 @@
                 },
             );
 
-            if (response.ok) {
-                // Card updates will come through WebSocket
-                console.log("Card grouped successfully");
-            } else {
+            if (!response.ok) {
                 console.error("Failed to group card");
             }
         } catch (error) {
@@ -1549,9 +1488,7 @@
                 body: JSON.stringify({ columnId: targetColumnId }),
             });
 
-            if (response.ok) {
-                console.log("Card ungrouped successfully");
-            } else {
+            if (!response.ok) {
                 console.error("Failed to ungroup card");
             }
         } catch (error) {

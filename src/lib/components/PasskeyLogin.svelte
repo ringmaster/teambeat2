@@ -17,31 +17,15 @@
         try {
             // Check passkey support
             passkeySupport = await checkPasskeySupport();
-            console.log(
-                "PasskeyLogin: passkey support check result:",
-                passkeySupport,
-            );
 
             // Check if there are available passkeys for authentication
             if (passkeySupport.supported) {
                 hasPasskeys = await hasAvailablePasskeys();
-                console.log(
-                    "PasskeyLogin: has available passkeys:",
-                    hasPasskeys,
-                );
             }
         } catch (err) {
             console.error("Failed to initialize passkey login:", err);
         } finally {
             loading = false;
-            console.log(
-                "PasskeyLogin: final state - loading:",
-                loading,
-                "supported:",
-                passkeySupport.supported,
-                "hasPasskeys:",
-                hasPasskeys,
-            );
         }
     });
 
@@ -70,18 +54,7 @@
         !loading && passkeySupport.supported && hasPasskeys,
     );
 
-    // Debug the derived value
-    $effect(() => {
-        console.log(
-            "PasskeyLogin: showPasskeyLogin updated:",
-            showPasskeyLogin,
-            {
-                loading,
-                supported: passkeySupport.supported,
-                hasPasskeys,
-            },
-        );
-    });
+
 </script>
 
 {#if showPasskeyLogin}

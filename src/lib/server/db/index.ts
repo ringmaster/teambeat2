@@ -5,7 +5,7 @@ import * as schema from './schema.js';
 // Use DATABASE_URL environment variable, fallback to development database
 const databaseUrl = process.env.DATABASE_URL || './teambeat.db';
 
-console.log('Database URL:', databaseUrl);
+
 
 const sqlite = new Database(databaseUrl);
 sqlite.pragma('journal_mode = WAL');

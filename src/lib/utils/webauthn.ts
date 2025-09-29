@@ -166,30 +166,18 @@ export async function authenticateWithPasskey(email?: string): Promise<{ success
  */
 export async function hasAvailablePasskeys(email?: string): Promise<boolean> {
   try {
-    console.log('hasAvailablePasskeys called with email:', email);
-
     const support = await checkPasskeySupport();
-    console.log('hasAvailablePasskeys: support check result:', support);
 
     if (!support.supported) {
-      console.log('hasAvailablePasskeys: WebAuthn not supported, returning false');
       return false;
     }
 
     // Try to get authentication options - if successful, passkeys are available
-    console.log('hasAvailablePasskeys: fetching authentication options');
     const optionsResponse = await fetch('/api/auth/webauthn/authenticate/begin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
-
-    console.log('hasAvailablePasskeys: response status:', optionsResponse.status, 'ok:', optionsResponse.ok);
-
-    if (!optionsResponse.ok) {
-      const errorText = await optionsResponse.text();
-      console.log('hasAvailablePasskeys: error response:', errorText);
-    }
 
     return optionsResponse.ok;
   } catch (error) {

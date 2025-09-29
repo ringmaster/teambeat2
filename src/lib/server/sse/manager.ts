@@ -37,8 +37,6 @@ class SSEManager {
       }
       this.boardClients.get(boardId)!.add(clientId);
     }
-
-    console.log(`SSE client ${clientId} connected, board: ${boardId}, user: ${userId}`);
   }
 
   removeClient(clientId: string) {
@@ -63,7 +61,6 @@ class SSEManager {
     }
 
     this.clients.delete(clientId);
-    console.log(`SSE client ${clientId} disconnected`);
   }
 
   updateClientBoard(clientId: string, boardId: string, userId?: string) {
@@ -90,8 +87,6 @@ class SSEManager {
       this.boardClients.set(boardId, new Set());
     }
     this.boardClients.get(boardId)!.add(clientId);
-
-    console.log(`SSE client ${clientId} joined board ${boardId}`);
   }
 
   broadcastToBoard(boardId: string, message: SSEMessage, excludeUserId?: string) {
@@ -115,8 +110,6 @@ class SSEManager {
         }
       }
     }
-
-    console.log(`SSE broadcast to board ${boardId}: ${message.type}, clients: ${boardClients.size}`);
   }
 
   broadcastToUser(boardId: string, userId: string, message: SSEMessage) {
@@ -139,8 +132,6 @@ class SSEManager {
         }
       }
     }
-
-    console.log(`SSE message to user ${userId} on board ${boardId}: ${message.type}, clients: ${sentCount}`);
   }
 
   sendToClient(clientId: string, message: SSEMessage) {

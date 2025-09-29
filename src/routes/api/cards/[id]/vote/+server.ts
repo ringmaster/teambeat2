@@ -35,7 +35,7 @@ export const POST: RequestHandler = async (event) => {
         { status: 400 }
       );
     }
-    console.log('Vote delta:', delta, 'User:', user.userId);
+
 
     const card = await findCardById(cardId);
     if (!card) {
@@ -117,9 +117,7 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Cast the vote
-    console.log('Casting vote:', { cardId, userId: user.userId, delta });
     const voteResult = await castVote(cardId, user.userId, delta);
-    console.log('Vote result:', voteResult);
 
     // Get updated card data with vote count
     const updatedCards = await getCardsForBoard(board.id);
@@ -170,7 +168,10 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Then broadcast comprehensive updates based on scene settings
-    await broadcastVoteUpdatesBasedOnScene(board.id, currentScene, user.userId);
+    await broadcastVoteUpdatesBasedOnScene(board.id, {
+      showVotes: currentScene.showVotes ?? undefined,
+      allowVoting: currentScene.allowVoting ?? undefined
+    }, user.userId);
 
     return json(response);
   } catch (error) {

@@ -45,7 +45,7 @@ export interface VotingStatsUpdatedMessageData {
 /**
  * Constructs user voting data from raw votes
  */
-export function buildUserVotingData(userVotes: Array<{cardId: string}>): UserVotingData {
+export function buildUserVotingData(userVotes: Array<{ cardId: string }>): UserVotingData {
   // Process user votes into votes by card map
   const votesByCard: Record<string, number> = {};
   userVotes.forEach(vote => {
@@ -65,8 +65,6 @@ export async function buildComprehensiveVotingData(
   userId?: string
 ): Promise<ComprehensiveVotingData> {
   try {
-    console.log('Building comprehensive voting data:', { boardId, userId });
-
     const { getBoardWithDetails } = await import('../repositories/board.js');
     const { getUserVotesForBoard } = await import('../repositories/vote.js');
 
@@ -75,18 +73,15 @@ export async function buildComprehensiveVotingData(
       throw new Error(`Board not found: ${boardId}`);
     }
 
-    console.log('Board found, calculating comprehensive voting stats');
     const votingStats = await buildVotingStats(boardId);
 
     let userVotingData: UserVotingData | undefined;
 
     if (userId) {
-      console.log('Building user voting data for user:', userId);
       const userVotes = await getUserVotesForBoard(userId, boardId);
       userVotingData = buildUserVotingData(userVotes);
     }
 
-    console.log('Comprehensive voting data built successfully');
     return {
       user_voting_data: userVotingData,
       voting_stats: votingStats
@@ -100,10 +95,8 @@ export async function buildComprehensiveVotingData(
 /**
  * Constructs comprehensive voting statistics including presence data
  */
-export async function buildVotingStats(boardId: string): Promise<VotingStats> {
+export async function buildVotingStats(boardId: string): Promise<any> {
   try {
-    console.log('Building comprehensive voting stats for board:', boardId);
-
     const { getBoardWithDetails } = await import('../repositories/board.js');
     const { getBoardPresence } = await import('../repositories/presence.js');
     const { calculateAggregateVotingStats } = await import('../repositories/vote.js');
@@ -113,7 +106,6 @@ export async function buildVotingStats(boardId: string): Promise<VotingStats> {
       throw new Error(`Board not found: ${boardId}`);
     }
 
-    console.log('Getting comprehensive voting data');
     const presenceData = await getBoardPresence(boardId);
 
     const activeUserIds = new Set(presenceData.map(p => p.userId));
@@ -121,10 +113,9 @@ export async function buildVotingStats(boardId: string): Promise<VotingStats> {
     // Pass activeUserIds to avoid duplicate presence queries
     const comprehensiveStats = await calculateAggregateVotingStats(boardId, board.seriesId, board.votingAllocation, activeUserIds);
 
-    console.log('Comprehensive voting stats built successfully:', comprehensiveStats);
     return comprehensiveStats;
   } catch (error) {
-    console.log('Failed to build comprehensive voting stats:', error);
+    console.error('Failed to build comprehensive voting stats:', error);
     throw error;
   }
 }

@@ -4,6 +4,7 @@ import { broadcastToBoardUsers } from '$lib/server/sse/broadcast';
 
 import { boards, columns, scenes, cards, scenesColumns, boardSeries } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 // In-memory store for timer votes
 const timerVotes = new Map<string, { A: Set<string>; B: Set<string> }>();
@@ -22,8 +23,6 @@ export function recordTimerVote(timerId: string, userId: string, choice: 'A' | '
     votes.B.add(userId);
   }
   timerVotes.set(timerId, votes);
-  console.log(`Recording choice ${choice} for timer ${timerId} for board ${userId}`);
-  console.log(votes);
 }
 
 export function getTimerVotes(timerId: string) {
@@ -259,7 +258,7 @@ export async function updateBoardTimer(boardId: string, addSeconds: number) {
     .from(boards)
     .where(eq(boards.id, boardId));
 
-  let updateData: any = {
+  const updateData: any = {
     updatedAt: sql`CURRENT_TIMESTAMP`
   };
 
@@ -345,14 +344,13 @@ export async function broadcastTimerUpdate(boardId: string) {
 
   const message = {
     type: 'timer_update',
+    board_id: boardId,
     data: {
       ...(timerData || { active: false }),
       votes: voteData,
       totalUsers: totalUsers
     }
   };
-
-  console.log(`Broadcasting timer ${timerData?.timer_start} update`, message);
 
   broadcastToBoardUsers(boardId, message);
 

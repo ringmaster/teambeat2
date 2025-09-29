@@ -43,7 +43,6 @@ export function broadcastCardDeleted(boardId: string, cardId: string) {
 
 export async function broadcastVoteChanged(boardId: string, cardId: string, voteCount: number, _userId?: string) {
   try {
-    console.log('Broadcasting simple vote changed:', { boardId, cardId, voteCount });
     const message: SSEMessage = {
       type: 'vote_changed',
       board_id: boardId,
@@ -51,7 +50,6 @@ export async function broadcastVoteChanged(boardId: string, cardId: string, vote
       vote_count: voteCount,
       timestamp: Date.now()
     };
-    console.log('Simple vote changed message created');
     sseManager.broadcastToBoard(boardId, message);
   } catch (error) {
     console.error('Failed to broadcast vote changed:', error);
@@ -61,7 +59,6 @@ export async function broadcastVoteChanged(boardId: string, cardId: string, vote
 
 export async function broadcastVoteChangedToUser(boardId: string, cardId: string, voteCount: number, userId: string) {
   try {
-    console.log('Broadcasting simple vote changed to user:', { boardId, cardId, voteCount, userId });
     const message: SSEMessage = {
       type: 'vote_changed',
       board_id: boardId,
@@ -70,7 +67,6 @@ export async function broadcastVoteChangedToUser(boardId: string, cardId: string
       user_id: userId,
       timestamp: Date.now()
     };
-    console.log('Simple vote changed to user message created');
     sseManager.broadcastToUser(boardId, userId, message);
   } catch (error) {
     console.error('Failed to broadcast vote changed to user:', error);
@@ -306,9 +302,7 @@ export async function broadcastUpdatePresentation(
 
 export async function broadcastVotingStatsUpdate(boardId: string, votingStats?: any) {
   try {
-    console.log('Broadcasting voting stats update with full data:', { boardId });
     const message = await buildVotingStatsUpdatedMessage(boardId, votingStats);
-    console.log('Full voting stats update message created');
     sseManager.broadcastToBoard(boardId, message);
   } catch (error) {
     console.error('Failed to broadcast voting stats update:', error);
@@ -318,9 +312,7 @@ export async function broadcastVotingStatsUpdate(boardId: string, votingStats?: 
 
 export async function broadcastVotingStatsUpdateExcludingUser(boardId: string, excludeUserId: string, votingStats?: any) {
   try {
-    console.log('Broadcasting voting stats update with full data excluding user:', { boardId, excludeUserId });
     const message = await buildVotingStatsUpdatedMessage(boardId, votingStats);
-    console.log('Full voting stats update message created, broadcasting excluding user');
     sseManager.broadcastToBoard(boardId, message, excludeUserId);
   } catch (error) {
     console.error('Failed to broadcast voting stats update excluding user:', error);

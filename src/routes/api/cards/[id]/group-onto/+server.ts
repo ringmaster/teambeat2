@@ -5,7 +5,6 @@ import {
   findCardById,
   groupCardOntoTarget,
   ungroupCard,
-  moveGroupToColumn,
   moveCardToColumn,
   getCardsForBoard
 } from '$lib/server/repositories/card.js';
@@ -31,7 +30,7 @@ export const POST: RequestHandler = async (event) => {
     const body = await event.request.json();
     const data = groupOntoSchema.parse(body);
 
-    console.log('Group-onto called:', { cardId, targetCardId: data.targetCardId, userId: user.userId });
+
 
     // Update user presence on this board
     await refreshPresenceOnBoardAction(event);
@@ -88,13 +87,12 @@ export const POST: RequestHandler = async (event) => {
     }
 
     const result = await groupCardOntoTarget(cardId, data.targetCardId);
-    console.log('Group-onto result:', result);
 
     // Get all affected cards and broadcast updates
     const updatedCards = await getCardsForBoard(board.id);
     const affectedCards = updatedCards.filter(c => c.groupId === result.targetGroupId);
 
-    console.log('Broadcasting updates for affected cards:', affectedCards.map(c => c.id));
+
 
     for (const affectedCard of affectedCards) {
       const enrichedCard = await enrichCardWithCounts(affectedCard);
@@ -105,7 +103,6 @@ export const POST: RequestHandler = async (event) => {
     for (const affectedCardId of result.affectedCardIds) {
       const affectedCard = updatedCards.find(c => c.id === affectedCardId);
       if (affectedCard) {
-        console.log('Broadcasting update for affected card:', affectedCardId);
         const enrichedCard = await enrichCardWithCounts(affectedCard);
         broadcastCardUpdated(board.id, enrichedCard);
       }
@@ -122,7 +119,7 @@ export const POST: RequestHandler = async (event) => {
 
     if (error instanceof z.ZodError) {
       return json(
-        { success: false, error: 'Invalid input', details: error.errors },
+        { success: false, error: 'Invalid input', details: error.issues },
         { status: 400 }
       );
     }
@@ -233,7 +230,7 @@ export const DELETE: RequestHandler = async (event) => {
 
     if (error instanceof z.ZodError) {
       return json(
-        { success: false, error: 'Invalid input', details: error.errors },
+        { success: false, error: 'Invalid input', details: error.issues },
         { status: 400 }
       );
     }
