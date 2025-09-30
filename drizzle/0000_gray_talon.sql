@@ -7,14 +7,6 @@ CREATE TABLE `board_series` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `board_series_slug_unique` ON `board_series` (`slug`);--> statement-breakpoint
-CREATE TABLE `board_timers` (
-	`board_id` text PRIMARY KEY NOT NULL,
-	`duration_seconds` integer NOT NULL,
-	`started_at` integer NOT NULL,
-	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
 CREATE TABLE `boards` (
 	`id` text PRIMARY KEY NOT NULL,
 	`series_id` text NOT NULL,
@@ -25,6 +17,8 @@ CREATE TABLE `boards` (
 	`voting_allocation` integer DEFAULT 3 NOT NULL,
 	`voting_enabled` integer DEFAULT true,
 	`meeting_date` text,
+	`timer_start` text,
+	`timer_duration` integer,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`series_id`) REFERENCES `board_series`(`id`) ON UPDATE no action ON DELETE cascade
@@ -136,16 +130,6 @@ CREATE TABLE `series_members` (
 	`joined_at` text DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY(`series_id`, `user_id`),
 	FOREIGN KEY (`series_id`) REFERENCES `board_series`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `timer_extension_votes` (
-	`board_id` text NOT NULL,
-	`user_id` text NOT NULL,
-	`vote` text NOT NULL,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY(`board_id`, `user_id`),
-	FOREIGN KEY (`board_id`) REFERENCES `board_timers`(`board_id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

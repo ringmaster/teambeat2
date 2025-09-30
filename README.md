@@ -37,6 +37,65 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
+## Docker Deployment
+
+### Quick Docker Start
+
+Use the provided docker-compose.yml for easy deployment:
+
+```bash
+# Build and start the application
+docker-compose up --build
+
+# Run in background
+docker-compose up -d --build
+```
+
+The application will be available at `http://localhost:3000` with the database persisted in `./db/teambeat.db`.
+
+### Manual Docker Build
+
+```bash
+# Build the Docker image
+docker build -t teambeat .
+
+# Create database directory
+mkdir -p ./db
+
+# Run the container
+docker run -d \
+  --name teambeat \
+  -p 3000:3000 \
+  -v $(pwd)/db:/db \
+  -e DATABASE_URL=/db/teambeat.db \
+  teambeat
+```
+
+### Docker Configuration
+
+The Dockerfile uses a multi-stage build:
+- **Stage 1**: Install dependencies
+- **Stage 2**: Build the application
+- **Stage 3**: Create optimized runtime image with Node.js
+
+Key features:
+- SQLite database mounted at `/db` directory
+- Non-root user for security
+- Health checks for container monitoring
+- Automatic database migration on startup
+- Port 3000 exposed by default
+
+### Environment Variables
+
+- `DATABASE_URL`: Path to SQLite database file (default: `/db/teambeat.db`)
+- `PORT`: Application port (default: `3000`)
+- `NODE_ENV`: Environment mode (set to `production` in container)
+
+### Volume Mounts
+
+- `/db`: Database directory (required for data persistence)
+- `/app/logs`: Application logs (optional)
+
 ## Database Commands
 
 ```bash

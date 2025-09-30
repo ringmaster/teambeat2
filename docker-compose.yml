@@ -1,0 +1,30 @@
+services:
+  teambeat:
+    build: .
+    container_name: teambeat-app
+    ports:
+      - "3000:3000"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const http = require('http'); const options = { hostname: 'localhost', port: 3000, path: '/', method: 'GET' }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Ensure database directory exists before starting
+    volumes:
+      # Mount the database directory to persist data
+      - ./db:/db
+      # Optionally mount logs directory
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=/db/teambeat.db
+    restart: unless-stopped

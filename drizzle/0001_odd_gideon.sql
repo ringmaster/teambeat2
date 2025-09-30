@@ -1,1 +1,0 @@
-ALTER TABLE `comments` ADD `is_reaction` integer DEFAULT false;

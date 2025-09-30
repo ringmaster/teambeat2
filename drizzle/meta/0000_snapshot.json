@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f2c17557-fd29-4d1b-9ac9-0167765d08e8",
+  "id": "296d22ee-8d29-41bb-b59c-1184349425ed",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "board_series": {
@@ -54,59 +54,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "board_timers": {
-      "name": "board_timers",
-      "columns": {
-        "board_id": {
-          "name": "board_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "duration_seconds": {
-          "name": "duration_seconds",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "CURRENT_TIMESTAMP"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "board_timers_board_id_boards_id_fk": {
-          "name": "board_timers_board_id_boards_id_fk",
-          "tableFrom": "board_timers",
-          "tableTo": "boards",
-          "columnsFrom": [
-            "board_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -177,6 +124,20 @@
         "meeting_date": {
           "name": "meeting_date",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "timer_start": {
+          "name": "timer_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "timer_duration": {
+          "name": "timer_duration",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -429,6 +390,14 @@
         },
         "is_agreement": {
           "name": "is_agreement",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "is_reaction": {
+          "name": "is_reaction",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -1002,80 +971,6 @@
             "user_id"
           ],
           "name": "series_members_series_id_user_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "timer_extension_votes": {
-      "name": "timer_extension_votes",
-      "columns": {
-        "board_id": {
-          "name": "board_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "vote": {
-          "name": "vote",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "CURRENT_TIMESTAMP"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "timer_extension_votes_board_id_board_timers_board_id_fk": {
-          "name": "timer_extension_votes_board_id_board_timers_board_id_fk",
-          "tableFrom": "timer_extension_votes",
-          "tableTo": "board_timers",
-          "columnsFrom": [
-            "board_id"
-          ],
-          "columnsTo": [
-            "board_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "timer_extension_votes_user_id_users_id_fk": {
-          "name": "timer_extension_votes_user_id_users_id_fk",
-          "tableFrom": "timer_extension_votes",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "timer_extension_votes_board_id_user_id_pk": {
-          "columns": [
-            "board_id",
-            "user_id"
-          ],
-          "name": "timer_extension_votes_board_id_user_id_pk"
         }
       },
       "uniqueConstraints": {},
