@@ -1,6 +1,39 @@
 /* ==================================
-   LESS Mixins - Minimal Set for Components
+   LESS Color System - Brand Colors
    ================================== */
+
+// TeamBeat Brand Color Family - 5 coordinated colors for all controls
+@brand-primary: #39495C;        // Primary brand color (confirmed)
+@brand-secondary: #395A5C;      // Teal-leaning secondary
+@brand-tertiary: #3B395C;       // Purple-leaning tertiary
+@brand-accent: #4D7A75;         // Cool accent color
+@brand-accent-second: #5C3B39;         // Warm accent color
+@brand-complement: #5A5C39;     // Earth tone complement
+
+// Semantic color assignments from brand family
+@interactive-primary: @brand-primary;    // Main interactive elements
+@interactive-secondary: @brand-secondary; // Secondary actions
+@interactive-accent: @brand-accent;      // Highlighting and focus states
+@interactive-tertiary: @brand-tertiary;  // Alternative actions
+@surface-accent: @brand-complement;      // Subtle surface accents
+
+// Status colors - derived from brand family with adjustments for accessibility
+@brand-danger: hsl(0, 61%, 70%);         // Softer red for errors
+@brand-warning: hsl(35, 92%, 50%);       // Yellow/Orange for warnings
+@brand-success: hsl(174, 80%, 40%);      // Teal for success
+@brand-info: @brand-secondary;           // Use secondary brand color for info
+
+// Neutral colors
+@neutral-white: hsl(0, 0%, 100%);
+@neutral-off-white: hsl(0, 0%, 96%);
+@neutral-light-gray: hsl(210, 14%, 95%);
+@neutral-gray: hsl(210, 11%, 90%);
+@neutral-mid-gray: hsl(210, 10%, 55%);
+@neutral-dark-gray: hsl(210, 10%, 30%);
+@neutral-darker: hsl(210, 12%, 20%);
+@neutral-black: hsl(0, 0%, 10%);
+
+/* LESS Mixins for Common Patterns */
 
 // Flexbox Layout Mixins
 .flex-center() {
@@ -41,25 +74,6 @@
     gap: @gap;
 }
 
-// Typography Mixins
-.text-style(@size, @weight: 400, @line-height: 1.5) {
-    font-size: @size;
-    font-weight: @weight;
-    line-height: @line-height;
-}
-
-.heading(@level: 1) when (@level = 1) {
-    .text-style(1.875rem, 700, 2.25rem);
-}
-
-.heading(@level: 2) when (@level = 2) {
-    .text-style(1.5rem, 600, 2rem);
-}
-
-.heading(@level: 3) when (@level = 3) {
-    .text-style(1.25rem, 600, 1.75rem);
-}
-
 // Interactive Elements Mixins
 .button-base() {
     display: inline-flex;
@@ -81,4 +95,212 @@
         background-color: @hover-bg;
         box-shadow: var(--shadow-sm);
     }
+}
+
+.input-style() {
+    width: 100%;
+    border: 1px solid var(--input-border);
+    font-family: inherit;
+    transition: all var(--transition-fast);
+
+    &:focus {
+        outline: none;
+        border-color: var(--card-interactive-highlight);
+        box-shadow: 0 0 0 1px var(--card-interactive-highlight);
+    }
+}
+
+// Card and Surface Mixins
+.surface(@bg: white, @shadow: var(--shadow-sm)) {
+    background-color: @bg;
+    box-shadow: @shadow;
+}
+
+.card-surface() {
+    .surface(white, var(--shadow-md));
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--input-border);
+}
+
+.form-card() {
+    background-color: white;
+    backdrop-filter: none;
+    border: none;
+    box-shadow: 0 1px 3px rgb(0 0 0);
+    border-radius: 1rem;
+    padding: var(--spacing-8);
+    box-shadow: var(--shadow-xl);
+    animation: slide-up 0.5s ease-out forwards;
+}
+
+.user-card() {
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-3);
+    transition: all var(--transition-fast);
+
+    &:hover {
+        box-shadow: var(--shadow-sm);
+    }
+}
+
+.content-card() {
+    .card-surface();
+    padding: var(--spacing-6);
+}
+
+.interactive-surface() {
+    transition: all var(--transition-fast);
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+// Form and Layout Mixins
+.form-error-base() {
+    color: var(--color-danger);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-4);
+    background-color: var(--status-error-bg);
+    border: 1px solid var(--status-error-bg);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--spacing-6);
+}
+
+.loading-spinner() {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.empty-state() {
+    text-align: center;
+    padding: var(--spacing-12) var(--spacing-4);
+    color: var(--color-text-muted);
+}
+
+// Modal Mixins
+.modal-overlay() {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.modal-dialog() {
+    background-color: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    max-width: 28rem;
+    width: 100%;
+    margin: var(--spacing-4);
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.modal-dialog-large() {
+    .modal-dialog();
+    max-width: 64rem;
+}
+
+.modal-header() {
+    padding: var(--spacing-6);
+    border-bottom: 1px solid var(--input-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-content() {
+    padding: var(--spacing-6);
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+.modal-title() {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.modal-subtitle() {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.modal-actions() {
+    display: flex;
+    gap: var(--spacing-3);
+    justify-content: flex-end;
+    margin: var(--spacing-6);
+}
+
+.close-button() {
+    background: none;
+    border: none;
+    color: var(--input-placeholder);
+    cursor: pointer;
+    padding: var(--spacing-1);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+
+    &:hover {
+        color: var(--color-text-secondary);
+        background-color: var(--surface-primary);
+    }
+}
+
+.warning-section() {
+    background-color: var(--status-error-bg);
+    border: 1px solid var(--status-error-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    margin: var(--spacing-4) 0;
+}
+
+// Typography Mixins
+.text-style(@size, @weight: 400, @line-height: 1.5) {
+    font-size: @size;
+    font-weight: @weight;
+    line-height: @line-height;
+}
+
+.heading(@level: 1) when (@level = 1) {
+    .text-style(1.875rem, 700, 2.25rem);
+}
+
+.heading(@level: 2) when (@level = 2) {
+    .text-style(1.5rem, 600, 2rem);
+}
+
+.heading(@level: 3) when (@level = 3) {
+    .text-style(1.25rem, 600, 1.75rem);
+}
+
+.body-text(@size: base) when (@size = sm) {
+    .text-style(0.875rem, 400, 1.25rem);
+}
+
+.body-text(@size: base) when (@size = base) {
+    .text-style(1rem, 400, 1.5rem);
+}
+
+.body-text(@size: base) when (@size = lg) {
+    .text-style(1.125rem, 400, 1.75rem);
 }

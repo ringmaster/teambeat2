@@ -102,7 +102,7 @@
 {/if}
 
 <style lang="less">
-    @import "../../../app.less";
+    @import "../../../_mixins.less";
 
     // Mixin for toast types
     .toast-type(@border-color, @icon-color) {
