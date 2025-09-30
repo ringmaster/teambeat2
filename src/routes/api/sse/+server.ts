@@ -6,7 +6,8 @@ import { getSession } from '$lib/server/auth/session.js';
 import { broadcastUserJoined, broadcastUserLeft, broadcastPresenceUpdate } from '$lib/server/sse/broadcast.js';
 import { updatePresence, removePresence } from '$lib/server/repositories/presence.js';
 
-export const GET: RequestHandler = async ({ url, cookies }) => {
+// Shared function to create SSE connection for both GET and POST
+const createSSEConnection = async (cookies: any, boardId: string | null) => {
   // Get session from cookies
   const sessionId = cookies.get('session');
   let userId: string | null = null;
@@ -18,7 +19,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     }
   }
 
-  const boardId = url.searchParams.get('boardId');
   const clientId = uuidv4();
 
   // Create readable stream for SSE
@@ -62,10 +62,24 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   });
 };
 
+export const GET: RequestHandler = async ({ url, cookies }) => {
+  const boardId = url.searchParams.get('boardId');
+  return createSSEConnection(cookies, boardId);
+};
+
 export const POST: RequestHandler = async ({ request, cookies }) => {
-  // Handle SSE control messages (join board, presence updates, etc.)
   try {
-    const { action, clientId, boardId, userId, data } = await request.json();
+    const requestBody = await request.json();
+
+    // Check if this is an SSE connection request or a control message
+    if (requestBody.type === 'sse_connect') {
+      // Handle SSE connection establishment via POST
+      const { boardId } = requestBody;
+      return createSSEConnection(cookies, boardId);
+    }
+
+    // Handle SSE control messages (join board, presence updates, etc.)
+    const { action, clientId, boardId, userId, data } = requestBody;
 
     // Verify session
     const sessionId = cookies.get('session');
@@ -113,7 +127,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     return json({ success: true });
 
   } catch (error) {
-    console.error('SSE control message error:', error);
+    console.error('SSE POST request error:', error);
     return json({ error: 'Invalid request' }, { status: 400 });
   }
 };

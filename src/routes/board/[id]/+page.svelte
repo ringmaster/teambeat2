@@ -15,6 +15,7 @@
     import Timer from "$lib/components/Timer.svelte";
     import { toastStore } from "$lib/stores/toast";
     import { resolve } from "$app/paths";
+    import { SSEClient } from "$lib/client/sse-client.js";
 
     interface Props {
         data: {
@@ -47,7 +48,7 @@
     let userRole = $state("");
     let notesLockStatus = $state(null);
     let loading = $state(true);
-    let eventSource: EventSource | null = null;
+    let eventSource: SSEClient | null = null;
     let boardId = $state("");
     let clientId = $state("");
 
@@ -271,16 +272,25 @@
     });
 
     function setupSSE() {
-        // Clear any existing timers
+        // Clear any existing timers - let custom SSE client handle reconnection
         clearSSETimers();
 
         // Set connecting state
         sseConnectionState = "connecting";
 
         try {
-            // Create SSE connection
-            const sseUrl = `/api/sse?boardId=${encodeURIComponent(boardId)}`;
-            eventSource = new EventSource(sseUrl);
+            // Create SSE connection using POST request
+            const sseUrl = `/api/sse`;
+            eventSource = new SSEClient({
+                url: sseUrl,
+                method: "POST",
+                body: {
+                    type: "sse_connect",
+                    boardId: boardId,
+                },
+                reconnectInterval: 3000,
+                maxReconnectAttempts: sseMaxReconnectAttempts,
+            });
 
             eventSource.onopen = () => {
                 console.log("SSE connected");
@@ -323,14 +333,28 @@
 
             eventSource.onerror = (error) => {
                 console.error("SSE error:", error);
-                sseConnectionState = "disconnected";
+                sseConnectionState = "error";
 
-                // Attempt reconnection with exponential backoff
-                attemptReconnection();
+                // Track reconnection attempts for UI state
+                sseReconnectAttempts++;
+
+                if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
+                    console.error(
+                        "Max SSE reconnection attempts reached, reloading page",
+                    );
+                    window.location.reload();
+                }
+            };
+
+            eventSource.onclose = () => {
+                console.log("SSE connection closed");
+                sseConnectionState = "disconnected";
             };
         } catch (error) {
             console.error("Failed to create SSE connection:", error);
             sseConnectionState = "error";
+
+            // Fallback to manual reconnection for initialization errors
             attemptReconnection();
         }
     }
