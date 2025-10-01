@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { page } from "$app/stores";
-    import "../app.less";
+    import "$lib/styles/app.less";
     import Avatar from "$lib/components/ui/Avatar.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import ToastContainer from "$lib/components/ui/ToastContainer.svelte";

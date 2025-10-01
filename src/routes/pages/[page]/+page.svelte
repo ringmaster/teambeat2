@@ -6,30 +6,40 @@
     }
 
     let { data }: Props = $props();
+    let pageContainer: HTMLElement;
+
+    $effect(() => {
+        if (pageContainer && data) {
+            pageContainer.scrollTop = 0;
+        }
+    });
 </script>
 
 <svelte:head>
     <title>{data.title} - TeamBeat</title>
 </svelte:head>
 
-<div class="page-container">
+<div class="page-container" id="top" bind:this={pageContainer}>
     <div class="page-content">
         <!-- Safe to use {@html} here - content comes from trusted static HTML files, not user input -->
         {@html data.content}
     </div>
 </div>
 
-<style>
+<style lang="less">
+    @import "$lib/styles/_mixins.less";
+
     .page-container {
-        max-width: 800px;
         margin: 0 auto;
         padding: 2rem;
-        min-height: calc(100vh - 4rem);
+        .page-container();
     }
 
     .page-content {
+        max-width: 800px;
         line-height: 1.6;
         color: var(--text-color);
+        margin: 0 auto;
     }
 
     .page-content :global(h1) {

@@ -19,7 +19,7 @@
                 // User is already authenticated, redirect to dashboard
                 goto(resolve("/"));
             }
-        } catch (err) {
+        } catch {
             // User not authenticated, show login form
             console.log("User not authenticated, showing login form");
         }
@@ -49,7 +49,7 @@
             } else {
                 error = data.error || "Login failed";
             }
-        } catch (err) {
+        } catch {
             error = "Network error. Please try again.";
         } finally {
             loading = false;
@@ -209,11 +209,10 @@
 </div>
 
 <style lang="less">
+    @import "$lib/styles/_mixins.less";
+
     .login-page {
-        min-height: 100vh;
-        background: var(--color-bg-primary);
-        display: flex;
-        align-items: center;
+        .page-container();
         justify-content: center;
         padding: 0 var(--spacing-4);
     }

@@ -220,7 +220,7 @@
 </div>
 
 <style lang="less">
-    @import "../../_mixins.less";
+    @import "$lib/styles/_mixins.less";
     .voting-toolbar {
         background-color: var(--surface-secondary);
         border-top: 1px solid var(--surface-tertiary);

@@ -245,8 +245,11 @@
     </div>
 </div>
 
-<style>
+<style lang="less">
+    @import "$lib/styles/_mixins.less";
+
     .register-page {
+        .page-container();
         min-height: 100vh;
         background: var(--color-bg-primary);
         display: flex;

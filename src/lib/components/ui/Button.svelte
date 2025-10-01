@@ -1,69 +1,65 @@
 <script lang="ts">
     interface Props {
-        variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-        size?: 'sm' | 'md' | 'lg';
-        type?: 'button' | 'submit' | 'reset';
+        variant?: "primary" | "secondary" | "danger" | "ghost";
+        size?: "sm" | "md" | "lg";
+        type?: "button" | "submit" | "reset";
         disabled?: boolean;
         onclick?: (event: MouseEvent) => void;
         class?: string;
+        children?: () => any;
     }
 
     let {
-        variant = 'primary',
-        size = 'md',
-        type = 'button',
+        variant = "primary",
+        size = "md",
+        type = "button",
         disabled = false,
         onclick,
-        class: className = '',
-        children
+        class: className = "",
+        children,
     }: Props = $props();
 
     let buttonClass = $derived.by(() => {
-        let classes = ['btn'];
-        
+        let classes = ["btn"];
+
         // Variant classes
         switch (variant) {
-            case 'primary':
-                classes.push('btn-primary');
+            case "primary":
+                classes.push("btn-primary");
                 break;
-            case 'secondary':
-                classes.push('btn-secondary');
+            case "secondary":
+                classes.push("btn-secondary");
                 break;
-            case 'danger':
-                classes.push('btn-danger');
+            case "danger":
+                classes.push("btn-danger");
                 break;
-            case 'ghost':
-                classes.push('btn-ghost');
+            case "ghost":
+                classes.push("btn-ghost");
                 break;
         }
-        
+
         // Size classes
         switch (size) {
-            case 'sm':
-                classes.push('btn-sm');
+            case "sm":
+                classes.push("btn-sm");
                 break;
-            case 'md':
-                classes.push('btn-md');
+            case "md":
+                classes.push("btn-md");
                 break;
-            case 'lg':
-                classes.push('btn-lg');
+            case "lg":
+                classes.push("btn-lg");
                 break;
         }
-        
+
         if (className) {
             classes.push(className);
         }
-        
-        return classes.join(' ');
+
+        return classes.join(" ");
     });
 </script>
 
-<button
-    {type}
-    {disabled}
-    class={buttonClass}
-    onclick={onclick}
->
+<button {type} {disabled} class={buttonClass} {onclick}>
     {@render children?.()}
 </button>
 

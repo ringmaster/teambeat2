@@ -2436,7 +2436,7 @@
 />
 
 <style lang="less">
-    @import "../../../app.less";
+    @import "$lib/styles/app.less";
     .connection-status {
         position: fixed;
         top: 1rem;

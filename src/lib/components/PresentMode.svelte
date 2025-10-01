@@ -527,7 +527,7 @@
 </div>
 
 <style lang="less">
-    @import "../../_mixins.less";
+    @import "$lib/styles/_mixins.less";
     .present-mode {
         display: flex;
         gap: var(--spacing-6);

@@ -157,43 +157,43 @@
                 </div>
             {/if}
 
-            <!-- Profile Information -->
-            <section class="profile-section">
-                <h2 class="section-title">Profile Information</h2>
-                <div class="form-group">
-                    <label for="email" class="form-label">Email</label>
-                    <input
-                        type="email"
-                        id="email"
-                        class="input"
-                        value={user.email}
-                        disabled
-                    />
-                    <p class="form-help">Email cannot be changed</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="name" class="form-label">Name</label>
-                    <input
-                        type="text"
-                        id="name"
-                        class="input"
-                        bind:value={name}
-                        placeholder="Enter your name"
-                    />
-                </div>
-
-                <button
-                    class="btn-primary"
-                    onclick={updateProfile}
-                    disabled={saving}
-                >
-                    {saving ? "Saving..." : "Update Profile"}
-                </button>
-            </section>
-
             <!-- Authentication Methods -->
             <div class="auth-methods-grid">
+                <!-- Profile Information -->
+                <section class="profile-section">
+                    <h2 class="section-title">Profile Information</h2>
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            class="input"
+                            value={user.email}
+                            disabled
+                        />
+                        <p class="form-help">Email cannot be changed</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name" class="form-label">Name</label>
+                        <input
+                            type="text"
+                            id="name"
+                            class="input"
+                            bind:value={name}
+                            placeholder="Enter your name"
+                        />
+                    </div>
+
+                    <button
+                        class="btn-primary"
+                        onclick={updateProfile}
+                        disabled={saving}
+                    >
+                        {saving ? "Saving..." : "Update Profile"}
+                    </button>
+                </section>
+
                 <!-- Change Password -->
                 <section class="profile-section">
                     <h2 class="section-title">Change Password</h2>
@@ -250,77 +250,81 @@
 
                 <!-- Passkey Manager -->
                 <PasskeyManager />
-            </div>
 
-            <!-- Delete Account -->
-            <section class="profile-section danger-section">
-                <h2 class="section-title section-title-danger">Danger Zone</h2>
-                <div class="danger-content">
-                    <div>
-                        <h3 class="danger-title">Delete Account</h3>
-                        <p class="danger-text">
-                            Once you delete your account, there is no going
-                            back. This will permanently delete your account and
-                            all associated data.
-                        </p>
-                    </div>
-                    <button
-                        class="btn-danger"
-                        onclick={() => (showDeleteConfirm = true)}
-                    >
-                        Delete Account
-                    </button>
-                </div>
-
-                {#if showDeleteConfirm}
-                    <div class="delete-confirm">
-                        <p class="confirm-text">
-                            Please type <strong>DELETE MY ACCOUNT</strong> to confirm:
-                        </p>
-                        <input
-                            type="text"
-                            class="input"
-                            bind:value={deleteConfirmText}
-                            placeholder="Type here to confirm"
-                        />
-                        <div class="confirm-actions">
-                            <button
-                                class="button button-secondary"
-                                onclick={() => {
-                                    showDeleteConfirm = false;
-                                    deleteConfirmText = "";
-                                }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                class="btn-danger"
-                                onclick={deleteAccount}
-                                disabled={saving ||
-                                    deleteConfirmText !== "DELETE MY ACCOUNT"}
-                            >
-                                {saving ? "Deleting..." : "Delete My Account"}
-                            </button>
+                <!-- Delete Account -->
+                <section class="profile-section danger-section">
+                    <h2 class="section-title section-title-danger">
+                        Danger Zone
+                    </h2>
+                    <div class="danger-content">
+                        <div>
+                            <h3 class="danger-title">Delete Account</h3>
+                            <p class="danger-text">
+                                Once you delete your account, there is no going
+                                back. This will permanently delete your account
+                                and all associated data.
+                            </p>
                         </div>
+                        <button
+                            class="btn-danger"
+                            onclick={() => (showDeleteConfirm = true)}
+                        >
+                            Delete Account
+                        </button>
                     </div>
-                {/if}
-            </section>
+
+                    {#if showDeleteConfirm}
+                        <div class="delete-confirm">
+                            <p class="confirm-text">
+                                Please type <strong>DELETE MY ACCOUNT</strong> to
+                                confirm:
+                            </p>
+                            <input
+                                type="text"
+                                class="input"
+                                bind:value={deleteConfirmText}
+                                placeholder="Type here to confirm"
+                            />
+                            <div class="confirm-actions">
+                                <button
+                                    class="button button-secondary"
+                                    onclick={() => {
+                                        showDeleteConfirm = false;
+                                        deleteConfirmText = "";
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    class="btn-danger"
+                                    onclick={deleteAccount}
+                                    disabled={saving ||
+                                        deleteConfirmText !==
+                                            "DELETE MY ACCOUNT"}
+                                >
+                                    {saving
+                                        ? "Deleting..."
+                                        : "Delete My Account"}
+                                </button>
+                            </div>
+                        </div>
+                    {/if}
+                </section>
+            </div>
         </div>
     {/if}
 </div>
 
 <style lang="less">
-    @import "../../_mixins.less";
+    @import "$lib/styles/_mixins.less";
     .profile-container {
-        height: 100%;
-        overflow-y: scroll;
+        .page-container();
         padding: var(--spacing-8) var(--spacing-4);
-        background: var(--color-bg-primary);
+    }
 
-        .flex-center();
-        flex: 1;
-        padding: var(--spacing-4);
-        margin: auto;
+    .profile-content {
+        margin: 0 auto;
+        max-width: 900px;
     }
 
     .loading-container {
