@@ -27,15 +27,16 @@ export const db = isPostgres
   ? drizzlePostgres(connection as postgres.Sql, { schema })
   : drizzleSqlite(connection as Database.Database, { schema });
 
-// Export database type for conditional logic
-export const isPostgresDatabase = isPostgres;
+// Export database capabilities for conditional logic
+export const dbSupportsAsyncTransactions = isPostgres;
+export const dbRequiresManualClose = !isPostgres;
 
 // Export for cleanup/shutdown if needed
 export const closeDatabase = () => {
-  if (!isPostgres) {
+  if (dbRequiresManualClose) {
     (connection as Database.Database).close();
   } else {
-    // Postgres connection will close when process exits
-    // Can call (connection as postgres.Sql).end() if needed
+    // Connection will close when process exits
+    // Can call (connection as postgres.Sql).end() if needed for graceful shutdown
   }
 };

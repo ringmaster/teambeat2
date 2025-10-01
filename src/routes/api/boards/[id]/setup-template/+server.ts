@@ -6,6 +6,7 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { getTemplate } from '$lib/server/templates.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
+import { withTransaction } from '$lib/server/db/transaction.js';
 import { columns, scenes, boards } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -58,46 +59,48 @@ export const POST: RequestHandler = async (event) => {
     const templateColumns = selectedTemplate.columns;
     const templateScenes = selectedTemplate.scenes;
 
-    // Create template
-    // Create columns from template
-    for (const col of templateColumns) {
-      // Get description from function if available, otherwise use static description
-      const description = col.getDescription ? col.getDescription() : col.description;
+    // Create template in a transaction
+    await withTransaction(async (tx) => {
+      // Create columns from template
+      for (const col of templateColumns) {
+        // Get description from function if available, otherwise use static description
+        const description = col.getDescription ? col.getDescription() : col.description;
 
-      await db
-        .insert(columns)
-        .values({
-          id: uuidv4(),
-          boardId: board.id,
-          title: col.title,
-          description: description || null,
-          seq: col.seq,
-          defaultAppearance: col.default_appearance || 'shown'
-        });
-    }
+        await tx
+          .insert(columns)
+          .values({
+            id: uuidv4(),
+            boardId: board.id,
+            title: col.title,
+            description: description || null,
+            seq: col.seq,
+            defaultAppearance: col.default_appearance || 'shown'
+          });
+      }
 
-    // Create scenes from template
-    let currentSceneId: string | null = null;
-    for (const scene of templateScenes) {
-      const sceneId = uuidv4();
-      if (!currentSceneId) currentSceneId = sceneId;
+      // Create scenes from template
+      let currentSceneId: string | null = null;
+      for (const scene of templateScenes) {
+        const sceneId = uuidv4();
+        if (!currentSceneId) currentSceneId = sceneId;
 
-      await db
-        .insert(scenes)
-        .values({
-          id: sceneId,
-          boardId: board.id,
-          ...scene
-        });
-    }
+        await tx
+          .insert(scenes)
+          .values({
+            id: sceneId,
+            boardId: board.id,
+            ...scene
+          });
+      }
 
-    // Set current scene to first scene
-    if (currentSceneId) {
-      await db
-        .update(boards)
-        .set({ currentSceneId })
-        .where(eq(boards.id, board.id));
-    }
+      // Set current scene to first scene
+      if (currentSceneId) {
+        await tx
+          .update(boards)
+          .set({ currentSceneId })
+          .where(eq(boards.id, board.id));
+      }
+    });
 
     return json({ success: true });
   } catch (error) {

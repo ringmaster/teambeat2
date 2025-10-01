@@ -1,4 +1,5 @@
 import { db } from '../db/index.js';
+import { withTransaction } from '../db/transaction.js';
 import { sseManager } from '$lib/server/sse/manager';
 import { broadcastToBoardUsers } from '$lib/server/sse/broadcast';
 
@@ -64,11 +65,12 @@ export async function createBoard(data: CreateBoardData) {
     updatedAt: new Date().toISOString()
   };
 
-  await db.insert(boards).values(board);
-
-  // Board is created empty - scenes and columns will be configured by user
-
-  return board;
+  // Use transaction wrapper - works with both PostgreSQL and SQLite
+  return await withTransaction(async (tx) => {
+    await tx.insert(boards).values(board);
+    // Board is created empty - scenes and columns will be configured by user
+    return board;
+  });
 }
 
 export async function findBoardById(boardId: string) {
@@ -373,13 +375,15 @@ export async function updateBoardSettings(boardId: string, data: UpdateBoardSett
 }
 
 export async function reorderColumns(boardId: string, columnOrders: { id: string; seq: number }[]) {
-  for (const { id, seq } of columnOrders) {
-    await db
-      .update(columns)
-      .set({ seq })
-      .where(eq(columns.id, id));
-  }
-  return { success: true };
+  return await withTransaction(async (tx) => {
+    for (const { id, seq } of columnOrders) {
+      await tx
+        .update(columns)
+        .set({ seq })
+        .where(eq(columns.id, id));
+    }
+    return { success: true };
+  });
 }
 
 export async function updateColumn(

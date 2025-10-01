@@ -259,23 +259,44 @@ The schema detects the database type at module load time and selects appropriate
 
 ### Transaction Patterns
 
-**Transactions are not currently used** due to better-sqlite3 driver limitations:
+**Transactions use a database-agnostic abstraction** to handle driver differences:
 
 - **better-sqlite3 does not support async transactions** - throws "Transaction function cannot return a promise"
 - **PostgreSQL with drizzle-orm requires async transactions**
-- **Current approach**: No explicit transactions - rely on foreign key constraints and atomic operations
+- **Solution**: `withTransaction()` helper provides unified interface
 
 ```typescript
-// Current pattern - individual operations without transaction wrapper
-await db.insert(boardSeries).values(series);
-await db.insert(seriesMembers).values({
-  seriesId: series.id,
-  userId: data.creatorId,
-  role: 'admin'
-});
+import { withTransaction } from '$lib/server/db/transaction';
+
+// Works with both PostgreSQL (uses real transaction) and SQLite (executes directly)
+export async function createBoardSeries(data: CreateSeriesData) {
+  const series = { /* ... */ };
+
+  return await withTransaction(async (tx) => {
+    await tx.insert(boardSeries).values(series);
+    await tx.insert(seriesMembers).values({
+      seriesId: series.id,
+      userId: data.creatorId,
+      role: 'admin'
+    });
+    return series;
+  });
+}
 ```
 
-For true PostgreSQL support with transactions, the codebase would need conditional transaction handling based on database type, but this adds complexity. Current implementation prioritizes code simplicity.
+**How it works:**
+- **Databases with async transaction support** (e.g., PostgreSQL): Wraps operations in `db.transaction()` for true ACID transactions
+- **Databases without async transaction support** (e.g., SQLite with better-sqlite3): Executes operations directly (foreign key constraints provide data integrity)
+
+**When to use transactions:**
+- Multi-table operations that should be atomic
+- Creating parent + child records together
+- Operations where partial completion would leave invalid state
+
+**When NOT to use transactions:**
+- Single-row inserts/updates (already atomic)
+- Operations protected by CASCADE DELETE
+- Simple queries
 
 ### Migration Management
 

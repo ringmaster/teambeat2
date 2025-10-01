@@ -1,4 +1,5 @@
 import { db } from '../db/index.js';
+import { withTransaction } from '../db/transaction.js';
 import { scenes } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -106,11 +107,13 @@ export async function deleteScene(sceneId: string) {
 }
 
 export async function reorderScenes(boardId: string, sceneOrders: { id: string; seq: number }[]) {
-  for (const { id, seq } of sceneOrders) {
-    await db
-      .update(scenes)
-      .set({ seq })
-      .where(eq(scenes.id, id));
-  }
-  return { success: true };
+  return await withTransaction(async (tx) => {
+    for (const { id, seq } of sceneOrders) {
+      await tx
+        .update(scenes)
+        .set({ seq })
+        .where(eq(scenes.id, id));
+    }
+    return { success: true };
+  });
 }

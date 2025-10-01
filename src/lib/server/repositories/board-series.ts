@@ -1,4 +1,5 @@
 import { db } from '../db/index.js';
+import { withTransaction } from '../db/transaction.js';
 import { boardSeries, seriesMembers, boards, users } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,14 +24,16 @@ export async function createBoardSeries(data: CreateSeriesData) {
     createdAt: new Date().toISOString()
   };
 
-  await db.insert(boardSeries).values(series);
-  await db.insert(seriesMembers).values({
-    seriesId: series.id,
-    userId: data.creatorId,
-    role: 'admin'
+  // Use transaction wrapper - works with both PostgreSQL and SQLite
+  return await withTransaction(async (tx) => {
+    await tx.insert(boardSeries).values(series);
+    await tx.insert(seriesMembers).values({
+      seriesId: series.id,
+      userId: data.creatorId,
+      role: 'admin'
+    });
+    return series;
   });
-
-  return series;
 }
 
 export async function findSeriesByUser(userId: string) {
