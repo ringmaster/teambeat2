@@ -573,7 +573,7 @@
         },
         "last_seen": {
           "name": "last_seen",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },

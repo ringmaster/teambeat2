@@ -76,7 +76,7 @@ CREATE TABLE "health_responses" (
 CREATE TABLE "presence" (
 	"user_id" text NOT NULL,
 	"board_id" text NOT NULL,
-	"last_seen" integer NOT NULL,
+	"last_seen" bigint NOT NULL,
 	"current_activity" text,
 	CONSTRAINT "presence_user_id_board_id_pk" PRIMARY KEY("user_id","board_id")
 );
