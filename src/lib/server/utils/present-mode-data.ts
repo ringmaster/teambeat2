@@ -118,7 +118,7 @@ export async function buildPresentModeData(
       .leftJoin(users, eq(users.id, cards.userId))
       .leftJoin(votes, eq(cards.id, votes.cardId))
       .where(inArray(cards.columnId, visibleColumnIds))
-      .groupBy(cards.id)
+      .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.notes, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt, users.name)
       .orderBy(sql`COUNT(${votes.id}) DESC`);
 
     // Check if user has voted on each card

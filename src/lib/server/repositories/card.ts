@@ -122,7 +122,7 @@ export async function getCardsForBoard(boardId: string) {
     .innerJoin(users, eq(users.id, cards.userId))
     .leftJoin(votes, eq(votes.cardId, cards.id))
     .where(eq(columns.boardId, boardId))
-    .groupBy(cards.id)
+    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt, users.name)
     .orderBy(cards.createdAt);
 
   return result;
@@ -144,7 +144,7 @@ export async function getCardsForColumn(columnId: string) {
     .from(cards)
     .leftJoin(votes, eq(votes.cardId, cards.id))
     .where(eq(cards.columnId, columnId))
-    .groupBy(cards.id)
+    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt)
     .orderBy(cards.createdAt);
 
   return result;

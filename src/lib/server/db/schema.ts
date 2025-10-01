@@ -1,5 +1,5 @@
 import { sqliteTable, text as sqliteText, integer as sqliteInteger, primaryKey as sqlitePrimaryKey, unique as sqliteUnique } from 'drizzle-orm/sqlite-core';
-import { pgTable, text as pgText, integer as pgInteger, boolean as pgBoolean, primaryKey as pgPrimaryKey, unique as pgUnique } from 'drizzle-orm/pg-core';
+import { pgTable, text as pgText, integer as pgInteger, bigint as pgBigint, boolean as pgBoolean, primaryKey as pgPrimaryKey, unique as pgUnique } from 'drizzle-orm/pg-core';
 
 // Detect database type from environment variable at module load time
 const DATABASE_URL = process.env.DATABASE_URL || './teambeat.db';
@@ -16,6 +16,11 @@ const unique = isPostgres ? pgUnique : sqliteUnique;
 const booleanField = (name: string) => isPostgres
   ? pgBoolean(name)
   : sqliteInteger(name, { mode: 'boolean' });
+
+// Helper for bigint fields - use bigint for Postgres, integer for SQLite (SQLite stores all numbers as 64-bit)
+const bigintField = (name: string) => isPostgres
+  ? pgBigint(name, { mode: 'number' })
+  : sqliteInteger(name);
 
 export const users = table('users', {
   id: text('id').primaryKey(),
@@ -152,7 +157,7 @@ export const healthResponses = table('health_responses', {
 export const presence = table('presence', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
-  lastSeen: integer('last_seen').notNull(),
+  lastSeen: bigintField('last_seen').notNull(),
   currentActivity: text('current_activity')
 }, (table) => ({
   pk: primaryKey({ columns: [table.userId, table.boardId] })
