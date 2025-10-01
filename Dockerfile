@@ -46,6 +46,7 @@ RUN npm ci --only=production && \
 
 # Copy built application and necessary files from builder stage
 COPY --from=builder --chown=sveltekit:nodejs /app/build ./build
+COPY --from=builder --chown=sveltekit:nodejs /app/static ./static
 COPY --from=builder --chown=sveltekit:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=sveltekit:nodejs /app/drizzle.config.sqlite.ts ./
 COPY --from=builder --chown=sveltekit:nodejs /app/drizzle.config.postgres.ts ./
