@@ -7,49 +7,65 @@ set -e  # Exit on any error
 
 echo "Starting TeamBeat application..."
 
-# Check if database directory exists and is writable
-if [ ! -d "/db" ]; then
-    echo "ERROR: Database directory /db does not exist"
-    exit 1
-fi
-
-if [ ! -w "/db" ]; then
-    echo "ERROR: Database directory /db is not writable"
-    exit 1
-fi
-
 # Set database URL if not already set
 export DATABASE_URL=${DATABASE_URL:-"/db/teambeat.db"}
 
 echo "Using database: $DATABASE_URL"
 
+# Detect database type from URL
+if echo "$DATABASE_URL" | grep -q "^postgres"; then
+    DB_TYPE="postgres"
+    DRIZZLE_CONFIG="drizzle.config.postgres.ts"
+    echo "Detected PostgreSQL database"
+else
+    DB_TYPE="sqlite"
+    DRIZZLE_CONFIG="drizzle.config.sqlite.ts"
+    echo "Detected SQLite database"
+
+    # SQLite-specific setup
+    if [ ! -d "/db" ]; then
+        echo "ERROR: Database directory /db does not exist"
+        exit 1
+    fi
+
+    if [ ! -w "/db" ]; then
+        echo "ERROR: Database directory /db is not writable"
+        exit 1
+    fi
+fi
+
 # Run database migrations if needed
 echo "Checking for database migrations..."
-if [ -f "drizzle.config.ts" ] && [ -d "drizzle" ]; then
-    echo "Running database migrations..."
-
-    # Set the DATABASE_URL for the migration command
-    export DATABASE_URL="$DATABASE_URL"
+if [ -f "$DRIZZLE_CONFIG" ] && [ -d "drizzle" ]; then
+    echo "Running database migrations with config: $DRIZZLE_CONFIG"
 
     # Run migrations with proper error handling
-    if npx drizzle-kit migrate; then
+    if npx drizzle-kit migrate --config="$DRIZZLE_CONFIG"; then
         echo "✅ Database migrations completed successfully"
     else
-        echo "❌ Database migration failed, checking if database exists..."
+        echo "❌ Database migration failed"
 
-        # Create database file if it doesn't exist
-        if [ ! -f "$DATABASE_URL" ]; then
-            echo "Creating database file..."
-            touch "$DATABASE_URL"
-        fi
+        # SQLite-specific recovery
+        if [ "$DB_TYPE" = "sqlite" ]; then
+            echo "Checking if database file exists..."
 
-        # Try migration again
-        echo "Retrying migration..."
-        if npx drizzle-kit migrate; then
-            echo "✅ Database migrations completed on retry"
+            # Create database file if it doesn't exist
+            if [ ! -f "$DATABASE_URL" ]; then
+                echo "Creating database file..."
+                touch "$DATABASE_URL"
+            fi
+
+            # Try migration again
+            echo "Retrying migration..."
+            if npx drizzle-kit migrate --config="$DRIZZLE_CONFIG"; then
+                echo "✅ Database migrations completed on retry"
+            else
+                echo "❌ Database migration failed on retry - continuing anyway"
+                echo "The application will create tables on first use if needed"
+            fi
         else
-            echo "❌ Database migration failed on retry - continuing anyway"
-            echo "The application will create tables on first use if needed"
+            echo "❌ PostgreSQL migration failed - exiting"
+            exit 1
         fi
     fi
 else
@@ -61,8 +77,8 @@ else
     exit 1
 fi
 
-# Ensure proper database permissions
-if [ -f "$DATABASE_URL" ]; then
+# SQLite-specific: Ensure proper database permissions
+if [ "$DB_TYPE" = "sqlite" ] && [ -f "$DATABASE_URL" ]; then
     chmod 644 "$DATABASE_URL"
     echo "Database file permissions set"
 fi
