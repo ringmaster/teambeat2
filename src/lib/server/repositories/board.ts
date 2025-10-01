@@ -52,28 +52,23 @@ export interface CreateBoardData {
 export async function createBoard(data: CreateBoardData) {
   const id = uuidv4();
 
-  return db.transaction((tx) => {
-    const board = {
-      id,
-      seriesId: data.seriesId,
-      name: data.name,
-      meetingDate: data.meetingDate,
-      blameFreeMode: data.blameFreeMode || false,
-      votingAllocation: data.votingAllocation,
-      status: 'draft' as const,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  const board = {
+    id,
+    seriesId: data.seriesId,
+    name: data.name,
+    meetingDate: data.meetingDate,
+    blameFreeMode: data.blameFreeMode || false,
+    votingAllocation: data.votingAllocation,
+    status: 'draft' as const,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 
-    tx
-      .insert(boards)
-      .values(board)
-      .run();
+  await db.insert(boards).values(board);
 
-    // Board is created empty - scenes and columns will be configured by user
+  // Board is created empty - scenes and columns will be configured by user
 
-    return board;
-  });
+  return board;
 }
 
 export async function findBoardById(boardId: string) {
@@ -378,15 +373,12 @@ export async function updateBoardSettings(boardId: string, data: UpdateBoardSett
 }
 
 export async function reorderColumns(boardId: string, columnOrders: { id: string; seq: number }[]) {
-  db.transaction((tx) => {
-    for (const { id, seq } of columnOrders) {
-      tx
-        .update(columns)
-        .set({ seq })
-        .where(eq(columns.id, id))
-        .run();
-    }
-  });
+  for (const { id, seq } of columnOrders) {
+    await db
+      .update(columns)
+      .set({ seq })
+      .where(eq(columns.id, id));
+  }
   return { success: true };
 }
 
@@ -416,8 +408,6 @@ export async function deleteColumn(columnId: string) {
 }
 
 export async function deleteBoard(boardId: string) {
-  return db.transaction((tx) => {
-    // Just delete the board, the db is set up to cascade deletes
-    tx.delete(boards).where(eq(boards.id, boardId)).run();
-  });
+  // Just delete the board, the db is set up to cascade deletes
+  await db.delete(boards).where(eq(boards.id, boardId));
 }

@@ -58,51 +58,46 @@ export const POST: RequestHandler = async (event) => {
     const templateColumns = selectedTemplate.columns;
     const templateScenes = selectedTemplate.scenes;
 
-    // Create template in a transaction
-    db.transaction((tx) => {
-      // Create columns from template
-      for (const col of templateColumns) {
-        // Get description from function if available, otherwise use static description
-        const description = col.getDescription ? col.getDescription() : col.description;
+    // Create template
+    // Create columns from template
+    for (const col of templateColumns) {
+      // Get description from function if available, otherwise use static description
+      const description = col.getDescription ? col.getDescription() : col.description;
 
-        tx
-          .insert(columns)
-          .values({
-            id: uuidv4(),
-            boardId: board.id,
-            title: col.title,
-            description: description || null,
-            seq: col.seq,
-            defaultAppearance: col.default_appearance || 'shown'
-          })
-          .run();
-      }
+      await db
+        .insert(columns)
+        .values({
+          id: uuidv4(),
+          boardId: board.id,
+          title: col.title,
+          description: description || null,
+          seq: col.seq,
+          defaultAppearance: col.default_appearance || 'shown'
+        });
+    }
 
-      // Create scenes from template
-      let currentSceneId: string | null = null;
-      for (const scene of templateScenes) {
-        const sceneId = uuidv4();
-        if (!currentSceneId) currentSceneId = sceneId;
+    // Create scenes from template
+    let currentSceneId: string | null = null;
+    for (const scene of templateScenes) {
+      const sceneId = uuidv4();
+      if (!currentSceneId) currentSceneId = sceneId;
 
-        tx
-          .insert(scenes)
-          .values({
-            id: sceneId,
-            boardId: board.id,
-            ...scene
-          })
-          .run();
-      }
+      await db
+        .insert(scenes)
+        .values({
+          id: sceneId,
+          boardId: board.id,
+          ...scene
+        });
+    }
 
-      // Set current scene to first scene
-      if (currentSceneId) {
-        tx
-          .update(boards)
-          .set({ currentSceneId })
-          .where(eq(boards.id, board.id))
-          .run();
-      }
-    });
+    // Set current scene to first scene
+    if (currentSceneId) {
+      await db
+        .update(boards)
+        .set({ currentSceneId })
+        .where(eq(boards.id, board.id));
+    }
 
     return json({ success: true });
   } catch (error) {

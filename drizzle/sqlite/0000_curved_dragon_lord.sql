@@ -3,7 +3,7 @@ CREATE TABLE `board_series` (
 	`name` text NOT NULL,
 	`slug` text,
 	`description` text,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP
+	`created_at` text NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `board_series_slug_unique` ON `board_series` (`slug`);--> statement-breakpoint
@@ -13,14 +13,14 @@ CREATE TABLE `boards` (
 	`name` text NOT NULL,
 	`status` text DEFAULT 'draft' NOT NULL,
 	`current_scene_id` text,
-	`blame_free_mode` integer DEFAULT false,
+	`blame_free_mode` integer DEFAULT false NOT NULL,
 	`voting_allocation` integer DEFAULT 3 NOT NULL,
-	`voting_enabled` integer DEFAULT true,
+	`voting_enabled` integer DEFAULT true NOT NULL,
 	`meeting_date` text,
 	`timer_start` text,
 	`timer_duration` integer,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
 	FOREIGN KEY (`series_id`) REFERENCES `board_series`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -31,9 +31,9 @@ CREATE TABLE `cards` (
 	`content` text NOT NULL,
 	`notes` text,
 	`group_id` text,
-	`is_group_lead` integer DEFAULT false,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
+	`is_group_lead` integer DEFAULT false NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
 	FOREIGN KEY (`column_id`) REFERENCES `columns`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -45,7 +45,7 @@ CREATE TABLE `columns` (
 	`description` text,
 	`seq` integer NOT NULL,
 	`default_appearance` text DEFAULT 'shown' NOT NULL,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -54,10 +54,10 @@ CREATE TABLE `comments` (
 	`card_id` text NOT NULL,
 	`user_id` text,
 	`content` text NOT NULL,
-	`is_agreement` integer DEFAULT false,
-	`is_reaction` integer DEFAULT false,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text DEFAULT CURRENT_TIMESTAMP,
+	`is_agreement` integer DEFAULT false NOT NULL,
+	`is_reaction` integer DEFAULT false NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
 	FOREIGN KEY (`card_id`) REFERENCES `cards`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -67,7 +67,7 @@ CREATE TABLE `health_questions` (
 	`board_id` text NOT NULL,
 	`question` text NOT NULL,
 	`seq` integer NOT NULL,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -76,7 +76,7 @@ CREATE TABLE `health_responses` (
 	`question_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`rating` integer NOT NULL,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`question_id`) REFERENCES `health_questions`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -100,16 +100,17 @@ CREATE TABLE `scenes` (
 	`mode` text NOT NULL,
 	`seq` integer NOT NULL,
 	`selected_card_id` text,
-	`allow_add_cards` integer DEFAULT true,
-	`allow_edit_cards` integer DEFAULT true,
-	`allow_obscure_cards` integer DEFAULT false,
-	`allow_move_cards` integer DEFAULT true,
-	`allow_group_cards` integer DEFAULT false,
-	`show_votes` integer DEFAULT true,
-	`allow_voting` integer DEFAULT false,
-	`show_comments` integer DEFAULT true,
-	`allow_comments` integer DEFAULT true,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`allow_add_cards` integer DEFAULT true NOT NULL,
+	`allow_edit_cards` integer DEFAULT true NOT NULL,
+	`allow_obscure_cards` integer DEFAULT false NOT NULL,
+	`allow_move_cards` integer DEFAULT true NOT NULL,
+	`allow_group_cards` integer DEFAULT false NOT NULL,
+	`show_votes` integer DEFAULT true NOT NULL,
+	`allow_voting` integer DEFAULT false NOT NULL,
+	`show_comments` integer DEFAULT true NOT NULL,
+	`allow_comments` integer DEFAULT true NOT NULL,
+	`multiple_votes_per_card` integer DEFAULT true NOT NULL,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`board_id`) REFERENCES `boards`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`selected_card_id`) REFERENCES `cards`(`id`) ON UPDATE no action ON DELETE set null
 );
@@ -127,7 +128,7 @@ CREATE TABLE `series_members` (
 	`series_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`role` text NOT NULL,
-	`joined_at` text DEFAULT CURRENT_TIMESTAMP,
+	`joined_at` text NOT NULL,
 	PRIMARY KEY(`series_id`, `user_id`),
 	FOREIGN KEY (`series_id`) REFERENCES `board_series`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
@@ -140,9 +141,9 @@ CREATE TABLE `user_authenticators` (
 	`credential_public_key` text NOT NULL,
 	`counter` integer DEFAULT 0 NOT NULL,
 	`credential_device_type` text,
-	`credential_backed_up` integer DEFAULT false,
+	`credential_backed_up` integer DEFAULT false NOT NULL,
 	`transports` text,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -152,8 +153,8 @@ CREATE TABLE `users` (
 	`email` text NOT NULL,
 	`name` text,
 	`password_hash` text NOT NULL,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text DEFAULT CURRENT_TIMESTAMP
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
@@ -161,7 +162,7 @@ CREATE TABLE `votes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`card_id` text NOT NULL,
 	`user_id` text NOT NULL,
-	`created_at` text DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`card_id`) REFERENCES `cards`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );

@@ -221,31 +221,102 @@
 
 ## Database Architecture
 
-### Critical: SQLite Transaction Limitations with better-sqlite3
-- **TRANSACTIONS CANNOT BE ASYNC** - better-sqlite3 is a synchronous driver
-- **Transaction functions CANNOT return promises** - Will throw "Transaction function cannot return a promise"
-- **No `await` inside transactions** - All operations must be synchronous
-- **Use `.run()` for execution** - Don't await database operations in transactions
-- **INCORRECT pattern (causes errors)**:
-  ```typescript
-  // BAD - async transaction causes error
-  db.transaction(async (tx) => {
-    await tx.update(table).set(data).where(condition);
-  });
-  ```
-- **CORRECT pattern**:
-  ```typescript
-  // GOOD - synchronous transaction
-  db.transaction((tx) => {
-    tx.update(table).set(data).where(condition).run();
-  });
-  ```
+### Multi-Database Support (SQLite and PostgreSQL)
 
-### Schema Management
-- Database schema lives in `/src/lib/server/db/schema.ts`
-- All schema changes require migration generation via `npm run db:generate`
-- Use composite keys and proper foreign key relationships
-- Slug generation includes UUID prefixes to ensure uniqueness across all tables
+TeamBeat supports both SQLite and PostgreSQL databases, selected automatically based on the `DATABASE_URL` environment variable:
+
+- **SQLite**: Default, file-based database (e.g., `./teambeat.db` or `file://path/to/db.db`)
+- **PostgreSQL**: Production-ready relational database (e.g., `postgresql://user:pass@host/db`)
+
+The database type is detected at runtime by checking if `DATABASE_URL` starts with `postgres://` or `postgresql://`.
+
+### Database Connection Abstraction
+
+`/src/lib/server/db/index.ts` provides a unified database interface:
+
+```typescript
+import { db } from '$lib/server/db';
+
+// Works with both SQLite and PostgreSQL
+const users = await db.select().from(users);
+```
+
+The module exports:
+- `db` - Drizzle database instance (works with either backend)
+- `isPostgresDatabase` - Boolean indicating database type
+- `closeDatabase()` - Cleanup function (primarily for SQLite)
+
+### Schema Design for Database Compatibility
+
+The schema (`/src/lib/server/db/schema.ts`) uses conditional type builders:
+
+- **Text fields**: Compatible across both databases using ISO 8601 strings for timestamps
+- **Boolean fields**: Uses native `boolean` for PostgreSQL, `integer({ mode: 'boolean' })` for SQLite
+- **Timestamps**: All use `text()` with `.$defaultFn(() => new Date().toISOString())`
+- **IDs**: Text-based UUIDs work identically in both databases
+
+The schema detects the database type at module load time and selects appropriate builders.
+
+### Transaction Patterns
+
+**Transactions are not currently used** due to better-sqlite3 driver limitations:
+
+- **better-sqlite3 does not support async transactions** - throws "Transaction function cannot return a promise"
+- **PostgreSQL with drizzle-orm requires async transactions**
+- **Current approach**: No explicit transactions - rely on foreign key constraints and atomic operations
+
+```typescript
+// Current pattern - individual operations without transaction wrapper
+await db.insert(boardSeries).values(series);
+await db.insert(seriesMembers).values({
+  seriesId: series.id,
+  userId: data.creatorId,
+  role: 'admin'
+});
+```
+
+For true PostgreSQL support with transactions, the codebase would need conditional transaction handling based on database type, but this adds complexity. Current implementation prioritizes code simplicity.
+
+### Migration Management
+
+Separate migration directories for each database:
+
+- `/drizzle/sqlite/` - SQLite migration files
+- `/drizzle/postgres/` - PostgreSQL migration files
+
+**Generating migrations:**
+
+```bash
+# SQLite migrations
+npm run db:generate:sqlite
+
+# PostgreSQL migrations (requires DATABASE_URL set)
+DATABASE_URL="postgresql://localhost/teambeat" npm run db:generate:postgres
+```
+
+**Applying migrations:**
+
+```bash
+# SQLite
+npm run db:push:sqlite
+
+# PostgreSQL
+DATABASE_URL="postgresql://user:pass@host/db" npm run db:push:postgres
+```
+
+### Database Selection at Runtime
+
+Set `DATABASE_URL` before starting the application:
+
+```bash
+# Use SQLite (default)
+npm run dev
+
+# Use PostgreSQL
+DATABASE_URL="postgresql://user:password@localhost/teambeat" npm run dev
+```
+
+The database type cannot be changed at runtime - it's determined at application startup.
 
 ### Query Patterns
 - Use Drizzle ORM for type-safe database operations

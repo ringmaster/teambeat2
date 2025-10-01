@@ -18,24 +18,46 @@ A modern, real-time collaborative retrospective tool built with SvelteKit 5 and 
 
 - **Frontend**: SvelteKit 5 with custom design system (LESS)
 - **Backend**: SvelteKit API routes with TypeScript
-- **Database**: SQLite with Drizzle ORM
+- **Database**: SQLite or PostgreSQL with Drizzle ORM
 - **Real-time**: Server-Side Events (same port as HTTP)
 - **Authentication**: Session-based with secure cookies
 
 ## Quick Start
 
+### SQLite (Default)
+
 ```bash
 # Install dependencies
 npm install
 
-# Set up database
-npm run db:migrate
+# Generate and apply SQLite schema
+npm run db:push:sqlite
 
 # Start development server
 npm run dev
 ```
 
 The application will be available at `http://localhost:5173`
+
+### PostgreSQL
+
+```bash
+# Install dependencies
+npm install
+
+# Set DATABASE_URL for PostgreSQL
+export DATABASE_URL="postgresql://user:password@localhost/teambeat"
+
+# Generate and apply PostgreSQL schema
+npm run db:push:postgres
+
+# Start development server with PostgreSQL
+npm run dev
+```
+
+The database type is automatically detected from `DATABASE_URL`:
+- Starts with `postgres://` or `postgresql://` → PostgreSQL
+- Otherwise → SQLite (default: `./teambeat.db`)
 
 ## Docker Deployment
 
@@ -98,16 +120,36 @@ Key features:
 
 ## Database Commands
 
-```bash
-# Generate migration from schema changes
-npm run db:generate
+### SQLite
 
-# Apply migrations
-npm run db:migrate
+```bash
+# Generate SQLite migration from schema changes
+npm run db:generate:sqlite
+
+# Apply SQLite schema to database
+npm run db:push:sqlite
 
 # Open database studio
 npm run db:studio
 ```
+
+### PostgreSQL
+
+```bash
+# Generate PostgreSQL migration from schema changes
+DATABASE_URL="postgresql://localhost/teambeat" npm run db:generate:postgres
+
+# Apply PostgreSQL schema to database
+DATABASE_URL="postgresql://user:pass@host/db" npm run db:push:postgres
+
+# Open database studio
+DATABASE_URL="postgresql://user:pass@host/db" npm run db:studio
+```
+
+Both databases use the same schema with automatic type adaptation:
+- **Booleans**: Native `boolean` in PostgreSQL, `integer` in SQLite
+- **Timestamps**: ISO 8601 text strings in both databases
+- **Transactions**: Async transactions work with both backends
 
 ## Project Structure
 

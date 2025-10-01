@@ -106,14 +106,11 @@ export async function deleteScene(sceneId: string) {
 }
 
 export async function reorderScenes(boardId: string, sceneOrders: { id: string; seq: number }[]) {
-  db.transaction((tx) => {
-    for (const { id, seq } of sceneOrders) {
-      tx
-        .update(scenes)
-        .set({ seq })
-        .where(eq(scenes.id, id))
-        .run();
-    }
-  });
+  for (const { id, seq } of sceneOrders) {
+    await db
+      .update(scenes)
+      .set({ seq })
+      .where(eq(scenes.id, id));
+  }
   return { success: true };
 }
