@@ -6,8 +6,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
 	const duration = Date.now() - start;
 
-	// Track API performance (only for API routes)
-	if (event.url.pathname.startsWith('/api/')) {
+	// Track API performance (exclude admin performance routes to avoid feedback loop)
+	if (event.url.pathname.startsWith('/api/') && !event.url.pathname.startsWith('/api/admin/performance')) {
 		performanceTracker.recordApiRequest(
 			duration,
 			event.request.method,
