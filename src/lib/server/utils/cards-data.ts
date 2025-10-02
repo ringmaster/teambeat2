@@ -9,6 +9,7 @@ export interface CardData {
   userId: string | null;
   userName: string | null;
   content: string;
+  notes?: string | null;
   groupId: string | null;
   isGroupLead: boolean | null;
   createdAt: string | null;

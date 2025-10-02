@@ -111,6 +111,7 @@ export async function getCardsForBoard(boardId: string) {
       userId: cards.userId,
       userName: users.name,
       content: cards.content,
+      notes: cards.notes,
       groupId: cards.groupId,
       isGroupLead: cards.isGroupLead,
       createdAt: cards.createdAt,
@@ -122,7 +123,7 @@ export async function getCardsForBoard(boardId: string) {
     .innerJoin(users, eq(users.id, cards.userId))
     .leftJoin(votes, eq(votes.cardId, cards.id))
     .where(eq(columns.boardId, boardId))
-    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt, users.name)
+    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.notes, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt, users.name)
     .orderBy(cards.createdAt);
 
   return result;
