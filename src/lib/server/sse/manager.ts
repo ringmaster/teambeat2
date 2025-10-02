@@ -1,5 +1,6 @@
 import { PRESENCE_PING_INTERVAL_MS, SSE_HEARTBEAT_INTERVAL_MS, SSE_STALE_CONNECTION_TIMEOUT_MS } from '../constants.js';
 import { getUsersNearingTimeout } from '../repositories/presence.js';
+import { performanceTracker } from '../performance/tracker.js';
 
 export interface SSEMessage {
   type: string;
@@ -37,6 +38,9 @@ class SSEManager {
       }
       this.boardClients.get(boardId)!.add(clientId);
     }
+
+    // Track connection in performance metrics
+    performanceTracker.recordConnection(true);
   }
 
   removeClient(clientId: string) {
@@ -61,6 +65,9 @@ class SSEManager {
     }
 
     this.clients.delete(clientId);
+
+    // Track disconnection in performance metrics
+    performanceTracker.recordConnection(false);
   }
 
   updateClientBoard(clientId: string, boardId: string, userId?: string) {
@@ -90,10 +97,12 @@ class SSEManager {
   }
 
   broadcastToBoard(boardId: string, message: SSEMessage, excludeUserId?: string) {
+    const start = Date.now();
     const boardClients = this.boardClients.get(boardId);
     if (!boardClients) return;
 
     const messageString = `data: ${JSON.stringify(message)}\n\n`;
+    let recipientCount = 0;
 
     for (const clientId of boardClients) {
       const client = this.clients.get(clientId);
@@ -104,12 +113,17 @@ class SSEManager {
         try {
           client.controller.enqueue(messageString);
           client.lastSeen = Date.now();
+          recipientCount++;
         } catch (error) {
           console.error('Failed to send SSE message to client', clientId, error);
           this.removeClient(clientId);
         }
       }
     }
+
+    // Track broadcast performance
+    const duration = Date.now() - start;
+    performanceTracker.recordBroadcast(duration, recipientCount, parseInt(boardId), message.type);
   }
 
   broadcastToUser(boardId: string, userId: string, message: SSEMessage) {

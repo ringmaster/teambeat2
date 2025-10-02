@@ -161,6 +161,16 @@
                                         <Icon name="user" size="sm" />
                                         <span>Profile</span>
                                     </a>
+                                    {#if user.isAdmin}
+                                        <a
+                                            href={resolve("/admin/performance")}
+                                            class="dropdown-item"
+                                            data-sveltekit-preload-data="hover"
+                                        >
+                                            <Icon name="chart-bar" size="sm" />
+                                            <span>Performance</span>
+                                        </a>
+                                    {/if}
                                     <div class="dropdown-divider"></div>
                                     <button
                                         class="dropdown-item dropdown-item-danger"
@@ -245,6 +255,14 @@
                             class="text-interactive text-muted text-medium"
                             onclick={() => (mobileMenuOpen = false)}>Profile</a
                         >
+                        {#if user.isAdmin}
+                            <a
+                                href={resolve("/admin/performance")}
+                                class="text-interactive text-muted text-medium"
+                                onclick={() => (mobileMenuOpen = false)}
+                                >Performance</a
+                            >
+                        {/if}
                         <button
                             class="status-text-danger text-medium"
                             style="width: 100%;"

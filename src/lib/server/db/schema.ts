@@ -1,5 +1,5 @@
-import { sqliteTable, text as sqliteText, integer as sqliteInteger, primaryKey as sqlitePrimaryKey, unique as sqliteUnique } from 'drizzle-orm/sqlite-core';
-import { pgTable, text as pgText, integer as pgInteger, bigint as pgBigint, boolean as pgBoolean, primaryKey as pgPrimaryKey, unique as pgUnique } from 'drizzle-orm/pg-core';
+import { sqliteTable, text as sqliteText, integer as sqliteInteger, real as sqliteReal, index as sqliteIndex, primaryKey as sqlitePrimaryKey, unique as sqliteUnique } from 'drizzle-orm/sqlite-core';
+import { pgTable, text as pgText, integer as pgInteger, serial as pgSerial, real as pgReal, bigint as pgBigint, boolean as pgBoolean, index as pgIndex, primaryKey as pgPrimaryKey, unique as pgUnique } from 'drizzle-orm/pg-core';
 
 // Detect database type from environment variable at module load time
 const DATABASE_URL = process.env.DATABASE_URL || './teambeat.db';
@@ -9,8 +9,15 @@ const isPostgres = DATABASE_URL.startsWith('postgres://') || DATABASE_URL.starts
 const table = isPostgres ? pgTable : sqliteTable;
 const text = isPostgres ? pgText : sqliteText;
 const integer = isPostgres ? pgInteger : sqliteInteger;
+const realField = isPostgres ? pgReal : sqliteReal;
+const indexField = isPostgres ? pgIndex : sqliteIndex;
 const primaryKey = isPostgres ? pgPrimaryKey : sqlitePrimaryKey;
 const unique = isPostgres ? pgUnique : sqliteUnique;
+
+// Helper for auto-increment ID - use generated identity for Postgres, integer with autoIncrement for SQLite
+const autoIncrementId = (name: string) => isPostgres
+  ? pgInteger(name).primaryKey().generatedAlwaysAsIdentity()
+  : sqliteInteger(name).primaryKey({ autoIncrement: true });
 
 // Helper for boolean fields - use native boolean for Postgres, integer mode for SQLite
 const booleanField = (name: string) => isPostgres
@@ -27,6 +34,7 @@ export const users = table('users', {
   email: text('email').notNull().unique(),
   name: text('name'),
   passwordHash: text('password_hash').notNull(),
+  is_admin: booleanField('is_admin').notNull().default(false),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });
@@ -178,3 +186,43 @@ export const userAuthenticators = table('user_authenticators', {
   transports: text('transports'),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 });
+
+// Performance monitoring tables - using text IDs like other tables for consistency
+// Note: Using direct imports instead of helpers to avoid Drizzle Kit introspection issues
+const perfReal = isPostgres ? pgReal : sqliteReal;
+const perfBigint = isPostgres ? pgBigint : sqliteInteger;
+const perfIndex = isPostgres ? pgIndex : sqliteIndex;
+
+export const metricSnapshots = table('metric_snapshots', {
+  id: text('id').primaryKey(),
+  timestamp: perfBigint('timestamp', { mode: 'number' }).notNull(),
+  concurrent_users: integer('concurrent_users').notNull(),
+  peak_concurrent_users: integer('peak_concurrent_users').notNull(),
+  active_connections: integer('active_connections').notNull(),
+  total_operations: integer('total_operations').notNull(),
+  broadcast_p95: perfReal('broadcast_p95').notNull(),
+  broadcast_p99: perfReal('broadcast_p99').notNull(),
+  messages_sent: integer('messages_sent').notNull()
+}, (table) => ({
+  timestampIdx: perfIndex('metric_snapshots_timestamp_idx').on(table.timestamp)
+}));
+
+export const boardMetrics = table('board_metrics', {
+  id: text('id').primaryKey(),
+  board_id: text('board_id').notNull(),
+  timestamp: perfBigint('timestamp', { mode: 'number' }).notNull(),
+  broadcast_count: integer('broadcast_count').notNull(),
+  avg_broadcast_duration: perfReal('avg_broadcast_duration').notNull()
+}, (table) => ({
+  boardTimestampIdx: perfIndex('board_metrics_board_timestamp_idx').on(table.board_id, table.timestamp)
+}));
+
+export const slowQueries = table('slow_queries', {
+  id: text('id').primaryKey(),
+  timestamp: perfBigint('timestamp', { mode: 'number' }).notNull(),
+  duration: perfReal('duration').notNull(),
+  query: text('query').notNull(),
+  board_id: text('board_id')
+}, (table) => ({
+  timestampIdx: perfIndex('slow_queries_timestamp_idx').on(table.timestamp)
+}));

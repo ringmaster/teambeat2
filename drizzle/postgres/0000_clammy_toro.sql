@@ -1,3 +1,11 @@
+CREATE TABLE "board_metrics" (
+	"id" text PRIMARY KEY NOT NULL,
+	"board_id" text NOT NULL,
+	"timestamp" bigint NOT NULL,
+	"broadcast_count" integer NOT NULL,
+	"avg_broadcast_duration" real NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "board_series" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
@@ -73,6 +81,18 @@ CREATE TABLE "health_responses" (
 	CONSTRAINT "health_responses_question_id_user_id_unique" UNIQUE("question_id","user_id")
 );
 --> statement-breakpoint
+CREATE TABLE "metric_snapshots" (
+	"id" text PRIMARY KEY NOT NULL,
+	"timestamp" bigint NOT NULL,
+	"concurrent_users" integer NOT NULL,
+	"peak_concurrent_users" integer NOT NULL,
+	"active_connections" integer NOT NULL,
+	"total_operations" integer NOT NULL,
+	"broadcast_p95" real NOT NULL,
+	"broadcast_p99" real NOT NULL,
+	"messages_sent" integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "presence" (
 	"user_id" text NOT NULL,
 	"board_id" text NOT NULL,
@@ -117,6 +137,14 @@ CREATE TABLE "series_members" (
 	CONSTRAINT "series_members_series_id_user_id_pk" PRIMARY KEY("series_id","user_id")
 );
 --> statement-breakpoint
+CREATE TABLE "slow_queries" (
+	"id" text PRIMARY KEY NOT NULL,
+	"timestamp" bigint NOT NULL,
+	"duration" real NOT NULL,
+	"query" text NOT NULL,
+	"board_id" text
+);
+--> statement-breakpoint
 CREATE TABLE "user_authenticators" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
@@ -135,6 +163,7 @@ CREATE TABLE "users" (
 	"email" text NOT NULL,
 	"name" text,
 	"password_hash" text NOT NULL,
+	"is_admin" boolean DEFAULT false NOT NULL,
 	"created_at" text NOT NULL,
 	"updated_at" text NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
@@ -166,4 +195,7 @@ ALTER TABLE "series_members" ADD CONSTRAINT "series_members_series_id_board_seri
 ALTER TABLE "series_members" ADD CONSTRAINT "series_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_authenticators" ADD CONSTRAINT "user_authenticators_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "votes" ADD CONSTRAINT "votes_card_id_cards_id_fk" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "votes" ADD CONSTRAINT "votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "votes" ADD CONSTRAINT "votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "board_metrics_board_timestamp_idx" ON "board_metrics" USING btree ("board_id","timestamp");--> statement-breakpoint
+CREATE INDEX "metric_snapshots_timestamp_idx" ON "metric_snapshots" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX "slow_queries_timestamp_idx" ON "slow_queries" USING btree ("timestamp");
