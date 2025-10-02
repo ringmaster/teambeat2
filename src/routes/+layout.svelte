@@ -7,11 +7,11 @@
     import ToastContainer from "$lib/components/ui/ToastContainer.svelte";
     import { resolve } from "$app/paths";
 
+    let { data, children } = $props();
     let user: any = $state(null);
     let loading = $state(true);
     let mobileMenuOpen = $state(false);
     let showUserDropdown = $state(false);
-    let { children } = $props();
 
     onMount(async () => {
         try {
@@ -315,8 +315,8 @@
                         />
                     </svg>
                     <span class="footer-copyright"
-                        >© {new Date().getFullYear()} TeamBeat. Built for better
-                        retrospectives.</span
+                        >© {new Date().getFullYear()} TeamBeat v{data.version}.
+                        Built for better retrospectives.</span
                     >
                 </div>
                 <div class="footer-right">
