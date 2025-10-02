@@ -9,6 +9,7 @@
     import BoardColumns from "$lib/components/BoardColumns.svelte";
     import BoardConfigDialog from "$lib/components/BoardConfigDialog.svelte";
     import PresentMode from "$lib/components/PresentMode.svelte";
+    import ReviewScene from "$lib/components/ReviewScene.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
@@ -2302,6 +2303,8 @@
             isFacilitator={userRole === "facilitator"}
             {notesLockStatus}
         />
+    {:else if currentScene?.mode === "review"}
+        <ReviewScene {board} scene={currentScene} {cards} />
     {:else}
         <BoardColumns
             board={displayBoard}
