@@ -250,7 +250,6 @@
 
     .register-page {
         .page-container();
-        min-height: 100vh;
         background: var(--color-bg-primary);
         display: flex;
         align-items: center;
