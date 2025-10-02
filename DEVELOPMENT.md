@@ -658,3 +658,141 @@ This two-level system allows flexible control where facilitators can:
 1. Show comments read-only (`showComments: true, allowComments: false`)
 2. Hide comments entirely (`showComments: false`)
 3. Enable full comment interaction (`showComments: true, allowComments: true`)
+
+## Database Migrations
+
+### Migration Architecture
+
+TeamBeat uses Drizzle Kit for database migrations with support for both SQLite and PostgreSQL. Migrations are separated from application startup to support different deployment scenarios.
+
+**Key Files:**
+- `scripts/migrate.sh` - Standalone migration script
+- `scripts/start.sh` - Application startup script
+- `.do/app.yaml` - Digital Ocean deployment configuration
+- `drizzle/` - Generated migration SQL files
+
+### Deployment Scenarios
+
+#### 1. Digital Ocean App Platform
+For Digital Ocean deployments, migrations run as a **pre-deploy job** before the web service starts:
+
+```yaml
+jobs:
+  - name: db-migrate
+    kind: PRE_DEPLOY
+    dockerfile_path: Dockerfile
+    run_command: ./scripts/migrate.sh
+```
+
+The web service sets `SKIP_MIGRATION=true` to avoid duplicate migrations:
+
+```yaml
+services:
+  - name: web
+    envs:
+      - key: SKIP_MIGRATION
+        value: "true"
+```
+
+**Digital Ocean Workflow:**
+1. Pre-deploy job runs `migrate.sh`
+2. Migration completes successfully or fails (preventing deployment)
+3. Web service starts with migrations already applied
+4. No migration overhead during application startup
+
+#### 2. Standalone Docker Deployments
+For Docker deployments outside Digital Ocean, migrations run automatically during container startup unless `SKIP_MIGRATION=true`:
+
+```bash
+# Default: migrations run automatically
+docker run -e DATABASE_URL=postgresql://... teambeat
+
+# Skip migrations (already run separately)
+docker run -e SKIP_MIGRATION=true -e DATABASE_URL=postgresql://... teambeat
+```
+
+**Standalone Docker Workflow:**
+1. Container starts with `start.sh`
+2. `start.sh` checks `SKIP_MIGRATION` environment variable
+3. If not set, runs `migrate.sh` before starting app
+4. Application starts with migrations complete
+
+#### 3. Manual Migration
+Run migrations manually in a running Docker container:
+
+```bash
+# Execute migration script in running container
+docker exec -it <container_id> ./scripts/migrate.sh
+
+# Or run as one-off command
+docker run --rm -e DATABASE_URL=postgresql://... teambeat ./scripts/migrate.sh
+```
+
+### Migration Script Behavior
+
+`scripts/migrate.sh` handles both database types:
+
+**PostgreSQL:**
+- Detects PostgreSQL from `DATABASE_URL` starting with `postgres://` or `postgresql://`
+- Uses `drizzle.config.postgres.ts`
+- Fails immediately on error (no retry)
+- Exits with code 1 on failure (prevents deployment)
+
+**SQLite:**
+- Detects SQLite from other `DATABASE_URL` formats
+- Uses `drizzle.config.sqlite.ts`
+- Creates database file if missing
+- Retries once on failure
+- Creates `/db` directory if needed
+
+### Generating New Migrations
+
+When schema changes are made in `src/lib/server/db/schema.ts`:
+
+**For PostgreSQL:**
+```bash
+DATABASE_URL=postgresql://localhost/teambeat npm run db:generate:postgres
+```
+
+**For SQLite:**
+```bash
+npm run db:generate:sqlite
+```
+
+This generates SQL files in `drizzle/postgres/` or `drizzle/sqlite/` respectively.
+
+### Environment Variables
+
+**Required:**
+- `DATABASE_URL` - Database connection string
+
+**Optional:**
+- `SKIP_MIGRATION=true` - Skip migration in start.sh (used by Digital Ocean)
+
+### Migration Failure Handling
+
+**Pre-deploy Job (Digital Ocean):**
+- Migration failure prevents deployment
+- Failed deployment preserves previous working version
+- Check job logs in Digital Ocean console
+
+**Startup Migration (Docker):**
+- PostgreSQL: Container exits with error code 1
+- SQLite: Attempts recovery, continues with warning if fails
+- Check container logs for migration status
+
+### Best Practices
+
+1. **Always test migrations locally** before deploying:
+   ```bash
+   docker build -t teambeat .
+   docker run -e DATABASE_URL=postgresql://... teambeat ./scripts/migrate.sh
+   ```
+
+2. **Use pre-deploy jobs in production** (Digital Ocean pattern) to catch migration failures before deployment
+
+3. **Keep migrations idempotent** - migrations should be safe to run multiple times
+
+4. **Never modify committed migrations** - create new migrations for changes
+
+5. **Backup production databases** before running migrations in production
