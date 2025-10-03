@@ -381,3 +381,14 @@ export async function broadcastVoteUpdatesBasedOnScene(
     throw error;
   }
 }
+
+export function broadcastAgreementsUpdated(boardId: string, agreements: any) {
+  const message: SSEMessage = {
+    type: 'agreements_updated',
+    board_id: boardId,
+    agreements,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}

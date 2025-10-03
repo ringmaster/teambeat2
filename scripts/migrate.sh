@@ -23,13 +23,13 @@ else
     echo "✓ Detected SQLite database"
 
     # SQLite-specific setup
-    if [ ! -d "/db" ]; then
-        echo "⚠️  WARNING: Database directory /db does not exist, creating it..."
-        mkdir -p /db
+    if [ ! -d "./db" ]; then
+        echo "⚠️  WARNING: Database directory ./db does not exist, creating it..."
+        mkdir -p ./db
     fi
 
-    if [ ! -w "/db" ]; then
-        echo "❌ ERROR: Database directory /db is not writable"
+    if [ ! -w "./db" ]; then
+        echo "❌ ERROR: Database directory ./db is not writable"
         exit 1
     fi
 fi

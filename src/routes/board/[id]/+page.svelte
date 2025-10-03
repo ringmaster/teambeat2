@@ -10,6 +10,7 @@
     import BoardConfigDialog from "$lib/components/BoardConfigDialog.svelte";
     import PresentMode from "$lib/components/PresentMode.svelte";
     import ReviewScene from "$lib/components/ReviewScene.svelte";
+    import AgreementsScene from "$lib/components/AgreementsScene.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
@@ -636,38 +637,27 @@
                 }
                 break;
             case "board_updated":
-                if (board && data.board) {
-                    // Store previous voting allocation
-                    const previousVotingAllocation = board.votingAllocation;
+                if (data.board_id === boardId) {
+                    const newBoardData = data.board;
+                    const oldBlameFreeMode = board.blameFreeMode;
 
-                    // Update board metadata while preserving reactive state
-                    board.name = data.board.name;
-                    board.blameFreeMode = data.board.blameFreeMode;
-                    board.votingAllocation = data.board.votingAllocation;
-                    board.status = data.board.status;
-                    board.updatedAt = data.board.updatedAt;
+                    board = { ...board, ...newBoardData };
 
-                    // If voting allocation changed, refresh presence
-                    if (
-                        previousVotingAllocation !== data.board.votingAllocation
-                    ) {
-                        refreshPresence("voting_allocation_changed");
+                    if (oldBlameFreeMode !== newBoardData.blameFreeMode) {
+                        window.dispatchEvent(
+                            new CustomEvent("reload_agreements"),
+                        );
                     }
 
-                    // Update column visibility data if it exists
-                    if (data.board.hiddenColumnsByScene) {
-                        board.hiddenColumnsByScene =
-                            data.board.hiddenColumnsByScene;
-                    }
-
-                    // Update config form if it exists
-                    if (configForm) {
-                        configForm.name = data.board.name || "";
-                        configForm.blameFreeMode =
-                            data.board.blameFreeMode || false;
-                        configForm.votingAllocation =
-                            data.board.votingAllocation;
-                        configForm.status = data.board.status || "draft";
+                    // Update config form if it's open
+                    if (showBoardConfig) {
+                        configForm.columns =
+                            newBoardData.columns || configForm.columns;
+                        configForm.scenes =
+                            newBoardData.scenes || configForm.scenes;
+                        configForm.hiddenColumnsByScene =
+                            newBoardData.hiddenColumnsByScene ||
+                            configForm.hiddenColumnsByScene;
                     }
                 }
                 break;
@@ -758,6 +748,15 @@
                 // If votes were cleared, clear the user's own votes
                 if (data.votes_cleared) {
                     userVotesByCard.clear();
+                }
+                break;
+            case "agreements_updated":
+                if (data.board_id === boardId) {
+                    window.dispatchEvent(
+                        new CustomEvent("agreements_updated", {
+                            detail: data.agreements,
+                        }),
+                    );
                 }
                 break;
             case "timer_update": {
@@ -2305,6 +2304,8 @@
         />
     {:else if currentScene?.mode === "review"}
         <ReviewScene {board} scene={currentScene} {cards} />
+    {:else if currentScene?.mode === "agreements"}
+        <AgreementsScene {board} scene={currentScene} {userRole} />
     {:else}
         <BoardColumns
             board={displayBoard}

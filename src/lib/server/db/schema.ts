@@ -87,7 +87,7 @@ export const scenes = table('scenes', {
   boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  mode: text('mode').notNull().$type<'columns' | 'present' | 'review'>(),
+  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements'>(),
   seq: integer('seq').notNull(),
   selectedCardId: text('selected_card_id').references(() => cards.id, { onDelete: 'set null' }),
   // Permission fields
@@ -138,11 +138,30 @@ export const comments = table('comments', {
   content: text('content').notNull(),
   isAgreement: booleanField('is_agreement').notNull().default(false),
   isReaction: booleanField('is_reaction').notNull().default(false),
+  completed: booleanField('completed').notNull().default(false),
+  completedByUserId: text('completed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  completedAt: text('completed_at'),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
-});
+}, (table) => ({
+  agreementCompletedIdx: indexField('comments_agreement_completed_idx').on(table.cardId, table.isAgreement, table.completed)
+}));
 
-
+export const agreements = table('agreements', {
+  id: text('id').primaryKey(),
+  boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  content: text('content').notNull(),
+  completed: booleanField('completed').notNull().default(false),
+  completedByUserId: text('completed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  completedAt: text('completed_at'),
+  sourceAgreementId: text('source_agreement_id').references((): any => agreements.id, { onDelete: 'set null' }),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+}, (table) => ({
+  boardIdIdx: indexField('agreements_board_id_idx').on(table.boardId),
+  completedIdx: indexField('agreements_completed_idx').on(table.boardId, table.completed)
+}));
 
 export const healthQuestions = table('health_questions', {
   id: text('id').primaryKey(),

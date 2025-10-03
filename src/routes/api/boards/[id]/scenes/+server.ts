@@ -71,9 +71,9 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    if (!mode || !['columns', 'present', 'review'].includes(mode)) {
+    if (!mode || !['columns', 'present', 'review', 'agreements'].includes(mode)) {
       return json(
-        { success: false, error: 'Valid scene mode is required (columns, present, or review)' },
+        { success: false, error: 'Valid scene mode is required (columns, present, review, or agreements)' },
         { status: 400 }
       );
     }
@@ -118,16 +118,23 @@ export const POST: RequestHandler = async (event) => {
         seq: nextSeq,
         allowAddCards: allowAddCards ?? true,
         allowEditCards: allowEditCards ?? true,
+        allowObscureCards: body.allowObscureCards ?? false,
+        allowMoveCards: body.allowMoveCards ?? true,
+        allowGroupCards: body.allowGroupCards ?? false,
+        showVotes: body.showVotes ?? true,
+        allowVoting: allowVoting ?? false,
+        showComments: body.showComments ?? true,
         allowComments: allowComments ?? true,
-        allowVoting: allowVoting ?? false
+        multipleVotesPerCard: body.multipleVotesPerCard ?? true,
+        createdAt: new Date().toISOString()
       });
 
     // Get the created scene with all its details
-    const newScene = await db
+    const [newScene] = await db
       .select()
       .from(scenes)
       .where(eq(scenes.id, sceneId))
-      .get();
+      .limit(1);
 
     // If this is the first scene and board doesn't have a current scene, make it current
     const boardWithCurrentScene = await findBoardById(boardId);

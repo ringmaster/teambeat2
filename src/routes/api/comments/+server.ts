@@ -109,6 +109,7 @@ export const POST: RequestHandler = async (event) => {
 
     // Create the comment/reaction
     const commentId = nanoid();
+    const now = new Date().toISOString();
     const [newComment] = await db
       .insert(comments)
       .values({
@@ -117,7 +118,12 @@ export const POST: RequestHandler = async (event) => {
         userId: user.userId,
         content: content.trim(),
         isAgreement: is_agreement,
-        isReaction: is_reaction
+        isReaction: is_reaction,
+        completed: false,
+        completedByUserId: null,
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now
       })
       .returning();
 

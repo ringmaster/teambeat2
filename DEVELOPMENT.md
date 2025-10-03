@@ -796,3 +796,125 @@ This generates SQL files in `drizzle/postgres/` or `drizzle/sqlite/` respectivel
 4. **Never modify committed migrations** - create new migrations for changes
 
 5. **Backup production databases** before running migrations in production
+
+## Drizzle Kit PostgreSQL Migration Issues
+
+### Historical Bug: drizzle-kit push with Composite Primary Keys (2024-2025)
+
+During implementation of the performance monitoring system, we encountered a critical bug with `drizzle-kit push` when using PostgreSQL databases with composite primary keys.
+
+#### The Problem
+
+**Symptoms:**
+- First `drizzle-kit push` succeeds and creates tables correctly
+- Second `drizzle-kit push` (with no schema changes) fails with error:
+  ```
+  PostgresError: column "id" is in a primary key
+  Error code: 42P16
+  ```
+
+**Root Cause:**
+Drizzle Kit versions 0.28.1 through 0.31.5 have a bug where they:
+1. Create CHECK constraints for NOT NULL columns (named `table_column_not_null`)
+2. Cannot properly introspect these CHECK constraints on subsequent runs
+3. Attempt to drop CHECK constraints on primary key columns
+4. PostgreSQL rejects this operation because you cannot drop NOT NULL from primary key columns
+
+**Affected Versions:**
+- drizzle-kit: 0.28.1, 0.31.5 (and versions between)
+- drizzle-orm: 0.44.5
+- Affects PostgreSQL only (SQLite works fine)
+
+#### Investigation History
+
+**Failed Workarounds Attempted:**
+1. ❌ Using `serial` or `generatedAlwaysAsIdentity()` for primary keys
+2. ❌ Manually dropping CHECK constraints with SQL
+3. ❌ Creating separate PostgreSQL-only schema file (`schema-pg-only.ts`)
+4. ❌ Downgrading drizzle-kit to older versions
+5. ❌ Adding explicit `.notNull()` to composite key columns (already present)
+6. ❌ Naming primary key constraints explicitly
+
+**Key Findings:**
+- Tables with single-column primary keys work fine
+- Composite primary key tables trigger the bug:
+  - `seriesMembers`: PRIMARY KEY (series_id, user_id)
+  - `scenesColumns`: PRIMARY KEY (scene_id, column_id)
+  - `presence`: PRIMARY KEY (user_id, board_id)
+- CHECK constraints are created by drizzle-kit itself, not our schema
+- Database recreation from scratch doesn't solve the issue
+
+#### The Solution
+
+**Use `drizzle-kit generate` + `drizzle-kit migrate` instead of `drizzle-kit push`:**
+
+```bash
+# Generate migration SQL files (development)
+npm run db:generate:postgres
+
+# Apply migrations (production)
+npx drizzle-kit migrate --config=drizzle.config.postgres.ts
+```
+
+**Why This Works:**
+- `drizzle-kit generate` creates clean SQL migration files without CHECK constraints
+- `drizzle-kit migrate` applies these SQL files directly without introspection
+- No CHECK constraint creation/introspection issues
+- Migrations are idempotent and repeatable
+
+#### Current Implementation
+
+**Migration Workflow:**
+1. Schema changes made in `src/lib/server/db/schema.ts`
+2. Generate migration: `npm run db:generate:postgres`
+3. Review generated SQL in `drizzle/postgres/`
+4. Commit migration files to git
+5. Production applies migrations via:
+   - Digital Ocean: Pre-deploy job runs `scripts/migrate.sh`
+   - Docker: Startup script runs `scripts/migrate.sh` (unless `SKIP_MIGRATION=true`)
+
+**Files Involved:**
+- `drizzle/postgres/` - Generated migration SQL files
+- `scripts/migrate.sh` - Standalone migration script
+- `.do/app.yaml` - Digital Ocean pre-deploy job configuration
+- `scripts/start.sh` - Application startup with optional migration
+
+#### Related GitHub Issues
+
+- drizzle-team/drizzle-orm#3342 - Composite pk always causes drizzle-kit push to crash
+- drizzle-team/drizzle-orm#3901 - Composite primary key does not set type of columns to not null
+- Community reports of "column is in a primary key" errors with drizzle-kit push
+
+#### Recommendations
+
+1. **Never use `drizzle-kit push` for PostgreSQL in production** - it has known introspection bugs
+2. **Always use generate + migrate workflow** for PostgreSQL
+3. **SQLite can use push safely** - the bug only affects PostgreSQL
+4. **Test migrations locally** before deploying to production
+5. **Keep drizzle-kit and drizzle-orm versions in sync** to avoid compatibility issues
+
+#### Schema Pattern That Works
+
+Our schema uses conditional types based on `DATABASE_URL`:
+
+```typescript
+const isPostgres = DATABASE_URL.startsWith('postgres://') || DATABASE_URL.startsWith('postgresql://');
+const table = isPostgres ? pgTable : sqliteTable;
+
+// Composite primary keys work with migrate but not push
+export const seriesMembers = table('series_members', {
+  seriesId: text('series_id').notNull().references(() => boardSeries.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  joinedAt: text('joined_at').notNull()
+}, (table) => ({
+  pk: primaryKey({ columns: [table.seriesId, table.userId] })
+}));
+```
+
+**Key Requirements:**
+- Composite primary key columns MUST have `.notNull()`
+- Use text IDs for cross-database compatibility
+- Define primary key in table callback, not inline
+- Use `drizzle-kit migrate` for production deployments
+

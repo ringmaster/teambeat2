@@ -6,10 +6,14 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { withTransaction } from '$lib/server/db/transaction.js';
-import { boards, columns, scenes, scenesColumns } from '$lib/server/db/schema.js';
+import { boards, columns, scenes, scenesColumns, agreements } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import {
+  findIncompleteAgreementsByBoardId,
+  findIncompleteCommentAgreementsByBoardId
+} from '$lib/server/repositories/agreement.js';
 
 const cloneBoardSchema = z.object({
   sourceId: z.string().uuid()
@@ -186,6 +190,50 @@ export const POST: RequestHandler = async (event) => {
           .update(boards)
           .set({ currentSceneId: firstSceneId })
           .where(eq(boards.id, boardId));
+      }
+
+      // Clone incomplete agreements (both free-form and comment-based)
+      const incompleteFreeFormAgreements = await findIncompleteAgreementsByBoardId(data.sourceId);
+      const incompleteCommentAgreements = await findIncompleteCommentAgreementsByBoardId(data.sourceId);
+
+      const now = new Date().toISOString();
+
+      // Clone free-form agreements
+      for (const agreement of incompleteFreeFormAgreements) {
+        const newAgreementId = uuidv4();
+        await tx
+          .insert(agreements)
+          .values({
+            id: newAgreementId,
+            boardId: boardId,
+            userId: agreement.userId,
+            content: agreement.content,
+            completed: false,
+            completedByUserId: null,
+            completedAt: null,
+            sourceAgreementId: agreement.id,
+            createdAt: agreement.createdAt,
+            updatedAt: now
+          });
+      }
+
+      // Clone comment-based agreements to agreements table
+      for (const commentAgreement of incompleteCommentAgreements) {
+        const newAgreementId = uuidv4();
+        await tx
+          .insert(agreements)
+          .values({
+            id: newAgreementId,
+            boardId: boardId,
+            userId: commentAgreement.userId,
+            content: commentAgreement.content,
+            completed: false,
+            completedByUserId: null,
+            completedAt: null,
+            sourceAgreementId: null,
+            createdAt: commentAgreement.createdAt,
+            updatedAt: now
+          });
       }
     });
 

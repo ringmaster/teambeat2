@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 const updateSceneSchema = z.object({
   title: z.string().min(1).max(100).optional(),
-  mode: z.enum(['columns', 'present', 'review']).optional(),
+  mode: z.enum(['columns', 'present', 'review', 'agreements']).optional(),
   allowAddCards: z.boolean().optional(),
   allowEditCards: z.boolean().optional(),
   allowObscureCards: z.boolean().optional(),

@@ -289,6 +289,9 @@
                                     <option value="columns">Columns</option>
                                     <option value="present">Present</option>
                                     <option value="review">Review</option>
+                                    <option value="agreements"
+                                        >Agreements</option
+                                    >
                                 </select>
                             </td>
                             <td>
