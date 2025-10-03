@@ -605,7 +605,7 @@
 
     /* Permission Button Styles */
     .permissions-grid .btn-secondary {
-        flex: 1 1 calc(33.333% - var(--spacing-2));
+        flex: 0 0 calc(33.333% - var(--spacing-2));
         min-width: 120px;
         display: flex;
         align-items: center;
