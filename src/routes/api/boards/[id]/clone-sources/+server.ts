@@ -6,7 +6,7 @@ import { getUserRoleInSeries, findSeriesByUser } from '$lib/server/repositories/
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { boards, boardSeries } from '$lib/server/db/schema.js';
-import { eq, and, or, inArray } from 'drizzle-orm';
+import { eq, and, or, inArray, desc } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
     try {
@@ -55,7 +55,7 @@ export const GET: RequestHandler = async (event) => {
                     eq(boards.status, 'draft')
                 )
             ))
-            .orderBy(boards.createdAt);
+            .orderBy(desc(boards.createdAt));
         
         // Get latest active or completed board from each other series
         const otherSeriesBoards = await db
@@ -77,7 +77,7 @@ export const GET: RequestHandler = async (event) => {
                     eq(boards.status, 'active')
                 )
             ))
-            .orderBy(boards.createdAt);
+            .orderBy(desc(boards.createdAt));
         
         // Filter to get latest board from each series (excluding current series)
         const latestFromOtherSeries = new Map();

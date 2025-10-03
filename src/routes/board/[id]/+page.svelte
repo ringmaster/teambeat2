@@ -2301,6 +2301,11 @@
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
             {notesLockStatus}
+            onVoteCard={voteCard}
+            onCommentCard={commentCard}
+            onDeleteCard={deleteCard}
+            onEditCard={editCard}
+            onReaction={addReaction}
         />
     {:else if currentScene?.mode === "review"}
         <ReviewScene {board} scene={currentScene} {cards} />

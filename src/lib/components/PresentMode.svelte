@@ -35,6 +35,11 @@
             locked: boolean;
             locked_by: string | null;
         } | null;
+        onVoteCard?: (cardId: string, delta: 1 | -1) => void;
+        onCommentCard?: (cardId: string) => void;
+        onDeleteCard?: (cardId: string) => void;
+        onEditCard?: (cardId: string) => void;
+        onReaction?: (cardId: string, emoji: string) => void;
     }
 
     let {
@@ -48,6 +53,11 @@
         isAdmin = false,
         isFacilitator = false,
         notesLockStatus = null,
+        onVoteCard,
+        onCommentCard,
+        onDeleteCard,
+        onEditCard,
+        onReaction,
     }: Props = $props();
 
     let notesContent = $state("");
@@ -608,11 +618,12 @@
                             hasVotes={true}
                             onDragStart={() => {}}
                             onToggleSelection={() => {}}
-                            onVote={() => {}}
-                            onComment={() => {}}
-                            onDelete={() => {}}
-                            onEdit={() => {}}
+                            onVote={onVoteCard || (() => {})}
+                            onComment={onCommentCard || (() => {})}
+                            onDelete={onDeleteCard || (() => {})}
+                            onEdit={onEditCard || (() => {})}
                             onCardDrop={() => {}}
+                            {onReaction}
                         />
                     </div>
                 </div>
