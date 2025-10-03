@@ -47,7 +47,7 @@ This project prioritizes **developer autonomy** over framework magic. We choose 
 - **Usage**: Drizzle for schema/types, raw SQL when beneficial
 - **Avoid**: Complex migrations during rapid development
 
-### Real-time: Native WebSockets
+### Real-time: Native Server Side Events (SSE)
 - **Why**: Direct control, minimal overhead, standard protocol
 - **Usage**: Board state sync, presence tracking, live collaboration
 - **Avoid**: Over-abstracting websocket lifecycle

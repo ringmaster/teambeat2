@@ -3,6 +3,7 @@ import { cards, columns, votes, scenesColumns, scenes, users, comments } from '.
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { getBoardWithDetails } from '../repositories/board.js';
 import { getUserDisplayName } from '../../utils/animalNames.js';
+import { enrichCardsWithCounts } from './cards-data.js';
 
 export interface PresentModeCard {
   id: string;
@@ -17,6 +18,8 @@ export interface PresentModeCard {
   updatedAt: string | null;
   voteCount: number;
   userVoted: boolean;
+  reactions?: Record<string, number>;
+  commentCount?: number;
 }
 
 export interface PresentModeComment {
@@ -26,6 +29,7 @@ export interface PresentModeComment {
   userName: string | null;
   content: string;
   isAgreement: boolean | null;
+  isReaction?: boolean | null;
   createdAt: string | null;
 }
 
@@ -162,6 +166,9 @@ export async function buildPresentModeData(
         }
       }
     }
+
+    // Enrich cards with reaction and comment counts
+    visibleCards = await enrichCardsWithCounts(visibleCards) as PresentModeCard[];
   }
 
   // Get the selected card if any
@@ -187,6 +194,7 @@ export async function buildPresentModeData(
         userName: users.name,
         content: comments.content,
         isAgreement: comments.isAgreement,
+        isReaction: comments.isReaction,
         createdAt: comments.createdAt
       })
       .from(comments)

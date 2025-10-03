@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Card from "$lib/components/Card.svelte";
+    import { getUserDisplayName } from "$lib/utils/animalNames";
     import type {
         Board,
         Scene,
@@ -9,14 +10,25 @@
         User,
     } from "$lib/types";
 
+    // Extended Card type with enriched data
+    interface EnrichedCard extends CardType {
+        reactions?: Record<string, number>;
+        userName?: string;
+    }
+
+    // Extended Comment type
+    interface EnrichedComment extends Comment {
+        isReaction?: boolean;
+    }
+
     interface Props {
         board: Board;
         scene: Scene;
         currentUser: User;
-        cards?: CardType[];
-        selectedCard?: CardType | null;
-        comments?: Comment[];
-        agreements?: Comment[];
+        cards?: EnrichedCard[];
+        selectedCard?: EnrichedCard | null;
+        comments?: EnrichedComment[];
+        agreements?: EnrichedComment[];
         isAdmin?: boolean;
         isFacilitator?: boolean;
         notesLockStatus?: {
@@ -49,6 +61,14 @@
     let notesTextarea = $state<HTMLTextAreaElement>();
 
     const canSelectCards = isAdmin || isFacilitator;
+
+    // Filter reactions from regular comments
+    const regularComments = $derived(
+        comments.filter((comment) => !comment.isReaction),
+    );
+
+    // Get reactions for the selected card
+    const cardReactions = $derived(selectedCard?.reactions || {});
 
     // Initialize notes content when selected card changes (only if user isn't actively editing)
     $effect(() => {
@@ -283,6 +303,29 @@
         }
     }
 
+    async function addReaction(emoji: string) {
+        if (!selectedCard || !scene.allowComments) return;
+
+        try {
+            const response = await fetch("/api/comments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    card_id: selectedCard.id,
+                    content: emoji,
+                    is_reaction: true,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error("Failed to add reaction:", error.error);
+            }
+        } catch (error) {
+            console.error("Error adding reaction:", error);
+        }
+    }
+
     async function deleteComment(commentId: string) {
         try {
             const response = await fetch(`/api/comments/${commentId}`, {
@@ -304,9 +347,30 @@
     <div class="presentation-panel">
         {#if selectedCard}
             <div class="selected-card-content">
-                <div class="card-content-display">
-                    {selectedCard.content}
+                <div class="card-content-with-votes">
+                    <div class="card-content-display">
+                        {selectedCard.content}
+                    </div>
+                    {#if scene.showVotes && selectedCard.voteCount !== undefined}
+                        <div class="vote-count-box">
+                            <div class="vote-count-number">
+                                {selectedCard.voteCount}
+                            </div>
+                            <div class="vote-count-label">
+                                {selectedCard.voteCount === 1 ? "vote" : "votes"}
+                            </div>
+                        </div>
+                    {/if}
                 </div>
+                {#if selectedCard.userName}
+                    <div class="card-author">
+                        {getUserDisplayName(
+                            selectedCard.userName,
+                            board.id,
+                            board.blameFreeMode,
+                        )}
+                    </div>
+                {/if}
             </div>
 
             <div class="notes-section">
@@ -383,7 +447,38 @@
 
             {#if scene.showComments}
                 <div class="comments-section">
-                    <h3 class="section-title">Comments:</h3>
+                    <div class="comments-header">
+                        <h3 class="section-title">Comments:</h3>
+                        {#if Object.keys(cardReactions).length > 0}
+                            <div class="reaction-pills">
+                                {#each Object.entries(cardReactions) as [emoji, count]}
+                                    {#if scene.allowComments}
+                                        <button
+                                            class="reaction-pill clickable"
+                                            title="Click to add {emoji} reaction ({count} total)"
+                                            onclick={(e) => {
+                                                e.stopPropagation();
+                                                addReaction(emoji);
+                                            }}
+                                        >
+                                            <span class="reaction-emoji">{emoji}</span>
+                                            <span class="reaction-count">{count}</span>
+                                        </button>
+                                    {:else}
+                                        <span
+                                            class="reaction-pill"
+                                            title="{count} {emoji} reaction{count !== 1
+                                                ? 's'
+                                                : ''}"
+                                        >
+                                            <span class="reaction-emoji">{emoji}</span>
+                                            <span class="reaction-count">{count}</span>
+                                        </span>
+                                    {/if}
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
                     {#if scene.allowComments}
                         <div class="add-comment">
                             <input
@@ -404,7 +499,7 @@
                         </div>
                     {/if}
                     <div class="comments-list">
-                        {#each comments as comment (comment.id)}
+                        {#each regularComments as comment (comment.id)}
                             <div class="comment">
                                 <div class="comment-content">
                                     {comment.content}
@@ -699,7 +794,15 @@
         color: var(--color-text-primary);
     }
 
+    .card-content-with-votes {
+        display: flex;
+        gap: var(--spacing-6);
+        align-items: flex-start;
+        margin-bottom: var(--spacing-3);
+    }
+
     .card-content-display {
+        flex: 1;
         font-size: 1.125rem;
         line-height: 1.6;
         color: var(--color-text-primary);
@@ -707,6 +810,41 @@
         background: var(--surface-elevated);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
+    }
+
+    .vote-count-box {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacing-4);
+        background: var(--surface-elevated);
+        border: 2px solid var(--color-accent);
+        border-radius: var(--radius-md);
+        min-width: 100px;
+    }
+
+    .vote-count-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--color-accent);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .vote-count-label {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .card-author {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        font-style: italic;
+        margin-bottom: var(--spacing-4);
     }
 
     .vote-count {
@@ -727,11 +865,62 @@
         margin-bottom: var(--spacing-8);
     }
 
+    .comments-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-4);
+        margin-bottom: var(--spacing-3);
+    }
+
     .section-title {
         font-size: 1rem;
         font-weight: 500;
-        margin-bottom: var(--spacing-3);
+        margin-bottom: 0;
         color: var(--color-text-secondary);
+    }
+
+    .reaction-pills {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .reaction-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 6px;
+        background-color: var(--surface-secondary);
+        border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+        border-radius: 12px;
+        font-size: 0.75rem;
+        transition:
+            background-color 0.2s,
+            transform 0.1s;
+
+        &.clickable {
+            cursor: pointer;
+
+            &:hover {
+                background-color: var(--surface-tertiary, #e0e0e0);
+                transform: scale(1.05);
+            }
+
+            &:active {
+                transform: scale(0.98);
+            }
+        }
+    }
+
+    .reaction-emoji {
+        font-size: 0.875rem;
+        line-height: 1;
+    }
+
+    .reaction-count {
+        color: var(--card-text-secondary);
+        font-weight: 500;
     }
 
     .notes-display {

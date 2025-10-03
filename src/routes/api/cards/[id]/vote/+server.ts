@@ -8,6 +8,7 @@ import { castVote, getUserVoteCount } from '$lib/server/repositories/vote.js';
 import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVoteUpdatesBasedOnScene } from '$lib/server/sse/broadcast.js';
 import { updatePresence } from '$lib/server/repositories/presence.js';
 import { buildComprehensiveVotingData } from '$lib/server/utils/voting-data.js';
+import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
@@ -130,7 +131,9 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    const voteCount = updatedCard.voteCount;
+    // Enrich card with comment counts and reactions before returning
+    const enrichedCard = await enrichCardWithCounts(updatedCard);
+    const voteCount = enrichedCard.voteCount;
 
     // Get comprehensive voting data for the response
     const comprehensiveVotingData = await buildComprehensiveVotingData(board.id, user.userId);
@@ -138,7 +141,7 @@ export const POST: RequestHandler = async (event) => {
     // Build the response with user's voting data
     const response: any = {
       success: true,
-      card: updatedCard,
+      card: enrichedCard,
       voteResult,
       user_voting_data: comprehensiveVotingData.user_voting_data,
       voting_stats: comprehensiveVotingData.voting_stats
