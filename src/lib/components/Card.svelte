@@ -274,47 +274,36 @@
         </p>
 
         <div class="card-sidebar">
-            <div
-                class="user-avatar cooltipz--left"
-                title={getUserDisplayName(
-                    card.userName || "Unknown",
-                    board.id,
-                    board.blameFreeMode,
-                )}
+            <span
+                class="user-avatar-wrapper cooltipz--left"
                 aria-label={getUserDisplayName(
                     card.userName || "Unknown",
                     board.id,
                     board.blameFreeMode,
                 )}
             >
-                {#if isObscured}
-                    <img
-                        src="/masked.svg"
-                        alt="Obscured user avatar"
-                        width="24"
-                        height="24"
-                        class="cooltipz--left"
-                        aria-label="Obscured user avatar"
-                    />
-                {:else}
-                    <img
-                        src={createAvatar(adventurer, {
-                            seed: `${card.userId}-${board.id}`,
-                            size: 24,
-                            radius: 12,
-                        }).toDataUri()}
-                        alt="User avatar"
-                        width="24"
-                        height="24"
-                        class="cooltipz--left"
-                        aria-label={getUserDisplayName(
-                            card.userName || "Unknown",
-                            board.id,
-                            board.blameFreeMode,
-                        )}
-                    />
-                {/if}
-            </div>
+                <div class="user-avatar">
+                    {#if isObscured}
+                        <img
+                            src="/masked.svg"
+                            alt="Obscured user avatar"
+                            width="24"
+                            height="24"
+                        />
+                    {:else}
+                        <img
+                            src={createAvatar(adventurer, {
+                                seed: `${card.userId}-${board.id}`,
+                                size: 24,
+                                radius: 12,
+                            }).toDataUri()}
+                            alt="User avatar"
+                            width="24"
+                            height="24"
+                        />
+                    {/if}
+                </div>
+            </span>
 
             <div class="card-menu-container">
                 {#if currentScene?.allowComments || canEdit || canDelete}
@@ -810,6 +799,13 @@
         align-items: center;
         gap: 8px;
         margin-left: 12px;
+        flex-shrink: 0;
+    }
+
+    /* User avatar wrapper - for tooltip */
+    .user-avatar-wrapper {
+        position: relative;
+        display: inline-block;
         flex-shrink: 0;
     }
 

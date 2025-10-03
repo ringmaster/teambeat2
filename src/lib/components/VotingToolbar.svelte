@@ -119,7 +119,6 @@
                 class="stat-item clickable cooltipz--bottom"
                 aria-label="Click to view user voting status"
                 onclick={openUserStatusModal}
-                title="Click to view user voting status"
             >
                 <span class="stat-value">{displayedConnectedUsers}</span>
                 <svg class="users-icon" viewBox="0 0 164.49 119.26">
@@ -130,7 +129,10 @@
                 </svg>
             </button>
         {:else}
-            <div class="stat-item" title="Connected users">
+            <div
+                class="stat-item cooltipz--bottom"
+                aria-label="Connected users"
+            >
                 <span class="stat-value">{displayedConnectedUsers}</span>
                 <svg class="users-icon" viewBox="0 0 164.49 119.26">
                     <path
@@ -141,7 +143,10 @@
             </div>
         {/if}
 
-        <div class="stat-item" title="Total votes remaining">
+        <div
+            class="stat-item cooltipz--bottom"
+            aria-label="Total votes remaining for all connected users"
+        >
             <span class="stat-value">{votingStats.remainingVotes}</span>
             <svg class="votes-icon" viewBox="0 0 2315.49 2202.5">
                 <path
@@ -161,7 +166,10 @@
 
         <!-- User's remaining votes / total allocation -->
         <div class="stat-item">
-            <span class="stat-value">
+            <span
+                class="stat-value cooltipz--bottom"
+                aria-label="Your remaining votes / Your vote allocation"
+            >
                 {userVoteAllocation.remainingVotes} / {userVoteAllocation.maxVotes}
             </span>
             <svg class="vote-icon" viewBox="0 0 512 512">
