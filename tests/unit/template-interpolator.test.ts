@@ -323,4 +323,63 @@ describe('Template Interpolator', () => {
       expect(result).toBe('api-gateway (v2.3.1) - Error rate: 0.025');
     });
   });
+
+  describe('Array Indexing', () => {
+    it('should access array element by index', () => {
+      const context: EvaluationContext = {
+        result: [true, 30, 'warning']
+      };
+      const template = 'Status: {result[0]}, Days: {result[1]}, Severity: {result[2]}';
+      const result = interpolateTemplate(template, context);
+      expect(result).toBe('Status: true, Days: 30, Severity: warning');
+    });
+
+    it('should treat single value as result[0]', () => {
+      const context: EvaluationContext = {
+        result: 42
+      };
+      const template = 'Value: {result[0]}';
+      const result = interpolateTemplate(template, context);
+      expect(result).toBe('Value: 42');
+    });
+
+    it('should use result without index for single value', () => {
+      const context: EvaluationContext = {
+        result: 42
+      };
+      const template = 'Value: {result}';
+      const result = interpolateTemplate(template, context);
+      expect(result).toBe('Value: 42');
+    });
+
+    it('should use result without index for array (shows array)', () => {
+      const context: EvaluationContext = {
+        result: [true, 30]
+      };
+      const template = 'Result: {result}';
+      const result = interpolateTemplate(template, context);
+      expect(result).toBe('Result: true,30');
+    });
+
+    it('should handle multi-value stack pattern', () => {
+      const context: EvaluationContext = {
+        '$': {
+          'Issue key': 'SREC-1234'
+        },
+        result: [true, 30] // [condition, days]
+      };
+      const template = '{$.Issue key} - {result[1]} days old';
+      const result = interpolateTemplate(template, context);
+      expect(result).toBe('SREC-1234 - 30 days old');
+    });
+
+    it('should handle out of bounds array access', () => {
+      const context: EvaluationContext = {
+        result: [true, 30]
+      };
+      const template = 'Value: {result[5]}';
+      const result = interpolateTemplate(template, context);
+      expect(result).toBe('Value: ');
+    });
+  });
 });

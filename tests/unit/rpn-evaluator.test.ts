@@ -29,14 +29,14 @@ describe('RPN Evaluator', () => {
       const expr: RPNExpression = [];
       const result = evaluateRPN(expr, {});
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Expected single value');
+      expect(result.error).toContain('Expected at least one value');
     });
 
-    it('should fail with multiple values on stack', () => {
+    it('should return array when multiple values on stack', () => {
       const expr: RPNExpression = [1, 2];
       const result = evaluateRPN(expr, {});
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Expected single value');
+      expect(result.success).toBe(true);
+      expect(result.value).toEqual([2, 1]); // Reversed: top to bottom
     });
   });
 
@@ -247,10 +247,45 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         count: 42
       };
-      const expr: RPNExpression = ['get_json_value', 'count'];
+      const expr: RPNExpression = ['get', 'count'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(42);
+    });
+
+    it('should get property using $ shortcut', () => {
+      const context: EvaluationContext = {
+        count: 42
+      };
+      const expr: RPNExpression = ['$.count'];
+      const result = evaluateRPN(expr, context);
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(42);
+    });
+
+    it('should get root using $ shortcut', () => {
+      const context: EvaluationContext = {
+        name: 'test',
+        value: 123
+      };
+      const expr: RPNExpression = ['$'];
+      const result = evaluateRPN(expr, context);
+      expect(result.success).toBe(true);
+      expect(result.value).toEqual({ name: 'test', value: 123 });
+    });
+
+    it('should get nested property using $ shortcut', () => {
+      const context: EvaluationContext = {
+        user: {
+          profile: {
+            age: 30
+          }
+        }
+      };
+      const expr: RPNExpression = ['$.user.profile.age'];
+      const result = evaluateRPN(expr, context);
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(30);
     });
 
     it('should get nested property value', () => {
@@ -261,7 +296,7 @@ describe('RPN Evaluator', () => {
           }
         }
       };
-      const expr: RPNExpression = ['get_json_value', 'user.profile.age'];
+      const expr: RPNExpression = ['get', 'user.profile.age'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(30);
@@ -271,7 +306,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         name: 'John'
       };
-      const expr: RPNExpression = ['get_json_value', 'age'];
+      const expr: RPNExpression = ['get', 'age'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(undefined);
@@ -281,7 +316,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         user: null
       };
-      const expr: RPNExpression = ['get_json_value', 'user.name'];
+      const expr: RPNExpression = ['get', 'user.name'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(null);
@@ -302,7 +337,7 @@ describe('RPN Evaluator', () => {
     });
 
     it('should fail get_json_value without path', () => {
-      const expr: RPNExpression = ['get_json_value'];
+      const expr: RPNExpression = ['get'];
       const result = evaluateRPN(expr, {});
       expect(result.success).toBe(false);
       expect(result.error).toContain('requires a path parameter');
@@ -358,7 +393,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         items: [1, 2, 3, 4, 5]
       };
-      const expr: RPNExpression = ['get_json_value', 'items', 'count'];
+      const expr: RPNExpression = ['get', 'items', 'count'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(5);
@@ -368,7 +403,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         numbers: [10, 20, 30]
       };
-      const expr: RPNExpression = ['get_json_value', 'numbers', 'sum'];
+      const expr: RPNExpression = ['get', 'numbers', 'sum'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(60);
@@ -378,7 +413,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         scores: [80, 90, 100]
       };
-      const expr: RPNExpression = ['get_json_value', 'scores', 'avg'];
+      const expr: RPNExpression = ['get', 'scores', 'avg'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(90);
@@ -388,7 +423,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         values: [5, 2, 9, 1, 7]
       };
-      const expr: RPNExpression = ['get_json_value', 'values', 'min'];
+      const expr: RPNExpression = ['get', 'values', 'min'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(1);
@@ -398,7 +433,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         values: [5, 2, 9, 1, 7]
       };
-      const expr: RPNExpression = ['get_json_value', 'values', 'max'];
+      const expr: RPNExpression = ['get', 'values', 'max'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(9);
@@ -408,7 +443,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         value: 42
       };
-      const expr: RPNExpression = ['get_json_value', 'value', 'count'];
+      const expr: RPNExpression = ['get', 'value', 'count'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(false);
       expect(result.error).toContain('requires an array');
@@ -418,7 +453,7 @@ describe('RPN Evaluator', () => {
       const context: EvaluationContext = {
         empty: []
       };
-      const expr: RPNExpression = ['get_json_value', 'empty', 'avg'];
+      const expr: RPNExpression = ['get', 'empty', 'avg'];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(false);
       expect(result.error).toContain('non-empty array');
@@ -442,9 +477,9 @@ describe('RPN Evaluator', () => {
       // Check if count of issues is greater than threshold
       // RPN: get_json_value issues count get_json_value threshold gt
       const expr: RPNExpression = [
-        'get_json_value', 'issues',
+        'get', 'issues',
         'count',
-        'get_json_value', 'threshold',
+        'get', 'threshold',
         'gt'
       ];
       const result = evaluateRPN(expr, context);
@@ -463,12 +498,12 @@ describe('RPN Evaluator', () => {
 
       // RPN: get_json_value a get_json_value b add get_json_value c mul get_json_value threshold gt
       const expr: RPNExpression = [
-        'get_json_value', 'a',
-        'get_json_value', 'b',
+        'get', 'a',
+        'get', 'b',
         'add',
-        'get_json_value', 'c',
+        'get', 'c',
         'mul',
-        'get_json_value', 'threshold',
+        'get', 'threshold',
         'gt'
       ];
       const result = evaluateRPN(expr, context);
@@ -483,13 +518,218 @@ describe('RPN Evaluator', () => {
 
       // Check if error_rate > 0.1
       const expr: RPNExpression = [
-        'get_json_value', 'error_rate',
+        'get', 'error_rate',
         'literal', 0.1,
         'gt'
       ];
       const result = evaluateRPN(expr, context);
       expect(result.success).toBe(true);
       expect(result.value).toBe(true);
+    });
+  });
+
+  describe('$ Shortcut in Iteration Context', () => {
+    it('should access $ property when context has $ key', () => {
+      // Simulates iteration context where item is stored in $ property
+      const context = {
+        '0': { name: 'item0' },
+        '1': { name: 'item1' },
+        '$': { name: 'current', field: 'value' },
+        '_index': 1
+      };
+
+      const expr: RPNExpression = ['$.field'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(result.value).toBe('value');
+    });
+
+    it('should access nested properties in $ context using get', () => {
+      const context = {
+        '$': {
+          'Status Category Changed': '02/Oct/25 11:49 AM',
+          'Issue key': 'SREC-1234'
+        },
+        '_index': 0
+      };
+
+      const expr: RPNExpression = ['get', '$.Status Category Changed'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(result.value).toBe('02/Oct/25 11:49 AM');
+    });
+
+    it('should access fields with spaces in $ context using get', () => {
+      const context = {
+        '$': {
+          'Status Category Changed': '02/Oct/25 11:49 AM',
+          'Issue key': 'SREC-1234'
+        },
+        '_index': 5
+      };
+
+      const expr: RPNExpression = ['get', '$.Status Category Changed', 'days_since_uk'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(typeof result.value).toBe('number');
+      expect(result.value).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fall back to root when $ property does not exist', () => {
+      const context = {
+        count: 42,
+        name: 'test'
+      };
+
+      const expr: RPNExpression = ['$.count'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(42);
+    });
+  });
+
+  describe('Date Operations', () => {
+    it('should calculate days since ISO date', () => {
+      // Create a date 5 days ago in ISO format
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+      const isoDate = fiveDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      const expr: RPNExpression = ['literal', isoDate, 'days_since'];
+      const result = evaluateRPN(expr, {});
+
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(5);
+    });
+
+    it('should calculate days since UK formatted date', () => {
+      // Create a date 3 days ago in UK format
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const day = String(threeDaysAgo.getDate()).padStart(2, '0');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = months[threeDaysAgo.getMonth()];
+      const year = String(threeDaysAgo.getFullYear()).slice(-2);
+      const hours = threeDaysAgo.getHours();
+      const minutes = String(threeDaysAgo.getMinutes()).padStart(2, '0');
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+
+      const ukDate = `${day}/${month}/${year} ${displayHours}:${minutes} ${period}`;
+
+      const expr: RPNExpression = ['literal', ukDate, 'days_since_uk'];
+      const result = evaluateRPN(expr, {});
+
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(3);
+    });
+
+    it('should handle UK date from context', () => {
+      const context = {
+        updated: '02/Oct/25 11:49 AM'
+      };
+
+      // This would be about 2 days ago if run on Oct 4, 2025
+      const expr: RPNExpression = ['get', 'updated', 'days_since_uk'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(typeof result.value).toBe('number');
+      expect(result.value).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fail on invalid date format for days_since', () => {
+      const expr: RPNExpression = ['literal', 'not-a-date', 'days_since'];
+      const result = evaluateRPN(expr, {});
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('days_since failed to parse date');
+    });
+
+    it('should fail on invalid UK date format', () => {
+      const expr: RPNExpression = ['literal', 'invalid-uk-date', 'days_since_uk'];
+      const result = evaluateRPN(expr, {});
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('days_since_uk failed to parse date');
+    });
+
+    it('should use days_since with $ shortcut', () => {
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      const isoDate = twoDaysAgo.toISOString().split('T')[0];
+
+      const context = [
+        { date: isoDate, title: 'Task 1' }
+      ];
+
+      const expr: RPNExpression = ['$.date', 'days_since'];
+      const result = evaluateRPN(expr, context[0]);
+
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(2);
+    });
+  });
+
+  describe('Multi-Value Stack Results', () => {
+    it('should return single value for single item on stack', () => {
+      const expr: RPNExpression = [42];
+      const result = evaluateRPN(expr, {});
+      expect(result.success).toBe(true);
+      expect(result.value).toBe(42);
+      expect(Array.isArray(result.value)).toBe(false);
+    });
+
+    it('should return array for multiple items on stack (reversed)', () => {
+      const expr: RPNExpression = ['literal', 'one', 'literal', 'two', 'literal', 'three'];
+      const result = evaluateRPN(expr, {});
+      expect(result.success).toBe(true);
+      expect(Array.isArray(result.value)).toBe(true);
+      expect(result.value).toEqual(['three', 'two', 'one']); // top to bottom
+    });
+
+    it('should handle dup gte pattern for age checking', () => {
+      const context = {
+        days: 30
+      };
+      // get days, dup, 4, gte -> [30, true]
+      const expr: RPNExpression = ['get', 'days', 'dup', 4, 'gte'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(Array.isArray(result.value)).toBe(true);
+      expect(result.value).toEqual([true, 30]); // [condition, days]
+    });
+
+    it('should handle date calculation with condition', () => {
+      const context = {
+        '$': {
+          'Status Category Changed': '02/Oct/25 11:49 AM'
+        }
+      };
+      // Calculate days, dup, compare with 4
+      // Stack will be: [days, days, 4] -> [days, condition]
+      const expr: RPNExpression = ['get', '$.Status Category Changed', 'days_since_uk', 'dup', 4, 'gte'];
+      const result = evaluateRPN(expr, context);
+
+      expect(result.success).toBe(true);
+      expect(Array.isArray(result.value)).toBe(true);
+      // result[0] is top of stack (condition), result[1] is days
+      expect(typeof result.value[0]).toBe('boolean'); // Condition (>= 4 days)
+      expect(typeof result.value[1]).toBe('number'); // Days value
+      expect(result.value[1]).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should handle three values on stack', () => {
+      const expr: RPNExpression = [10, 20, 30];
+      const result = evaluateRPN(expr, {});
+      expect(result.success).toBe(true);
+      expect(result.value).toEqual([30, 20, 10]); // top to bottom
     });
   });
 

@@ -2326,7 +2326,10 @@
         <ScorecardScene
             sceneId={currentScene.id}
             boardId={boardId}
+            {board}
+            scene={currentScene}
             canEdit={userRole === "admin" || userRole === "facilitator"}
+            {userRole}
         />
     {:else}
         <BoardColumns

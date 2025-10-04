@@ -427,6 +427,8 @@
                             if (e.key === "Enter") createSeries();
                         }}
                         class="series-input-with-button"
+                        buttonClass="cooltipz--bottom"
+                        buttonAriaLabel="Add series"
                     >
                         {#snippet buttonContent()}
                             {#if creatingNewSeries}
@@ -531,20 +533,20 @@
                                         {/if}
                                     </div>
                                     <div class="series-card-actions">
-                                        <a
-                                            href="/series/{s.id}/scorecards"
-                                            class="icon-button icon-button-primary"
-                                            title="Scorecards"
-                                            aria-label="View scorecards"
-                                        >
-                                            <Icon name="chart-bar" size="sm" />
-                                        </a>
+                                        {#if s.role === "admin"}
+                                            <a
+                                                href="/series/{s.id}/scorecards"
+                                                class="icon-button icon-button-primary cooltipz--bottom"
+                                                aria-label="Scorecards"
+                                            >
+                                                <Icon name="chart-bar" size="sm" />
+                                            </a>
+                                        {/if}
                                         {#if s.role === "admin"}
                                             <button
                                                 onclick={() =>
                                                     openSeriesUserManagement(s)}
-                                                class="icon-button icon-button-primary"
-                                                title="Manage users"
+                                                class="icon-button icon-button-primary cooltipz--bottom"
                                                 aria-label="Manage users"
                                             >
                                                 <Icon
@@ -555,8 +557,7 @@
                                             <button
                                                 onclick={() =>
                                                     confirmDeleteSeries(s)}
-                                                class="icon-button icon-button-danger"
-                                                title="Delete series"
+                                                class="icon-button icon-button-danger cooltipz--bottom"
                                                 aria-label="Delete series"
                                             >
                                                 <Icon name="trash" size="sm" />
@@ -636,6 +637,8 @@
                                                 createBoard(s.id, s.name);
                                         }}
                                         class="board-input-with-button"
+                                        buttonClass="cooltipz--bottom"
+                                        buttonAriaLabel="Add board"
                                     >
                                         {#snippet buttonContent()}
                                             {#if creatingBoards[s.id]}

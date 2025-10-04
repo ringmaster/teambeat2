@@ -47,7 +47,8 @@ export const GET: RequestHandler = async (event) => {
     return json({
       success: true,
       results,
-      processedAt: sceneScorecard.processedAt
+      processedAt: sceneScorecard.processedAt,
+      collectedData: sceneScorecard.collectedData
     });
   } catch (error) {
     return handleApiError(error, 'Failed to fetch scorecard results');

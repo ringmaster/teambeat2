@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import ScorecardLibrary from '$lib/components/ScorecardLibrary.svelte';
+  import ScorecardManager from '$lib/components/ScorecardManager.svelte';
 
   interface Props {
     data: {
@@ -10,25 +10,44 @@
   }
 
   let { data }: Props = $props();
+
+  // Get boardId from query string if present
+  let boardId = $derived($page.url.searchParams.get('boardId'));
+  let backLink = $derived(boardId ? `/board/${boardId}` : '/');
+  let backText = $derived(boardId ? '← Return to Board' : '← Back to Dashboard');
 </script>
 
 <div class="scorecard-page">
   <div class="page-header">
-    <a href="/" class="back-link">← Back to Dashboard</a>
+    <a href={backLink} class="back-link">{backText}</a>
+    <h1>Scorecard Configuration</h1>
   </div>
 
-  <ScorecardLibrary seriesId={data.seriesId} canEdit={data.canEdit} />
+  <ScorecardManager seriesId={data.seriesId} canEdit={data.canEdit} />
 </div>
 
 <style>
   .scorecard-page {
-    max-width: 80rem;
-    margin: 0 auto;
-    padding: 2rem 1rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .page-header {
-    margin-bottom: 1.5rem;
+    flex: 0 0 auto;
+    padding: 1rem 1.5rem;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
   }
 
   .back-link {

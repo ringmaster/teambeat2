@@ -15,7 +15,7 @@ export interface CreateDatasourceData {
   scorecardId: string;
   name: string;
   sourceType: 'paste' | 'api';
-  dataSchema?: any;
+  dataSchema?: string; // Already a JSON string from the UI
   rules: ScorecardRule[];
   apiConfig?: {
     url: string;
@@ -48,7 +48,7 @@ export async function createDatasource(data: CreateDatasourceData) {
       seq: maxSeq + 1,
       sourceType: data.sourceType,
       apiConfig: data.apiConfig ? JSON.stringify(data.apiConfig) : null,
-      dataSchema: data.dataSchema ? JSON.stringify(data.dataSchema) : null,
+      dataSchema: data.dataSchema || null, // Already a JSON string, don't stringify again
       rules: JSON.stringify(data.rules),
       createdAt: now,
       updatedAt: now
@@ -99,7 +99,7 @@ export async function findDatasourcesByScorecard(scorecardId: string) {
 
 export interface UpdateDatasourceData {
   name?: string;
-  dataSchema?: any;
+  dataSchema?: string; // Already a JSON string from the UI
   rules?: ScorecardRule[];
   apiConfig?: {
     url: string;
@@ -118,7 +118,7 @@ export async function updateDatasource(datasourceId: string, data: UpdateDatasou
   }
 
   if (data.dataSchema !== undefined) {
-    updateData.dataSchema = data.dataSchema ? JSON.stringify(data.dataSchema) : null;
+    updateData.dataSchema = data.dataSchema || null; // Already a JSON string, don't stringify again
   }
 
   if (data.rules !== undefined) {

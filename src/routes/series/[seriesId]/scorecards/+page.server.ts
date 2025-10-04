@@ -10,12 +10,12 @@ export const load: PageServerLoad = async (event) => {
   // Get user's role in this series
   const userRole = await getUserRoleInSeries(user.userId, seriesId);
 
-  if (!userRole) {
-    throw error(403, 'You do not have access to this series');
+  if (!userRole || userRole !== 'admin') {
+    throw error(403, 'Only series administrators can access scorecards');
   }
 
   return {
     seriesId,
-    canEdit: userRole === 'admin' || userRole === 'facilitator'
+    canEdit: true
   };
 };

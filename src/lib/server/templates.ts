@@ -271,7 +271,7 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
       },
       {
         title: 'Scorecard',
-        mode: 'columns' as const,
+        mode: 'scorecard' as const,
         seq: 2,
         allowAddCards: false,
         allowEditCards: false,

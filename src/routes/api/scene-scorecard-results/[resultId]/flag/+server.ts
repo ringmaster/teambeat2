@@ -61,17 +61,17 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Validate input
-    if (!body.card_id || typeof body.card_id !== 'string') {
+    if (!body.column_id || typeof body.column_id !== 'string') {
       return json(
-        { success: false, error: 'card_id is required' },
+        { success: false, error: 'column_id is required' },
         { status: 400 }
       );
     }
 
-    await flagResultForDiscussion(resultId, body.card_id);
+    const { cardId } = await flagResultForDiscussion(resultId, body.column_id, user.userId);
 
     // Broadcast to board users
-    broadcastScorecardResultFlagged(scene.boardId, resultId, body.card_id);
+    broadcastScorecardResultFlagged(scene.boardId, resultId, cardId);
 
     return json({
       success: true

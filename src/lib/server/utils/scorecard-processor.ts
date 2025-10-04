@@ -91,7 +91,8 @@ function processAggregateRule(
     result: conditionResult.value
   };
 
-  // Interpolate title and value templates
+  // Interpolate section, title and value templates
+  const section = interpolateTemplate(rule.section, context);
   const title = interpolateTemplate(rule.title_template, context);
   const primaryValue = interpolateTemplate(rule.value_template, context);
 
@@ -100,7 +101,7 @@ function processAggregateRule(
 
   return {
     result: {
-      section: rule.section,
+      section,
       title,
       primaryValue,
       severity,
@@ -170,8 +171,15 @@ function processDetailRule(
       return;
     }
 
+    // Handle array results (multiple values on stack)
+    // If result is an array, first element (top of stack) is the condition
+    // Otherwise, the value itself is the condition
+    const conditionValue = Array.isArray(conditionResult.value)
+      ? conditionResult.value[0]
+      : conditionResult.value;
+
     // Only include items where condition is true (or truthy for non-boolean results)
-    if (!conditionResult.value) {
+    if (!conditionValue) {
       return;
     }
 
@@ -179,6 +187,7 @@ function processDetailRule(
     context.result = conditionResult.value;
 
     // Interpolate templates
+    const section = interpolateTemplate(rule.section, context);
     const title = interpolateTemplate(rule.title_template, context);
     const primaryValue = interpolateTemplate(rule.value_template, context);
 
@@ -186,7 +195,7 @@ function processDetailRule(
     const severity = determineSeverity(rule, context, conditionResult.value);
 
     results.push({
-      section: rule.section,
+      section,
       title,
       primaryValue,
       severity,
@@ -206,22 +215,7 @@ function determineSeverity(
   context: EvaluationContext,
   conditionValue: any
 ): SeverityLevel {
-  // Method 1: Fixed severity
-  if (rule.severity) {
-    return rule.severity;
-  }
-
-  // Method 2: Severity from field
-  if (rule.severity_from_field) {
-    const severityValue = getValueByPath(context, rule.severity_from_field);
-    if (isValidSeverity(severityValue)) {
-      return severityValue as SeverityLevel;
-    }
-    console.warn(`Invalid severity value from field "${rule.severity_from_field}": ${severityValue}`);
-    return 'info'; // Default fallback
-  }
-
-  // Method 3: Threshold rules
+  // Method 1: Threshold rules (evaluated first, can override base severity)
   if (rule.threshold_rules && rule.threshold_rules.length > 0) {
     // Evaluate threshold rules in order, return first match
     for (const thresholdRule of rule.threshold_rules) {
@@ -234,8 +228,21 @@ function determineSeverity(
       }
     }
 
-    // If no threshold matched, default to info
-    return 'info';
+    // If no threshold matched, fall through to base severity or default
+  }
+
+  // Method 2: Severity from field
+  if (rule.severity_from_field) {
+    const severityValue = getValueByPath(context, rule.severity_from_field);
+    if (isValidSeverity(severityValue)) {
+      return severityValue as SeverityLevel;
+    }
+    console.warn(`Invalid severity value from field "${rule.severity_from_field}": ${severityValue}`);
+  }
+
+  // Method 3: Base/fixed severity
+  if (rule.severity) {
+    return rule.severity;
   }
 
   // Default: info severity
@@ -251,8 +258,14 @@ function isValidSeverity(value: any): boolean {
 
 /**
  * Get value from object using dot notation path
+ * Special case: "$" returns the root object itself (for root-level arrays)
  */
 function getValueByPath(obj: any, path: string): any {
+  // Special case: "$" represents the root object
+  if (path === '$') {
+    return obj;
+  }
+
   const parts = path.split('.');
   let current = obj;
 
@@ -269,8 +282,14 @@ function getValueByPath(obj: any, path: string): any {
 /**
  * Get singular item name from array path
  * Examples: "tickets" -> "ticket", "prs" -> "pr", "alerts" -> "alert"
+ * Special case: "$" -> "$" (root array, item name is also "$")
  */
 function getItemName(arrayPath: string): string {
+  // Special case: root array
+  if (arrayPath === '$') {
+    return '$';
+  }
+
   // Get the last part of the path
   const parts = arrayPath.split('.');
   const arrayName = parts[parts.length - 1];

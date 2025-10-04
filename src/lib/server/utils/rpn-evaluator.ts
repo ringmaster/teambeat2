@@ -40,8 +40,36 @@ export function evaluateRPN(expression: RPNExpression, context: EvaluationContex
 
       // String operations
       if (typeof token === 'string') {
+        // Check for $ prefix (shortcut for get operation)
+        if (operation.startsWith('$')) {
+          let path: string;
+          if (operation === '$') {
+            // Check if context has a $ property (iteration context)
+            if ('$' in context) {
+              path = '$';
+            } else {
+              path = '$root';
+            }
+          } else if (operation.startsWith('$.')) {
+            // Check if context has a $ property (iteration context)
+            if ('$' in context) {
+              // Access property on the $ object: $.field -> $.field
+              path = operation;
+            } else {
+              // Remove $. prefix: $.count -> count
+              path = operation.substring(2);
+            }
+          } else {
+            // Just $, treat as root
+            path = '$root';
+          }
+          const value = getValueByPath(context, path);
+          stack.push(value);
+          stackTrace.push({ step: i + 1, operation: `get ${path}`, stack: [...stack] });
+          i++;
+        }
         // Check if it's an operation or a literal value
-        if (isOperation(operation)) {
+        else if (isOperation(operation)) {
           const consumed = executeOperation(operation, stack, context, expression, i);
           stackTrace.push({ step: i + 1, operation, stack: [...stack] });
           i += consumed;
@@ -56,17 +84,21 @@ export function evaluateRPN(expression: RPNExpression, context: EvaluationContex
       }
     }
 
-    if (stack.length !== 1) {
+    if (stack.length === 0) {
       return {
         success: false,
-        error: `Expected single value on stack, got ${stack.length}`,
+        error: `Expected at least one value on stack, got 0`,
         stackTrace
       };
     }
 
+    // If multiple values on stack, return them in reverse order (top to bottom)
+    // so result[0] is the top of stack (most recent value)
+    const resultValue = stack.length === 1 ? stack[0] : [...stack].reverse();
+
     return {
       success: true,
-      value: stack[0],
+      value: resultValue,
       stackTrace
     };
   } catch (error) {
@@ -86,7 +118,7 @@ function isOperation(token: string): boolean {
     // Stack manipulation
     'dup', 'swap', 'drop',
     // Data access
-    'get_json_value', 'literal',
+    'get', 'literal',
     // Comparisons
     'eq', 'ne', 'gt', 'lt', 'gte', 'lte',
     // Logic
@@ -96,7 +128,9 @@ function isOperation(token: string): boolean {
     // String operations
     'concat', 'contains', 'matches_regex',
     // Aggregation
-    'count', 'sum', 'avg', 'min', 'max'
+    'count', 'sum', 'avg', 'min', 'max',
+    // Date operations
+    'days_since', 'days_since_uk'
   ];
   return operations.includes(token);
 }
@@ -135,11 +169,11 @@ function executeOperation(
       return 1;
 
     // Data access
-    case 'get_json_value':
+    case 'get':
       {
         // Next token in expression should be the path
         const path = expression[currentIndex + 1];
-        if (path === undefined) throw new Error('get_json_value requires a path parameter');
+        if (path === undefined) throw new Error('get requires a path parameter');
 
         const value = getValueByPath(context, String(path));
         stack.push(value);
@@ -365,6 +399,51 @@ function executeOperation(
       }
       return 1;
 
+    // Date operations
+    case 'days_since':
+      if (stack.length < 1) throw new Error('Stack underflow for days_since');
+      {
+        const dateStr = stack.pop();
+        if (typeof dateStr !== 'string') throw new Error('days_since requires a string');
+
+        try {
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) throw new Error('Invalid date format');
+
+          const now = new Date();
+          const diffMs = now.getTime() - date.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+          stack.push(diffDays);
+        } catch (error) {
+          throw new Error(`days_since failed to parse date: ${dateStr}`);
+        }
+      }
+      return 1;
+
+    case 'days_since_uk':
+      if (stack.length < 1) throw new Error('Stack underflow for days_since_uk');
+      {
+        const dateStr = stack.pop();
+        if (typeof dateStr !== 'string') throw new Error('days_since_uk requires a string');
+
+        try {
+          // Parse UK format: "02/Oct/25 11:49 AM"
+          // Format: DD/MMM/YY HH:mm AM/PM
+          const ukDate = parseUKDate(dateStr);
+          if (!ukDate) throw new Error('Invalid UK date format');
+
+          const now = new Date();
+          const diffMs = now.getTime() - ukDate.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+          stack.push(diffDays);
+        } catch (error) {
+          throw new Error(`days_since_uk failed to parse date: ${dateStr}`);
+        }
+      }
+      return 1;
+
     default:
       throw new Error(`Unknown operation: ${operation}`);
   }
@@ -374,6 +453,26 @@ function executeOperation(
  * Get a value from an object using dot notation path
  */
 function getValueByPath(obj: any, path: string): any {
+  // Empty path or '$root' returns the whole object
+  if (path === '' || path === '$root') {
+    return obj;
+  }
+
+  // Handle paths that reference the $ property (iteration context)
+  // e.g., "$.field" should access obj["$"]["field"]
+  if (path.startsWith('$.')) {
+    // Check if obj has a $ property
+    if ('$' in obj && obj['$'] !== undefined) {
+      const fieldPath = path.substring(2); // Remove "$." prefix
+      return getValueByPath(obj['$'], fieldPath);
+    }
+  }
+
+  // Handle direct $ property access
+  if (path === '$') {
+    return obj['$'] !== undefined ? obj['$'] : obj;
+  }
+
   const parts = path.split('.');
   let current = obj;
 
@@ -385,4 +484,50 @@ function getValueByPath(obj: any, path: string): any {
   }
 
   return current;
+}
+
+/**
+ * Parse UK date format: "02/Oct/25 11:49 AM"
+ * Format: DD/MMM/YY HH:mm AM/PM
+ */
+function parseUKDate(dateStr: string): Date | null {
+  try {
+    // Example: "02/Oct/25 11:49 AM"
+    // Pattern: DD/MMM/YY HH:mm AM/PM
+    const pattern = /^(\d{1,2})\/(\w{3})\/(\d{2})\s+(\d{1,2}):(\d{2})\s+(AM|PM)$/i;
+    const match = dateStr.match(pattern);
+
+    if (!match) return null;
+
+    const [, day, monthStr, year, hours, minutes, period] = match;
+
+    // Map month abbreviations to month numbers (0-11)
+    const monthMap: Record<string, number> = {
+      'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+      'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    };
+
+    const month = monthMap[monthStr.toLowerCase()];
+    if (month === undefined) return null;
+
+    // Convert 2-digit year to 4-digit (assume 20xx for 00-99)
+    const fullYear = 2000 + parseInt(year, 10);
+
+    // Convert 12-hour to 24-hour format
+    let hour = parseInt(hours, 10);
+    if (period.toUpperCase() === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (period.toUpperCase() === 'AM' && hour === 12) {
+      hour = 0;
+    }
+
+    const date = new Date(fullYear, month, parseInt(day, 10), hour, parseInt(minutes, 10));
+
+    // Validate the date is valid
+    if (isNaN(date.getTime())) return null;
+
+    return date;
+  } catch (error) {
+    return null;
+  }
 }

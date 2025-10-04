@@ -37,8 +37,31 @@ export function interpolateTemplate(template: string, context: EvaluationContext
 
 /**
  * Get a value from an object using dot notation path
+ * Supports array indexing with bracket syntax: result[0], result[1], etc.
  */
 function getValueByPath(obj: any, path: string): any {
+  // Handle array indexing: result[0] -> result, index 0
+  const arrayIndexMatch = path.match(/^([^[]+)\[(\d+)\]$/);
+  if (arrayIndexMatch) {
+    const [, basePath, indexStr] = arrayIndexMatch;
+    const index = parseInt(indexStr, 10);
+
+    // Get the base value
+    const baseValue = basePath === '' ? obj : getValueByPath(obj, basePath);
+
+    // If it's an array, return the indexed value
+    if (Array.isArray(baseValue)) {
+      return baseValue[index];
+    }
+
+    // If base path is 'result' and value is not an array, treat result as result[0]
+    if (basePath === 'result' && index === 0) {
+      return baseValue;
+    }
+
+    return null;
+  }
+
   const parts = path.split('.');
   let current = obj;
 

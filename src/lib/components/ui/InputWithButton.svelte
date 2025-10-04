@@ -1,6 +1,6 @@
 <script lang="ts">
     interface Props {
-        type?: 'text' | 'email' | 'password' | 'number';
+        type?: "text" | "email" | "password" | "number";
         placeholder?: string;
         value?: string;
         disabled?: boolean;
@@ -8,8 +8,10 @@
         id?: string;
         name?: string;
         class?: string;
-        buttonVariant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+        buttonVariant?: "primary" | "secondary" | "danger" | "ghost";
         buttonDisabled?: boolean;
+        buttonAriaLabel?: string;
+        buttonClass?: string;
         oninput?: (event: Event) => void;
         onkeydown?: (event: KeyboardEvent) => void;
         onButtonClick?: (event: MouseEvent) => void;
@@ -17,42 +19,49 @@
     }
 
     let {
-        type = 'text',
-        placeholder = '',
-        value = $bindable(''),
+        type = "text",
+        placeholder = "",
+        value = $bindable(""),
         disabled = false,
         required = false,
         id,
         name,
-        class: className = '',
-        buttonVariant = 'primary',
+        class: className = "",
+        buttonVariant = "primary",
         buttonDisabled = false,
+        buttonAriaLabel,
+        buttonClass: additionalButtonClass = "",
         oninput,
         onkeydown,
         onButtonClick,
-        buttonContent
+        buttonContent,
     }: Props = $props();
 
     let buttonClass = $derived.by(() => {
-        let classes = ['input-button'];
-        
+        let classes = ["input-button"];
+
         // Variant classes
         switch (buttonVariant) {
-            case 'primary':
-                classes.push('button-primary');
+            case "primary":
+                classes.push("button-primary");
                 break;
-            case 'secondary':
-                classes.push('button-secondary');
+            case "secondary":
+                classes.push("button-secondary");
                 break;
-            case 'danger':
-                classes.push('button-danger');
+            case "danger":
+                classes.push("button-danger");
                 break;
-            case 'ghost':
-                classes.push('button-ghost');
+            case "ghost":
+                classes.push("button-ghost");
                 break;
         }
-        
-        return classes.join(' ');
+
+        // Additional classes
+        if (additionalButtonClass) {
+            classes.push(additionalButtonClass);
+        }
+
+        return classes.join(" ");
     });
 </script>
 
@@ -66,14 +75,16 @@
         {id}
         {name}
         class="input-field"
-        oninput={oninput}
-        onkeydown={onkeydown}
+        {oninput}
+        {onkeydown}
+        autocomplete="off"
     />
     <button
         type="button"
         class={buttonClass}
         disabled={buttonDisabled || disabled}
         onclick={onButtonClick}
+        aria-label={buttonAriaLabel || undefined}
     >
         {@render buttonContent?.()}
     </button>

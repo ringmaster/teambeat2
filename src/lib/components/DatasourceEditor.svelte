@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import type { ScorecardDatasource, ScorecardRule, ThresholdRule } from '$lib/types/scorecard';
   import { parseRPNString, serializeRPNExpression } from '$lib/utils/rpn-parser';
+  import { extractPathsFromJSON } from '$lib/utils/json-path-extractor';
+  import { validateRPNCondition, type ValidationResult } from '$lib/utils/rpn-validator';
 
   interface Props {
     scorecardId: string;
@@ -23,9 +25,28 @@
 
   let name = $state('');
   let sourceType = $state<'paste' | 'api'>('paste');
-  let dataSchema = $state('');
+  let sampleData = $state('');
   let rules = $state<EditableRule[]>([]);
   let editingRuleIndex = $state<number | null>(null);
+
+  // Derived state for available paths from sample data
+  let availablePaths = $derived(extractPathsFromJSON(sampleData));
+
+  // Validation state
+  let ruleValidations = $state<Map<number, ValidationResult>>(new Map());
+
+  function validateRule(rule: EditableRule, index: number): ValidationResult {
+    return validateRPNCondition(rule.condition, sampleData, rule.iterate_over);
+  }
+
+  // Update validations when rules or sample data changes
+  $effect(() => {
+    const newValidations = new Map<number, ValidationResult>();
+    rules.forEach((rule, index) => {
+      newValidations.set(index, validateRule(rule, index));
+    });
+    ruleValidations = newValidations;
+  });
 
   async function loadDatasource() {
     if (!datasourceId) {
@@ -43,7 +64,7 @@
         datasource = data.datasource;
         name = datasource.name;
         sourceType = datasource.sourceType;
-        dataSchema = datasource.dataSchema || '';
+        sampleData = datasource.dataSchema || '';
 
         // Convert ScorecardRule[] to EditableRule[] by serializing conditions
         const loadedRules: ScorecardRule[] = JSON.parse(datasource.rules);
@@ -92,7 +113,7 @@
       const body = {
         name,
         source_type: sourceType,
-        data_schema: dataSchema || null,
+        data_schema: sampleData || null,
         rules: parsedRules,
         api_config: null
       };
@@ -213,13 +234,14 @@
         </div>
 
         <div class="form-group">
-          <label for="data-schema">Data Schema (optional)</label>
+          <label for="sample-data">Sample Data (JSON)</label>
           <textarea
-            id="data-schema"
-            bind:value={dataSchema}
-            placeholder="Describe the expected data structure"
-            rows="3"
+            id="sample-data"
+            bind:value={sampleData}
+            placeholder={`{"cards": [{"id": 1}], "wip": 4}`}
+            rows="6"
           ></textarea>
+          <small>Provide sample JSON to see available paths for iteration</small>
         </div>
       </div>
 
@@ -265,12 +287,14 @@
                     </div>
 
                     <div class="form-group">
-                      <label>Rule Type</label>
+                      <label>Iterate Over</label>
                       <select bind:value={rule.iterate_over}>
-                        <option value={null}>Aggregate Metric (single result)</option>
-                        <option value="$.items">Detail Filter (multiple results from $.items)</option>
+                        <option value={null}>Nothing (evaluate once)</option>
+                        {#each availablePaths as path}
+                          <option value={path}>{path}</option>
+                        {/each}
                       </select>
-                      <small>Aggregate: evaluate once. Detail: iterate over array items.</small>
+                      <small>Choose a path to iterate over, or "Nothing" for a single evaluation. {availablePaths.length === 0 ? 'Add sample data above to see available paths.' : ''}</small>
                     </div>
 
                     <div class="form-group">
@@ -278,9 +302,25 @@
                       <input
                         type="text"
                         bind:value={rule.condition}
-                        placeholder="e.g., count 10 >"
+                        placeholder="e.g., get_json_value count 10 gt"
+                        class:validation-error={ruleValidations.get(index) && !ruleValidations.get(index)!.valid}
                       />
-                      <small>Stack-based expression. Example: "count 10 >" means count > 10</small>
+                      {#if ruleValidations.get(index)}
+                        {@const validation = ruleValidations.get(index)!}
+                        {#if !validation.valid}
+                          <div class="validation-message error">
+                            {validation.error}
+                            {#if validation.details}
+                              <div class="validation-details">{validation.details}</div>
+                            {/if}
+                          </div>
+                        {:else if validation.error}
+                          <div class="validation-message warning">
+                            {validation.error}
+                          </div>
+                        {/if}
+                      {/if}
+                      <small>Stack-based expression. Example: "get_json_value count 10 gt" means count > 10</small>
                     </div>
 
                     <div class="form-group">
@@ -568,5 +608,41 @@
 
   .btn-secondary:hover {
     background-color: #545b62;
+  }
+
+  /* Validation feedback */
+  .validation-error {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+  }
+
+  .validation-error:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+  }
+
+  .validation-message {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .validation-message.error {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    color: #c33;
+  }
+
+  .validation-message.warning {
+    background-color: #fff8e1;
+    border: 1px solid #ffe082;
+    color: #856404;
+  }
+
+  .validation-details {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    opacity: 0.9;
   }
 </style>
