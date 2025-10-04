@@ -46,6 +46,7 @@
         onConfigureClick: () => void;
         onShareClick: () => void;
         onSceneChange: (sceneId: string) => void;
+        onNextScene?: () => void;
         onShowSceneDropdown: (show: boolean) => void;
         onIncreaseAllocation?: () => Promise<void>;
         onResetVotes?: () => Promise<void>;
@@ -63,6 +64,7 @@
         onConfigureClick,
         onShareClick,
         onSceneChange,
+        onNextScene,
         onShowSceneDropdown,
         onIncreaseAllocation,
         onResetVotes,
@@ -129,6 +131,7 @@
                         {currentScene}
                         {showSceneDropdown}
                         {onSceneChange}
+                        {onNextScene}
                         {onShowSceneDropdown}
                     />
                 {/if}

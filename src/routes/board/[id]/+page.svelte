@@ -871,6 +871,15 @@
         }
     }
 
+    function nextScene() {
+        if (!board.scenes || !currentScene) return;
+        const currentIndex = board.scenes.findIndex(s => s.id === currentScene.id);
+        if (currentIndex >= 0 && currentIndex < board.scenes.length - 1) {
+            const nextSceneId = board.scenes[currentIndex + 1].id;
+            changeScene(nextSceneId);
+        }
+    }
+
     async function setupTemplate(template: any) {
         try {
             const response = await fetch(
@@ -2243,6 +2252,7 @@
         onConfigureClick={() => (showBoardConfig = true)}
         onShareClick={handleShareBoard}
         onSceneChange={changeScene}
+        onNextScene={nextScene}
         onShowSceneDropdown={(show) => (showSceneDropdown = show)}
         onIncreaseAllocation={increaseVotingAllocation}
         onResetVotes={resetBoardVotes}
