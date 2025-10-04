@@ -63,6 +63,7 @@ interface TemplateScene {
   allowVoting: boolean;
   showComments: boolean;
   allowComments: boolean;
+  visibleColumns?: string[];  // Optional array of column titles that should be visible (if omitted, all columns are visible)
 }
 
 interface BoardTemplate {
@@ -114,9 +115,24 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowComments: true
       },
       {
+        title: 'Kvetch',
+        mode: 'present' as const,
+        seq: 3,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true,
+        visibleColumns: ['Kvetches']
+      },
+      {
         title: 'Vote',
         mode: 'columns' as const,
-        seq: 3,
+        seq: 4,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
@@ -125,12 +141,13 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         showVotes: false,
         allowVoting: true,
         showComments: true,
-        allowComments: false
+        allowComments: false,
+        visibleColumns: ['Flaws', 'Experiments']
       },
       {
         title: 'Discuss',
         mode: 'present' as const,
-        seq: 4,
+        seq: 5,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
@@ -142,9 +159,24 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowComments: true
       },
       {
+        title: 'Appreciate',
+        mode: 'present' as const,
+        seq: 6,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true,
+        visibleColumns: ['Appreciations']
+      },
+      {
         title: 'Review',
         mode: 'review' as const,
-        seq: 5,
+        seq: 7,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
@@ -154,6 +186,145 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowVoting: false,
         showComments: false,
         allowComments: false
+      }
+    ]
+  },
+  leancoffee: {
+    id: 'leancoffee',
+    name: 'Lean Coffee',
+    description: 'A democratic discussion format where topics are proposed, discussed, and decided on.',
+    columns: [
+      {
+        title: 'Icebreaker',
+        seq: 1,
+        default_appearance: 'locked',
+        getDescription: getRandomIcebreakerQuestion
+      },
+      { title: 'Issues to Discuss', seq: 2, default_appearance: 'spread' }
+    ],
+    scenes: [
+      {
+        title: 'Propose Topics',
+        mode: 'columns' as const,
+        seq: 1,
+        allowAddCards: true,
+        allowEditCards: true,
+        allowObscureCards: false,
+        allowMoveCards: true,
+        allowGroupCards: false,
+        showVotes: true,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Vote on Topics',
+        mode: 'columns' as const,
+        seq: 2,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: true,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Discuss Topics',
+        mode: 'present' as const,
+        seq: 3,
+        allowAddCards: false,
+        allowEditCards: true,
+        allowObscureCards: false,
+        allowMoveCards: true,
+        allowGroupCards: false,
+        showVotes: true,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
+      }
+    ]
+  },
+  traction: {
+    id: 'traction',
+    name: 'Traction Touchbase',
+    description: 'A structured meeting format to discuss key issues and plan actions.',
+    columns: [
+      { title: 'Issues List', seq: 1 }
+    ],
+    scenes: [
+      {
+        title: 'To-Do List',
+        mode: 'agreements' as const,
+        seq: 1,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Scorecard',
+        mode: 'columns' as const,
+        seq: 2,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: false,
+        allowComments: false,
+        visibleColumns: []
+      },
+      {
+        title: 'Issue List',
+        mode: 'columns' as const,
+        seq: 3,
+        allowAddCards: true,
+        allowEditCards: true,
+        allowObscureCards: false,
+        allowMoveCards: true,
+        allowGroupCards: true,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Identify, Discuss, Solve (IDS)',
+        mode: 'present' as const,
+        seq: 4,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Close',
+        mode: 'review' as const,
+        seq: 5,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
       }
     ]
   },
@@ -334,64 +505,6 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
       }
     ]
   },
-  leancoffee: {
-    id: 'leancoffee',
-    name: 'Lean Coffee',
-    description: 'A democratic discussion format where topics are proposed, discussed, and decided on.',
-    columns: [
-      {
-        title: 'Icebreaker',
-        seq: 1,
-        default_appearance: 'locked',
-        getDescription: getRandomIcebreakerQuestion
-      },
-      { title: 'Issues to Discuss', seq: 2, default_appearance: 'spread' }
-    ],
-    scenes: [
-      {
-        title: 'Propose Topics',
-        mode: 'columns' as const,
-        seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
-      },
-      {
-        title: 'Vote on Topics',
-        mode: 'columns' as const,
-        seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true
-      },
-      {
-        title: 'Discuss Topics',
-        mode: 'present' as const,
-        seq: 3,
-        allowAddCards: false,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
-      }
-    ]
-  }
 } as const;
 
 // Helper function to get template list for the templates API

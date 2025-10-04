@@ -11,8 +11,8 @@ A modern, real-time collaborative retrospective tool built with SvelteKit 5 and 
 - [x] **Card Management** - Create, edit, group, and vote on retrospective cards
 - [x] **Smart Voting System** - Configurable vote allocation with facilitator dashboard
 - [x] **Scene Management** - Control meeting phases with customizable permissions
-- [ ] **Presence Tracking** - See who's actively participating in real-time
-- [ ] **Timer System** - Meeting timers with extension voting capabilities
+- [x] **Presence Tracking** - See who's actively participating in real-time
+- [x] **Timer System** - Meeting timers with extension voting capabilities
 
 ## Architecture
 
@@ -263,19 +263,31 @@ This is a functional MVP implementation covering all core retrospective features
 - [x] Real-time card creation, editing, and voting
 - [x] Multi-phase meeting workflow
 - [x] Drag-and-drop card organization
-- [ ] Facilitator controls and voting dashboard
+- [x] Facilitator controls and voting dashboard
 - [x] SSE-powered sync collaboration
-- [ ] Timer system with extension voting
-- [ ] Presence tracking
+- [x] Timer system with extension voting
+- [x] Presence tracking
+- [x] Action item tracking
+- [x] Rollover of action items between boards
+
+## Bug Fixes
+
+- [ ] Templates to include scene option values
+- [ ] Column property editing for default_appearance values
+- [ ] Automated Postgres migrations that work properly
+- [ ] Go directly to linked board after registration
 
 ## Future Enhancements
 
+- [ ] Scene-based tutorial popups
+- [ ] Session security improvements (CSRF protection)
+- [ ] Anonymous user join support
+- [ ] In-column ordering of cards
 - [ ] AI-powered card grouping
 - [ ] Team health check system
-- [ ] Action item tracking with assignments
-- [ ] Resolution carryover between boards
+- [ ] Action item assignments
 - [ ] Enhanced rich text editing (replace textarea)
-- [ ] Mobile-responsive improvements
+- [ ] Responsive CSS improvements
 - [ ] SSO/OAuth integration
 
 Built according to CLAUDE.md development guidelines emphasizing explicit over implicit code, libraries over custom solutions, and human-maintainable architecture.

@@ -7,7 +7,7 @@ import { getTemplate } from '$lib/server/templates.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { withTransaction } from '$lib/server/db/transaction.js';
-import { columns, scenes, boards } from '$lib/server/db/schema.js';
+import { columns, scenes, boards, scenesColumns } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -61,21 +61,26 @@ export const POST: RequestHandler = async (event) => {
 
     // Create template in a transaction
     await withTransaction(async (tx) => {
-      // Create columns from template
+      // Create columns from template and track their IDs
+      const columnIdMap = new Map<string, string>(); // Map column title to column ID
+
       for (const col of templateColumns) {
         // Get description from function if available, otherwise use static description
         const description = col.getDescription ? col.getDescription() : col.description;
+        const columnId = uuidv4();
 
         await tx
           .insert(columns)
           .values({
-            id: uuidv4(),
+            id: columnId,
             boardId: board.id,
             title: col.title,
             description: description || null,
             seq: col.seq,
             defaultAppearance: col.default_appearance || 'shown'
           });
+
+        columnIdMap.set(col.title, columnId);
       }
 
       // Create scenes from template
@@ -84,13 +89,41 @@ export const POST: RequestHandler = async (event) => {
         const sceneId = uuidv4();
         if (!currentSceneId) currentSceneId = sceneId;
 
+        // Remove visibleColumns from the scene data as it's not a database field
+        const { visibleColumns, ...sceneData } = scene;
+
         await tx
           .insert(scenes)
           .values({
             id: sceneId,
             boardId: board.id,
-            ...scene
+            ...sceneData
           });
+
+        // Create scene-column relationships based on visibleColumns
+        if (visibleColumns && visibleColumns.length > 0) {
+          // If visibleColumns is specified, set those as visible and others as hidden
+          for (const [columnTitle, columnId] of columnIdMap) {
+            await tx
+              .insert(scenesColumns)
+              .values({
+                sceneId,
+                columnId,
+                state: visibleColumns.includes(columnTitle) ? 'visible' : 'hidden'
+              });
+          }
+        } else {
+          // If no visibleColumns specified, all columns are visible by default
+          for (const columnId of columnIdMap.values()) {
+            await tx
+              .insert(scenesColumns)
+              .values({
+                sceneId,
+                columnId,
+                state: 'visible'
+              });
+          }
+        }
       }
 
       // Set current scene to first scene
