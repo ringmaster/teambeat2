@@ -531,6 +531,14 @@
                                         {/if}
                                     </div>
                                     <div class="series-card-actions">
+                                        <a
+                                            href="/series/{s.id}/scorecards"
+                                            class="icon-button icon-button-primary"
+                                            title="Scorecards"
+                                            aria-label="View scorecards"
+                                        >
+                                            <Icon name="chart-bar" size="sm" />
+                                        </a>
                                         {#if s.role === "admin"}
                                             <button
                                                 onclick={() =>

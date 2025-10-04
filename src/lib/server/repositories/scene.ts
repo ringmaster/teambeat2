@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { withTransaction } from '../db/transaction.js';
-import { scenes } from '../db/schema.js';
+import { scenes, boards } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -39,13 +39,34 @@ export async function createScene(data: CreateSceneData) {
 }
 
 export async function findSceneById(sceneId: string) {
-  const [scene] = await db
-    .select()
+  const [result] = await db
+    .select({
+      id: scenes.id,
+      boardId: scenes.boardId,
+      title: scenes.title,
+      description: scenes.description,
+      mode: scenes.mode,
+      seq: scenes.seq,
+      selectedCardId: scenes.selectedCardId,
+      allowAddCards: scenes.allowAddCards,
+      allowEditCards: scenes.allowEditCards,
+      allowObscureCards: scenes.allowObscureCards,
+      allowMoveCards: scenes.allowMoveCards,
+      allowGroupCards: scenes.allowGroupCards,
+      showVotes: scenes.showVotes,
+      allowVoting: scenes.allowVoting,
+      showComments: scenes.showComments,
+      allowComments: scenes.allowComments,
+      multipleVotesPerCard: scenes.multipleVotesPerCard,
+      createdAt: scenes.createdAt,
+      seriesId: boards.seriesId
+    })
     .from(scenes)
+    .innerJoin(boards, eq(scenes.boardId, boards.id))
     .where(eq(scenes.id, sceneId))
     .limit(1);
 
-  return scene;
+  return result;
 }
 
 export async function updateScenePermissions(

@@ -1,0 +1,10 @@
+{
+"cards": [
+{"id": "SREC-47", "title": "Reinstall Redis on node 3", "statusCategory": "To Do"},
+{"id": "SREC-48", "title": "Update Redis configuration on node 2", "statusCategory": "In Progress"},
+{"id": "SREC-49", "title": "Monitor Redis performance on node 1", "statusCategory": "Done"},
+{"id": "SREC-50", "title": "Backup Redis data on node 4", "statusCategory": "To Do"},
+{"id": "SREC-51", "title": "Test failover on Redis cluster", "statusCategory": "In Progress"},
+{"id": "SREC-52", "title": "Document Redis setup process", "statusCategory": "Done"}
+]
+}

@@ -30,9 +30,12 @@
     }: Props = $props();
 
     // Inline editing state
-    let editingMode = $state(""); // "permissions", "display", or ""
+    let editingMode = $state(""); // "permissions", "display", "scorecards", or ""
     let activeSceneId = $state("");
     let activeSceneName = $state("");
+    let availableScorecards = $state<any[]>([]);
+    let attachedScorecards = $state<any[]>([]);
+    let loadingScorecards = $state(false);
 
     function updateSceneTitle(sceneId: string, title: string) {
         onUpdateScene(sceneId, { title });
@@ -73,6 +76,72 @@
             board.hiddenColumnsByScene[sceneId].forEach((colId: string) => {
                 columnStates[sceneId][colId] = "hidden";
             });
+        }
+    }
+
+    async function showScorecardsForScene(sceneId: string) {
+        const scene = board.scenes.find((s: any) => s.id === sceneId);
+        if (!scene) return;
+
+        activeSceneId = sceneId;
+        activeSceneName = scene.title;
+        editingMode = "scorecards";
+        loadingScorecards = true;
+
+        try {
+            // Load available scorecards from the series
+            const scorecardsResponse = await fetch(`/api/series/${board.seriesId}/scorecards`);
+            if (scorecardsResponse.ok) {
+                const scorecardsData = await scorecardsResponse.json();
+                availableScorecards = scorecardsData.scorecards || [];
+            }
+
+            // Load scorecards attached to this scene
+            const attachedResponse = await fetch(`/api/scenes/${sceneId}/scorecards`);
+            if (attachedResponse.ok) {
+                const attachedData = await attachedResponse.json();
+                attachedScorecards = attachedData.sceneScorecards || [];
+            }
+        } catch (error) {
+            console.error('Failed to load scorecards:', error);
+        } finally {
+            loadingScorecards = false;
+        }
+    }
+
+    async function attachScorecard(scorecardId: string) {
+        try {
+            const response = await fetch(`/api/scenes/${activeSceneId}/scorecards`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scorecard_id: scorecardId })
+            });
+
+            if (response.ok) {
+                // Reload attached scorecards
+                const attachedResponse = await fetch(`/api/scenes/${activeSceneId}/scorecards`);
+                if (attachedResponse.ok) {
+                    const attachedData = await attachedResponse.json();
+                    attachedScorecards = attachedData.sceneScorecards || [];
+                }
+            }
+        } catch (error) {
+            console.error('Failed to attach scorecard:', error);
+        }
+    }
+
+    async function detachScorecard(sceneScorecardId: string) {
+        try {
+            const response = await fetch(`/api/scene-scorecards/${sceneScorecardId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Remove from local state
+                attachedScorecards = attachedScorecards.filter(ss => ss.id !== sceneScorecardId);
+            }
+        } catch (error) {
+            console.error('Failed to detach scorecard:', error);
         }
     }
 
@@ -275,6 +344,14 @@
                                     class="button button-secondary"
                                     >Columns</button
                                 >
+                                {#if scene.mode === 'scorecard'}
+                                    <button
+                                        onclick={() =>
+                                            showScorecardsForScene(scene.id)}
+                                        class="button button-secondary"
+                                        >Scorecards</button
+                                    >
+                                {/if}
                             </td>
                             <td>
                                 <select
@@ -291,6 +368,9 @@
                                     <option value="review">Review</option>
                                     <option value="agreements"
                                         >Agreements</option
+                                    >
+                                    <option value="scorecard"
+                                        >Scorecard</option
                                     >
                                 </select>
                             </td>
@@ -533,6 +613,65 @@
                         {/each}
                     </div>
                 </div>
+            {:else if editingMode === "scorecards"}
+                <div class="permissions-section">
+                    <h4 class="permissions-title">Scorecard Management</h4>
+
+                    {#if loadingScorecards}
+                        <p>Loading scorecards...</p>
+                    {:else}
+                        <div class="scorecards-management">
+                            <!-- Attached Scorecards -->
+                            {#if attachedScorecards.length > 0}
+                                <div class="attached-scorecards">
+                                    <h5>Attached Scorecards</h5>
+                                    <div class="scorecard-list">
+                                        {#each attachedScorecards as sceneScorecard}
+                                            <div class="scorecard-item">
+                                                <span>{sceneScorecard.scorecard?.name || 'Unknown Scorecard'}</span>
+                                                <button
+                                                    onclick={() => detachScorecard(sceneScorecard.id)}
+                                                    class="button button-danger"
+                                                    style="padding: 0.25rem 0.5rem; font-size: 0.875rem;"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+
+                            <!-- Available Scorecards -->
+                            <div class="available-scorecards">
+                                <h5>Available Scorecards</h5>
+                                {#if availableScorecards.length === 0}
+                                    <p class="text-muted">No scorecards available. <a href="/series/{board.seriesId}/scorecards">Create one</a></p>
+                                {:else}
+                                    <div class="scorecard-list">
+                                        {#each availableScorecards as scorecard}
+                                            {@const isAttached = attachedScorecards.some(ss => ss.scorecardId === scorecard.id)}
+                                            <div class="scorecard-item">
+                                                <span>{scorecard.name}</span>
+                                                {#if isAttached}
+                                                    <span class="badge">Attached</span>
+                                                {:else}
+                                                    <button
+                                                        onclick={() => attachScorecard(scorecard.id)}
+                                                        class="button button-primary"
+                                                        style="padding: 0.25rem 0.5rem; font-size: 0.875rem;"
+                                                    >
+                                                        Attach
+                                                    </button>
+                                                {/if}
+                                            </div>
+                                        {/each}
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+                    {/if}
+                </div>
             {/if}
         {/if}
     </div>
@@ -656,5 +795,60 @@
     .drag-handle {
         cursor: grab;
         color: var(--color-text-muted);
+    }
+
+    .scorecards-management {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .attached-scorecards,
+    .available-scorecards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .attached-scorecards h5,
+    .available-scorecards h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .scorecard-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .scorecard-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background-color: var(--color-bg);
+    }
+
+    .badge {
+        padding: 0.25rem 0.5rem;
+        background-color: var(--color-success-bg);
+        color: var(--color-success-text);
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .text-muted {
+        color: var(--color-text-muted);
+    }
+
+    .text-muted a {
+        color: var(--color-primary);
+        text-decoration: underline;
     }
 </style>

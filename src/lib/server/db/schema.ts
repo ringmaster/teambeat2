@@ -87,7 +87,7 @@ export const scenes = table('scenes', {
   boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements'>(),
+  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements' | 'scorecard'>(),
   seq: integer('seq').notNull(),
   selectedCardId: text('selected_card_id').references(() => cards.id, { onDelete: 'set null' }),
   // Permission fields
@@ -244,4 +244,59 @@ export const slowQueries = table('slow_queries', {
   board_id: text('board_id')
 }, (table) => ({
   timestampIdx: perfIndex('slow_queries_timestamp_idx').on(table.timestamp)
+}));
+
+// Scorecard tables - for data-driven meeting insights
+export const scorecards = table('scorecards', {
+  id: text('id').primaryKey(),
+  seriesId: text('series_id').notNull().references(() => boardSeries.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdByUserId: text('created_by_user_id').notNull().references(() => users.id),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+}, (table) => ({
+  seriesIdx: indexField('scorecards_series_idx').on(table.seriesId)
+}));
+
+export const scorecardDatasources = table('scorecard_datasources', {
+  id: text('id').primaryKey(),
+  scorecardId: text('scorecard_id').notNull().references(() => scorecards.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  seq: integer('seq').notNull(),
+  sourceType: text('source_type').notNull().$type<'paste' | 'api'>(),
+  apiConfig: text('api_config'), // JSON: {url, auth_type, credentials_encrypted}
+  dataSchema: text('data_schema'), // JSON: describes expected data shape
+  rules: text('rules').notNull(), // JSON: array of rule objects
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
+}, (table) => ({
+  scorecardIdx: indexField('scorecard_datasources_scorecard_idx').on(table.scorecardId)
+}));
+
+export const sceneScorecards = table('scene_scorecards', {
+  id: text('id').primaryKey(),
+  sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
+  scorecardId: text('scorecard_id').notNull().references(() => scorecards.id, { onDelete: 'cascade' }),
+  collectedData: text('collected_data'), // JSON: all datasource data combined
+  processedAt: text('processed_at'),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
+}, (table) => ({
+  sceneIdx: indexField('scene_scorecards_scene_idx').on(table.sceneId),
+  scorecardIdx: indexField('scene_scorecards_scorecard_idx').on(table.scorecardId)
+}));
+
+export const sceneScorecardResults = table('scene_scorecard_results', {
+  id: text('id').primaryKey(),
+  sceneScorecardId: text('scene_scorecard_id').notNull().references(() => sceneScorecards.id, { onDelete: 'cascade' }),
+  datasourceId: text('datasource_id').notNull().references(() => scorecardDatasources.id),
+  section: text('section').notNull(),
+  title: text('title').notNull(),
+  primaryValue: text('primary_value'),
+  secondaryValues: text('secondary_values'), // JSON: additional fields
+  severity: text('severity').notNull().$type<'info' | 'warning' | 'critical'>(),
+  sourceData: text('source_data'), // JSON: full original record
+  seq: integer('seq').notNull()
+}, (table) => ({
+  sceneScorecardIdx: indexField('scene_scorecard_results_scene_scorecard_idx').on(table.sceneScorecardId)
 }));

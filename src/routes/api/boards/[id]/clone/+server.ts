@@ -6,8 +6,8 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { withTransaction } from '$lib/server/db/transaction.js';
-import { boards, columns, scenes, scenesColumns, agreements } from '$lib/server/db/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { boards, columns, scenes, scenesColumns, agreements, sceneScorecards } from '$lib/server/db/schema.js';
+import { eq, and, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import {
@@ -190,6 +190,31 @@ export const POST: RequestHandler = async (event) => {
           .update(boards)
           .set({ currentSceneId: firstSceneId })
           .where(eq(boards.id, boardId));
+      }
+
+      // Clone scene scorecards
+      if (Object.keys(sceneIdMapping).length > 0) {
+        const sourceSceneIds = Object.keys(sceneIdMapping);
+        const sourceScorecards = await tx
+          .select()
+          .from(sceneScorecards)
+          .where(inArray(sceneScorecards.sceneId, sourceSceneIds));
+
+        for (const scorecard of sourceScorecards) {
+          const newSceneId = sceneIdMapping[scorecard.sceneId];
+          if (newSceneId) {
+            await tx
+              .insert(sceneScorecards)
+              .values({
+                id: uuidv4(),
+                sceneId: newSceneId,
+                scorecardId: scorecard.scorecardId,
+                collectedData: null,
+                processedAt: null,
+                createdAt: new Date().toISOString()
+              });
+          }
+        }
       }
 
       // Clone incomplete agreements (both free-form and comment-based)

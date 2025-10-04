@@ -392,3 +392,50 @@ export function broadcastAgreementsUpdated(boardId: string, agreements: any) {
 
   sseManager.broadcastToBoard(boardId, message);
 }
+
+export function broadcastScorecardAttached(boardId: string, sceneScorecard: any) {
+  const message: SSEMessage = {
+    type: 'scorecard_attached',
+    board_id: boardId,
+    scene_scorecard: sceneScorecard,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastScorecardDetached(boardId: string, sceneScorecardId: string) {
+  const message: SSEMessage = {
+    type: 'scorecard_detached',
+    board_id: boardId,
+    scene_scorecard_id: sceneScorecardId,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastScorecardDataCollected(boardId: string, sceneScorecardId: string, processedAt: string, resultCount: number) {
+  const message: SSEMessage = {
+    type: 'scorecard_data_collected',
+    board_id: boardId,
+    scene_scorecard_id: sceneScorecardId,
+    processed_at: processedAt,
+    result_count: resultCount,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastScorecardResultFlagged(boardId: string, resultId: string, cardId: string) {
+  const message: SSEMessage = {
+    type: 'scorecard_result_flagged',
+    board_id: boardId,
+    result_id: resultId,
+    card_id: cardId,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}

@@ -52,7 +52,7 @@ interface TemplateColumn {
 
 interface TemplateScene {
   title: string;
-  mode: 'columns' | 'present' | 'review' | 'agreements';
+  mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard';
   seq: number;
   allowAddCards: boolean;
   allowEditCards: boolean;

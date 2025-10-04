@@ -11,6 +11,7 @@
     import PresentMode from "$lib/components/PresentMode.svelte";
     import ReviewScene from "$lib/components/ReviewScene.svelte";
     import AgreementsScene from "$lib/components/AgreementsScene.svelte";
+    import ScorecardScene from "$lib/components/ScorecardScene.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
@@ -2321,6 +2322,12 @@
         <ReviewScene {board} scene={currentScene} {cards} />
     {:else if currentScene?.mode === "agreements"}
         <AgreementsScene {board} scene={currentScene} {userRole} />
+    {:else if currentScene?.mode === "scorecard"}
+        <ScorecardScene
+            sceneId={currentScene.id}
+            boardId={boardId}
+            canEdit={userRole === "admin" || userRole === "facilitator"}
+        />
     {:else}
         <BoardColumns
             board={displayBoard}
