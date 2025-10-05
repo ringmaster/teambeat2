@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import Input from "$lib/components/ui/Input.svelte";
     import Button from "$lib/components/ui/Button.svelte";
 
@@ -10,14 +11,33 @@
     let confirmPassword: string = $state("");
     let error: string = $state("");
     let loading: boolean = $state(false);
+    let redirectBoardId: string = $state("");
+
+    // Validate redirect parameter to prevent open redirect attacks
+    function validateRedirectBoardId(redirect: string | null): string {
+        if (!redirect) return "";
+        // Only allow alphanumeric characters, hyphens, and underscores (valid board IDs)
+        // This prevents URLs, path traversal, and XSS attempts
+        if (/^[a-zA-Z0-9_-]+$/.test(redirect)) {
+            return redirect;
+        }
+        return "";
+    }
 
     // Check if user is already logged in and redirect to dashboard
     onMount(async () => {
+        // Get and validate redirect board ID from query string
+        redirectBoardId = validateRedirectBoardId($page.url.searchParams.get("redirect"));
+
         try {
             const response = await fetch("/api/auth/me");
             if (response.ok) {
-                // User is already authenticated, redirect to dashboard
-                goto("/");
+                // User is already authenticated, redirect appropriately
+                if (redirectBoardId) {
+                    goto(`/board/${redirectBoardId}`);
+                } else {
+                    goto("/");
+                }
             }
         } catch (err) {
             // User not authenticated, show register form
@@ -58,8 +78,12 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Force a full page reload to update the authentication state
-                window.location.href = "/";
+                // Redirect to board or dashboard
+                if (redirectBoardId) {
+                    window.location.href = `/board/${redirectBoardId}`;
+                } else {
+                    window.location.href = "/";
+                }
             } else {
                 error = data.error || "Registration failed";
             }
@@ -239,7 +263,7 @@
         <div class="register-footer">
             <p class="text-muted">
                 Already have an account?
-                <a href="/login" class="register-signin-link">Sign in</a>
+                <a href={redirectBoardId ? `/login?redirect=${redirectBoardId}` : "/login"} class="register-signin-link">Sign in</a>
             </p>
         </div>
     </div>

@@ -48,7 +48,18 @@
 </div>
 
 <style lang="less">
+    @import "$lib/styles/_mixins.less";
     .agreements-section {
+        .page-width();
+        background-color: white;
+        backdrop-filter: none;
+        border: none;
+        box-shadow: 0 1px 3px #000000;
+        border-radius: 1rem;
+        padding: var(--spacing-8);
+        box-shadow: var(--shadow-xl);
+        margin: 0 auto;
+        width: 60%;
         display: flex;
         flex-direction: column;
         gap: 1rem;

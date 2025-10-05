@@ -177,7 +177,7 @@
             // Load user info
             const userResponse = await fetch("/api/auth/me");
             if (!userResponse.ok) {
-                goto(resolve("/login"));
+                goto(resolve(`/login?redirect=${boardId}`));
                 return;
             }
             const userData = await userResponse.json();

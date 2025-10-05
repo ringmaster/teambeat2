@@ -539,7 +539,7 @@
                                                 class="icon-button icon-button-primary cooltipz--bottom"
                                                 aria-label="Scorecards"
                                             >
-                                                <Icon name="chart-bar" size="sm" />
+                                                <Icon name="scorecard" size="sm" />
                                             </a>
                                         {/if}
                                         {#if s.role === "admin"}

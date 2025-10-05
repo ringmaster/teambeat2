@@ -13,6 +13,16 @@
     let mobileMenuOpen = $state(false);
     let showUserDropdown = $state(false);
 
+    // Get redirect parameter from URL if present (with validation)
+    let redirectParam = $derived.by(() => {
+        const redirect = $page.url.searchParams.get("redirect");
+        // Validate to prevent open redirect attacks - only allow valid board IDs
+        if (redirect && /^[a-zA-Z0-9_-]+$/.test(redirect)) {
+            return `?redirect=${redirect}`;
+        }
+        return "";
+    });
+
     onMount(async () => {
         try {
             const response = await fetch("/api/auth/me");
@@ -188,10 +198,10 @@
                             {/if}
                         </div>
                     {:else}
-                        <a href={resolve("/login")} class="btn-secondary"
+                        <a href={resolve(`/login${redirectParam}`)} class="btn-secondary"
                             >Sign In</a
                         >
-                        <a href={resolve("/register")} class="btn-primary"
+                        <a href={resolve(`/register${redirectParam}`)} class="btn-primary"
                             >Register</a
                         >
                     {/if}
@@ -277,12 +287,12 @@
                         </button>
                     {:else}
                         <a
-                            href={resolve("/login")}
+                            href={resolve(`/login${redirectParam}`)}
                             class="btn-secondary"
                             style="width: 100%;">Sign In</a
                         >
                         <a
-                            href={resolve("/register")}
+                            href={resolve(`/register${redirectParam}`)}
                             class="btn-primary"
                             style="width: 100%;">Register</a
                         >
