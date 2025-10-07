@@ -49,6 +49,8 @@
         close: "M6 18L18 6M6 6l12 12",
         "chevron-down": "M19 9l-7 7-7-7",
         "chevron-up": "M5 15l7-7 7 7",
+        "chevron-right": "M9 5l7 7-7 7",
+        "chevron-left": "M15 19l-7-7 7-7",
         menu: "M4 6h16M4 12h16M4 18h16",
         list: "M4 6h16M4 12h16M4 18h16",
         clock: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
@@ -91,6 +93,8 @@
         "vote-multiple":
             "M9 12l2 2 4-4m1.09-9a16 16 0 014.91 0 16 16 0 010 18 16 16 0 01-4.91 0m-1.09-9a16 16 0 00-8 0 16 16 0 000 18 16 16 0 008 0",
         "arrow-up": "M7 14l5-5 5 5",
+        "arrow-left": "M10 19l-7-7m0 0l7-7m-7 7h18",
+        "arrow-right": "M14 5l7 7m0 0l-7 7m7-7H3",
         reset: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15",
 
         // Security & Authentication

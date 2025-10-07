@@ -94,8 +94,6 @@
 </script>
 
 <div class="user-management">
-    <h3 class="management-title">User Management</h3>
-
     <!-- Add User Section -->
     {#if currentUserRole === "admin"}
         <div class="add-user-section">

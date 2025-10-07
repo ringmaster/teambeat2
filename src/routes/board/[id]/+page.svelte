@@ -7,7 +7,7 @@
     import BoardHeader from "$lib/components/BoardHeader.svelte";
     import BoardSetup from "$lib/components/BoardSetup.svelte";
     import BoardColumns from "$lib/components/BoardColumns.svelte";
-    import BoardConfigDialog from "$lib/components/BoardConfigDialog.svelte";
+    import BoardConfigPage from "$lib/components/BoardConfigPage.svelte";
     import PresentMode from "$lib/components/PresentMode.svelte";
     import ReviewScene from "$lib/components/ReviewScene.svelte";
     import AgreementsScene from "$lib/components/AgreementsScene.svelte";
@@ -68,7 +68,6 @@
     let newCardContentByColumn = new SvelteMap<string, string>();
     let showSceneDropdown = $state(false);
     let showBoardConfig = $state(false);
-    let configActiveTab = $state("general");
     let showTemplateSelector = $state(false);
 
     // Edit Card Modal State
@@ -159,14 +158,6 @@
         }
     });
 
-    // Config Form State
-    let configForm = $state({
-        name: "",
-        blameFreeMode: false,
-        votingAllocation: 0,
-        status: "draft",
-    });
-
     // Templates
     let templates: any[] = $state([]);
 
@@ -225,12 +216,6 @@
             if (board.allColumns) {
                 board.columns = board.allColumns;
             }
-
-            // Update config form with board data
-            configForm.name = board.name || "";
-            configForm.blameFreeMode = board.blameFreeMode || false;
-            configForm.votingAllocation = board.votingAllocation;
-            configForm.status = board.status || "draft";
 
             // Load cards based on the current scene mode
             if (currentScene?.mode === "present") {
@@ -650,16 +635,6 @@
                         );
                     }
 
-                    // Update config form if it's open
-                    if (showBoardConfig) {
-                        configForm.columns =
-                            newBoardData.columns || configForm.columns;
-                        configForm.scenes =
-                            newBoardData.scenes || configForm.scenes;
-                        configForm.hiddenColumnsByScene =
-                            newBoardData.hiddenColumnsByScene ||
-                            configForm.hiddenColumnsByScene;
-                    }
                 }
                 break;
             case "columns_updated":
@@ -2242,150 +2217,151 @@
         </div>
     </div>
 {:else}
-    <BoardHeader
-        {board}
-        {userRole}
-        {currentScene}
-        {showSceneDropdown}
-        {connectedUsers}
-        userVoteAllocation={votingAllocation || undefined}
-        votingStats={votingStats || undefined}
-        onConfigureClick={() => (showBoardConfig = true)}
-        onShareClick={handleShareBoard}
-        onSceneChange={changeScene}
-        onNextScene={nextScene}
-        onShowSceneDropdown={(show) => (showSceneDropdown = show)}
-        onIncreaseAllocation={increaseVotingAllocation}
-        onResetVotes={resetBoardVotes}
-        onStartTimer={() => showTimer()}
-    />
-
-    <!-- Connection Status Indicator -->
-    {#if sseConnectionState !== "connected"}
-        <div class="connection-status connection-status--{sseConnectionState}">
-            <div class="connection-status__content">
-                {#if sseConnectionState === "connecting"}
-                    <div
-                        class="connection-status__indicator connection-status__indicator--connecting"
-                    ></div>
-                    <span>Connecting...</span>
-                {:else if sseConnectionState === "disconnected"}
-                    <div
-                        class="connection-status__indicator connection-status__indicator--disconnected"
-                    ></div>
-                    <span
-                        >Reconnecting... (Attempt {sseReconnectAttempts}/{sseMaxReconnectAttempts})</span
-                    >
-                {:else}
-                    <div
-                        class="connection-status__indicator connection-status__indicator--error"
-                    ></div>
-                    <span>Connection failed - reloading...</span>
-                {/if}
-            </div>
-        </div>
-    {/if}
-
-    <!-- Main content area that grows to fill available space -->
-    {#if (!(board.allColumns || board.columns) || (board.allColumns || board.columns)?.length === 0) && (!board.scenes || board.scenes.length === 0)}
-        <BoardSetup
-            bind:showTemplateSelector
-            {templates}
-            {boardId}
-            onToggleTemplateSelector={() =>
-                (showTemplateSelector = !showTemplateSelector)}
-            onSetupTemplate={setupTemplate}
-            onConfigureClick={() => (showBoardConfig = true)}
-            onCloneBoard={cloneBoard}
-        />
-    {:else if currentScene?.mode === "present"}
-        <PresentMode
+    {#if showBoardConfig}
+        <!-- Configuration Page -->
+        <BoardConfigPage
             {board}
-            scene={currentScene}
-            currentUser={user}
-            {cards}
-            selectedCard={cards.find(
-                (c) => c.id === currentScene.selectedCardId,
-            ) || null}
-            {comments}
-            {agreements}
-            isAdmin={userRole === "admin"}
-            isFacilitator={userRole === "facilitator"}
-            {notesLockStatus}
-            onVoteCard={voteCard}
-            onCommentCard={commentCard}
-            onDeleteCard={deleteCard}
-            onEditCard={editCard}
-            onReaction={addReaction}
-        />
-    {:else if currentScene?.mode === "review"}
-        <ReviewScene {board} scene={currentScene} {cards} />
-    {:else if currentScene?.mode === "agreements"}
-        <AgreementsScene {board} scene={currentScene} {userRole} />
-    {:else if currentScene?.mode === "scorecard"}
-        <ScorecardScene
-            sceneId={currentScene.id}
-            boardId={boardId}
-            {board}
-            scene={currentScene}
-            canEdit={userRole === "admin" || userRole === "facilitator"}
             {userRole}
+            onClose={() => (showBoardConfig = false)}
+            onUpdateBoardConfig={updateBoardConfigImmediate}
+            onAddNewColumn={addNewColumnRow}
+            onAddNewScene={addNewSceneRow}
+            onUpdateColumn={updateColumn}
+            onDeleteColumn={deleteColumn}
+            onUpdateScene={updateScene}
+            onDeleteScene={deleteScene}
+            onDragStart={handleConfigDragStart}
+            onDragOver={handleConfigDragOver}
+            onDragLeave={handleConfigDragLeave}
+            onDrop={handleConfigDrop}
+            onEndDrop={handleConfigEndDrop}
+            onDeleteBoard={deleteBoard}
+            {dragState}
         />
     {:else}
-        <BoardColumns
-            board={displayBoard}
-            {cards}
-            {currentScene}
-            {groupingMode}
-            {selectedCards}
-            dragTargetColumnId={cardDropTargetColumnId}
-            onDragOver={handleDragOver}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onCardDrop={handleCardDrop}
-            onDragStart={handleDragStart}
-            onToggleCardSelection={toggleCardSelection}
-            onVoteCard={voteCard}
-            onCommentCard={commentCard}
-            onAddCard={addCardToColumn}
-            onGroupCards={groupCards}
-            onGetColumnContent={getColumnContent}
-            onSetColumnContent={setColumnContent}
-            onDeleteCard={deleteCard}
-            onEditCard={editCard}
-            onReaction={addReaction}
+        <!-- Board View -->
+        <BoardHeader
+            {board}
             {userRole}
-            currentUserId={user?.id}
-            {hasVotes}
-            {userVotesByCard}
-            {allVotesByCard}
+            {currentScene}
+            {showSceneDropdown}
+            {showBoardConfig}
+            {connectedUsers}
+            userVoteAllocation={votingAllocation || undefined}
+            votingStats={votingStats || undefined}
+            onConfigureClick={() => (showBoardConfig = true)}
+            onShareClick={handleShareBoard}
+            onSceneChange={changeScene}
+            onNextScene={nextScene}
+            onShowSceneDropdown={(show) => (showSceneDropdown = show)}
+            onIncreaseAllocation={increaseVotingAllocation}
+            onResetVotes={resetBoardVotes}
+            onStartTimer={() => showTimer()}
         />
-    {/if}
 
-    <BoardConfigDialog
-        {showBoardConfig}
-        {userRole}
-        bind:configActiveTab
-        {board}
-        bind:configForm
-        onClose={() => (showBoardConfig = false)}
-        onTabChange={(tab) => (configActiveTab = tab)}
-        onUpdateBoardConfig={updateBoardConfigImmediate}
-        onAddNewColumn={addNewColumnRow}
-        onAddNewScene={addNewSceneRow}
-        onUpdateColumn={updateColumn}
-        onDeleteColumn={deleteColumn}
-        onUpdateScene={updateScene}
-        onDeleteScene={deleteScene}
-        onDragStart={handleConfigDragStart}
-        onDragOver={handleConfigDragOver}
-        onDragLeave={handleConfigDragLeave}
-        onDrop={handleConfigDrop}
-        onEndDrop={handleConfigEndDrop}
-        onDeleteBoard={deleteBoard}
-        {dragState}
-    />
+        <!-- Connection Status Indicator -->
+        {#if sseConnectionState !== "connected"}
+            <div class="connection-status connection-status--{sseConnectionState}">
+                <div class="connection-status__content">
+                    {#if sseConnectionState === "connecting"}
+                        <div
+                            class="connection-status__indicator connection-status__indicator--connecting"
+                        ></div>
+                        <span>Connecting...</span>
+                    {:else if sseConnectionState === "disconnected"}
+                        <div
+                            class="connection-status__indicator connection-status__indicator--disconnected"
+                        ></div>
+                        <span
+                            >Reconnecting... (Attempt {sseReconnectAttempts}/{sseMaxReconnectAttempts})</span
+                        >
+                    {:else}
+                        <div
+                            class="connection-status__indicator connection-status__indicator--error"
+                        ></div>
+                        <span>Connection failed - reloading...</span>
+                    {/if}
+                </div>
+            </div>
+        {/if}
+
+        <!-- Main content area that grows to fill available space -->
+        {#if (!(board.allColumns || board.columns) || (board.allColumns || board.columns)?.length === 0) && (!board.scenes || board.scenes.length === 0)}
+            <BoardSetup
+                bind:showTemplateSelector
+                {templates}
+                {boardId}
+                onToggleTemplateSelector={() =>
+                    (showTemplateSelector = !showTemplateSelector)}
+                onSetupTemplate={setupTemplate}
+                onConfigureClick={() => (showBoardConfig = true)}
+                onCloneBoard={cloneBoard}
+            />
+        {:else if currentScene?.mode === "present"}
+            <PresentMode
+                {board}
+                scene={currentScene}
+                currentUser={user}
+                {cards}
+                selectedCard={cards.find(
+                    (c) => c.id === currentScene.selectedCardId,
+                ) || null}
+                {comments}
+                {agreements}
+                isAdmin={userRole === "admin"}
+                isFacilitator={userRole === "facilitator"}
+                {notesLockStatus}
+                onVoteCard={voteCard}
+                onCommentCard={commentCard}
+                onDeleteCard={deleteCard}
+                onEditCard={editCard}
+                onReaction={addReaction}
+            />
+        {:else if currentScene?.mode === "review"}
+            <ReviewScene {board} scene={currentScene} {cards} />
+        {:else if currentScene?.mode === "agreements"}
+            <AgreementsScene {board} scene={currentScene} {userRole} />
+        {:else if currentScene?.mode === "scorecard"}
+            <ScorecardScene
+                sceneId={currentScene.id}
+                boardId={boardId}
+                {board}
+                scene={currentScene}
+                canEdit={userRole === "admin" || userRole === "facilitator"}
+                {userRole}
+            />
+        {:else}
+            <BoardColumns
+                board={displayBoard}
+                {cards}
+                {currentScene}
+                {groupingMode}
+                {selectedCards}
+                dragTargetColumnId={cardDropTargetColumnId}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onCardDrop={handleCardDrop}
+                onDragStart={handleDragStart}
+                onToggleCardSelection={toggleCardSelection}
+                onVoteCard={voteCard}
+                onCommentCard={commentCard}
+                onAddCard={addCardToColumn}
+                onGroupCards={groupCards}
+                onGetColumnContent={getColumnContent}
+                onSetColumnContent={setColumnContent}
+                onDeleteCard={deleteCard}
+                onEditCard={editCard}
+                onReaction={addReaction}
+                {userRole}
+                currentUserId={user?.id}
+                {hasVotes}
+                {userVotesByCard}
+                {allVotesByCard}
+            />
+        {/if}
+    {/if}
 {/if}
 
 <!-- Edit Card Modal -->

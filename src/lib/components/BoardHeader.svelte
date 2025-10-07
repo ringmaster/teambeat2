@@ -26,6 +26,7 @@
             allowVoting?: boolean;
         } | null;
         showSceneDropdown: boolean;
+        showBoardConfig?: boolean;
         connectedUsers?: number;
         userVoteAllocation?: {
             currentVotes: number;
@@ -58,6 +59,7 @@
         userRole,
         currentScene,
         showSceneDropdown,
+        showBoardConfig = false,
         connectedUsers = 0,
         userVoteAllocation,
         votingStats,
@@ -140,7 +142,7 @@
             {#if ["admin", "facilitator"].includes(userRole)}
                 <button
                     onclick={onConfigureClick}
-                    class="toolbar-button facilitator-configure cooltipz--bottom"
+                    class="toolbar-button facilitator-configure cooltipz--bottom {showBoardConfig ? 'active' : ''}"
                     aria-label="Configure board settings"
                 >
                     <Icon name="settings" size="sm" />
@@ -241,6 +243,15 @@
                 gap: var(--spacing-2);
                 align-items: center;
             }
+        }
+    }
+
+    .toolbar-button.active {
+        background: var(--color-primary);
+        color: white;
+
+        &:hover {
+            background: var(--color-primary-hover);
         }
     }
 </style>
