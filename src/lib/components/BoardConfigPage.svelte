@@ -914,69 +914,38 @@
                         <h3>Scorecards</h3>
                         {#if loadingScorecards}
                             <p>Loading scorecards...</p>
+                        {:else if availableScorecards.length > 0}
+                            <div class="checkbox-grid">
+                                {#each availableScorecards as scorecard}
+                                    {@const isAttached = attachedScorecards.some(
+                                        (ss) => ss.scorecardId === scorecard.id
+                                    )}
+                                    {@const sceneScorecardId = attachedScorecards.find(
+                                        (ss) => ss.scorecardId === scorecard.id
+                                    )?.id}
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={isAttached}
+                                            onchange={() => {
+                                                if (isAttached && sceneScorecardId) {
+                                                    detachScorecard(sceneScorecardId);
+                                                } else {
+                                                    attachScorecard(scorecard.id);
+                                                }
+                                            }}
+                                        />
+                                        {scorecard.name}
+                                    </label>
+                                {/each}
+                            </div>
                         {:else}
-                            {#if attachedScorecards.length > 0}
-                                <div class="scorecard-list">
-                                    <h4>Attached Scorecards</h4>
-                                    {#each attachedScorecards as sceneScorecard}
-                                        <div class="scorecard-item">
-                                            <span
-                                                >{sceneScorecard.scorecard
-                                                    ?.name ||
-                                                    "Unknown Scorecard"}</span
-                                            >
-                                            <button
-                                                onclick={() =>
-                                                    detachScorecard(
-                                                        sceneScorecard.id,
-                                                    )}
-                                                class="btn-danger btn-sm"
-                                            >
-                                                Remove
-                                            </button>
-                                        </div>
-                                    {/each}
-                                </div>
-                            {/if}
-
-                            {#if availableScorecards.length > 0}
-                                <div class="scorecard-list">
-                                    <h4>Available Scorecards</h4>
-                                    {#each availableScorecards as scorecard}
-                                        {@const isAttached =
-                                            attachedScorecards.some(
-                                                (ss) =>
-                                                    ss.scorecardId ===
-                                                    scorecard.id,
-                                            )}
-                                        <div class="scorecard-item">
-                                            <span>{scorecard.name}</span>
-                                            {#if isAttached}
-                                                <span class="badge"
-                                                    >Attached</span
-                                                >
-                                            {:else}
-                                                <button
-                                                    onclick={() =>
-                                                        attachScorecard(
-                                                            scorecard.id,
-                                                        )}
-                                                    class="btn-secondary btn-sm"
-                                                >
-                                                    Attach
-                                                </button>
-                                            {/if}
-                                        </div>
-                                    {/each}
-                                </div>
-                            {:else}
-                                <p class="help-text">
-                                    No scorecards available. <a
-                                        href="/series/{board.seriesId}/scorecards"
-                                        >Create one</a
-                                    >
-                                </p>
-                            {/if}
+                            <p class="help-text">
+                                No scorecards available. <a
+                                    href="/series/{board.seriesId}/scorecards"
+                                    >Create one</a
+                                >
+                            </p>
                         {/if}
                     </div>
                 {/if}
@@ -1389,36 +1358,6 @@
         height: 200px;
         color: #999;
         font-style: italic;
-    }
-
-    .scorecard-list {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-3);
-        margin-top: var(--spacing-3);
-
-        h4 {
-            margin-bottom: var(--spacing-2);
-        }
-    }
-
-    .scorecard-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        background: #f8f9fa;
-    }
-
-    .badge {
-        padding: 0.25rem 0.5rem;
-        background: #28a745;
-        color: white;
-        border-radius: 3px;
-        font-size: 0.75rem;
-        font-weight: 500;
     }
 
     .maintenance-section {
