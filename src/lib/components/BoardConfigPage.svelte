@@ -196,10 +196,18 @@
         activeTab = tab;
 
         // Auto-select first item when switching to columns or scenes
-        if (tab === "columns" && board.allColumns && board.allColumns.length > 0) {
+        if (
+            tab === "columns" &&
+            board.allColumns &&
+            board.allColumns.length > 0
+        ) {
             selectedColumnId = board.allColumns[0].id;
             selectedSceneId = "";
-        } else if (tab === "scenes" && board.scenes && board.scenes.length > 0) {
+        } else if (
+            tab === "scenes" &&
+            board.scenes &&
+            board.scenes.length > 0
+        ) {
             selectedSceneId = board.scenes[0].id;
             selectedColumnId = "";
         } else {
@@ -917,21 +925,32 @@
                         {:else if availableScorecards.length > 0}
                             <div class="checkbox-grid">
                                 {#each availableScorecards as scorecard}
-                                    {@const isAttached = attachedScorecards.some(
-                                        (ss) => ss.scorecardId === scorecard.id
-                                    )}
-                                    {@const sceneScorecardId = attachedScorecards.find(
-                                        (ss) => ss.scorecardId === scorecard.id
-                                    )?.id}
+                                    {@const isAttached =
+                                        attachedScorecards.some(
+                                            (ss) =>
+                                                ss.scorecardId === scorecard.id,
+                                        )}
+                                    {@const sceneScorecardId =
+                                        attachedScorecards.find(
+                                            (ss) =>
+                                                ss.scorecardId === scorecard.id,
+                                        )?.id}
                                     <label>
                                         <input
                                             type="checkbox"
                                             checked={isAttached}
                                             onchange={() => {
-                                                if (isAttached && sceneScorecardId) {
-                                                    detachScorecard(sceneScorecardId);
+                                                if (
+                                                    isAttached &&
+                                                    sceneScorecardId
+                                                ) {
+                                                    detachScorecard(
+                                                        sceneScorecardId,
+                                                    );
                                                 } else {
-                                                    attachScorecard(scorecard.id);
+                                                    attachScorecard(
+                                                        scorecard.id,
+                                                    );
                                                 }
                                             }}
                                         />
@@ -1160,7 +1179,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-bottom: 1px solid #e9ecef;
         color: #999;
         font-size: 0.875rem;
         transition: all 0.2s;
