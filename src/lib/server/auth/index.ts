@@ -20,11 +20,15 @@ export function requireUser(event: RequestEvent): SessionData {
 }
 
 export function setSessionCookie(event: RequestEvent, sessionId: string): void {
+	// Detect HTTPS from request URL or proxy headers
+	const isSecure = event.request.headers.get('x-forwarded-proto') === 'https'
+		|| event.request.url.startsWith('https://');
+
 	event.cookies.set('session', sessionId, {
 		path: '/',
 		httpOnly: true,
-		secure: false, // Set to true in production with HTTPS
-		sameSite: 'strict',
+		secure: isSecure,
+		sameSite: 'lax',
 		maxAge: 7 * 24 * 60 * 60 // 7 days
 	});
 }

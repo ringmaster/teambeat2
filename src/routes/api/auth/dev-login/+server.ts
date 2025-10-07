@@ -1,10 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createSession } from '$lib/server/auth/session.js';
+import { setSessionCookie } from '$lib/server/auth/index.js';
 import { findUserByEmail, createUser } from '$lib/server/repositories/user.js';
 import { dev } from '$app/environment';
 
-export const GET: RequestHandler = async ({ cookies, url }) => {
+export const GET: RequestHandler = async (event) => {
+    const { cookies, url, request } = event;
     // Only allow in development mode for testing
     if (!dev) {
         return json({ error: 'Not available in production' }, { status: 403 });
@@ -32,16 +34,10 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         
         // Create session
         const sessionId = createSession(user.id, user.email);
-        
+
         // Set session cookie
-        cookies.set('session', sessionId, {
-            path: '/',
-            httpOnly: true,
-            secure: false, // Allow in dev
-            sameSite: 'strict',
-            maxAge: 60 * 60 * 24 * 7 // 1 week
-        });
-        
+        setSessionCookie(event, sessionId);
+
         // Redirect to boards page or specific board
         const boardId = url.searchParams.get('boardId');
         const redirectUrl = boardId ? `/board/${boardId}` : '/';

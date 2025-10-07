@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { findUserByEmail } from '$lib/server/repositories/user.js';
 import { verifyPassword } from '$lib/server/auth/password.js';
 import { createSession } from '$lib/server/auth/session.js';
+import { setSessionCookie } from '$lib/server/auth/index.js';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -10,7 +11,8 @@ const loginSchema = z.object({
 	password: z.string().min(1)
 });
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, cookies } = event;
 	try {
 		const body = await request.json();
 		const data = loginSchema.parse(body);
@@ -24,15 +26,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 		
 		const sessionId = createSession(user.id, user.email);
-		
-		cookies.set('session', sessionId, {
-			path: '/',
-			httpOnly: true,
-			secure: false, // Set to true in production
-			sameSite: 'strict',
-			maxAge: 7 * 24 * 60 * 60
-		});
-		
+
+		setSessionCookie(event, sessionId);
+
 		return json({
 			success: true,
 			user: {
