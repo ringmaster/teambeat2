@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { fade, scale } from "svelte/transition";
     import Card from "$lib/components/Card.svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
     import type {
@@ -362,14 +363,16 @@
                         {selectedCard.content}
                     </div>
                     {#if scene.showVotes && selectedCard.voteCount !== undefined}
-                        <div class="vote-count-box">
-                            <div class="vote-count-number">
-                                {selectedCard.voteCount}
+                        {#key selectedCard.id}
+                            <div class="vote-count-box">
+                                <div class="vote-count-number">
+                                    {selectedCard.voteCount}
+                                </div>
+                                <div class="vote-count-label">
+                                    {selectedCard.voteCount === 1 ? "vote" : "votes"}
+                                </div>
                             </div>
-                            <div class="vote-count-label">
-                                {selectedCard.voteCount === 1 ? "vote" : "votes"}
-                            </div>
-                        </div>
+                        {/key}
                     {/if}
                 </div>
                 {#if selectedCard.userName}
@@ -415,7 +418,7 @@
                     <h3 class="section-title">Agreements:</h3>
                     <div class="agreements-list">
                         {#each agreements as agreement (agreement.id)}
-                            <div class="agreement">
+                            <div class="agreement" transition:fade={{ duration: 200 }}>
                                 <div class="agreement-content">
                                     {agreement.content}
                                 </div>
@@ -510,7 +513,7 @@
                     {/if}
                     <div class="comments-list">
                         {#each regularComments as comment (comment.id)}
-                            <div class="comment">
+                            <div class="comment" transition:fade={{ duration: 200 }}>
                                 <div class="comment-content">
                                     {comment.content}
                                 </div>
@@ -908,7 +911,10 @@
         font-size: 0.75rem;
         transition:
             background-color 0.2s,
-            transform 0.1s;
+            transform 0.1s,
+            opacity 0.3s ease-in,
+            scale 0.3s ease-in;
+        animation: reactionAppear 0.3s ease-out;
 
         &.clickable {
             cursor: pointer;
@@ -921,6 +927,20 @@
             &:active {
                 transform: scale(0.98);
             }
+        }
+    }
+
+    @keyframes reactionAppear {
+        0% {
+            opacity: 0;
+            scale: 0.5;
+        }
+        50% {
+            scale: 1.1;
+        }
+        100% {
+            opacity: 1;
+            scale: 1;
         }
     }
 

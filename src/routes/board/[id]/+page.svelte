@@ -603,19 +603,49 @@
 
                     // Use present mode data from SSE if available
                     if (data.present_mode_data) {
-                        cards = data.present_mode_data.visible_cards;
+                        // Intelligently update cards to preserve object identity where possible
+                        // This prevents unnecessary re-renders and flashing
+                        const newCards = data.present_mode_data.visible_cards;
+                        const cardMap = new Map(cards.map(c => [c.id, c]));
+
+                        cards = newCards.map(newCard => {
+                            const existingCard = cardMap.get(newCard.id);
+                            // If card exists and its data hasn't changed, preserve the object reference
+                            if (existingCard &&
+                                JSON.stringify(existingCard) === JSON.stringify(newCard)) {
+                                return existingCard;
+                            }
+                            return newCard;
+                        });
+
                         if (data.present_mode_data.selected_card) {
                             currentScene.selectedCardId =
                                 data.present_mode_data.selected_card.id;
                         }
                         // Update notes lock status
                         notesLockStatus = data.present_mode_data.notes_lock;
-                        // Update comments and agreements
+
+                        // Only update comments/agreements if they actually changed
+                        // This prevents the flash when content is the same
                         if (data.present_mode_data.comments) {
-                            comments = data.present_mode_data.comments;
+                            const newComments = data.present_mode_data.comments;
+                            const commentsChanged =
+                                comments.length !== newComments.length ||
+                                !comments.every((c, i) => c.id === newComments[i]?.id);
+
+                            if (commentsChanged) {
+                                comments = newComments;
+                            }
                         }
                         if (data.present_mode_data.agreements) {
-                            agreements = data.present_mode_data.agreements;
+                            const newAgreements = data.present_mode_data.agreements;
+                            const agreementsChanged =
+                                agreements.length !== newAgreements.length ||
+                                !agreements.every((a, i) => a.id === newAgreements[i]?.id);
+
+                            if (agreementsChanged) {
+                                agreements = newAgreements;
+                            }
                         }
                     } else {
                         loadPresentModeData();
@@ -779,6 +809,11 @@
 
     let currentScene = $derived(
         board?.scenes?.find((s: any) => s.id === board.currentSceneId),
+    );
+
+    // Derive selected card for Present mode - preserves object identity when card data hasn't changed
+    let selectedCard = $derived(
+        cards.find((c: any) => c.id === currentScene?.selectedCardId) || null
     );
 
     // Filter columns based on current scene visibility settings
@@ -2303,9 +2338,7 @@
                 scene={currentScene}
                 currentUser={user}
                 {cards}
-                selectedCard={cards.find(
-                    (c) => c.id === currentScene.selectedCardId,
-                ) || null}
+                {selectedCard}
                 {comments}
                 {agreements}
                 isAdmin={userRole === "admin"}

@@ -4,6 +4,8 @@
   import { parseRPNString, serializeRPNExpression } from '$lib/utils/rpn-parser';
   import { extractPathsFromJSON } from '$lib/utils/json-path-extractor';
   import { validateRPNCondition, type ValidationResult } from '$lib/utils/rpn-validator';
+  import Modal from '$lib/components/ui/Modal.svelte';
+  import Icon from '$lib/components/ui/Icon.svelte';
 
   interface Props {
     seriesId: string;
@@ -48,6 +50,9 @@
 
   // Validation state - map of rule index to validation result
   let ruleValidations = $state<Map<number, ValidationResult>>(new Map());
+
+  // RPN help modal state
+  let showRPNHelpModal = $state(false);
   // Validation state for threshold rules - map of "ruleIndex-thresholdIndex" to validation result
   let thresholdRuleValidations = $state<Map<string, ValidationResult>>(new Map());
 
@@ -830,14 +835,24 @@
 
                       <div class="form-group">
                         <label>Condition (RPN Expression)</label>
-                        <input
-                          type="text"
-                          bind:value={rule.condition}
-                          onblur={saveDatasource}
-                          placeholder="e.g., get_json_value count 10 gt"
-                          disabled={!canEdit}
-                          class:validation-error={ruleValidations.get(index) && !ruleValidations.get(index)!.valid}
-                        />
+                        <div class="input-with-button">
+                          <input
+                            type="text"
+                            bind:value={rule.condition}
+                            onblur={saveDatasource}
+                            placeholder="e.g., $.count 10 gt"
+                            disabled={!canEdit}
+                            class:validation-error={ruleValidations.get(index) && !ruleValidations.get(index)!.valid}
+                          />
+                          <button
+                            type="button"
+                            class="help-button"
+                            onclick={() => showRPNHelpModal = true}
+                            title="Show RPN operators help"
+                          >
+                            <Icon name="info" circle size="sm" />
+                          </button>
+                        </div>
                         {#if ruleValidations.get(index)}
                           {@const validation = ruleValidations.get(index)!}
                           {#if !validation.valid}
@@ -853,7 +868,7 @@
                             </div>
                           {/if}
                         {/if}
-                        <small>Stack-based expression. Example: "get_json_value count 10 gt" means count > 10</small>
+                        <small>Stack-based expression. Example: "$.count 10 gt" means count > 10</small>
                       </div>
 
                       <div class="form-group">
@@ -997,6 +1012,203 @@
     {/if}
   </div>
 </div>
+
+<!-- RPN Help Modal -->
+<Modal
+  show={showRPNHelpModal}
+  title="RPN (Reverse Polish Notation) Operators"
+  onClose={() => showRPNHelpModal = false}
+  size="lg"
+>
+  {#snippet children()}
+    <div class="rpn-help-content">
+      <p class="rpn-intro">
+        RPN expressions are evaluated using a stack. Values are pushed onto the stack,
+        and operators pop values, perform operations, and push results back.
+      </p>
+
+      <h4>Data Access</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>$</code>
+          <span>Pushes the current iteration value (or root if not iterating)</span>
+        </div>
+        <div class="operator-item">
+          <code>$.field</code>
+          <span>Pushes the value of "field" from the current iteration context. Example: <code>$.count</code></span>
+        </div>
+        <div class="operator-item">
+          <code>get path</code>
+          <span>Pushes the value at the specified path. Takes the next token as the path parameter. Example: <code>get count</code></span>
+        </div>
+        <div class="operator-item">
+          <code>literal value</code>
+          <span>Pushes a literal value onto the stack. Takes the next token as the value. Example: <code>literal "Hello"</code></span>
+        </div>
+      </div>
+
+      <h4>Stack Manipulation</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>dup</code>
+          <span>Duplicates the top value on the stack</span>
+        </div>
+        <div class="operator-item">
+          <code>swap</code>
+          <span>Swaps the top two values on the stack</span>
+        </div>
+        <div class="operator-item">
+          <code>drop</code>
+          <span>Removes the top value from the stack</span>
+        </div>
+      </div>
+
+      <h4>Comparison Operators</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>eq</code>
+          <span>Equals: Pops two values (b, a), pushes true if a === b</span>
+        </div>
+        <div class="operator-item">
+          <code>ne</code>
+          <span>Not equals: Pops two values (b, a), pushes true if a !== b</span>
+        </div>
+        <div class="operator-item">
+          <code>gt</code>
+          <span>Greater than: Pops two values (b, a), pushes true if a &gt; b</span>
+        </div>
+        <div class="operator-item">
+          <code>gte</code>
+          <span>Greater than or equal: Pops two values (b, a), pushes true if a &gt;= b</span>
+        </div>
+        <div class="operator-item">
+          <code>lt</code>
+          <span>Less than: Pops two values (b, a), pushes true if a &lt; b</span>
+        </div>
+        <div class="operator-item">
+          <code>lte</code>
+          <span>Less than or equal: Pops two values (b, a), pushes true if a &lt;= b</span>
+        </div>
+      </div>
+
+      <h4>Logical Operators</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>and</code>
+          <span>Logical AND: Pops two values (b, a), pushes a &amp;&amp; b</span>
+        </div>
+        <div class="operator-item">
+          <code>or</code>
+          <span>Logical OR: Pops two values (b, a), pushes a || b</span>
+        </div>
+        <div class="operator-item">
+          <code>not</code>
+          <span>Logical NOT: Pops one value, pushes !value</span>
+        </div>
+      </div>
+
+      <h4>Arithmetic Operators</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>add</code>
+          <span>Addition: Pops two values (b, a), pushes a + b</span>
+        </div>
+        <div class="operator-item">
+          <code>sub</code>
+          <span>Subtraction: Pops two values (b, a), pushes a - b</span>
+        </div>
+        <div class="operator-item">
+          <code>mul</code>
+          <span>Multiplication: Pops two values (b, a), pushes a * b</span>
+        </div>
+        <div class="operator-item">
+          <code>div</code>
+          <span>Division: Pops two values (b, a), pushes a / b (throws error if b is 0)</span>
+        </div>
+        <div class="operator-item">
+          <code>mod</code>
+          <span>Modulo: Pops two values (b, a), pushes a % b</span>
+        </div>
+      </div>
+
+      <h4>String Operators</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>concat</code>
+          <span>Concatenation: Pops two values (b, a), pushes a + b as strings</span>
+        </div>
+        <div class="operator-item">
+          <code>contains</code>
+          <span>Substring test: Pops two values (substring, string), pushes true if string contains substring</span>
+        </div>
+        <div class="operator-item">
+          <code>matches_regex</code>
+          <span>Regex test: Pops two values (pattern, string), pushes true if string matches the regex pattern</span>
+        </div>
+      </div>
+
+      <h4>Aggregation Functions</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>count</code>
+          <span>Pops an array, pushes its length</span>
+        </div>
+        <div class="operator-item">
+          <code>sum</code>
+          <span>Pops an array of numbers, pushes their sum</span>
+        </div>
+        <div class="operator-item">
+          <code>avg</code>
+          <span>Pops an array of numbers, pushes their average</span>
+        </div>
+        <div class="operator-item">
+          <code>min</code>
+          <span>Pops an array of numbers, pushes the minimum value</span>
+        </div>
+        <div class="operator-item">
+          <code>max</code>
+          <span>Pops an array of numbers, pushes the maximum value</span>
+        </div>
+      </div>
+
+      <h4>Date Functions</h4>
+      <div class="operator-list">
+        <div class="operator-item">
+          <code>days_since</code>
+          <span>Pops a date string, pushes the number of days since that date (ISO format)</span>
+        </div>
+        <div class="operator-item">
+          <code>days_since_uk</code>
+          <span>Pops a UK-formatted date string (DD/MMM/YY HH:mm AM/PM), pushes the number of days since that date</span>
+        </div>
+      </div>
+
+      <h4>Examples</h4>
+      <div class="example-list">
+        <div class="example-item">
+          <code>$ 10 gt</code>
+          <span>True if the current value is greater than 10</span>
+        </div>
+        <div class="example-item">
+          <code>$.count 5 gte $.count 20 lte and</code>
+          <span>True if count is between 5 and 20 (inclusive)</span>
+        </div>
+        <div class="example-item">
+          <code>$.status literal "active" eq</code>
+          <span>True if status equals "active"</span>
+        </div>
+        <div class="example-item">
+          <code>$.items count 0 gt</code>
+          <span>True if items array has at least one element</span>
+        </div>
+        <div class="example-item">
+          <code>$.created_at days_since 30 lt</code>
+          <span>True if created within the last 30 days</span>
+        </div>
+      </div>
+    </div>
+  {/snippet}
+</Modal>
 
 <style>
   .scorecard-manager {
@@ -1549,5 +1761,93 @@
     outline: none;
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+
+  /* Input with Button Layout */
+  .input-with-button {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .input-with-button input {
+    flex: 1;
+  }
+
+  .help-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+  }
+
+  .help-button:hover {
+    opacity: 0.7;
+  }
+
+  /* RPN Help Modal Content */
+  .rpn-help-content {
+    font-size: 0.9375rem;
+  }
+
+  .rpn-intro {
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-left: 3px solid #007bff;
+    line-height: 1.6;
+  }
+
+  .rpn-help-content h4 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #343a40;
+  }
+
+  .rpn-help-content h4:first-of-type {
+    margin-top: 0;
+  }
+
+  .operator-list,
+  .example-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .operator-item,
+  .example-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+  }
+
+  .operator-item code,
+  .example-item code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0056b3;
+    background-color: #e7f1ff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    align-self: flex-start;
+  }
+
+  .operator-item span,
+  .example-item span {
+    color: #495057;
+    line-height: 1.5;
   }
 </style>
