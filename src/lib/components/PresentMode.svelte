@@ -369,7 +369,9 @@
                                     {selectedCard.voteCount}
                                 </div>
                                 <div class="vote-count-label">
-                                    {selectedCard.voteCount === 1 ? "vote" : "votes"}
+                                    {selectedCard.voteCount === 1
+                                        ? "vote"
+                                        : "votes"}
                                 </div>
                             </div>
                         {/key}
@@ -418,7 +420,10 @@
                     <h3 class="section-title">Agreements:</h3>
                     <div class="agreements-list">
                         {#each agreements as agreement (agreement.id)}
-                            <div class="agreement" transition:fade={{ duration: 200 }}>
+                            <div
+                                class="agreement"
+                                transition:fade={{ duration: 200 }}
+                            >
                                 <div class="agreement-content">
                                     {agreement.content}
                                 </div>
@@ -474,18 +479,27 @@
                                                 addReaction(emoji);
                                             }}
                                         >
-                                            <span class="reaction-emoji">{emoji}</span>
-                                            <span class="reaction-count">{count}</span>
+                                            <span class="reaction-emoji"
+                                                >{emoji}</span
+                                            >
+                                            <span class="reaction-count"
+                                                >{count}</span
+                                            >
                                         </button>
                                     {:else}
                                         <span
                                             class="reaction-pill"
-                                            title="{count} {emoji} reaction{count !== 1
+                                            title="{count} {emoji} reaction{count !==
+                                            1
                                                 ? 's'
                                                 : ''}"
                                         >
-                                            <span class="reaction-emoji">{emoji}</span>
-                                            <span class="reaction-count">{count}</span>
+                                            <span class="reaction-emoji"
+                                                >{emoji}</span
+                                            >
+                                            <span class="reaction-count"
+                                                >{count}</span
+                                            >
                                         </span>
                                     {/if}
                                 {/each}
@@ -513,7 +527,10 @@
                     {/if}
                     <div class="comments-list">
                         {#each regularComments as comment (comment.id)}
-                            <div class="comment" transition:fade={{ duration: 200 }}>
+                            <div
+                                class="comment"
+                                transition:fade={{ duration: 200 }}
+                            >
                                 <div class="comment-content">
                                     {comment.content}
                                 </div>
@@ -665,13 +682,6 @@
         position: relative;
     }
 
-    .panel-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        margin-bottom: var(--spacing-4);
-        color: var(--color-text-primary);
-    }
-
     .cards-list {
         display: flex;
         flex-direction: column;
@@ -801,13 +811,6 @@
         margin-bottom: var(--spacing-6);
     }
 
-    .card-title {
-        font-size: 1.75rem;
-        font-weight: 600;
-        margin-bottom: var(--spacing-4);
-        color: var(--color-text-primary);
-    }
-
     .card-content-with-votes {
         display: flex;
         gap: var(--spacing-6);
@@ -859,18 +862,6 @@
         color: var(--color-text-muted);
         font-style: italic;
         margin-bottom: var(--spacing-4);
-    }
-
-    .vote-count {
-        font-size: 1rem;
-        color: var(--color-text-muted);
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-
-        .vote-icon {
-            font-size: 1.25rem;
-        }
     }
 
     .notes-section,
@@ -952,28 +943,6 @@
     .reaction-count {
         color: var(--card-text-secondary);
         font-weight: 500;
-    }
-
-    .notes-display {
-        padding: var(--spacing-4);
-        background: var(--surface-elevated);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        min-height: 100px;
-        white-space: pre-wrap;
-        color: var(--color-text-primary);
-        font-size: 0.9375rem;
-        line-height: 1.5;
-
-        &.editable {
-            cursor: text;
-            transition: all 0.2s;
-
-            &:hover {
-                background: white;
-                border-color: var(--color-border);
-            }
-        }
     }
 
     .notes-editor-container {
@@ -1174,45 +1143,5 @@
         font-size: 1rem;
         color: var(--color-text-muted);
         max-width: 400px;
-    }
-
-    .nav-arrow {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 50%;
-        width: 2rem;
-        height: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        z-index: 10;
-
-        &:hover {
-            background: var(--surface-hover);
-            border-color: var(--color-primary);
-        }
-
-        &.nav-arrow-left {
-            left: -1rem;
-        }
-
-        &.nav-arrow-right {
-            right: -1rem;
-        }
-
-        span {
-            font-size: 1.25rem;
-            line-height: 1;
-            color: var(--color-text-muted);
-        }
-
-        &:hover span {
-            color: var(--color-text-primary);
-        }
     }
 </style>

@@ -1160,12 +1160,6 @@
             border-bottom: 3px solid #007bff;
         }
 
-        .drag-handle {
-            margin-right: 0.5rem;
-            color: #999;
-            cursor: grab;
-        }
-
         span {
             flex: 1;
             overflow: hidden;
@@ -1235,11 +1229,6 @@
             font-weight: 500;
         }
 
-        h4 {
-            margin: 0 0 var(--spacing-2) 0;
-            font-size: var(--text-md);
-            font-weight: 500;
-        }
     }
 
     .detail-form {
@@ -1341,31 +1330,6 @@
 
         &:hover {
             background: #c82333;
-        }
-
-        &.btn-sm {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.8125rem;
-        }
-    }
-
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-
-        &:hover {
-            background: #5a6268;
-        }
-
-        &.btn-sm {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.8125rem;
         }
     }
 

@@ -327,7 +327,7 @@
         margin: 0;
     }
 
-    .register-submit-button {
+    :global(.register-submit-button) {
         width: 100%;
         margin-top: var(--spacing-6);
     }

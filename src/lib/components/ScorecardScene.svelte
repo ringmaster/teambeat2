@@ -777,10 +777,6 @@
         text-align: center;
         padding: 3rem;
         color: var(--text-secondary);
-
-        p {
-            margin: 0.5rem 0;
-        }
     }
 
     .error-message {

@@ -718,12 +718,6 @@
         height: 14px;
     }
 
-    .card-actions {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-    }
-
     /* Button styles */
     .card button {
         transition: all 0.2s ease;
@@ -759,30 +753,6 @@
     .delete-button:hover {
         color: var(--card-delete-button-hover);
         background-color: var(--card-delete-button-background);
-    }
-
-    /* Comment button */
-    .comment-button {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 8px;
-        background-color: var(--card-comment-button-background);
-        color: white;
-        font-size: 0.75rem;
-        border-radius: 9999px;
-        border: none;
-        cursor: pointer;
-    }
-
-    .comment-button:hover {
-        background-color: var(--card-comment-button-hover);
-    }
-
-    /* Author text */
-    .author-text {
-        font-size: 0.75rem;
-        color: var(--card-text-secondary);
     }
 
     /* Card main container */

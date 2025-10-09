@@ -2474,7 +2474,7 @@
 />
 
 <style lang="less">
-    @import "$lib/styles/app.less";
+    @import "$lib/styles/_mixins.less";
     .connection-status {
         position: fixed;
         top: 1rem;
