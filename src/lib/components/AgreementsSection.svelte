@@ -2,7 +2,8 @@
     interface Agreement {
         id: string;
         content: string;
-        cardTitle: string;
+        cardTitle: string | null;
+        source?: 'agreement' | 'comment';
     }
 
     interface Props {
@@ -39,9 +40,15 @@
         {#each agreements as agreement (agreement.id)}
             <li class="agreement-item">
                 <div class="agreement-content">{agreement.content}</div>
-                <div class="agreement-source">
-                    from: {agreement.cardTitle}
-                </div>
+                {#if agreement.cardTitle}
+                    <div class="agreement-source">
+                        from: {agreement.cardTitle}
+                    </div>
+                {:else}
+                    <div class="agreement-source">
+                        board-level agreement
+                    </div>
+                {/if}
             </li>
         {/each}
     </ul>

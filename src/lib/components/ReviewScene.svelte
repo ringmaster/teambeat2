@@ -20,10 +20,11 @@
     let viewMode = $state<ViewMode>("by-column");
     let copying = $state(false);
     let allComments = $state<Comment[]>([]);
+    let allAgreements = $state<any[]>([]);
     let loading = $state(true);
 
     onMount(async () => {
-        await loadComments();
+        await Promise.all([loadComments(), loadAgreements()]);
     });
 
     async function loadComments() {
@@ -36,6 +37,19 @@
         } catch (error) {
             console.error("Failed to load comments:", error);
             toastStore.error("Failed to load comments");
+        }
+    }
+
+    async function loadAgreements() {
+        try {
+            const response = await fetch(`/api/boards/${board.id}/agreements`);
+            if (response.ok) {
+                const data = await response.json();
+                allAgreements = data.agreements || [];
+            }
+        } catch (error) {
+            console.error("Failed to load agreements:", error);
+            toastStore.error("Failed to load agreements");
         } finally {
             loading = false;
         }
@@ -139,20 +153,22 @@
         return columnMap;
     });
 
-    // Get agreement comments
+    // Get agreements (both board-level and comment-based)
     const agreements = $derived(() => {
-        return allComments
-            .filter((comment) => comment.isAgreement && !comment.isReaction)
-            .map((comment) => {
-                const card = visibleCards().find(
-                    (c) => c.id === comment.cardId,
-                );
+        return allAgreements.map((agreement) => {
+            // For comment-based agreements, include card context
+            if (agreement.source === 'comment' && agreement.cardId) {
                 return {
-                    ...comment,
-                    cardTitle: card?.content || "Unknown Card",
+                    ...agreement,
+                    cardTitle: agreement.cardContent || "Unknown Card",
                 };
-            })
-            .filter((agreement) => agreement.cardTitle !== "Unknown Card"); // Only show agreements for visible cards
+            }
+            // For board-level agreements, no card context needed
+            return {
+                ...agreement,
+                cardTitle: null,
+            };
+        });
     });
 
     // Get regular comments (non-reactions, non-agreements) grouped by card
@@ -290,7 +306,10 @@
         if (agreementList.length > 0) {
             md += `## Agreements\n\n`;
             for (const agreement of agreementList) {
-                md += `- [ ] ${agreement.content} (from: ${agreement.cardTitle})\n`;
+                const source = agreement.cardTitle
+                    ? `from: ${agreement.cardTitle}`
+                    : 'board-level agreement';
+                md += `- [ ] ${agreement.content} (${source})\n`;
             }
         }
 
@@ -415,7 +434,10 @@
         if (agreementList.length > 0) {
             html += `<h2>Agreements</h2>\n<ul style="list-style-type: none; padding-left: 0;">\n`;
             for (const agreement of agreementList) {
-                html += `<li><input type="checkbox" /> ${escapeHtml(agreement.content)} (from: ${escapeHtml(agreement.cardTitle)})</li>\n`;
+                const source = agreement.cardTitle
+                    ? `from: ${escapeHtml(agreement.cardTitle)}`
+                    : 'board-level agreement';
+                html += `<li><input type="checkbox" /> ${escapeHtml(agreement.content)} (${source})</li>\n`;
             }
             html += `</ul>\n`;
         }
@@ -602,6 +624,7 @@
 </div>
 
 <style lang="less">
+    @import "$lib/styles/_mixins.less";
     .review-scene {
         display: flex;
         flex-direction: column;
@@ -719,7 +742,18 @@
     .all-cards-section {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        .page-width();
+        gap: 1rem;
+        width: 100%;
+        background-color: white;
+        backdrop-filter: none;
+        border: none;
+        box-shadow: 0 1px 3px #000000;
+        border-radius: 1rem;
+        padding: var(--spacing-8);
+        box-shadow: var(--shadow-xl);
+        margin: 0 auto;
+        width: 60%;
     }
 
     .section-title {
