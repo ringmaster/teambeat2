@@ -16,6 +16,7 @@
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
     import Timer from "$lib/components/Timer.svelte";
+    import PollDropdown, { type PollConfig } from "$lib/components/PollDropdown.svelte";
     import { toastStore } from "$lib/stores/toast";
     import { resolve } from "$app/paths";
     import { SSEClient } from "$lib/client/sse-client.js";
@@ -122,14 +123,17 @@
     let comments = $state<any[]>([]);
     let agreements = $state<any[]>([]);
 
-    // Timer state
+    // Poll/Timer state
+    let showPollDropdown = $state(false);
     let timerVisible = $state(false);
     let hasActiveTimer = $derived(
         board?.timerStart && board?.timerDuration ? true : false,
     );
     let timerRef: any = $state(null);
-    let timerVotesA = $state(0);
-    let timerVotesB = $state(0);
+    let pollType = $state<PollConfig["type"]>("timer");
+    let pollQuestion = $state("");
+    let pollChoices = $state<string[]>([]);
+    let pollVotes = $state<Record<string, number>>({});
     let timerTotalVotes = $state(0);
     let pendingTimerInit = $state<{
         remaining: number;
@@ -776,9 +780,13 @@
                 const payload = data.data;
 
                 if (payload) {
-                    // Update votes and total users
-                    timerVotesA = payload.votes?.A || 0;
-                    timerVotesB = payload.votes?.B || 0;
+                    // Update poll type and configuration
+                    pollType = payload.poll_type || "timer";
+                    pollQuestion = payload.question || "";
+                    pollChoices = payload.choices || [];
+
+                    // Update votes
+                    pollVotes = payload.votes || {};
                     timerTotalVotes = payload.totalUsers || 0;
 
                     // Update timer display state
@@ -1203,7 +1211,7 @@
         }
     }
 
-    async function handleTimerVote(choice: "A" | "B") {
+    async function handlePollVote(choice: string) {
         if (!boardId || !board.timerStart) return;
 
         try {
@@ -1219,12 +1227,56 @@
 
             if (response.ok) {
                 const data = await response.json();
-                timerTotalVotes = data.totalUsers;
+                // The API returns the broadcast message with updated vote data
+                // Apply it immediately so the voting client sees the update
+                if (data.message && data.message.data) {
+                    const payload = data.message.data;
+                    pollVotes = payload.votes || {};
+                    timerTotalVotes = payload.totalUsers || 0;
+                }
             } else {
-                console.error("Failed to submit timer vote:", response.status);
+                console.error("Failed to submit poll vote:", response.status);
             }
         } catch (error) {
-            console.error("Error submitting timer vote:", error);
+            console.error("Error submitting poll vote:", error);
+        }
+    }
+
+    async function handlePollStart(config: PollConfig) {
+        if (!boardId || (userRole !== "admin" && userRole !== "facilitator"))
+            return;
+
+        try {
+            const response = await fetch(`/api/boards/${boardId}/timer`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    duration: config.durationSeconds,
+                    pollType: config.type,
+                    question: config.question,
+                    choices: config.choices,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Set poll configuration BEFORE calling setTimer so the component has the right pollType
+                pollType = config.type;
+                pollQuestion = config.question || "";
+                pollChoices = config.choices || [];
+
+                if (data.timer && timerRef) {
+                    timerRef.setTimer(
+                        data.timer.timer_remaining,
+                        data.timer.timer_passed,
+                    );
+                }
+                showPollDropdown = false;
+            } else {
+                console.error("Failed to start poll:", response.status);
+            }
+        } catch (error) {
+            console.error("Failed to start poll:", error);
         }
     }
 
@@ -1232,26 +1284,12 @@
         if (!boardId || (userRole !== "admin" && userRole !== "facilitator"))
             return;
 
-        // If timer is not running, start it with the specified duration
+        // If timer is not running, start a simple timer with the specified duration
         if (timerRef && !board?.timerStart) {
-            try {
-                const response = await fetch(`/api/boards/${boardId}/timer`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ duration: seconds }),
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.timer && timerRef) {
-                        timerRef.setTimer(
-                            data.timer.timer_remaining,
-                            data.timer.timer_passed,
-                        );
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to start timer:", error);
-            }
+            await handlePollStart({
+                type: "timer",
+                durationSeconds: seconds,
+            });
         } else {
             // Timer is running, add time to it
             try {
@@ -1289,14 +1327,87 @@
         }
     }
 
-    function showTimer() {
+    async function handleRecordAgreement(pollData: {
+        pollType: string;
+        question: string;
+        choices: string[];
+        votes: Record<string, number>;
+        votingOptions: Array<{ key: string; label: string; icon: string }>;
+    }) {
+        if (!boardId || (userRole !== "admin" && userRole !== "facilitator"))
+            return;
+
+        // Build sorted results with vote counts
+        const results = pollData.votingOptions
+            .map((option) => ({
+                label: option.label,
+                votes: pollData.votes[option.key] || 0,
+            }))
+            .sort((a, b) => b.votes - a.votes) // Sort descending by votes
+            .map((item) => `- ${item.label} (${item.votes})`)
+            .join("\n");
+
+        const agreementText = `**${pollData.question}**\n${results}`;
+
+        try {
+            // Determine if we're in Present mode with an active card
+            const inPresentMode = currentScene?.mode === "present" && selectedCard;
+
+            if (inPresentMode && selectedCard) {
+                // Record as comment on the active card
+                const response = await fetch(
+                    `/api/comments`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            card_id: selectedCard.id,
+                            content: agreementText,
+                            is_agreement: true,
+                        }),
+                    },
+                );
+
+                if (!response.ok) {
+                    console.error("Failed to record poll as card comment");
+                    toastStore.error("Failed to record poll results");
+                    return;
+                }
+            } else {
+                // Record as board-level agreement
+                const response = await fetch(
+                    `/api/boards/${boardId}/agreements`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            content: agreementText,
+                        }),
+                    },
+                );
+
+                if (!response.ok) {
+                    console.error("Failed to record poll as board agreement");
+                    toastStore.error("Failed to record poll results");
+                    return;
+                }
+            }
+
+            // Stop the timer after recording
+            await handleTimerStop();
+
+            toastStore.success("Poll results recorded");
+        } catch (error) {
+            console.error("Failed to record poll agreement:", error);
+            toastStore.error("Failed to record poll results");
+        }
+    }
+
+    function showPoll() {
         if (userRole !== "admin" && userRole !== "facilitator") return;
 
-        // Just show the timer at 0 seconds - user can add time via menu
-        if (timerRef && !hasActiveTimer) {
-            timerRef.setTimer(0, 0);
-        }
-        timerVisible = true;
+        // Show the poll configuration dropdown
+        showPollDropdown = true;
     }
 
     async function increaseVotingAllocation() {
@@ -2299,7 +2410,7 @@
         onShowSceneDropdown={(show) => (showSceneDropdown = show)}
         onIncreaseAllocation={increaseVotingAllocation}
         onResetVotes={resetBoardVotes}
-        onStartTimer={() => showTimer()}
+        onStartTimer={() => showPoll()}
     />
 
     <!-- Connection Status Indicator -->
@@ -2465,19 +2576,27 @@
     }}
 />
 
-<!-- Timer Component -->
+<!-- Poll Dropdown -->
+<PollDropdown
+    visible={showPollDropdown}
+    onStartPoll={handlePollStart}
+    onClose={() => (showPollDropdown = false)}
+/>
+
+<!-- Timer/Poll Component -->
 <Timer
     bind:this={timerRef}
     visible={timerVisible}
     enableMenu={userRole === "admin" || userRole === "facilitator"}
-    labelA="More Time"
-    labelB="Move On"
-    votesA={timerVotesA}
-    votesB={timerVotesB}
+    {pollType}
+    question={pollQuestion}
+    choices={pollChoices}
+    votes={pollVotes}
     totalVotes={timerTotalVotes}
-    onvote={handleTimerVote}
+    onvote={handlePollVote}
     onaddtime={handleTimerAdd}
     onstopTimer={handleTimerStop}
+    onrecordagreement={handleRecordAgreement}
 />
 
 <style lang="less">

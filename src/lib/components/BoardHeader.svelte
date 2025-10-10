@@ -152,11 +152,11 @@
             {#if ["admin", "facilitator"].includes(userRole) && onStartTimer}
                 <button
                     class="toolbar-button facilitator-timer cooltipz--bottom"
-                    aria-label="Start a timer for this board"
+                    aria-label="Start a poll for this board"
                     onclick={onStartTimer}
                 >
                     <Icon name="clock" size="sm" />
-                    <span>Timer</span>
+                    <span>Poll</span>
                 </button>
             {/if}
 

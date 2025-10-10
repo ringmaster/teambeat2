@@ -10,6 +10,49 @@ import { v4 as uuidv4 } from 'uuid';
 // In-memory store for timer votes
 const timerVotes = new Map<string, { A: Set<string>; B: Set<string> }>();
 
+// In-memory store for poll configurations (supports different poll types)
+interface PollConfig {
+  pollType: 'timer' | 'roman' | 'fist-of-five' | 'multiple-choice';
+  question?: string;
+  choices?: string[];
+}
+const pollConfigs = new Map<string, PollConfig>();
+
+// In-memory store for poll votes (for non-timer polls)
+const pollVotes = new Map<string, Map<string, string>>();
+
+export function setPollConfig(boardId: string, config: PollConfig) {
+  pollConfigs.set(boardId, config);
+}
+
+export function getPollConfig(boardId: string): PollConfig | null {
+  return pollConfigs.get(boardId) || null;
+}
+
+export function clearPollConfig(boardId: string) {
+  pollConfigs.delete(boardId);
+  pollVotes.delete(boardId);
+}
+
+export function recordPollVote(boardId: string, userId: string, choice: string) {
+  if (!pollVotes.has(boardId)) {
+    pollVotes.set(boardId, new Map());
+  }
+  const votes = pollVotes.get(boardId)!;
+  votes.set(userId, choice);
+}
+
+export function getPollVotes(boardId: string): Record<string, number> {
+  const votes = pollVotes.get(boardId);
+  if (!votes) return {};
+
+  const counts: Record<string, number> = {};
+  for (const [_, choice] of votes) {
+    counts[choice] = (counts[choice] || 0) + 1;
+  }
+  return counts;
+}
+
 export function recordTimerVote(timerId: string, userId: string, choice: 'A' | 'B') {
   if (!timerVotes.has(timerId)) {
     timerVotes.set(timerId, { A: new Set(), B: new Set() });
@@ -230,8 +273,18 @@ export async function updateBoardStatus(boardId: string, status: 'draft' | 'acti
     .where(eq(boards.id, boardId));
 }
 
-export async function startBoardTimer(boardId: string, duration: number) {
+export async function startBoardTimer(
+  boardId: string,
+  duration: number,
+  pollType: 'timer' | 'roman' | 'fist-of-five' | 'multiple-choice' = 'timer',
+  question?: string,
+  choices?: string[]
+) {
   const now = new Date().toISOString();
+
+  // Store poll configuration in memory
+  setPollConfig(boardId, { pollType, question, choices });
+
   const [result] = await db
     .update(boards)
     .set({
@@ -290,6 +343,9 @@ export async function updateBoardTimer(boardId: string, addSeconds: number) {
 }
 
 export async function stopBoardTimer(boardId: string) {
+  // Clear poll configuration and votes
+  clearPollConfig(boardId);
+
   const [result] = await db
     .update(boards)
     .set({
@@ -321,11 +377,17 @@ export async function getBoardTimer(boardId: string) {
   const elapsed = Math.floor((now - start) / 1000);
   const remaining = Math.max(0, board.timerDuration - elapsed);
 
+  // Get poll configuration
+  const pollConfig = getPollConfig(boardId);
+
   return {
     timer_start: board.timerStart,
     timer_passed: elapsed,
     timer_remaining: remaining,
-    active: !!board.timerStart //remaining > 0
+    active: !!board.timerStart, //remaining > 0
+    poll_type: pollConfig?.pollType || 'timer',
+    question: pollConfig?.question,
+    choices: pollConfig?.choices
   };
 }
 
@@ -335,7 +397,16 @@ export async function broadcastTimerUpdate(boardId: string) {
   let totalUsers = 0;
 
   if (timerData && timerData.timer_start) {
-    voteData = getTimerVotes(timerData.timer_start);
+    const pollConfig = getPollConfig(boardId);
+
+    // For timer mode, use the old A/B vote system
+    // For other poll types, use the new poll vote system
+    if (pollConfig?.pollType === 'timer') {
+      voteData = getTimerVotes(timerData.timer_start);
+    } else {
+      voteData = getPollVotes(boardId);
+    }
+
     totalUsers = sseManager.getConnectedUsers(boardId).length;
   }
 

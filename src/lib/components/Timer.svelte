@@ -5,27 +5,35 @@
     interface Props {
         visible?: boolean;
         enableMenu?: boolean;
-        labelA?: string;
-        labelB?: string;
-        votesA?: number;
-        votesB?: number;
+        pollType?: "timer" | "roman" | "fist-of-five" | "multiple-choice";
+        question?: string;
+        choices?: string[];
+        votes?: Record<string, number>;
         totalVotes?: number;
-        onvote?: (choice: "A" | "B") => void;
+        onvote?: (choice: string) => void;
         onaddtime?: (seconds: number) => void;
         onstopTimer?: () => void;
+        onrecordagreement?: (pollData: {
+            pollType: string;
+            question: string;
+            choices: string[];
+            votes: Record<string, number>;
+            votingOptions: Array<{ key: string; label: string; icon: string }>;
+        }) => void;
     }
 
     let {
         visible = false,
         enableMenu = false,
-        labelA = "More Time",
-        labelB = "Move On",
-        votesA = 0,
-        votesB = 0,
+        pollType = "timer",
+        question = "",
+        choices = [],
+        votes = {},
         totalVotes = 0,
         onvote,
         onaddtime,
         onstopTimer,
+        onrecordagreement,
     }: Props = $props();
 
     let remaining = $state(0);
@@ -130,15 +138,28 @@
             _stopTick();
             new Audio("/alarmding1.mp3").play();
         }
-        _updateVotingState(false);
+        // Only update voting state during tick for timer mode
+        // For other poll types, votes are always shown
+        if (pollType === "timer") {
+            _updateVotingState(false);
+        }
     }
 
     function _updateVotingState(_fromSetTimer: boolean) {
         const was = showVotes;
-        showVotes =
-            remaining <= 10 ? true : remaining >= 11 ? false : showVotes;
-        if (!was && showVotes && remaining <= 10) {
-            animKey++;
+        // For timer mode, show votes at 10 seconds
+        // For voting polls, always show votes immediately
+        if (pollType === "timer") {
+            showVotes =
+                remaining <= 10 ? true : remaining >= 11 ? false : showVotes;
+            if (!was && showVotes && remaining <= 10) {
+                animKey++;
+            }
+        } else {
+            showVotes = true;
+            if (!was && showVotes && _fromSetTimer) {
+                animKey++;
+            }
         }
     }
 
@@ -177,17 +198,60 @@
         return `rgb(${red.join(",")})`;
     });
 
-    function percent(a: number, b: number, total: number): string {
-        const denom = total > 0 ? total : a + b;
-        const p = denom > 0 ? (a / denom) * 100 : 0;
+    function percent(count: number, total: number): string {
+        const p = total > 0 ? (count / total) * 100 : 0;
         return `${p.toFixed(0)}%`;
     }
 
-    function handleVote(choice: "A" | "B") {
+    function handleVote(choice: string) {
         if (onvote) {
             onvote(choice);
         }
     }
+
+    // Calculate the maximum vote count to highlight top votes
+    const maxVoteCount = $derived.by(() => {
+        const voteCounts = Object.values(votes);
+        return voteCounts.length > 0 ? Math.max(...voteCounts) : 0;
+    });
+
+    // Check if an option has the top vote count
+    function isTopVote(optionKey: string): boolean {
+        const voteCount = votes[optionKey] || 0;
+        return voteCount > 0 && voteCount === maxVoteCount;
+    }
+
+    // Build voting options based on poll type
+    const votingOptions = $derived.by(() => {
+        if (pollType === "timer") {
+            return [
+                { key: "A", label: "More Time", icon: "" },
+                { key: "B", label: "Move On", icon: "" },
+            ];
+        } else if (pollType === "roman") {
+            return [
+                { key: "support", label: "Support", icon: "👍" },
+                { key: "oppose", label: "Oppose", icon: "👎" },
+                { key: "abstain", label: "Abstain", icon: "👋" },
+            ];
+        } else if (pollType === "fist-of-five") {
+            return [
+                { key: "0", label: "0", icon: "" },
+                { key: "1", label: "1", icon: "" },
+                { key: "2", label: "2", icon: "" },
+                { key: "3", label: "3", icon: "" },
+                { key: "4", label: "4", icon: "" },
+                { key: "5", label: "5", icon: "" },
+            ];
+        } else if (pollType === "multiple-choice") {
+            return choices.map((choice, i) => ({
+                key: `choice_${i}`,
+                label: choice,
+                icon: "",
+            }));
+        }
+        return [];
+    });
 
     function handleAdd(seconds: number) {
         if (onaddtime) {
@@ -202,9 +266,33 @@
         }
     }
 
+    function handleRecordAgreement() {
+        hoverMenuOpen = false;
+        if (onrecordagreement) {
+            onrecordagreement({
+                pollType,
+                question,
+                choices,
+                votes,
+                votingOptions,
+            });
+        }
+    }
+
     $effect(() => {
         if (!visible) {
             _stopTick();
+        }
+    });
+
+    // Update voting state when poll type changes or when visible changes
+    $effect(() => {
+        // For non-timer poll types, always show votes immediately when running
+        if (pollType !== "timer" && running) {
+            if (!showVotes) {
+                showVotes = true;
+                animKey++;
+            }
         }
     });
 
@@ -220,46 +308,38 @@
 {#if visible}
     <div class="timer-root" transition:fly={{ y: 200, duration: 500 }}>
         <div
-            class="timerbox {showVotes ? 'expanded' : ''}"
+            class="timerbox {showVotes ? 'expanded' : ''} poll-type-{pollType}"
             data-anim-key={animKey}
         >
             {#if showVotes}
                 {#key animKey}
-                    <div class="timerdetail">
-                        <button
-                            class="vote-btn"
-                            onclick={() => handleVote("A")}
-                            tabindex="0"
-                        >
-                            <span class="vote-label">{labelA}</span>
-                            <div class="bar">
-                                <div
-                                    class="fill a"
-                                    style="width: {percent(
-                                        votesA,
-                                        votesB,
-                                        totalVotes,
-                                    )};"
-                                ></div>
+                    <div class="timerdetail poll-type-{pollType}">
+                        {#if pollType !== "timer" && question}
+                            <div class="poll-question-display">
+                                {question}
                             </div>
-                        </button>
-                        <button
-                            class="vote-btn"
-                            onclick={() => handleVote("B")}
-                            tabindex="0"
-                        >
-                            <span class="vote-label">{labelB}</span>
-                            <div class="bar">
-                                <div
-                                    class="fill b"
-                                    style="width: {percent(
-                                        votesB,
-                                        votesA,
-                                        totalVotes,
-                                    )};"
-                                ></div>
-                            </div>
-                        </button>
+                        {/if}
+                        {#each votingOptions as option}
+                            <button
+                                class="vote-btn"
+                                onclick={() => handleVote(option.key)}
+                                tabindex="0"
+                            >
+                                <span class="vote-label">
+                                    {#if option.icon}{option.icon}{/if}
+                                    {option.label}
+                                </span>
+                                <div class="bar">
+                                    <div
+                                        class="fill {isTopVote(option.key) ? 'top-vote' : ''}"
+                                        style="width: {percent(
+                                            votes[option.key] || 0,
+                                            totalVotes,
+                                        )};"
+                                    ></div>
+                                </div>
+                            </button>
+                        {/each}
                     </div>
                 {/key}
             {/if}
@@ -311,7 +391,10 @@
                         <button onclick={() => handleAdd(60)}>+ 1:00</button>
                         <button onclick={() => handleAdd(300)}>+ 5:00</button>
                         <hr />
-                        <button onclick={handleStopClick}>Stop Timer</button>
+                        {#if pollType !== "timer" && question}
+                            <button onclick={handleRecordAgreement}>Record as Agreement</button>
+                        {/if}
+                        <button onclick={handleStopClick}>Cancel Timer</button>
                     </div>
                 {/if}
             </div>
@@ -366,6 +449,7 @@
         padding: 0px;
         gap: 8px;
         align-items: end;
+        max-width: 90vw;
     }
 
     .timerdetail {
@@ -520,5 +604,50 @@
         border: 0;
         border-top: 1px solid #e1e4e8;
         margin: 4px 0;
+    }
+
+    .poll-question-display {
+        font-weight: 600;
+        font-size: 14px;
+        color: #24292e;
+        padding: 0 12px 8px 12px;
+        text-align: left;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    /* Fist of Five horizontal layout */
+    .timerbox.poll-type-fist-of-five.expanded {
+        width: auto;
+        min-width: 400px;
+        max-width: 600px;
+    }
+
+    .timerdetail.poll-type-fist-of-five {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px;
+    }
+
+    .timerdetail.poll-type-fist-of-five .vote-btn {
+        flex: 0 0 auto;
+        width: auto !important;
+        min-width: 60px;
+        max-width: 80px;
+        margin: 0;
+    }
+
+    .timerdetail.poll-type-fist-of-five .poll-question-display {
+        flex: 1 1 100%;
+        width: 100%;
+        text-align: center;
+        margin-bottom: 4px;
+    }
+
+    /* Top vote highlighting */
+    .fill.top-vote {
+        background: #28a745 !important;
     }
 </style>

@@ -20,13 +20,19 @@ export const POST: RequestHandler = async (event) => {
       return json({ success: false, error: 'Only admins and facilitators can manage timers' }, { status: 403 });
     }
 
-    const { duration } = await event.request.json();
+    const { duration, pollType, question, choices } = await event.request.json();
     if (typeof duration !== 'number' || duration <= 0) {
       return json({ success: false, error: 'Invalid duration' }, { status: 400 });
     }
 
-    // Start the timer
-    const updatedBoard = await startBoardTimer(boardId, duration);
+    // Start the timer with poll configuration
+    const updatedBoard = await startBoardTimer(
+      boardId,
+      duration,
+      pollType || 'timer',
+      question,
+      choices
+    );
 
     // Clear any previous votes for this new timer session
     if (updatedBoard.timerStart) {
