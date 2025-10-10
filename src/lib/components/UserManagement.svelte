@@ -97,12 +97,12 @@
     <!-- Add User Section -->
     {#if currentUserRole === "admin"}
         <div class="add-user-section">
-            <h4 class="section-header">Add User</h4>
+            <h4 class="section-header">Add Existing User To This Series</h4>
             <div class="add-user-form">
                 <input
                     type="email"
                     bind:value={newUserEmail}
-                    placeholder="Enter user email..."
+                    placeholder="Enter existing user's email..."
                     class="email-input"
                     disabled={addingUser}
                     onkeydown={(e) => {
