@@ -410,7 +410,7 @@
                         Welcome back{user?.name ? `, ${user.name}` : ""}!
                     </h1>
                     <p class="dashboard-subtitle">
-                        Ready to run an amazing retrospective?
+                        Ready to run an amazing team meeting?
                     </p>
                 </div>
                 <div class="add-series-form">
@@ -539,7 +539,10 @@
                                                 class="icon-button icon-button-primary cooltipz--bottom"
                                                 aria-label="Scorecards"
                                             >
-                                                <Icon name="scorecard" size="sm" />
+                                                <Icon
+                                                    name="scorecard"
+                                                    size="sm"
+                                                />
                                             </a>
                                         {/if}
                                         {#if s.role === "admin"}

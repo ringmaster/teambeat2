@@ -5,7 +5,8 @@
     <div class="welcome-container">
         <h1 class="welcome-title">Welcome to TeamBeat</h1>
         <p class="welcome-subtitle">
-            Please sign in to access your retrospectives
+            Please sign in to access your team meetings and collaborate
+            effectively.
         </p>
 
         <div class="welcome-actions">

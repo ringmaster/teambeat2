@@ -44,20 +44,20 @@
 </script>
 
 <svelte:head>
-    <title>TeamBeat - Collaborative Retrospectives</title>
+    <title>TeamBeat - Collaborative Team Meetings</title>
     <meta
         name="description"
-        content="Collaborative retrospective boards for agile teams. Run better retrospectives with real-time collaboration, voting, and action items."
+        content="Collaborative retrospective boards for agile teams. Run better team meetings with real-time collaboration, voting, and action items."
     />
 
     <!-- OpenGraph tags -->
     <meta
         property="og:title"
-        content="TeamBeat - Collaborative Retrospectives"
+        content="TeamBeat - Collaborative Team Meetings"
     />
     <meta
         property="og:description"
-        content="Collaborative retrospective boards for agile teams. Run better retrospectives with real-time collaboration, voting, and action items."
+        content="Collaborative retrospective boards for agile teams. Run better team meetings with real-time collaboration, voting, and action items."
     />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="{$page.url.origin}/og-image.svg" />
@@ -65,7 +65,7 @@
     <meta property="og:image:height" content="630" />
     <meta
         property="og:image:alt"
-        content="TeamBeat - Collaborative Retrospectives"
+        content="TeamBeat - Collaborative Team Meetings"
     />
     <meta property="og:site_name" content="TeamBeat" />
 
@@ -73,16 +73,16 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
         name="twitter:title"
-        content="TeamBeat - Collaborative Retrospectives"
+        content="TeamBeat - Collaborative Team Meetings"
     />
     <meta
         name="twitter:description"
-        content="Collaborative retrospective boards for agile teams. Run better retrospectives with real-time collaboration, voting, and action items."
+        content="Collaborative retrospective boards for agile teams. Run better team meetings with real-time collaboration, voting, and action items."
     />
     <meta name="twitter:image" content="{$page.url.origin}/og-image.svg" />
     <meta
         name="twitter:image:alt"
-        content="TeamBeat - Collaborative Retrospectives"
+        content="TeamBeat - Collaborative Team Meetings"
     />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -198,11 +198,13 @@
                             {/if}
                         </div>
                     {:else}
-                        <a href={resolve(`/login${redirectParam}`)} class="btn-secondary"
-                            >Sign In</a
+                        <a
+                            href={resolve(`/login${redirectParam}`)}
+                            class="btn-secondary">Sign In</a
                         >
-                        <a href={resolve(`/register${redirectParam}`)} class="btn-primary"
-                            >Register</a
+                        <a
+                            href={resolve(`/register${redirectParam}`)}
+                            class="btn-primary">Register</a
                         >
                     {/if}
                 </div>
@@ -326,7 +328,7 @@
                     </svg>
                     <span class="footer-copyright"
                         >© {new Date().getFullYear()} TeamBeat v{data.version}.
-                        Built for better retrospectives.</span
+                        Built for better team meetings.</span
                     >
                 </div>
                 <div class="footer-right">
