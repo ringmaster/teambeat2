@@ -104,7 +104,11 @@
         align-items: center;
         justify-content: center;
         z-index: 1000;
-        padding: 1rem;
+        padding: 0.5rem;
+
+        @media (min-width: 640px) {
+            padding: 1rem;
+        }
     }
 
     .modal-dialog {
@@ -112,26 +116,46 @@
         border-radius: 0.5rem;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         width: 100%;
-        max-height: 90vh;
+        max-height: 95vh;
         overflow: hidden;
         display: flex;
         flex-direction: column;
+
+        @media (min-width: 640px) {
+            max-height: 90vh;
+        }
     }
 
     .modal-sm {
-        max-width: 28rem;
+        max-width: 100%;
+
+        @media (min-width: 640px) {
+            max-width: 28rem;
+        }
     }
 
     .modal-md {
-        max-width: 32rem;
+        max-width: 100%;
+
+        @media (min-width: 640px) {
+            max-width: 32rem;
+        }
     }
 
     .modal-lg {
-        max-width: 48rem;
+        max-width: 100%;
+
+        @media (min-width: 768px) {
+            max-width: 48rem;
+        }
     }
 
     .modal-xl {
-        max-width: 64rem;
+        max-width: 100%;
+
+        @media (min-width: 1024px) {
+            max-width: 64rem;
+        }
     }
 
     .modal-content {
@@ -144,16 +168,24 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0.75rem 1rem;
+        padding: 0.75rem 0.75rem;
         border-bottom: 1px solid var(--border-light);
         margin-bottom: 0;
+
+        @media (min-width: 640px) {
+            padding: 0.75rem 1rem;
+        }
     }
 
     .modal-title {
-        font-size: 1.25rem;
+        font-size: 1.125rem;
         font-weight: 600;
         color: #111827;
         margin: 0;
+
+        @media (min-width: 640px) {
+            font-size: 1.25rem;
+        }
     }
 
     .close-button {
@@ -163,9 +195,20 @@
         font-weight: bold;
         color: #6b7280;
         cursor: pointer;
-        padding: 0.25rem;
+        padding: 0.5rem;
         line-height: 1;
         transition: color 0.2s ease;
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        @media (min-width: 640px) {
+            padding: 0.25rem;
+            min-width: auto;
+            min-height: auto;
+        }
     }
 
     .close-button:hover {
@@ -173,8 +216,12 @@
     }
 
     .modal-body {
-        padding: 0 1rem 1rem 1rem;
+        padding: 0 0.75rem 0.75rem 0.75rem;
         overflow-y: auto;
         flex: 1;
+
+        @media (min-width: 640px) {
+            padding: 0 1rem 1rem 1rem;
+        }
     }
 </style>

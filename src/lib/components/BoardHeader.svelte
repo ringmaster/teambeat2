@@ -197,21 +197,44 @@
 <style lang="less">
     #board-header {
         padding: 0 var(--spacing-4);
+
+        @media (min-width: 768px) {
+            padding: 0 var(--spacing-6);
+        }
     }
+
     #board-header-content {
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
+        gap: var(--spacing-4);
+
+        @media (min-width: 768px) {
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 0;
+        }
 
         > div:first-child {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            width: 100%;
+
+            @media (min-width: 768px) {
+                width: auto;
+            }
         }
 
         > div:last-child {
             display: flex;
-            gap: var(--spacing-4);
+            gap: var(--spacing-2);
             align-items: center;
+            flex-wrap: wrap;
+
+            @media (min-width: 768px) {
+                gap: var(--spacing-4);
+                flex-wrap: nowrap;
+            }
         }
     }
 
@@ -229,19 +252,34 @@
 
         .board-name-row {
             display: flex;
-            align-items: center;
-            gap: var(--spacing-3);
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-2);
+            width: 100%;
+
+            @media (min-width: 640px) {
+                flex-direction: row;
+                align-items: center;
+                gap: var(--spacing-3);
+                width: auto;
+            }
 
             h1 {
                 margin: 0;
                 font-weight: bold;
                 color: var(--text-primary);
+                font-size: 1.5rem;
+
+                @media (min-width: 768px) {
+                    font-size: 1.875rem;
+                }
             }
 
             .pills {
                 display: flex;
                 gap: var(--spacing-2);
                 align-items: center;
+                flex-wrap: wrap;
             }
         }
     }

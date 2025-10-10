@@ -317,3 +317,115 @@
 .body-text(@size: base) when (@size = lg) {
     .text-style(1.125rem, 400, 1.75rem);
 }
+
+/* ==================================
+   RESPONSIVE DESIGN MIXINS
+   ================================== */
+
+// Responsive breakpoint mixins
+.mobile-only(@rules) {
+    @media (max-width: 767px) {
+        @rules();
+    }
+}
+
+.tablet-only(@rules) {
+    @media (min-width: 768px) and (max-width: 1023px) {
+        @rules();
+    }
+}
+
+.tablet-up(@rules) {
+    @media (min-width: 768px) {
+        @rules();
+    }
+}
+
+.desktop-only(@rules) {
+    @media (min-width: 1024px) {
+        @rules();
+    }
+}
+
+.mobile-and-tablet(@rules) {
+    @media (max-width: 1023px) {
+        @rules();
+    }
+}
+
+// Responsive container padding mixin
+.responsive-padding() {
+    padding: var(--spacing-4);
+
+    @media (min-width: 768px) {
+        padding: var(--spacing-6);
+    }
+
+    @media (min-width: 1024px) {
+        padding: var(--spacing-8);
+    }
+}
+
+// Responsive font size mixin
+.responsive-font(@mobile-size, @tablet-size, @desktop-size) {
+    font-size: @mobile-size;
+
+    @media (min-width: 768px) {
+        font-size: @tablet-size;
+    }
+
+    @media (min-width: 1024px) {
+        font-size: @desktop-size;
+    }
+}
+
+// Fluid typography using clamp
+.fluid-font(@min-size, @max-size) {
+    font-size: clamp(@min-size, 2.5vw, @max-size);
+}
+
+// Touch-friendly tap target mixin (minimum 44x44px)
+.touch-target() {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+// Stack layout on mobile, horizontal on desktop
+.responsive-stack(@mobile-gap: var(--spacing-4), @desktop-gap: var(--spacing-6)) {
+    display: flex;
+    flex-direction: column;
+    gap: @mobile-gap;
+
+    @media (min-width: 768px) {
+        flex-direction: row;
+        gap: @desktop-gap;
+    }
+}
+
+// Responsive grid with auto-fit columns
+.responsive-grid(@min-col-width: 280px, @gap: var(--spacing-4)) {
+    display: grid;
+    gap: @gap;
+    grid-template-columns: repeat(auto-fit, minmax(min(@min-col-width, 100%), 1fr));
+}
+
+// Hide on mobile, show on tablet/desktop
+.hide-mobile() {
+    display: none;
+
+    @media (min-width: 768px) {
+        display: block;
+    }
+}
+
+// Show on mobile, hide on tablet/desktop
+.show-mobile-only() {
+    display: block;
+
+    @media (min-width: 768px) {
+        display: none;
+    }
+}

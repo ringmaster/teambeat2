@@ -844,19 +844,36 @@
     .dashboard-container {
         max-width: 80rem;
         margin: 0 auto;
-        padding: var(--spacing-8) var(--spacing-4);
+        padding: var(--spacing-4);
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-8);
+        gap: var(--spacing-6);
         height: 100%;
         overflow-y: scroll;
+
+        @media (min-width: 768px) {
+            padding: var(--spacing-6) var(--spacing-4);
+            gap: var(--spacing-8);
+        }
+
+        @media (min-width: 1024px) {
+            padding: var(--spacing-8) var(--spacing-4);
+        }
     }
 
     .dashboard-header {
         background-color: white;
         border-radius: 1rem;
         box-shadow: var(--shadow-sm);
-        padding: var(--spacing-8);
+        padding: var(--spacing-4);
+
+        @media (min-width: 768px) {
+            padding: var(--spacing-6);
+        }
+
+        @media (min-width: 1024px) {
+            padding: var(--spacing-8);
+        }
     }
 
     .header-content {
@@ -865,33 +882,45 @@
         gap: var(--spacing-4);
         justify-content: space-between;
         align-items: flex-start;
-    }
 
-    @media (min-width: 768px) {
-        .header-content {
+        @media (min-width: 768px) {
             flex-direction: row;
             align-items: center;
         }
     }
 
     .dashboard-title {
-        font-size: 1.875rem;
-        line-height: 2.25rem;
+        font-size: 1.5rem;
+        line-height: 2rem;
         font-weight: 700;
         color: var(--color-text-primary);
         margin: 0;
+
+        @media (min-width: 768px) {
+            font-size: 1.875rem;
+            line-height: 2.25rem;
+        }
     }
 
     .dashboard-subtitle {
         color: var(--color-text-secondary);
         margin: var(--spacing-2) 0 0 0;
-        font-size: 1rem;
+        font-size: 0.875rem;
+
+        @media (min-width: 768px) {
+            font-size: 1rem;
+        }
     }
 
     .add-series-form {
         display: flex;
         align-items: center;
         gap: var(--spacing-2);
+        width: 100%;
+
+        @media (min-width: 768px) {
+            width: auto;
+        }
     }
 
     .section-title {

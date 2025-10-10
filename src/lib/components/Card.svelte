@@ -562,6 +562,11 @@
         border-top: 3px solid var(--card-border-color);
         position: relative;
         z-index: 1;
+        min-height: 44px; /* Touch-friendly minimum height */
+
+        @media (max-width: 767px) {
+            padding: 14px; /* Slightly more padding on mobile for better touch targets */
+        }
     }
 
     .card:has(.card-menu) {
@@ -671,9 +676,16 @@
         border-radius: 12px;
         font-size: 0.75rem;
         cursor: pointer;
+        min-height: 28px;
         transition:
             background-color 0.2s,
             transform 0.1s;
+
+        @media (max-width: 767px) {
+            padding: 4px 8px;
+            min-height: 36px;
+            font-size: 0.8125rem;
+        }
     }
 
     .reaction-pill:hover {
@@ -706,7 +718,14 @@
         border-radius: 12px;
         border: none;
         cursor: pointer;
+        min-height: 28px;
         transition: background-color 0.2s;
+
+        @media (max-width: 767px) {
+            padding: 6px 10px;
+            min-height: 36px;
+            font-size: 0.8125rem;
+        }
     }
 
     .comment-pill:hover {

@@ -119,48 +119,69 @@
     </div>
 </div>
 
-<style>
+<style lang="less">
     .board-columns-container {
         width: 100%;
         overflow-x: auto;
-        padding: 2rem 0;
+        padding: 1rem var(--spacing-4);
         flex: 1;
         display: flex;
         flex-direction: column;
+
+        @media (min-width: 768px) {
+            padding: 2rem 0;
+        }
     }
 
     #board-columns-flex {
-        /*
-        margin-left: calc(
-            (100vw - var(--board-header-width, 800px)) / 2
-        ) !important;
-        margin-right: calc(
-            (100vw - var(--board-header-width, 800px)) / 2
-        ) !important;
-        */
         display: flex;
         gap: 1rem;
         flex: 1;
         height: 100%;
-        width: var(--board-header-width);
+        width: 100%;
         margin: 0 auto;
+        flex-direction: column;
+
+        @media (min-width: 768px) {
+            flex-direction: row;
+            width: var(--board-header-width);
+            max-width: 100%;
+        }
     }
 
     #board-columns-flex.single-column {
         justify-content: center;
+
         :global .column {
-            width: 70%;
+            width: 100%;
+
+            @media (min-width: 768px) {
+                width: 70%;
+            }
         }
     }
 
     :global #board-columns-flex.multiple-columns .column {
-        width: 25%;
-        /* min-width: max-content; */
+        width: 100%;
+
+        @media (min-width: 768px) {
+            width: 25%;
+        }
     }
+
     :global #board-columns-flex.two-columns .column {
-        width: 50%;
+        width: 100%;
+
+        @media (min-width: 768px) {
+            width: 50%;
+        }
     }
+
     :global #board-columns-flex.three-columns .column {
-        width: 33%;
+        width: 100%;
+
+        @media (min-width: 768px) {
+            width: 33%;
+        }
     }
 </style>
