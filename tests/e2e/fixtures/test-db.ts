@@ -24,7 +24,7 @@ export class TestDatabase {
 
       // Run actual Drizzle migrations using the CLI
       console.log('Running Drizzle migrations on test database...');
-      execSync('npm run db:migrate', {
+      execSync('npm run db:migrate:sqlite', {
         stdio: 'inherit',
         env: {
           ...process.env,
