@@ -144,10 +144,9 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1.5rem 1.5rem 0 1.5rem;
-        border-bottom: 1px solid #e5e7eb;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-light);
+        margin-bottom: 0;
     }
 
     .modal-title {
@@ -174,7 +173,7 @@
     }
 
     .modal-body {
-        padding: 0 1.5rem 1.5rem 1.5rem;
+        padding: 0 1rem 1rem 1rem;
         overflow-y: auto;
         flex: 1;
     }

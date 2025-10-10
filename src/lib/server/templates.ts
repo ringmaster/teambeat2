@@ -141,7 +141,7 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         showVotes: false,
         allowVoting: true,
         showComments: true,
-        allowComments: false,
+        allowComments: true,
         visibleColumns: ['Flaws', 'Experiments']
       },
       {
@@ -156,7 +156,8 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         showVotes: true,
         allowVoting: false,
         showComments: true,
-        allowComments: true
+        allowComments: true,
+        visibleColumns: ['Flaws', 'Experiments']
       },
       {
         title: 'Appreciate',
@@ -212,7 +213,7 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowObscureCards: false,
         allowMoveCards: true,
         allowGroupCards: false,
-        showVotes: true,
+        showVotes: false,
         allowVoting: false,
         showComments: true,
         allowComments: true
@@ -229,21 +230,37 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         showVotes: false,
         allowVoting: true,
         showComments: true,
-        allowComments: true
+        allowComments: true,
+        visibleColumns: ['Issues to Discuss']
       },
       {
         title: 'Discuss Topics',
         mode: 'present' as const,
         seq: 3,
         allowAddCards: false,
-        allowEditCards: true,
+        allowEditCards: false,
         allowObscureCards: false,
-        allowMoveCards: true,
+        allowMoveCards: false,
         allowGroupCards: false,
         showVotes: true,
         allowVoting: false,
         showComments: true,
-        allowComments: true
+        allowComments: true,
+        visibleColumns: ['Issues to Discuss']
+      },
+      {
+        title: 'Review Topics',
+        mode: 'review' as const,
+        seq: 4,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: true,
+        allowVoting: false,
+        showComments: true,
+        allowComments: false
       }
     ]
   },
@@ -346,29 +363,29 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowEditCards: true,
         allowObscureCards: false,
         allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: true,
+        allowGroupCards: true,
+        showVotes: false,
         allowVoting: false,
         showComments: true,
         allowComments: false
       },
       {
-        title: 'Discuss',
-        mode: 'present' as const,
+        title: 'Prioritize',
+        mode: 'columns' as const,
         seq: 2,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
         allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
+        allowGroupCards: true,
+        showVotes: false,
         allowVoting: true,
         showComments: true,
         allowComments: true
       },
       {
-        title: 'Plan Actions',
-        mode: 'review' as const,
+        title: 'Discuss',
+        mode: 'present' as const,
         seq: 3,
         allowAddCards: false,
         allowEditCards: false,
@@ -379,6 +396,20 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowVoting: false,
         showComments: true,
         allowComments: true
+      },
+      {
+        title: 'Plan Actions',
+        mode: 'review' as const,
+        seq: 4,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: true,
+        allowVoting: false,
+        showComments: true,
+        allowComments: false
       }
     ]
   },
@@ -400,22 +431,36 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowEditCards: true,
         allowObscureCards: false,
         allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: true,
+        allowGroupCards: true,
+        showVotes: false,
         allowVoting: false,
         showComments: true,
         allowComments: false
       },
       {
-        title: 'Explore Together',
-        mode: 'present' as const,
+        title: 'Prioritize',
+        mode: 'columns' as const,
         seq: 2,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
         allowMoveCards: false,
-        allowGroupCards: false,
+        allowGroupCards: true,
         showVotes: false,
+        allowVoting: true,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Explore Together',
+        mode: 'present' as const,
+        seq: 3,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: true,
         allowVoting: false,
         showComments: true,
         allowComments: true
@@ -423,16 +468,16 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
       {
         title: 'Find Solutions',
         mode: 'review' as const,
-        seq: 3,
-        allowAddCards: true,
-        allowEditCards: true,
+        seq: 4,
+        allowAddCards: false,
+        allowEditCards: false,
         allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: true,
+        allowMoveCards: false,
+        allowGroupCards: false,
         showVotes: true,
-        allowVoting: true,
+        allowVoting: false,
         showComments: true,
-        allowComments: true
+        allowComments: false
       }
     ]
   },
@@ -502,6 +547,75 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowVoting: false,
         showComments: true,
         allowComments: true
+      }
+    ]
+  },
+  fourls: {
+    id: 'fourls',
+    name: "4 L's (Liked, Learned, Lacked, Longed for)",
+    description: 'A comprehensive reflection on the four L\'s of team experience.',
+    columns: [
+      { title: 'Liked', description: '(What did we enjoy?)', seq: 1 },
+      { title: 'Learned', description: '(What did we discover?)', seq: 2 },
+      { title: 'Lacked', description: '(What was missing?)', seq: 3 },
+      { title: 'Longed for', description: '(What did we wish for?)', seq: 4 }
+    ],
+    scenes: [
+      {
+        title: 'Reflect',
+        mode: 'columns' as const,
+        seq: 1,
+        allowAddCards: true,
+        allowEditCards: true,
+        allowObscureCards: false,
+        allowMoveCards: true,
+        allowGroupCards: true,
+        showVotes: false,
+        allowVoting: false,
+        showComments: true,
+        allowComments: false
+      },
+      {
+        title: 'Prioritize',
+        mode: 'columns' as const,
+        seq: 2,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: true,
+        showVotes: false,
+        allowVoting: true,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Discuss',
+        mode: 'present' as const,
+        seq: 3,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: true,
+        allowVoting: false,
+        showComments: true,
+        allowComments: true
+      },
+      {
+        title: 'Plan Actions',
+        mode: 'review' as const,
+        seq: 4,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: true,
+        allowVoting: false,
+        showComments: true,
+        allowComments: false
       }
     ]
   },

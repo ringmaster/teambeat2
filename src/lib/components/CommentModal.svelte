@@ -1,5 +1,6 @@
 <script lang="ts">
     import Modal from "$lib/components/ui/Modal.svelte";
+    import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
 
     interface Props {
@@ -140,12 +141,14 @@
                 </div>
 
                 <div class="new-comment-section">
-                    <textarea
+                    <InputWithButton
                         bind:value={newCommentContent}
                         placeholder="Add a comment..."
-                        rows="3"
-                        class="comment-input"
                         disabled={savingComment}
+                        buttonVariant="ghost"
+                        buttonDisabled={!newCommentContent.trim() || savingComment}
+                        buttonAriaLabel="Submit comment"
+                        onButtonClick={saveComment}
                         onkeydown={(e) => {
                             if (
                                 e.key === "Enter" &&
@@ -156,26 +159,11 @@
                                 saveComment();
                             }
                         }}
-                    ></textarea>
-                    <div class="hint">Press Ctrl+Enter to submit</div>
-                </div>
-
-                <div class="modal-actions">
-                    <button
-                        onclick={handleClose}
-                        class="btn-secondary"
-                        type="button"
                     >
-                        Cancel
-                    </button>
-                    <button
-                        onclick={saveComment}
-                        class="btn-primary"
-                        type="button"
-                        disabled={!newCommentContent.trim() || savingComment}
-                    >
-                        {savingComment ? "Saving..." : "Add Comment"}
-                    </button>
+                        {#snippet buttonContent()}
+                            ✓
+                        {/snippet}
+                    </InputWithButton>
                 </div>
             {/if}
         </div>
@@ -186,13 +174,12 @@
     .comment-modal-content {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.75rem;
     }
 
     .card-preview {
-        padding: 1rem;
+        padding: 0.75rem;
         background-color: var(--surface-secondary);
-        border-radius: 8px;
         border-left: 4px solid var(--primary-color);
     }
 
@@ -205,9 +192,7 @@
     .comments-section {
         max-height: 300px;
         overflow-y: auto;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
+        padding: 0.5rem 0;
     }
 
     .loading {
@@ -226,14 +211,20 @@
     .comments-list {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0;
     }
 
     .comment-item {
-        padding: 0.75rem;
-        background-color: var(--surface-primary);
-        border-radius: 6px;
-        border: 1px solid var(--border-light);
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--color-border, #e5e7eb);
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+
+    .comment-item:not(:last-child) {
+        margin-bottom: 0.5rem;
     }
 
     .comment-header {
@@ -263,79 +254,7 @@
     }
 
     .new-comment-section {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .comment-input {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        background-color: var(--surface-primary);
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        resize: vertical;
-        font-family: inherit;
-        transition: border-color 0.2s;
-
-        &:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        &:disabled {
-            background-color: var(--surface-secondary);
-            opacity: 0.7;
-        }
-    }
-
-    .hint {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        font-style: italic;
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid var(--border-light);
-    }
-
-    .btn-primary,
-    .btn-secondary {
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-primary {
-        background-color: var(--primary-color);
-        color: white;
-
-        &:hover:not(:disabled) {
-            background-color: var(--primary-hover);
-        }
-
-        &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-    }
-
-    .btn-secondary {
-        background-color: var(--surface-secondary);
-        color: var(--text-primary);
-
-        &:hover {
-            background-color: var(--surface-tertiary);
-        }
+        border-top: 1px solid var(--color-border, #e5e7eb);
+        padding-top: 0.75rem;
     }
 </style>
