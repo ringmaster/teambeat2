@@ -179,25 +179,303 @@ test('should show real-time card updates', async ({ browser }) => {
 });
 ```
 
-## Authentication Helpers
+## Authentication Testing Infrastructure
 
-The `AuthHelper` class provides utilities for test authentication:
+TeamBeat provides a comprehensive authentication testing infrastructure designed to make it easy to test features that require user authentication, multi-user scenarios, and role-based access control.
+
+### AuthHelper Class
+
+The `AuthHelper` class provides utilities for all authentication operations in tests:
 
 ```typescript
+import { AuthHelper } from './fixtures/auth-helpers';
+
 const auth = new AuthHelper(page);
 
-// Login via API (fast)
-await auth.loginViaAPI(email, password);
+// Login via API (fast, recommended for setup)
+await auth.loginViaAPI('user@test.com', 'password123');
 
-// Login via UI (for testing forms)
-await auth.login(email, password);
+// Login via UI (for testing login forms)
+await auth.login('user@test.com', 'password123');
+
+// Register via API (fast, recommended for setup)
+const result = await auth.registerViaAPI('newuser@test.com', 'password123', 'New User');
+
+// Register via UI (for testing registration forms)
+await auth.register('newuser@test.com', 'password123', 'New User');
 
 // Check login status
 const isLoggedIn = await auth.isLoggedIn();
 
-// Ensure specific user is logged in
-await auth.ensureLoggedIn(email, password);
+// Get current user information
+const currentUser = await auth.getCurrentUser();
+// Returns: { success: true, user: { id, email, name, isAdmin } }
+
+// Logout via API
+await auth.logoutViaAPI();
+
+// Logout via UI
+await auth.logout();
+
+// Ensure specific user is logged in (switches if needed)
+await auth.ensureLoggedIn('user@test.com', 'password123');
+
+// Ensure user is logged out (logs out if needed)
+await auth.ensureLoggedOut();
 ```
+
+### Pre-defined Test Users
+
+The test suite provides four pre-configured test users that are created during global setup:
+
+```typescript
+import { TestUsers, getTestUser } from './fixtures/auth-helpers';
+
+// Access pre-defined users
+const facilitator = await getTestUser('facilitator');
+// { email: 'facilitator@test.com', password: 'password123', name: 'Test Facilitator', id: 'usr_...' }
+
+const participant1 = await getTestUser('participant1');
+// { email: 'participant1@test.com', password: 'password123', name: 'Participant One', id: 'usr_...' }
+
+const participant2 = await getTestUser('participant2');
+// { email: 'participant2@test.com', password: 'password123', name: 'Participant Two', id: 'usr_...' }
+
+const admin = await getTestUser('admin');
+// { email: 'admin@test.com', password: 'password123', name: 'Test Admin', id: 'usr_...' }
+
+// Use with AuthHelper
+const auth = new AuthHelper(page);
+await auth.loginViaAPI(facilitator.email, facilitator.password);
+```
+
+### Creating Ad-Hoc Test Users
+
+For tests that need unique users or many users, use `createAdHocTestUser`:
+
+```typescript
+import { createAdHocTestUser } from './fixtures/auth-helpers';
+
+// Create a unique test user
+const newUser = await createAdHocTestUser();
+// { email: 'adhoc-1234567890-abc123@test.com', password: 'password123', name: '...', id: 'usr_...' }
+
+// Create with custom prefix
+const facilitatorUser = await createAdHocTestUser('facilitator');
+// { email: 'facilitator-1234567890-abc123@test.com', ... }
+
+// Use immediately
+const auth = new AuthHelper(page);
+await auth.loginViaAPI(newUser.email, newUser.password);
+```
+
+### Multi-User Authentication
+
+For testing collaboration features with multiple authenticated users:
+
+```typescript
+import { setupMultiUserContexts, getTestUser } from './fixtures/auth-helpers';
+
+test('multi-user collaboration', async ({ browser }) => {
+  // Create authenticated contexts for multiple users
+  const { contexts, helpers } = await setupMultiUserContexts(
+    browser,
+    [
+      await getTestUser('facilitator'),
+      await getTestUser('participant1'),
+      await getTestUser('participant2')
+    ],
+    'http://localhost:5174'
+  );
+
+  // Each context has its own authenticated session
+  const [facilitatorPage, participant1Page, participant2Page] = await Promise.all(
+    contexts.map(ctx => ctx.newPage())
+  );
+
+  // All users can now interact independently
+  await facilitatorPage.goto('/board/test-board');
+  await participant1Page.goto('/board/test-board');
+  await participant2Page.goto('/board/test-board');
+
+  // Test real-time collaboration...
+
+  // Cleanup
+  await Promise.all(contexts.map(ctx => ctx.close()));
+});
+```
+
+### API Endpoints
+
+The authentication helpers interact with these API endpoints:
+
+#### POST /api/auth/register
+Register a new user and receive a session cookie.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "name": "User Name" // optional
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "usr_...",
+    "email": "user@example.com",
+    "name": "User Name"
+  }
+}
+```
+
+#### POST /api/auth/login
+Login with credentials and receive a session cookie.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "usr_...",
+    "email": "user@example.com",
+    "name": "User Name"
+  }
+}
+```
+
+**Response (401):**
+```json
+{
+  "success": false,
+  "error": "Invalid email or password"
+}
+```
+
+#### GET /api/auth/me
+Get current authenticated user information.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "usr_...",
+    "email": "user@example.com",
+    "name": "User Name",
+    "isAdmin": false
+  }
+}
+```
+
+**Response (401):**
+```json
+{
+  "success": false,
+  "error": "Not authenticated"
+}
+```
+
+#### POST /api/auth/logout
+Logout and clear session cookie.
+
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+### Session Management
+
+Sessions are managed via HTTP-only cookies:
+- **Cookie name**: `sessionId`
+- **Session persistence**: Maintained across page navigation and refreshes
+- **Session isolation**: Each browser context has its own session
+- **Session expiration**: Handled by the server (timeout + cleanup)
+
+### Complete Testing Example
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { AuthHelper, getTestUser, createAdHocTestUser } from './fixtures/auth-helpers';
+
+test.describe('Feature with Authentication', () => {
+  test('should allow authenticated user to access protected feature', async ({ page }) => {
+    const auth = new AuthHelper(page);
+
+    // Setup: Login as facilitator
+    const facilitator = await getTestUser('facilitator');
+    await auth.loginViaAPI(facilitator.email, facilitator.password);
+
+    // Navigate to protected page
+    await page.goto('/dashboard');
+
+    // Verify authenticated access
+    await expect(page.locator('text=Your Series')).toBeVisible();
+
+    // Test feature functionality...
+
+    // Cleanup: Logout
+    await auth.logoutViaAPI();
+  });
+
+  test('should deny access to unauthenticated users', async ({ page }) => {
+    const auth = new AuthHelper(page);
+
+    // Ensure logged out
+    await auth.ensureLoggedOut();
+
+    // Try to access protected page
+    await page.goto('/dashboard');
+
+    // Should redirect to login
+    await page.waitForURL('/login');
+    expect(page.url()).toContain('/login');
+  });
+
+  test('should handle registration of new users', async ({ page }) => {
+    const auth = new AuthHelper(page);
+
+    // Create unique test user
+    const newUser = await createAdHocTestUser('newuser');
+
+    // Register via API (user is now logged in)
+    const result = await auth.registerViaAPI(newUser.email, newUser.password, newUser.name);
+
+    // Verify registration success
+    expect(result.success).toBe(true);
+    expect(result.user.email).toBe(newUser.email);
+
+    // Verify user is logged in
+    expect(await auth.isLoggedIn()).toBe(true);
+
+    // Test authenticated features...
+  });
+});
+```
+
+### Best Practices
+
+1. **Use API methods for setup**: `loginViaAPI` and `registerViaAPI` are faster than UI methods
+2. **Use UI methods for testing forms**: Test login/registration forms with `login()` and `register()`
+3. **Use pre-defined users when possible**: Faster than creating new users
+4. **Create ad-hoc users for isolation**: Use `createAdHocTestUser()` when you need unique users
+5. **Clean up sessions**: Call `ensureLoggedOut()` or `logoutViaAPI()` in test cleanup
+6. **Verify authentication state**: Use `isLoggedIn()` and `getCurrentUser()` to verify state
+7. **Test role-based access**: Use different test users to verify permission enforcement
 
 ## Test Data IDs
 

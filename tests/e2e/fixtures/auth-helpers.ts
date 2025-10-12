@@ -41,6 +41,22 @@ export class AuthHelper {
   }
 
   /**
+   * Register via API call (faster for setup)
+   */
+  async registerViaAPI(email: string, password: string, name?: string) {
+    const response = await this.page.request.post('/api/auth/register', {
+      data: { email, password, name }
+    });
+
+    if (!response.ok()) {
+      throw new Error(`Registration failed: ${await response.text()}`);
+    }
+
+    // The session cookie should now be set
+    return response.json();
+  }
+
+  /**
    * Login via API call (faster for setup)
    */
   async loginViaAPI(email: string, password: string) {
@@ -245,4 +261,34 @@ let storedUserIds: Record<string, string> | null = null;
  */
 export function setTestUserIds(userIds: Record<string, string>) {
   storedUserIds = userIds;
+}
+
+/**
+ * Create an ad-hoc test user dynamically during a test
+ * Useful when you need a fresh user that isn't one of the pre-defined test users
+ */
+export async function createAdHocTestUser(emailPrefix?: string): Promise<TestUser & { id: string }> {
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(7);
+  const prefix = emailPrefix || 'adhoc';
+
+  const email = `${prefix}-${timestamp}-${randomSuffix}@test.com`;
+  const password = 'password123';
+  const name = `${prefix} Test User ${randomSuffix}`;
+
+  const { TestDatabase } = await import('./test-db.js');
+  const testDb = new TestDatabase(process.env.DATABASE_URL || './teambeat-test.db');
+
+  try {
+    const userId = await testDb.createTestUser(email, password, name);
+
+    return {
+      email,
+      password,
+      name,
+      id: userId
+    };
+  } catch (error) {
+    throw new Error(`Failed to create ad-hoc test user: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
