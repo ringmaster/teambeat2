@@ -10,7 +10,6 @@
     let { data, children } = $props();
     let user: any = $state(null);
     let loading = $state(true);
-    let mobileMenuOpen = $state(false);
     let showUserDropdown = $state(false);
 
     // Get redirect parameter from URL if present (with validation)
@@ -35,11 +34,6 @@
         } finally {
             loading = false;
         }
-
-        // Click outside handler for dropdown
-        // Remove click outside handler since we're using hover
-
-        // No need for click event listeners with hover
     });
 </script>
 
@@ -118,8 +112,8 @@
                     </a>
                 </div>
 
-                <!-- Desktop Navigation -->
-                <div class="desktop-nav toolbar">
+                <!-- Navigation -->
+                <div class="toolbar">
                     {#if loading}
                         <div class="button-group">
                             <div
@@ -142,6 +136,7 @@
                         >
                             <button
                                 class="avatar-dropdown-trigger"
+                                onclick={() => (showUserDropdown = !showUserDropdown)}
                                 onkeydown={(e) =>
                                     e.key === "Escape" &&
                                     (showUserDropdown = false)}
@@ -214,100 +209,8 @@
                         >
                     {/if}
                 </div>
-
-                <!-- Mobile menu button -->
-                <div class="mobile-nav">
-                    <button
-                        onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
-                        class="text-interactive text-muted"
-                        style="padding: var(--spacing-2); background: none; border: none; cursor: pointer;"
-                    >
-                        <svg
-                            class="icon-md"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            {#if mobileMenuOpen}
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            {:else}
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M4 6h16M4 12h16M4 18h16"
-                                />
-                            {/if}
-                        </svg>
-                    </button>
-                </div>
             </div>
         </div>
-
-        <!-- Mobile menu -->
-        {#if mobileMenuOpen}
-            <div class="mobile-nav slide-in-animation">
-                <div class="form-group responsive-container">
-                    {#if loading}
-                        <div class="text-centered">Loading...</div>
-                    {:else if user}
-                        <div class="button-group surface-muted">
-                            <Avatar name={user.name} email={user.email} />
-                            <span class="text-secondary text-medium"
-                                >{user.name || user.email}</span
-                            >
-                        </div>
-                        <a
-                            href={resolve("/")}
-                            class="text-interactive text-muted text-medium"
-                            onclick={() => (mobileMenuOpen = false)}
-                            >Dashboard</a
-                        >
-                        <a
-                            href={resolve("/profile")}
-                            class="text-interactive text-muted text-medium"
-                            onclick={() => (mobileMenuOpen = false)}>Profile</a
-                        >
-                        {#if user.isAdmin}
-                            <a
-                                href={resolve("/admin/performance")}
-                                class="text-interactive text-muted text-medium"
-                                onclick={() => (mobileMenuOpen = false)}
-                                >Performance</a
-                            >
-                        {/if}
-                        <button
-                            class="status-text-danger text-medium"
-                            style="width: 100%;"
-                            onclick={async () => {
-                                await fetch("/api/auth/logout", {
-                                    method: "POST",
-                                });
-                                window.location.reload();
-                            }}
-                        >
-                            Sign Out
-                        </button>
-                    {:else}
-                        <a
-                            href={resolve(`/login${redirectParam}`)}
-                            class="btn-secondary"
-                            style="width: 100%;">Sign In</a
-                        >
-                        <a
-                            href={resolve(`/register${redirectParam}`)}
-                            class="btn-primary"
-                            style="width: 100%;">Register</a
-                        >
-                    {/if}
-                </div>
-            </div>
-        {/if}
     </nav>
 
     <main class="main-content">
