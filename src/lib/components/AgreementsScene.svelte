@@ -283,9 +283,17 @@
                 <div class="add-agreement-form">
                     <textarea
                         bind:value={newAgreementContent}
-                        placeholder="Add a new agreement..."
+                        placeholder="Add a new item..."
                         rows="2"
                         maxlength="1000"
+                        onkeydown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                if (newAgreementContent.trim()) {
+                                    createAgreement();
+                                }
+                            }
+                        }}
                     ></textarea>
                     <button
                         class="primary-button"
