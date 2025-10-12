@@ -269,14 +269,12 @@
 
 <div class="agreements-scene">
     <div class="agreements-header">
-        <h2>Agreements</h2>
-        <p class="scene-description">
-            Review and manage commitments from this retrospective
-        </p>
+        <h2>{scene.title}</h2>
+        <p class="scene-description">Review and manage commitments</p>
     </div>
 
     {#if loading}
-        <div class="loading">Loading agreements...</div>
+        <div class="loading">Loading...</div>
     {:else}
         <!-- Unified Agreements Section -->
         <div class="agreements-section">
@@ -293,7 +291,7 @@
                         onclick={createAgreement}
                         disabled={!newAgreementContent.trim()}
                     >
-                        Add Agreement
+                        Add
                     </button>
                 </div>
             {/if}
