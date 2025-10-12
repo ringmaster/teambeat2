@@ -1470,3 +1470,64 @@ nav {
         padding: 0 var(--spacing-8);
     }
 }
+
+/* Universal Layout Classes
+ *
+ * These three classes form a complete layout system for controlling scroll behavior:
+ *
+ * .ring - Horizontal container with fixed height
+ *   - Use as the outermost container for a layout section
+ *   - Creates horizontal columns that fill the available height
+ *   - Never scrolls - always maintains fixed height
+ *   - Example: Modal content wrapper, split-pane layouts
+ *
+ * .band - Vertical column within a .ring
+ *   - Use for each vertical column in a horizontal layout
+ *   - Arranges children vertically and fills parent height
+ *   - Never scrolls itself - delegates scrolling to .expand children
+ *   - Use for: Side panels, main content areas, form sections
+ *   - Can contain fixed headers/footers (with flex-shrink: 0) and .expand areas
+ *
+ * .expand - Scrollable content area within a .band
+ *   - Use for content that should scroll when it overflows
+ *   - Fills remaining vertical space in parent .band
+ *   - Only these areas scroll - everything else stays fixed
+ *   - Use for: Textareas, long lists, execution results, any overflowing content
+ *
+ * Typical structure:
+ *   <div class="ring">              <!-- Horizontal container -->
+ *     <div class="band">            <!-- Left column -->
+ *       <div class="header">...</div>           <!-- Fixed header -->
+ *       <div class="expand">...</div>           <!-- Scrolls -->
+ *       <div class="footer">...</div>           <!-- Fixed footer -->
+ *     </div>
+ *     <div class="band">            <!-- Right column -->
+ *       <div class="expand">...</div>           <!-- Scrolls -->
+ *     </div>
+ *   </div>
+ */
+
+/* Container with fixed height - horizontal layout, never scrolls */
+.ring {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Vertical column that fills ring height - arranges children vertically, never scrolls */
+.band {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Scrollable content area - fills remaining space and scrolls when content overflows */
+.expand {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}

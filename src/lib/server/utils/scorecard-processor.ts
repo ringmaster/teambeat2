@@ -11,7 +11,7 @@ import type {
   EvaluationContext,
   SeverityLevel
 } from '$lib/types/scorecard.js';
-import { evaluateRPN } from './rpn-evaluator.js';
+import { evaluateRPN } from '$lib/utils/rpn-evaluator.js';
 import { interpolateTemplate } from './template-interpolator.js';
 
 export interface ProcessingError {

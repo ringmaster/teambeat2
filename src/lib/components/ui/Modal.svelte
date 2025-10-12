@@ -70,7 +70,7 @@
             onclick={(e) => e.stopPropagation()}
             onkeydown={(e) => e.stopPropagation()}
         >
-            <div class="modal-content">
+            <div class="modal-content band">
                 {#if title}
                     <div class="modal-header">
                         <h2 id="modal-title" class="modal-title">{title}</h2>
@@ -84,7 +84,7 @@
                     </div>
                 {/if}
 
-                <div class="modal-body">
+                <div class="modal-body expand">
                     {@render children()}
                 </div>
             </div>
@@ -159,12 +159,11 @@
     }
 
     .modal-content {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
+        /* Layout handled by .band class */
     }
 
     .modal-header {
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -216,9 +215,8 @@
     }
 
     .modal-body {
+        /* Layout handled by .expand class */
         padding: 0 0.75rem 0.75rem 0.75rem;
-        overflow-y: auto;
-        flex: 1;
 
         @media (min-width: 640px) {
             padding: 0 1rem 1rem 1rem;
