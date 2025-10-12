@@ -900,8 +900,97 @@
     function nextScene() {
         if (!board.scenes || !currentScene) return;
         const currentIndex = board.scenes.findIndex(
-            (s) => s.id === currentScene.id,
+            (s: any) => s.id === currentScene.id,
         );
+
+        // Check if we're on the last scene
+        const isLastScene = currentIndex >= 0 && currentIndex === board.scenes.length - 1;
+
+        if (isLastScene) {
+            // Handle last scene behavior based on board status
+            if (board.status === "active") {
+                // Offer to mark board as completed
+                toastStore.warning("You've reached the end. Mark this board as completed?", {
+                    autoHide: false,
+                    actions: [
+                        {
+                            label: "Yes",
+                            onClick: async () => {
+                                try {
+                                    const response = await fetch(`/api/boards/${boardId}`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ status: "completed" }),
+                                    });
+
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        board.status = data.board.status;
+                                        toastStore.success("Board marked as completed");
+                                    } else {
+                                        toastStore.error("Failed to mark board as completed");
+                                    }
+                                } catch (error) {
+                                    console.error("Error updating board status:", error);
+                                    toastStore.error("Error updating board status");
+                                }
+                            },
+                            variant: "primary",
+                        },
+                        {
+                            label: "Cancel",
+                            onClick: () => {},
+                            variant: "secondary",
+                        },
+                    ],
+                });
+            } else if (board.status === "draft") {
+                // Offer to mark board as active and restart at beginning
+                toastStore.warning("You've reached the end. Mark this board as active and restart from the beginning?", {
+                    autoHide: false,
+                    actions: [
+                        {
+                            label: "Yes",
+                            onClick: async () => {
+                                try {
+                                    const response = await fetch(`/api/boards/${boardId}`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ status: "active" }),
+                                    });
+
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        board.status = data.board.status;
+                                        // Navigate to first scene
+                                        if (board.scenes && board.scenes.length > 0) {
+                                            const firstSceneId = board.scenes[0].id;
+                                            changeScene(firstSceneId);
+                                        }
+                                        toastStore.success("Board activated and restarted");
+                                    } else {
+                                        toastStore.error("Failed to activate board");
+                                    }
+                                } catch (error) {
+                                    console.error("Error updating board status:", error);
+                                    toastStore.error("Error updating board status");
+                                }
+                            },
+                            variant: "primary",
+                        },
+                        {
+                            label: "Cancel",
+                            onClick: () => {},
+                            variant: "secondary",
+                        },
+                    ],
+                });
+            }
+            // If status is "completed" or "archived", button should be disabled (handled in SceneDropdown)
+            return;
+        }
+
+        // Not on last scene, proceed to next scene normally
         if (currentIndex >= 0 && currentIndex < board.scenes.length - 1) {
             const nextSceneId = board.scenes[currentIndex + 1].id;
             changeScene(nextSceneId);

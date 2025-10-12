@@ -17,15 +17,13 @@
         onNextScene,
     }: Props = $props();
 
-    // Determine if there's a next scene
-    const hasNextScene = $derived(() => {
-        if (!currentScene || !board.scenes) return false;
-        const currentIndex = board.scenes.findIndex((s: any) => s.id === currentScene.id);
-        return currentIndex >= 0 && currentIndex < board.scenes.length - 1;
+    // Button should only be disabled if board is completed or archived
+    const isButtonDisabled = $derived(() => {
+        return board.status === "completed" || board.status === "archived";
     });
 
     function handleNextScene() {
-        if (hasNextScene() && onNextScene) {
+        if (!isButtonDisabled() && onNextScene) {
             onNextScene();
         }
     }
@@ -85,8 +83,9 @@
     <button
         class="toolbar-button toolbar-button-primary toolbar-button-right"
         onclick={handleNextScene}
-        disabled={!hasNextScene()}
+        disabled={isButtonDisabled()}
         aria-label="Next scene"
+        data-testid="next-scene-button"
     >
         <svg
             class="icon-sm"
