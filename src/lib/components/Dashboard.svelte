@@ -394,7 +394,20 @@
     }
 
     async function cloneBoard(sourceBoard: any, seriesId: string) {
+        const boardName = boardNames[seriesId]?.trim();
+
+        if (!boardName) {
+            boardErrors[seriesId] = "Board name is required";
+            return;
+        }
+
+        if (boardName.length < 2) {
+            boardErrors[seriesId] = "Board name must be at least 2 characters";
+            return;
+        }
+
         cloningBoards[sourceBoard.id] = true;
+        boardErrors[seriesId] = "";
 
         try {
             // Create a new board
@@ -402,7 +415,7 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    name: `${sourceBoard.name} (Clone)`,
+                    name: boardName,
                     seriesId,
                 }),
             });

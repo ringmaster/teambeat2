@@ -82,13 +82,14 @@ export const POST: RequestHandler = async (event) => {
 
     // Clone board configuration in a transaction
     await withTransaction(async (tx) => {
-      // Clone board options from source board
+      // Clone board options from source board and set clone_of
       await tx
         .update(boards)
         .set({
           blameFreeMode: sourceBoard.blameFreeMode,
           votingAllocation: sourceBoard.votingAllocation,
-          votingEnabled: sourceBoard.votingEnabled
+          votingEnabled: sourceBoard.votingEnabled,
+          cloneOf: data.sourceId
         })
         .where(eq(boards.id, boardId));
 

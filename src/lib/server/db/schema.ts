@@ -62,6 +62,7 @@ export const boards = table('boards', {
   name: text('name').notNull(),
   status: text('status').notNull().default('draft').$type<'draft' | 'active' | 'completed' | 'archived'>(),
   currentSceneId: text('current_scene_id'),
+  cloneOf: text('clone_of').references(() => boards.id, { onDelete: 'set null' }),
   blameFreeMode: booleanField('blame_free_mode').notNull().default(false),
   votingAllocation: integer('voting_allocation').notNull().default(3),
   votingEnabled: booleanField('voting_enabled').notNull().default(true),

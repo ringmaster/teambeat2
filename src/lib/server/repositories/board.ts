@@ -164,6 +164,7 @@ export async function getBoardWithDetails(boardId: string) {
       name: boards.name,
       status: boards.status,
       currentSceneId: boards.currentSceneId,
+      cloneOf: boards.cloneOf,
       blameFreeMode: boards.blameFreeMode,
       votingAllocation: boards.votingAllocation,
       votingEnabled: boards.votingEnabled,
@@ -181,6 +182,24 @@ export async function getBoardWithDetails(boardId: string) {
 
   if (!boardResult) return null;
   const board = boardResult;
+
+  // Fetch clone source info if this board is a clone
+  let cloneSource = null;
+  if (board.cloneOf) {
+    const [sourceBoard] = await db
+      .select({
+        name: boards.name,
+        meetingDate: boards.meetingDate,
+        createdAt: boards.createdAt
+      })
+      .from(boards)
+      .where(eq(boards.id, board.cloneOf))
+      .limit(1);
+
+    if (sourceBoard) {
+      cloneSource = sourceBoard;
+    }
+  }
 
   const boardColumns = await db
     .select({
@@ -249,7 +268,8 @@ export async function getBoardWithDetails(boardId: string) {
     allColumns: boardColumns, // Keep all columns for configuration
     scenes: boardScenes,
     cards: boardCards,
-    hiddenColumnsByScene
+    hiddenColumnsByScene,
+    cloneSource
   };
 }
 

@@ -18,6 +18,11 @@
                 name: string;
                 allowVoting?: boolean;
             }>;
+            cloneSource?: {
+                name: string;
+                meetingDate?: string | null;
+                createdAt: string;
+            } | null;
         };
         userRole: string;
         currentScene: {
@@ -72,6 +77,25 @@
         onResetVotes,
         onStartTimer,
     }: Props = $props();
+
+    function formatDate(dateString: string | null | undefined) {
+        if (!dateString) return null;
+        return new Date(dateString).toLocaleDateString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    }
+
+    let cloneSourceDate = $derived(
+        board.cloneSource
+            ? formatDate(
+                  board.cloneSource.meetingDate ||
+                      board.cloneSource.createdAt,
+              )
+            : null,
+    );
 </script>
 
 <div id="board-header" class="surface-primary content-divider">
@@ -89,6 +113,9 @@
                             day: "numeric",
                         },
                     )}
+                    {#if board.cloneSource}
+                        &bullet; from "{board.cloneSource.name}" on {cloneSourceDate}
+                    {/if}
                 </h2>
                 <div class="board-name-row">
                     <h1>{board.name}</h1>
