@@ -3,8 +3,8 @@ import {
   findCommentAgreementsByColumns
 } from '../repositories/agreement.js';
 import { db } from '../db/index.js';
-import { users, scenesColumns, columns } from '../db/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { users, scenesColumns, columns, comments } from '../db/schema.js';
+import { eq, and, sql } from 'drizzle-orm';
 import { getUserDisplayName } from '$lib/utils/animalNames.js';
 
 export interface UnifiedAgreement {
@@ -21,6 +21,7 @@ export interface UnifiedAgreement {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  reactions?: Record<string, number>;
   // Agreement-specific fields
   boardId?: string;
   sourceAgreementId?: string | null;
@@ -72,7 +73,38 @@ async function getUserNames(userIds: (string | null)[]): Promise<Map<string, str
 }
 
 /**
- * Enriches all agreements with user information
+ * Get reactions for a set of card IDs (for comment-based agreements)
+ */
+async function getReactionsForCards(cardIds: string[]): Promise<Map<string, Record<string, number>>> {
+  if (cardIds.length === 0) return new Map();
+
+  const reactionCounts = await db
+    .select({
+      cardId: comments.cardId,
+      emoji: comments.content,
+      count: sql<number>`COUNT(*)`.as('count')
+    })
+    .from(comments)
+    .where(and(
+      sql`${comments.cardId} IN (${sql.join(cardIds.map(id => sql`${id}`), sql`, `)})`,
+      eq(comments.isReaction, true)
+    ))
+    .groupBy(comments.cardId, comments.content);
+
+  const reactionsMap = new Map<string, Record<string, number>>();
+
+  reactionCounts.forEach(({ cardId, emoji, count }) => {
+    if (!reactionsMap.has(cardId)) {
+      reactionsMap.set(cardId, {});
+    }
+    reactionsMap.get(cardId)![emoji] = count;
+  });
+
+  return reactionsMap;
+}
+
+/**
+ * Enriches all agreements with user information and reactions
  */
 async function enrichAgreements(
   agreements: any[],
@@ -100,6 +132,13 @@ async function enrichAgreements(
     }
   }
 
+  // For comment-based agreements, fetch reactions
+  let reactionsMap = new Map<string, Record<string, number>>();
+  if (source === 'comment') {
+    const cardIds = agreements.map(a => a.cardId).filter(Boolean);
+    reactionsMap = await getReactionsForCards(cardIds);
+  }
+
   // Enrich agreements
   return agreements.map(agreement => {
     const userName = agreement.userId ? userNameMap.get(agreement.userId) || null : null;
@@ -115,7 +154,10 @@ async function enrichAgreements(
       completedByUserName,
       completedByDisplayName: completedByUserName
         ? getUserDisplayName(completedByUserName, boardId, blameFreeMode)
-        : null
+        : null,
+      reactions: source === 'comment' && agreement.cardId
+        ? reactionsMap.get(agreement.cardId) || {}
+        : undefined
     };
   });
 }

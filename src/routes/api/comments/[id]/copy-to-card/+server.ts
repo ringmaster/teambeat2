@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db/index.js';
 import { comments, cards, columns } from '$lib/server/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { createCard } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
@@ -90,11 +90,41 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    // Create the card with comment content
+    // Get reactions for the card
+    const reactionCounts = await db
+      .select({
+        emoji: comments.content,
+        count: sql<number>`COUNT(*)`.as('count')
+      })
+      .from(comments)
+      .where(and(
+        eq(comments.cardId, commentData.cardId),
+        eq(comments.isReaction, true)
+      ))
+      .groupBy(comments.content);
+
+    // Format reactions as text
+    let formattedReactions = '';
+    if (reactionCounts.length > 0) {
+      const reactionTexts = reactionCounts.map(({ emoji, count }) => `(${count}×${emoji})`);
+      formattedReactions = reactionTexts.join(' ');
+    }
+
+    // Format content with indentation for markdown
+    // Replace newlines with 4 spaces + tab for markdown indentation
+    const formattedContent = commentData.commentContent.replace(/\n/g, '\n    \t');
+
+    // Build final content with reactions
+    let finalContent = formattedContent;
+    if (formattedReactions) {
+      finalContent = formattedContent + '\n\n' + formattedReactions;
+    }
+
+    // Create the card with formatted content
     const card = await createCard({
       columnId: data.column_id,
       userId: user.userId,
-      content: commentData.commentContent
+      content: finalContent
     });
 
     const enrichedCard = await enrichCardWithCounts(card);

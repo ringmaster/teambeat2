@@ -27,6 +27,7 @@
         completedAt: string | null;
         createdAt: string;
         updatedAt: string;
+        reactions?: Record<string, number>;
         // Agreement-specific fields
         boardId?: string;
         sourceAgreementId?: string | null;
@@ -349,6 +350,16 @@
                                     <div class="agreement-text">
                                         {agreement.content}
                                     </div>
+                                    {#if agreement.reactions && Object.keys(agreement.reactions).length > 0}
+                                        <div class="reaction-pills">
+                                            {#each Object.entries(agreement.reactions) as [emoji, count]}
+                                                <span class="reaction-pill" title="{count} {emoji} reaction{count !== 1 ? 's' : ''}">
+                                                    <span class="reaction-emoji">{emoji}</span>
+                                                    <span class="reaction-count">{count}</span>
+                                                </span>
+                                            {/each}
+                                        </div>
+                                    {/if}
                                     <div class="agreement-meta">
                                         {#if agreement.source === "comment" && agreement.cardContent}
                                             <span class="card-reference">
@@ -493,8 +504,8 @@
                         </div>
                     {/each}
                 </div>
-            {:else if !isFacilitator}
-                <p class="no-agreements">No agreements yet</p>
+            {:else}
+                <p class="no-agreements">Nothing to review</p>
             {/if}
         </div>
     {/if}
@@ -775,5 +786,35 @@
         &:hover {
             background: #5a6268;
         }
+    }
+
+    .reaction-pills {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .reaction-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 6px;
+        background-color: #f5f5f5;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        min-height: 24px;
+    }
+
+    .reaction-emoji {
+        font-size: 0.875rem;
+        line-height: 1;
+    }
+
+    .reaction-count {
+        color: #666;
+        font-weight: 500;
     }
 </style>

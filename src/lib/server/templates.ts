@@ -219,9 +219,24 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         allowComments: true
       },
       {
+        title: 'Review Last Time',
+        mode: 'agreements' as const,
+        seq: 2,
+        allowAddCards: false,
+        allowEditCards: false,
+        allowObscureCards: false,
+        allowMoveCards: false,
+        allowGroupCards: false,
+        showVotes: false,
+        allowVoting: false,
+        showComments: false,
+        allowComments: false,
+        visibleColumns: ['Issues to Discuss']
+      },
+      {
         title: 'Vote on Topics',
         mode: 'columns' as const,
-        seq: 2,
+        seq: 3,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
@@ -236,7 +251,7 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
       {
         title: 'Discuss Topics',
         mode: 'present' as const,
-        seq: 3,
+        seq: 4,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,
@@ -251,7 +266,7 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
       {
         title: 'Review Topics',
         mode: 'review' as const,
-        seq: 4,
+        seq: 5,
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,

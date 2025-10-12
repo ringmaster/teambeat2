@@ -210,6 +210,12 @@
                         md += `${group.leadCard.notes}\n\n`;
                     }
 
+                    // Add reactions if present
+                    if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
+                        const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                        md += `${reactionTexts.join(' ')}\n\n`;
+                    }
+
                     // Add lead card comments
                     const leadComments = getCommentsForCard(group.leadCard.id);
                     if (leadComments.length > 0) {
@@ -231,6 +237,12 @@
 
                         if (subCard.notes) {
                             md += `${subCard.notes}\n\n`;
+                        }
+
+                        // Add reactions if present
+                        if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+                            const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                            md += `${reactionTexts.join(' ')}\n\n`;
                         }
 
                         const subComments = getCommentsForCard(subCard.id);
@@ -262,6 +274,12 @@
                     md += `${group.leadCard.notes}\n\n`;
                 }
 
+                // Add reactions if present
+                if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
+                    const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                    md += `${reactionTexts.join(' ')}\n\n`;
+                }
+
                 // Add lead card comments
                 const leadComments = getCommentsForCard(group.leadCard.id);
                 if (leadComments.length > 0) {
@@ -283,6 +301,12 @@
 
                     if (subCard.notes) {
                         md += `${subCard.notes}\n\n`;
+                    }
+
+                    // Add reactions if present
+                    if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+                        const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                        md += `${reactionTexts.join(' ')}\n\n`;
                     }
 
                     const subComments = getCommentsForCard(subCard.id);
@@ -314,7 +338,32 @@
                 const completionDate = agreement.completed && agreement.completedAt
                     ? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
                     : '';
-                md += `- ${checkbox} ${agreement.content} (${source})${completionDate}\n`;
+
+                // Handle multi-line content with proper indentation
+                const lines = agreement.content.split('\n');
+                const firstLine = lines[0];
+                const remainingLines = lines.slice(1);
+
+                // First line with checkbox
+                md += `- ${checkbox} **${firstLine}**\n`;
+
+                // Remaining content lines, indented
+                for (let i = 0; i < remainingLines.length; i++) {
+                    const line = remainingLines[i].trim();
+                    if (line) {
+                        // Add source info to the last non-empty line
+                        if (i === remainingLines.length - 1) {
+                            md += `    - ${line} (${source})${completionDate}\n`;
+                        } else {
+                            md += `    - ${line}\n`;
+                        }
+                    }
+                }
+
+                // If there were no remaining lines, add source on its own line
+                if (remainingLines.length === 0 || remainingLines.every(line => !line.trim())) {
+                    md += `    - (${source})${completionDate}\n`;
+                }
             }
         }
 
@@ -342,6 +391,12 @@
                         html += `<p>${escapeHtml(group.leadCard.notes)}</p>\n`;
                     }
 
+                    // Add reactions if present
+                    if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
+                        const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                        html += `<p>${reactionTexts.join(' ')}</p>\n`;
+                    }
+
                     // Add lead card comments
                     const leadComments = getCommentsForCard(group.leadCard.id);
                     if (leadComments.length > 0) {
@@ -363,6 +418,12 @@
 
                         if (subCard.notes) {
                             html += `<p>${escapeHtml(subCard.notes)}</p>\n`;
+                        }
+
+                        // Add reactions if present
+                        if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+                            const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                            html += `<p>${reactionTexts.join(' ')}</p>\n`;
                         }
 
                         const subComments = getCommentsForCard(subCard.id);
@@ -394,6 +455,12 @@
                     html += `<p>${escapeHtml(group.leadCard.notes)}</p>\n`;
                 }
 
+                // Add reactions if present
+                if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
+                    const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                    html += `<p>${reactionTexts.join(' ')}</p>\n`;
+                }
+
                 // Add lead card comments
                 const leadComments = getCommentsForCard(group.leadCard.id);
                 if (leadComments.length > 0) {
@@ -415,6 +482,12 @@
 
                     if (subCard.notes) {
                         html += `<p>${escapeHtml(subCard.notes)}</p>\n`;
+                    }
+
+                    // Add reactions if present
+                    if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+                        const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
+                        html += `<p>${reactionTexts.join(' ')}</p>\n`;
                     }
 
                     const subComments = getCommentsForCard(subCard.id);
@@ -447,7 +520,36 @@
                 const completionDate = agreement.completed && agreement.completedAt
                     ? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
                     : '';
-                html += `<li><input type="checkbox" ${checked} /> <span ${strikethrough}>${escapeHtml(agreement.content)} (${source})${completionDate}</span></li>\n`;
+
+                // Handle multi-line content with proper indentation
+                const lines = agreement.content.split('\n');
+                const firstLine = lines[0];
+                const remainingLines = lines.slice(1).filter(line => line.trim());
+
+                // First line with checkbox
+                html += `<li><input type="checkbox" ${checked} /> <span ${strikethrough}><strong>${escapeHtml(firstLine)}</strong></span>`;
+
+                // Remaining content lines, indented as nested list
+                if (remainingLines.length > 0) {
+                    html += `\n<ul style="list-style-type: none; padding-left: 20px; margin-top: 5px;">\n`;
+                    for (let i = 0; i < remainingLines.length; i++) {
+                        const line = remainingLines[i].trim();
+                        if (line) {
+                            // Add source info to the last line
+                            if (i === remainingLines.length - 1) {
+                                html += `<li>${escapeHtml(line)} <em>(${source})${completionDate}</em></li>\n`;
+                            } else {
+                                html += `<li>${escapeHtml(line)}</li>\n`;
+                            }
+                        }
+                    }
+                    html += `</ul>\n`;
+                } else {
+                    // If no remaining lines, add source on same line
+                    html += ` <em>(${source})${completionDate}</em>`;
+                }
+
+                html += `</li>\n`;
             }
             html += `</ul>\n`;
         }

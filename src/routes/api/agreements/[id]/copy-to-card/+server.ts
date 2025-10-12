@@ -67,11 +67,15 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    // Create the card with agreement content
+    // Format content with indentation for markdown
+    // Replace newlines with 4 spaces + tab for markdown indentation
+    const formattedContent = agreement.content.replace(/\n/g, '\n    \t');
+
+    // Create the card with formatted content
     const card = await createCard({
       columnId: data.column_id,
       userId: user.userId,
-      content: agreement.content
+      content: formattedContent
     });
 
     const enrichedCard = await enrichCardWithCounts(card);
