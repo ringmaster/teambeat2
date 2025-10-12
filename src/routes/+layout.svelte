@@ -49,6 +49,12 @@
         name="description"
         content="Collaborative retrospective boards for agile teams. Run better team meetings with real-time collaboration, voting, and action items."
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap"
+        rel="stylesheet"
+    />
 
     <!-- OpenGraph tags -->
     <meta
@@ -360,8 +366,8 @@
     }
 
     .teambeat-logo {
-        width: 1.5em;
-        height: 1.5em;
+        width: 2em;
+        height: 2em;
         margin-right: 0.5em;
         vertical-align: middle;
         color: var(--title-bar-color);

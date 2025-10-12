@@ -1,9 +1,13 @@
 <script lang="ts">
+    import moment from "moment";
+
     interface Agreement {
         id: string;
         content: string;
         cardTitle: string | null;
         source?: 'agreement' | 'comment';
+        completed?: boolean;
+        completedAt?: string | null;
     }
 
     interface Props {
@@ -11,6 +15,12 @@
     }
 
     const { agreements }: Props = $props();
+
+    // Format date as yyyy-mm-dd
+    function formatDateYYYYMMDD(dateString: string | null | undefined): string {
+        if (!dateString) return "";
+        return moment(dateString).format('YYYY-MM-DD');
+    }
 </script>
 
 <div class="agreements-section">
@@ -38,17 +48,24 @@
 
     <ul class="agreements-list">
         {#each agreements as agreement (agreement.id)}
-            <li class="agreement-item">
+            <li class="agreement-item" class:completed={agreement.completed}>
                 <div class="agreement-content">{agreement.content}</div>
-                {#if agreement.cardTitle}
-                    <div class="agreement-source">
-                        from: {agreement.cardTitle}
-                    </div>
-                {:else}
-                    <div class="agreement-source">
-                        board-level agreement
-                    </div>
-                {/if}
+                <div class="agreement-metadata">
+                    {#if agreement.cardTitle}
+                        <div class="agreement-source">
+                            from: {agreement.cardTitle}
+                        </div>
+                    {:else}
+                        <div class="agreement-source">
+                            board-level agreement
+                        </div>
+                    {/if}
+                    {#if agreement.completed && agreement.completedAt}
+                        <div class="agreement-completed">
+                            Completed on {formatDateYYYYMMDD(agreement.completedAt)}
+                        </div>
+                    {/if}
+                </div>
             </li>
         {/each}
     </ul>
@@ -114,12 +131,26 @@
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+
+        &.completed {
+            opacity: 0.7;
+
+            .agreement-content {
+                text-decoration: line-through;
+            }
+        }
     }
 
     .agreement-content {
         color: var(--text-primary);
         font-size: 1rem;
         line-height: 1.5;
+    }
+
+    .agreement-metadata {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
     }
 
     .agreement-source {
@@ -129,5 +160,11 @@
         color: var(--text-secondary);
         font-size: 0.875rem;
         font-style: italic;
+    }
+
+    .agreement-completed {
+        color: var(--accent-success);
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 </style>

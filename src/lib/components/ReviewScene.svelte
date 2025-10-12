@@ -7,6 +7,7 @@
     import { toastStore } from "$lib/stores/toast";
     import { onMount } from "svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
+    import moment from "moment";
 
     interface Props {
         board: Board;
@@ -309,7 +310,11 @@
                 const source = agreement.cardTitle
                     ? `from: ${agreement.cardTitle}`
                     : 'board-level agreement';
-                md += `- [ ] ${agreement.content} (${source})\n`;
+                const checkbox = agreement.completed ? '[x]' : '[ ]';
+                const completionDate = agreement.completed && agreement.completedAt
+                    ? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
+                    : '';
+                md += `- ${checkbox} ${agreement.content} (${source})${completionDate}\n`;
             }
         }
 
@@ -437,7 +442,12 @@
                 const source = agreement.cardTitle
                     ? `from: ${escapeHtml(agreement.cardTitle)}`
                     : 'board-level agreement';
-                html += `<li><input type="checkbox" /> ${escapeHtml(agreement.content)} (${source})</li>\n`;
+                const checked = agreement.completed ? 'checked' : '';
+                const strikethrough = agreement.completed ? 'style="text-decoration: line-through;"' : '';
+                const completionDate = agreement.completed && agreement.completedAt
+                    ? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
+                    : '';
+                html += `<li><input type="checkbox" ${checked} /> <span ${strikethrough}>${escapeHtml(agreement.content)} (${source})${completionDate}</span></li>\n`;
             }
             html += `</ul>\n`;
         }
@@ -450,6 +460,12 @@
         const div = document.createElement("div");
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Format date as yyyy-mm-dd
+    function formatDateYYYYMMDD(dateString: string | null): string {
+        if (!dateString) return "";
+        return moment(dateString).format('YYYY-MM-DD');
     }
 
     // Copy to clipboard
