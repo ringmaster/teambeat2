@@ -1,6 +1,7 @@
 <script lang="ts">
     import Pill from './Pill.svelte';
-    
+    import type { Snippet } from 'svelte';
+
     interface Props {
         name: string;
         meetingDate?: string | null;
@@ -8,15 +9,17 @@
         status?: 'draft' | 'active' | 'complete' | 'archived';
         onclick?: () => void;
         class?: string;
+        actions?: Snippet;
     }
-    
+
     let {
         name,
         meetingDate,
         createdAt,
         status = 'draft',
         onclick,
-        class: className = ''
+        class: className = '',
+        actions
     }: Props = $props();
     
     function formatDate(dateString: string | null | undefined) {
@@ -42,7 +45,7 @@
     });
 </script>
 
-<button 
+<button
     {onclick}
     class={itemClass}
 >
@@ -53,6 +56,11 @@
                 <p class="board-listing-date">{displayDate}</p>
             {/if}
         </div>
-        <Pill preset={status}>{status}</Pill>
+        <div class="board-listing-actions">
+            {#if actions}
+                {@render actions()}
+            {/if}
+            <Pill preset={status}>{status}</Pill>
+        </div>
     </div>
 </button>

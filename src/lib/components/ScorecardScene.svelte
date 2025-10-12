@@ -768,7 +768,7 @@
     }
 
     .scorecard-scene {
-        padding: var(--spacing-6);
+        padding: 0 var(--spacing-6) var(--spacing-6) var(--spacing-6);
         overflow-y: auto;
     }
 
@@ -797,10 +797,15 @@
         margin-bottom: var(--spacing-8);
 
         h3 {
+            position: sticky;
+            top: 0;
             margin: 0 0 var(--spacing-4) 0;
             font-size: var(--text-xl);
             padding-bottom: var(--spacing-2);
+            padding-top: var(--spacing-2);
             border-bottom: 2px solid var(--color-primary);
+            background-color: var(--surface-primary);
+            z-index: 10;
         }
     }
 

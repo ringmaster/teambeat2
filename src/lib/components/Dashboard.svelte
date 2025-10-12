@@ -27,6 +27,7 @@
     let showUserManagementModal = $state(false);
     let seriesToManage: any = $state(null);
     let currentSeriesUsers = $state([]);
+    let cloningBoards = $state({} as Record<string, boolean>);
 
     onMount(async () => {
         try {
@@ -391,6 +392,51 @@
             console.error("Failed to update user role:", error);
         }
     }
+
+    async function cloneBoard(sourceBoard: any, seriesId: string) {
+        cloningBoards[sourceBoard.id] = true;
+
+        try {
+            // Create a new board
+            const createResponse = await fetch("/api/boards", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: `${sourceBoard.name} (Clone)`,
+                    seriesId,
+                }),
+            });
+
+            if (!createResponse.ok) {
+                const data = await createResponse.json();
+                alert(data.error || "Failed to create new board");
+                return;
+            }
+
+            const createData = await createResponse.json();
+            const newBoardId = createData.board.id;
+
+            // Clone the source board into the new board
+            const cloneResponse = await fetch(`/api/boards/${newBoardId}/clone`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sourceId: sourceBoard.id }),
+            });
+
+            if (!cloneResponse.ok) {
+                const data = await cloneResponse.json();
+                alert(data.error || "Failed to clone board");
+                return;
+            }
+
+            // Navigate to the new board
+            goto(`/board/${newBoardId}`);
+        } catch (error) {
+            alert(`Network error. Please try again. Error: ${error}`);
+        } finally {
+            cloningBoards[sourceBoard.id] = false;
+        }
+    }
 </script>
 
 {#if loading}
@@ -619,7 +665,25 @@
                                                             goto(
                                                                 `/board/${board.id}`,
                                                             )}
-                                                    />
+                                                    >
+                                                        {#snippet actions()}
+                                                            <button
+                                                                class="icon-button icon-button-secondary cooltipz--bottom"
+                                                                aria-label="Clone board"
+                                                                onclick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    cloneBoard(board, s.id);
+                                                                }}
+                                                                disabled={cloningBoards[board.id]}
+                                                            >
+                                                                {#if cloningBoards[board.id]}
+                                                                    <Icon name="spinner" size="sm" />
+                                                                {:else}
+                                                                    <Icon name="clone" size="sm" />
+                                                                {/if}
+                                                            </button>
+                                                        {/snippet}
+                                                    </BoardListingItem>
                                                 {/each}
                                             </div>
                                         </div>
