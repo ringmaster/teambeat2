@@ -562,7 +562,6 @@
         border-top: 3px solid var(--card-border-color);
         position: relative;
         z-index: 1;
-        min-height: 44px; /* Touch-friendly minimum height */
 
         @media (max-width: 767px) {
             padding: 14px; /* Slightly more padding on mobile for better touch targets */
