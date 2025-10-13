@@ -169,23 +169,42 @@
     }
 
     async function deleteAgreement(agreementId: string) {
-        if (!confirm("Are you sure you want to delete this agreement?")) return;
+        toastStore.warning("Are you sure you want to delete this agreement?", {
+            autoHide: false,
+            actions: [
+                {
+                    label: "Delete",
+                    onClick: async () => {
+                        try {
+                            const response = await fetch(
+                                `/api/agreements/${agreementId}`,
+                                {
+                                    method: "DELETE",
+                                },
+                            );
 
-        try {
-            const response = await fetch(`/api/agreements/${agreementId}`, {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                toastStore.success("Agreement deleted");
-            } else {
-                const data = await response.json();
-                toastStore.error(data.error || "Failed to delete agreement");
-            }
-        } catch (error) {
-            console.error("Failed to delete agreement:", error);
-            toastStore.error("Failed to delete agreement");
-        }
+                            if (response.ok) {
+                                toastStore.success("Agreement deleted");
+                            } else {
+                                const data = await response.json();
+                                toastStore.error(
+                                    data.error || "Failed to delete agreement",
+                                );
+                            }
+                        } catch (error) {
+                            console.error("Failed to delete agreement:", error);
+                            toastStore.error("Failed to delete agreement");
+                        }
+                    },
+                    variant: "primary",
+                },
+                {
+                    label: "Cancel",
+                    onClick: () => {},
+                    variant: "secondary",
+                },
+            ],
+        });
     }
 
     async function copyToCard(agreement: UnifiedAgreement, columnId: string) {
@@ -558,6 +577,7 @@
 
     .agreements-section {
         margin-bottom: 2rem;
+        min-height: 100vh;
     }
 
     .add-agreement-form {

@@ -2,6 +2,7 @@
     import { onMount, onDestroy } from "svelte";
     import type { PerformanceStats } from "$lib/server/performance/tracker";
     import TimeSeriesChart from "$lib/components/TimeSeriesChart.svelte";
+    import { toastStore } from "$lib/stores/toast";
 
     let stats: PerformanceStats | null = $state(null);
     let loading = $state(true);
@@ -24,21 +25,42 @@
     }
 
     async function resetMetrics() {
-        if (!confirm("Reset all performance counters?")) return;
-
-        try {
-            const response = await fetch("/api/admin/performance", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "reset" }),
-            });
-            if (response.ok) {
-                await loadStats();
-            }
-        } catch (err) {
-            error =
-                err instanceof Error ? err.message : "Failed to reset metrics";
-        }
+        toastStore.warning("Reset all performance counters?", {
+            autoHide: false,
+            actions: [
+                {
+                    label: "Reset",
+                    onClick: async () => {
+                        try {
+                            const response = await fetch(
+                                "/api/admin/performance",
+                                {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ action: "reset" }),
+                                },
+                            );
+                            if (response.ok) {
+                                await loadStats();
+                                toastStore.success("Performance counters reset successfully");
+                            }
+                        } catch (err) {
+                            error =
+                                err instanceof Error
+                                    ? err.message
+                                    : "Failed to reset metrics";
+                            toastStore.error("Failed to reset metrics");
+                        }
+                    },
+                    variant: "primary",
+                },
+                {
+                    label: "Cancel",
+                    onClick: () => {},
+                    variant: "secondary",
+                },
+            ],
+        });
     }
 
     function formatBytes(bytes: number): string {

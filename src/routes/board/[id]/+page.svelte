@@ -1913,35 +1913,51 @@
     }
 
     async function deleteColumn(columnId: string) {
-        if (
-            !confirm(
-                "Are you sure you want to delete this column? All cards in this column will be deleted.",
-            )
-        )
-            return;
+        toastStore.warning(
+            "Are you sure you want to delete this column? All cards in this column will be deleted.",
+            {
+                autoHide: false,
+                actions: [
+                    {
+                        label: "Delete",
+                        onClick: async () => {
+                            try {
+                                const response = await fetch(
+                                    `/api/boards/${boardId}/columns/${columnId}`,
+                                    {
+                                        method: "DELETE",
+                                    },
+                                );
 
-        try {
-            const response = await fetch(
-                `/api/boards/${boardId}/columns/${columnId}`,
-                {
-                    method: "DELETE",
-                },
-            );
-
-            if (response.ok) {
-                // Remove from both columns and allColumns for optimistic update
-                board.columns = board.columns.filter(
-                    (c: any) => c.id !== columnId,
-                );
-                if (board.allColumns) {
-                    board.allColumns = board.allColumns.filter(
-                        (c: any) => c.id !== columnId,
-                    );
-                }
-            }
-        } catch (error) {
-            console.error("Failed to delete column:", error);
-        }
+                                if (response.ok) {
+                                    // Remove from both columns and allColumns for optimistic update
+                                    board.columns = board.columns.filter(
+                                        (c: any) => c.id !== columnId,
+                                    );
+                                    if (board.allColumns) {
+                                        board.allColumns = board.allColumns.filter(
+                                            (c: any) => c.id !== columnId,
+                                        );
+                                    }
+                                    toastStore.success("Column deleted successfully");
+                                } else {
+                                    toastStore.error("Failed to delete column");
+                                }
+                            } catch (error) {
+                                console.error("Failed to delete column:", error);
+                                toastStore.error("Failed to delete column");
+                            }
+                        },
+                        variant: "primary",
+                    },
+                    {
+                        label: "Cancel",
+                        onClick: () => {},
+                        variant: "secondary",
+                    },
+                ],
+            },
+        );
     }
 
     // Scene Management Functions
@@ -2027,24 +2043,42 @@
     }
 
     async function deleteScene(sceneId: string) {
-        if (!confirm("Are you sure you want to delete this scene?")) return;
-
-        try {
-            const response = await fetch(
-                `/api/boards/${boardId}/scenes/${sceneId}`,
+        toastStore.warning("Are you sure you want to delete this scene?", {
+            autoHide: false,
+            actions: [
                 {
-                    method: "DELETE",
-                },
-            );
+                    label: "Delete",
+                    onClick: async () => {
+                        try {
+                            const response = await fetch(
+                                `/api/boards/${boardId}/scenes/${sceneId}`,
+                                {
+                                    method: "DELETE",
+                                },
+                            );
 
-            if (response.ok) {
-                board.scenes = board.scenes.filter(
-                    (s: any) => s.id !== sceneId,
-                );
-            }
-        } catch (error) {
-            console.error("Failed to delete scene:", error);
-        }
+                            if (response.ok) {
+                                board.scenes = board.scenes.filter(
+                                    (s: any) => s.id !== sceneId,
+                                );
+                                toastStore.success("Scene deleted successfully");
+                            } else {
+                                toastStore.error("Failed to delete scene");
+                            }
+                        } catch (error) {
+                            console.error("Failed to delete scene:", error);
+                            toastStore.error("Failed to delete scene");
+                        }
+                    },
+                    variant: "primary",
+                },
+                {
+                    label: "Cancel",
+                    onClick: () => {},
+                    variant: "secondary",
+                },
+            ],
+        });
     }
 
     // Drag and Drop Handlers

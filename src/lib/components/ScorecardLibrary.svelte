@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Scorecard } from '$lib/types/scorecard';
+  import { toastStore } from '$lib/stores/toast';
 
   interface Props {
     seriesId: string;
@@ -70,26 +71,41 @@
   }
 
   async function deleteScorecard(scorecardId: string) {
-    if (!confirm('Are you sure you want to delete this scorecard? This will remove it from all scenes.')) {
-      return;
-    }
+    toastStore.warning('Are you sure you want to delete this scorecard? This will remove it from all scenes.', {
+      autoHide: false,
+      actions: [
+        {
+          label: 'Delete',
+          onClick: async () => {
+            try {
+              const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`, {
+                method: 'DELETE'
+              });
 
-    try {
-      const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`, {
-        method: 'DELETE'
-      });
+              const data = await response.json();
 
-      const data = await response.json();
-
-      if (data.success) {
-        scorecards = scorecards.filter(s => s.id !== scorecardId);
-      } else {
-        error = data.error || 'Failed to delete scorecard';
-      }
-    } catch (e) {
-      error = 'Failed to delete scorecard';
-      console.error('Error deleting scorecard:', e);
-    }
+              if (data.success) {
+                scorecards = scorecards.filter(s => s.id !== scorecardId);
+                toastStore.success('Scorecard deleted successfully');
+              } else {
+                error = data.error || 'Failed to delete scorecard';
+                toastStore.error('Failed to delete scorecard');
+              }
+            } catch (e) {
+              error = 'Failed to delete scorecard';
+              toastStore.error('Failed to delete scorecard');
+              console.error('Error deleting scorecard:', e);
+            }
+          },
+          variant: 'primary'
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+          variant: 'secondary'
+        }
+      ]
+    });
   }
 
   onMount(() => {

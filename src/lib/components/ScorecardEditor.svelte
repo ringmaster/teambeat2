@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Scorecard, ScorecardDatasource } from '$lib/types/scorecard';
+  import { toastStore } from '$lib/stores/toast';
 
   interface Props {
     scorecardId: string;
@@ -83,26 +84,41 @@
   }
 
   async function deleteDatasource(datasourceId: string) {
-    if (!confirm('Are you sure you want to delete this datasource?')) {
-      return;
-    }
+    toastStore.warning('Are you sure you want to delete this datasource?', {
+      autoHide: false,
+      actions: [
+        {
+          label: 'Delete',
+          onClick: async () => {
+            try {
+              const response = await fetch(`/api/scorecards/${scorecardId}/datasources/${datasourceId}`, {
+                method: 'DELETE'
+              });
 
-    try {
-      const response = await fetch(`/api/scorecards/${scorecardId}/datasources/${datasourceId}`, {
-        method: 'DELETE'
-      });
+              const data = await response.json();
 
-      const data = await response.json();
-
-      if (data.success) {
-        datasources = datasources.filter(d => d.id !== datasourceId);
-      } else {
-        error = data.error || 'Failed to delete datasource';
-      }
-    } catch (e) {
-      error = 'Failed to delete datasource';
-      console.error('Error deleting datasource:', e);
-    }
+              if (data.success) {
+                datasources = datasources.filter(d => d.id !== datasourceId);
+                toastStore.success('Datasource deleted successfully');
+              } else {
+                error = data.error || 'Failed to delete datasource';
+                toastStore.error('Failed to delete datasource');
+              }
+            } catch (e) {
+              error = 'Failed to delete datasource';
+              toastStore.error('Failed to delete datasource');
+              console.error('Error deleting datasource:', e);
+            }
+          },
+          variant: 'primary'
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+          variant: 'secondary'
+        }
+      ]
+    });
   }
 
   function handleDragStart(index: number) {

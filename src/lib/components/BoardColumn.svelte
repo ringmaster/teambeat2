@@ -285,7 +285,7 @@
         min-height: 128px;
         flex: 1;
         overflow-y: auto;
-        padding: 8px;
+        padding: 8px 8px 50vh;
     }
 
     /* Card group container */
