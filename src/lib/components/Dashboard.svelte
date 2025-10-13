@@ -430,11 +430,14 @@
             const newBoardId = createData.board.id;
 
             // Clone the source board into the new board
-            const cloneResponse = await fetch(`/api/boards/${newBoardId}/clone`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sourceId: sourceBoard.id }),
-            });
+            const cloneResponse = await fetch(
+                `/api/boards/${newBoardId}/clone`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sourceId: sourceBoard.id }),
+                },
+            );
 
             if (!cloneResponse.ok) {
                 const data = await cloneResponse.json();
@@ -518,7 +521,7 @@
         </div>
 
         <!-- Board Series -->
-        <div>
+        <div class="all-series-section">
             <h2 class="section-title">Your Series</h2>
             {#if series.length === 0}
                 <div class="empty-state">
@@ -628,6 +631,49 @@
                                     </div>
                                 </div>
 
+                                <!-- Create New Board -->
+                                <InputWithButton
+                                    type="text"
+                                    bind:value={boardNames[s.id]}
+                                    placeholder="Board name..."
+                                    buttonVariant="primary"
+                                    buttonDisabled={creatingBoards[s.id] ||
+                                        !boardNames[s.id]?.trim()}
+                                    onButtonClick={() =>
+                                        createBoard(s.id, s.name)}
+                                    onkeydown={(e) => {
+                                        if (e.key === "Enter")
+                                            createBoard(s.id, s.name);
+                                    }}
+                                    class="board-input-with-button"
+                                    buttonClass="cooltipz--bottom"
+                                    buttonAriaLabel="Add board"
+                                >
+                                    {#snippet buttonContent()}
+                                        {#if creatingBoards[s.id]}
+                                            ...
+                                        {:else}
+                                            <Icon name="plus" size="sm" />
+                                        {/if}
+                                    {/snippet}
+                                </InputWithButton>
+                                {#if boardErrors[s.id]}
+                                    <div class="alert alert-error">
+                                        <svg
+                                            class="w-4 h-4"
+                                            fill="currentColor"
+                                            viewBox="0 0 20 20"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                                clip-rule="evenodd"
+                                            />
+                                        </svg>
+                                        <span>{boardErrors[s.id]}</span>
+                                    </div>
+                                {/if}
+
                                 <div class="space-y-3">
                                     <!-- Active and Draft Boards -->
                                     {#if s.boards && s.boards.filter( (b) => ["active", "draft"].includes(b.status), ).length > 0}
@@ -661,7 +707,9 @@
 
                                     <!-- Completed Boards -->
                                     {#if s.boards && s.boards.filter((b) => b.status === "completed").length > 0}
-                                        <div class="board-section">
+                                        <div
+                                            class="board-section completed-boards-section"
+                                        >
                                             <h4 class="board-section-title">
                                                 Completed Boards:
                                             </h4>
@@ -683,65 +731,35 @@
                                                             <button
                                                                 class="icon-button icon-button-secondary cooltipz--bottom"
                                                                 aria-label="Clone board"
-                                                                onclick={(e) => {
+                                                                onclick={(
+                                                                    e,
+                                                                ) => {
                                                                     e.stopPropagation();
-                                                                    cloneBoard(board, s.id);
+                                                                    cloneBoard(
+                                                                        board,
+                                                                        s.id,
+                                                                    );
                                                                 }}
-                                                                disabled={cloningBoards[board.id]}
+                                                                disabled={cloningBoards[
+                                                                    board.id
+                                                                ]}
                                                             >
                                                                 {#if cloningBoards[board.id]}
-                                                                    <Icon name="spinner" size="sm" />
+                                                                    <Icon
+                                                                        name="spinner"
+                                                                        size="sm"
+                                                                    />
                                                                 {:else}
-                                                                    <Icon name="clone" size="sm" />
+                                                                    <Icon
+                                                                        name="clone"
+                                                                        size="sm"
+                                                                    />
                                                                 {/if}
                                                             </button>
                                                         {/snippet}
                                                     </BoardListingItem>
                                                 {/each}
                                             </div>
-                                        </div>
-                                    {/if}
-
-                                    <!-- Create New Board -->
-                                    <InputWithButton
-                                        type="text"
-                                        bind:value={boardNames[s.id]}
-                                        placeholder="Board name..."
-                                        buttonVariant="primary"
-                                        buttonDisabled={creatingBoards[s.id] ||
-                                            !boardNames[s.id]?.trim()}
-                                        onButtonClick={() =>
-                                            createBoard(s.id, s.name)}
-                                        onkeydown={(e) => {
-                                            if (e.key === "Enter")
-                                                createBoard(s.id, s.name);
-                                        }}
-                                        class="board-input-with-button"
-                                        buttonClass="cooltipz--bottom"
-                                        buttonAriaLabel="Add board"
-                                    >
-                                        {#snippet buttonContent()}
-                                            {#if creatingBoards[s.id]}
-                                                ...
-                                            {:else}
-                                                <Icon name="plus" size="sm" />
-                                            {/if}
-                                        {/snippet}
-                                    </InputWithButton>
-                                    {#if boardErrors[s.id]}
-                                        <div class="alert alert-error">
-                                            <svg
-                                                class="w-4 h-4"
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
-                                            >
-                                                <path
-                                                    fill-rule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                    clip-rule="evenodd"
-                                                />
-                                            </svg>
-                                            <span>{boardErrors[s.id]}</span>
                                         </div>
                                     {/if}
                                 </div>
@@ -1031,5 +1049,9 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+    }
+
+    .completed-boards-section {
+        margin-top: var(--spacing-6);
     }
 </style>

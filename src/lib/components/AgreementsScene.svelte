@@ -2,8 +2,6 @@
     import type { Board, Scene } from "$lib/types";
     import Icon from "./ui/Icon.svelte";
     import { toastStore } from "$lib/stores/toast";
-    import { onMount } from "svelte";
-    import { getUserDisplayName } from "$lib/utils/animalNames";
 
     interface Props {
         board: Board;
@@ -216,7 +214,7 @@
         }
     }
 
-    function startEdit(agreement: EnrichedAgreement) {
+    function startEdit(agreement: UnifiedAgreement) {
         editingAgreementId = agreement.id;
         editingContent = agreement.content;
     }
@@ -360,10 +358,20 @@
                                     </div>
                                     {#if agreement.reactions && Object.keys(agreement.reactions).length > 0}
                                         <div class="reaction-pills">
-                                            {#each Object.entries(agreement.reactions) as [emoji, count]}
-                                                <span class="reaction-pill" title="{count} {emoji} reaction{count !== 1 ? 's' : ''}">
-                                                    <span class="reaction-emoji">{emoji}</span>
-                                                    <span class="reaction-count">{count}</span>
+                                            {#each Object.entries(agreement.reactions) as [emoji, count] (emoji)}
+                                                <span
+                                                    class="reaction-pill"
+                                                    title="{count} {emoji} reaction{count !==
+                                                    1
+                                                        ? 's'
+                                                        : ''}"
+                                                >
+                                                    <span class="reaction-emoji"
+                                                        >{emoji}</span
+                                                    >
+                                                    <span class="reaction-count"
+                                                        >{count}</span
+                                                    >
                                                 </span>
                                             {/each}
                                         </div>
@@ -434,7 +442,7 @@
                                                 <div class="dropdown-header">
                                                     Copy to column:
                                                 </div>
-                                                {#each visibleColumns() as column}
+                                                {#each visibleColumns() as column (column.id)}
                                                     <button
                                                         class="dropdown-item"
                                                         onclick={() =>
@@ -493,7 +501,7 @@
                                             <div class="dropdown-header">
                                                 Copy to column:
                                             </div>
-                                            {#each visibleColumns() as column}
+                                            {#each visibleColumns() as column (column.id)}
                                                 <button
                                                     class="dropdown-item"
                                                     onclick={() =>
@@ -525,6 +533,7 @@
         max-width: 1200px;
         margin: 0 auto;
         width: 800px;
+        overflow-y: auto;
     }
 
     .agreements-header {
