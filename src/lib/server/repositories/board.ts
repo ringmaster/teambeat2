@@ -506,3 +506,28 @@ export async function deleteBoard(boardId: string) {
   // Just delete the board, the db is set up to cascade deletes
   await db.delete(boards).where(eq(boards.id, boardId));
 }
+
+export async function getColumnsBySeriesId(seriesId: string, excludeBoardId?: string) {
+  const conditions = [eq(boards.seriesId, seriesId)];
+
+  if (excludeBoardId) {
+    conditions.push(sql`${boards.id} != ${excludeBoardId}`);
+  }
+
+  const result = await db
+    .select({
+      id: columns.id,
+      boardId: columns.boardId,
+      title: columns.title,
+      description: columns.description,
+      seq: columns.seq,
+      defaultAppearance: columns.defaultAppearance,
+      createdAt: columns.createdAt
+    })
+    .from(columns)
+    .innerJoin(boards, eq(columns.boardId, boards.id))
+    .where(and(...conditions))
+    .orderBy(columns.title, columns.seq);
+
+  return result;
+}

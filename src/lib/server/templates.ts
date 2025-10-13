@@ -8,37 +8,19 @@
  * - Scene configurations
  */
 
-// Icebreaker questions for Lean Coffee
-const ICEBREAKER_QUESTIONS = [
-  "What's the best piece of advice you've ever received?",
-  "If you could instantly become an expert in something, what would it be?",
-  "What's the most interesting thing you've learned this week?",
-  "What's your go-to productivity hack that works best for you?",
-  "If you could have dinner with any historical figure, who would it be and why?",
-  "What's one skill you wish they taught in school?",
-  "What's the best compliment you've ever received?",
-  "If you could solve one world problem, what would it be?",
-  "What's your favorite way to unwind after a challenging day?",
-  "What's one thing that always makes you smile?",
-  "If you could live in any decade, what would it be?",
-  "What's the most useful app on your phone?",
-  "What's one book that changed your perspective?",
-  "If you could master any language overnight, which would you choose?",
-  "What's your favorite tradition or ritual?",
-  "What's the best gift you've ever given someone?",
-  "If you could have any superpower for a day, what would it be?",
-  "What's one thing you're grateful for today?",
-  "What's your favorite way to learn new things?",
-  "If you could ask your future self one question, what would it be?",
-  "What's the most beautiful place you've ever seen?",
-  "What's one habit you're proud of developing?",
-  "If you could attend any event in history, what would it be?",
-  "What's your favorite quote or saying?",
-  "What's one thing that always motivates you?"
-];
+import { COLUMN_PRESETS } from '$lib/data/column-presets';
 
-function getRandomIcebreakerQuestion(): string {
-  return ICEBREAKER_QUESTIONS[Math.floor(Math.random() * ICEBREAKER_QUESTIONS.length)];
+/**
+ * Get a random description for a column from the presets
+ * @param columnTitle The title of the column to get a description for
+ * @returns A random description from the preset list, or empty string if no presets available
+ */
+function getRandomColumnDescription(columnTitle: string): string {
+  const presets = COLUMN_PRESETS[columnTitle];
+  if (!presets || presets.length === 0) {
+    return '';
+  }
+  return presets[Math.floor(Math.random() * presets.length)];
 }
 
 // Type definitions for template structure
@@ -199,7 +181,7 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'Icebreaker',
         seq: 1,
         default_appearance: 'locked',
-        getDescription: getRandomIcebreakerQuestion
+        getDescription: () => getRandomColumnDescription('Icebreaker')
       },
       { title: 'Issues to Discuss', seq: 2, default_appearance: 'spread' }
     ],

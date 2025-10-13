@@ -924,7 +924,7 @@
                             <p>Loading scorecards...</p>
                         {:else if availableScorecards.length > 0}
                             <div class="checkbox-grid">
-                                {#each availableScorecards as scorecard}
+                                {#each availableScorecards as scorecard(scorecard.id)}
                                     {@const isAttached =
                                         attachedScorecards.some(
                                             (ss) =>
