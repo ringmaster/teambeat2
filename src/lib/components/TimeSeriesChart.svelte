@@ -54,12 +54,20 @@
             series: [
                 {
                     label: "Time",
+                    value: (self, rawValue) => {
+                        return rawValue != null
+                            ? new Date(rawValue * 1000).toLocaleTimeString()
+                            : "";
+                    },
                 },
                 {
                     label: yAxisLabel,
                     stroke: color,
                     width: 2,
                     points: { show: false },
+                    value: (self, rawValue) => {
+                        return rawValue != null ? rawValue.toFixed(0) : "";
+                    },
                 },
             ],
             axes: [
