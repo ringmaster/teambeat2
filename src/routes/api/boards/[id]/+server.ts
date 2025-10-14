@@ -36,9 +36,17 @@ export const GET: RequestHandler = async (event) => {
 		// Check if user has access to this board
 		let userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole) {
-			// Auto-add user as member when they visit a shared board
-			await addUserToSeries(board.seriesId, user.userId, 'member');
-			userRole = 'member';
+			// Only auto-add users to active boards
+			if (board.status === 'active') {
+				await addUserToSeries(board.seriesId, user.userId, 'member');
+				userRole = 'member';
+			} else {
+				// User not a member and board is not active
+				return json(
+					{ success: false, error: 'Board not found' },
+					{ status: 404 }
+				);
+			}
 		}
 
 		// Non-admin/facilitator users cannot access draft boards

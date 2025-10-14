@@ -91,8 +91,7 @@
     let cloneSourceDate = $derived(
         board.cloneSource
             ? formatDate(
-                  board.cloneSource.meetingDate ||
-                      board.cloneSource.createdAt,
+                  board.cloneSource.meetingDate || board.cloneSource.createdAt,
               )
             : null,
     );
@@ -140,7 +139,7 @@
                         {#if board.blameFreeMode}
                             <Pill
                                 size="sm"
-                                variant="success"
+                                variant="danger"
                                 tip="Usernames are replaced with animal names"
                                 >Blame-free</Pill
                             >
@@ -169,7 +168,9 @@
             {#if ["admin", "facilitator"].includes(userRole)}
                 <button
                     onclick={onConfigureClick}
-                    class="toolbar-button facilitator-configure cooltipz--bottom {showBoardConfig ? 'active' : ''}"
+                    class="toolbar-button facilitator-configure cooltipz--bottom {showBoardConfig
+                        ? 'active'
+                        : ''}"
                     aria-label="Configure board settings"
                 >
                     <Icon name="settings" size="sm" />

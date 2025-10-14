@@ -2410,19 +2410,28 @@
                     toastStore.error("Error updating board. Please try again.");
                 }
             });
+        } else if (board.status === "completed" || board.status === "archived") {
+            // Board is completed or archived - copy URL with restricted access message
+            await copyBoardUrlToClipboard(true);
         } else {
             // Board is active, proceed with sharing
-            await copyBoardUrlToClipboard();
+            await copyBoardUrlToClipboard(false);
         }
     }
 
-    async function copyBoardUrlToClipboard() {
+    async function copyBoardUrlToClipboard(restrictedAccess = false) {
         try {
             const shareUrl = window.location.href;
             await navigator.clipboard.writeText(shareUrl);
-            toastStore.success(
-                "Board URL copied to clipboard! Anyone with this link can access the board.",
-            );
+            if (restrictedAccess) {
+                toastStore.success(
+                    "Board URL copied to clipboard! Only existing members with access to the series will be able to see this board.",
+                );
+            } else {
+                toastStore.success(
+                    "Board URL copied to clipboard! Anyone with this link can access the board.",
+                );
+            }
         } catch (error) {
             console.error("Error copying to clipboard:", error);
             toastStore.error(

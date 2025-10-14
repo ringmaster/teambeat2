@@ -171,3 +171,16 @@ export async function updateUserRoleInSeries(seriesId: string, userId: string, n
     .set({ role: newRole })
     .where(and(eq(seriesMembers.seriesId, seriesId), eq(seriesMembers.userId, userId)));
 }
+
+export async function hasActiveBoards(seriesId: string): Promise<boolean> {
+  const [result] = await db
+    .select({ id: boards.id })
+    .from(boards)
+    .where(and(
+      eq(boards.seriesId, seriesId),
+      eq(boards.status, 'active')
+    ))
+    .limit(1);
+
+  return !!result;
+}

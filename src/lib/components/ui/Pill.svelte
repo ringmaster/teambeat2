@@ -7,6 +7,7 @@
             | "draft"
             | "active"
             | "complete"
+            | "completed"
             | "archived";
         variant?:
             | "primary"
@@ -41,6 +42,7 @@
         draft: "muted",
         active: "primary",
         complete: "success",
+        completed: "success",
         archived: "warning",
     };
 

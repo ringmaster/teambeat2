@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
-import { getUserRoleInSeries, getSeriesMembers, addUserToSeries, removeUserFromSeries, updateUserRoleInSeries } from '$lib/server/repositories/board-series.js';
+import { getUserRoleInSeries, getSeriesMembers, addUserToSeries, removeUserFromSeries, updateUserRoleInSeries, hasActiveBoards } from '$lib/server/repositories/board-series.js';
 import { findUserByEmail } from '$lib/server/repositories/user.js';
 import { z } from 'zod';
 
@@ -84,10 +84,19 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 409 }
 			);
 		}
-		
+
+		// Check if series has any active boards before adding new member
+		const hasActive = await hasActiveBoards(seriesId);
+		if (!hasActive) {
+			return json(
+				{ success: false, error: 'Cannot add users to a series with no active boards' },
+				{ status: 403 }
+			);
+		}
+
 		// Add user to series
 		await addUserToSeries(seriesId, targetUser.id, data.role);
-		
+
 		return json({
 			success: true,
 			message: 'User added successfully'
