@@ -30,10 +30,11 @@
             );
             if (!response.ok) throw new Error("Failed to fetch data");
 
-            const data: Array<{ timestamp: number; value: number }> =
+            const data: Array<{ timestamp: number; value: number | null }> =
                 await response.json();
 
             // Convert to uPlot format: [timestamps[], values[]]
+            // null values will create gaps in the chart
             const timestamps = data.map((d) => d.timestamp / 1000); // uPlot uses seconds
             const values = data.map((d) => d.value);
 
@@ -47,7 +48,7 @@
         }
     }
 
-    function createChart(timestamps: number[], values: number[]) {
+    function createChart(timestamps: number[], values: (number | null)[]) {
         const opts: uPlot.Options = {
             width: chartContainer.offsetWidth,
             height: 200,

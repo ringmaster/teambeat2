@@ -121,6 +121,14 @@
                         class:active={timeRange === "1h"}
                         onclick={() => (timeRange = "1h")}>1h</button
                     >
+                    <button
+                        class:active={timeRange === "1d"}
+                        onclick={() => (timeRange = "1d")}>1d</button
+                    >
+                    <button
+                        class:active={timeRange === "1w"}
+                        onclick={() => (timeRange = "1w")}>1w</button
+                    >
                 </div>
                 <label>
                     <input type="checkbox" bind:checked={autoRefresh} />

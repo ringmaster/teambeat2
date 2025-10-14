@@ -6,7 +6,7 @@
 import { db } from '$lib/server/db';
 import { metricSnapshots, boardMetrics, slowQueries } from '$lib/server/db/schema';
 import { performanceTracker } from './tracker';
-import { lt } from 'drizzle-orm';
+import { lt, gte, and } from 'drizzle-orm';
 
 class MetricsPersistence {
 	private persistInterval: NodeJS.Timeout | null = null;
@@ -91,14 +91,20 @@ class MetricsPersistence {
 	async getHistoricalMetrics(startTime: number, endTime: number) {
 		return await db.select()
 			.from(metricSnapshots)
-			.where(lt(metricSnapshots.timestamp, endTime))
+			.where(and(
+				gte(metricSnapshots.timestamp, startTime),
+				lt(metricSnapshots.timestamp, endTime)
+			))
 			.orderBy(metricSnapshots.timestamp);
 	}
 
 	async getBoardHistory(boardId: number, startTime: number, endTime: number) {
 		return await db.select()
 			.from(boardMetrics)
-			.where(lt(boardMetrics.timestamp, endTime))
+			.where(and(
+				gte(boardMetrics.timestamp, startTime),
+				lt(boardMetrics.timestamp, endTime)
+			))
 			.orderBy(boardMetrics.timestamp);
 	}
 
