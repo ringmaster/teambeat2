@@ -231,7 +231,9 @@ export async function getBoardWithDetails(boardId: string) {
       createdAt: cards.createdAt,
       updatedAt: cards.updatedAt
     })
-    .from(cards);
+    .from(cards)
+    .innerJoin(columns, eq(cards.columnId, columns.id))
+    .where(eq(columns.boardId, boardId));
 
   // Get hidden columns for all scenes
   const hiddenColumnsByScene: Record<string, string[]> = {};

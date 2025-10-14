@@ -4,6 +4,7 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import { getBoardWithDetails } from '../repositories/board.js';
 import { getUserDisplayName } from '../../utils/animalNames.js';
 import { enrichCardsWithCounts } from './cards-data.js';
+import { getSceneCapability } from '$lib/utils/scene-capability.js';
 
 export interface PresentModeCard {
   id: string;
@@ -254,11 +255,11 @@ export async function buildPresentModeData(
     comments: cardComments,
     agreements: cardAgreements,
     scene_permissions: {
-      allow_comments: currentScene.allowComments || false,
-      allow_voting: currentScene.allowVoting || false,
-      allow_edit_cards: currentScene.allowEditCards || false,
-      show_votes: currentScene.showVotes || false,
-      show_comments: currentScene.showComments || false
+      allow_comments: getSceneCapability(currentScene, board.status, 'allowComments'),
+      allow_voting: getSceneCapability(currentScene, board.status, 'allowVoting'),
+      allow_edit_cards: getSceneCapability(currentScene, board.status, 'allowEditCards'),
+      show_votes: getSceneCapability(currentScene, board.status, 'showVotes'),
+      show_comments: getSceneCapability(currentScene, board.status, 'showComments')
     },
     notes_lock: notesLock
   };

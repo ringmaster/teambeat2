@@ -6,6 +6,7 @@ import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositori
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated } from '$lib/server/sse/broadcast.js';
 import { enrichCardWithCounts, enrichCardsWithCounts } from '$lib/server/utils/cards-data.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 import { z } from 'zod';
 
 const moveCardSchema = z.object({
@@ -54,8 +55,8 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     // Check if current scene allows moving cards
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene || !currentScene.allowMoveCards) {
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowMoveCards')) {
       return json(
         { success: false, error: 'Moving cards not allowed in current scene' },
         { status: 403 }

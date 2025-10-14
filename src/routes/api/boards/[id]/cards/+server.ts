@@ -8,6 +8,7 @@ import { broadcastCardCreated } from '$lib/server/sse/broadcast.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
 import { buildAllCardsData, enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 import { z } from 'zod';
 
 const createCardSchema = z.object({
@@ -80,8 +81,8 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Check if current scene allows adding cards
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene || !currentScene.allowAddCards) {
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowAddCards')) {
       return json(
         { success: false, error: 'Adding cards not allowed in current scene' },
         { status: 403 }

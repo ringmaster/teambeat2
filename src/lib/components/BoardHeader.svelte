@@ -3,6 +3,7 @@
     import VotingToolbar from "./VotingToolbar.svelte";
     import Pill from "./ui/Pill.svelte";
     import Icon from "./ui/Icon.svelte";
+    import { getSceneCapability } from "$lib/utils/scene-capability";
 
     interface Props {
         board: {
@@ -200,7 +201,7 @@
     </div>
 </div>
 
-{#if board?.votingEnabled && currentScene?.allowVoting && userVoteAllocation && votingStats}
+{#if board?.votingEnabled && getSceneCapability(currentScene, board?.status, 'allowVoting') && userVoteAllocation && votingStats}
     <VotingToolbar
         board={{
             id: board.id,

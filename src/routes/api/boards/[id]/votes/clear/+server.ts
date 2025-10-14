@@ -5,6 +5,7 @@ import { getBoardWithDetails, updateBoardSettings } from '$lib/server/repositori
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { clearBoardVotes } from '$lib/server/repositories/vote.js';
 import { broadcastBoardUpdated, broadcastVoteUpdatesBasedOnScene } from '$lib/server/sse/broadcast.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 
 export const DELETE: RequestHandler = async (event) => {
   try {
@@ -42,10 +43,17 @@ export const DELETE: RequestHandler = async (event) => {
       broadcastBoardUpdated(boardId, updatedBoard);
 
       // Get current scene to determine what voting data to broadcast
-      const currentScene = updatedBoard.scenes?.find((s: any) => s.id === updatedBoard.currentSceneId);
+      const currentScene = getCurrentScene(updatedBoard.scenes, updatedBoard.currentSceneId);
+
+      // Check capabilities based on scene and board status
+      const canShowVotes = getSceneCapability(currentScene, updatedBoard.status, 'showVotes');
+      const canAllowVoting = getSceneCapability(currentScene, updatedBoard.status, 'allowVoting');
 
       // Broadcast vote updates based on scene settings with votes_cleared flag
-      await broadcastVoteUpdatesBasedOnScene(boardId, currentScene, undefined, true);
+      await broadcastVoteUpdatesBasedOnScene(boardId, {
+        showVotes: canShowVotes || undefined,
+        allowVoting: canAllowVoting || undefined
+      }, undefined, true);
     }
 
     return json({

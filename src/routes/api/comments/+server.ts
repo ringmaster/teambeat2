@@ -6,6 +6,8 @@ import { comments, cards, boards, users, columns } from '$lib/server/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { broadcastUpdatePresentation, broadcastCardUpdated } from '$lib/server/sse/broadcast.js';
 import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
+import { getBoardWithDetails } from '$lib/server/repositories/board.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 import { nanoid } from 'nanoid';
 import { getUserDisplayName } from '$lib/utils/animalNames';
 
@@ -66,6 +68,21 @@ export const POST: RequestHandler = async (event) => {
 
     if (!cardData) {
       return json({ success: false, error: 'Card not found' }, { status: 404 });
+    }
+
+    // Get board with scenes to check scene capabilities
+    const boardWithScenes = await getBoardWithDetails(cardData.board.id);
+    if (!boardWithScenes) {
+      return json({ success: false, error: 'Board not found' }, { status: 404 });
+    }
+
+    // Check if current scene allows commenting
+    const currentScene = getCurrentScene(boardWithScenes.scenes, boardWithScenes.currentSceneId);
+    if (!getSceneCapability(currentScene, boardWithScenes.status, 'allowComments')) {
+      return json(
+        { success: false, error: 'Adding comments not allowed in current scene' },
+        { status: 403 }
+      );
     }
 
     // If this is a reaction, check if the user already has this reaction

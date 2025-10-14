@@ -13,6 +13,7 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated } from '$lib/server/sse/broadcast.js';
 import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
 import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 import { z } from 'zod';
 
 const groupOntoSchema = z.object({
@@ -78,8 +79,8 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Check if current scene allows grouping cards
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene || !currentScene.allowGroupCards) {
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowGroupCards')) {
       return json(
         { success: false, error: 'Grouping cards not allowed in current scene' },
         { status: 403 }
@@ -176,8 +177,8 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     // Check if current scene allows grouping cards
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene || !currentScene.allowGroupCards) {
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowGroupCards')) {
       return json(
         { success: false, error: 'Grouping cards not allowed in current scene' },
         { status: 403 }

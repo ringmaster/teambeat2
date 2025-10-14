@@ -20,6 +20,7 @@
     import { toastStore } from "$lib/stores/toast";
     import { resolve } from "$app/paths";
     import { SSEClient } from "$lib/client/sse-client.js";
+    import { getSceneCapability } from "$lib/utils/scene-capability";
 
     interface Props {
         data: {
@@ -1076,7 +1077,7 @@
 
     async function addCardToColumn(columnId: string) {
         const content = newCardContentByColumn.get(columnId) || "";
-        if (!content.trim() || !currentScene?.allowAddCards) return;
+        if (!content.trim() || !getSceneCapability(currentScene, board?.status, 'allowAddCards')) return;
 
         try {
             const response = await fetch(`/api/boards/${boardId}/cards`, {
@@ -1609,7 +1610,7 @@
 
     function handleDragStart(event: DragEvent, cardId: string) {
         // Check if moving cards is allowed in current scene
-        if (!currentScene?.allowMoveCards) {
+        if (!getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
             event.preventDefault();
             return;
         }
@@ -1624,7 +1625,7 @@
         event.preventDefault();
 
         // Don't allow drop if moving cards is not allowed
-        if (!currentScene?.allowMoveCards) {
+        if (!getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
             if (event.dataTransfer) {
                 event.dataTransfer.dropEffect = "none";
             }
@@ -1641,7 +1642,7 @@
 
     function handleDragEnter(event: DragEvent, columnId: string) {
         event.preventDefault();
-        if (draggedCardId && currentScene?.allowMoveCards) {
+        if (draggedCardId && getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
             cardDropTargetColumnId = columnId;
         }
     }
@@ -1666,7 +1667,7 @@
     async function handleDrop(event: DragEvent, targetColumnId: string) {
         event.preventDefault();
 
-        if (!draggedCardId || !currentScene?.allowMoveCards) {
+        if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
             draggedCardId = "";
             cardDropTargetColumnId = "";
             return;
@@ -1701,7 +1702,7 @@
     async function handleCardDrop(event: DragEvent, targetCardId: string) {
         event.preventDefault();
 
-        if (!draggedCardId || !currentScene?.allowGroupCards) {
+        if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allowGroupCards')) {
             draggedCardId = "";
             return;
         }

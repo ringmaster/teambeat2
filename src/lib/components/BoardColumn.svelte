@@ -3,6 +3,7 @@
     import TextareaWithButton from "./ui/TextareaWithButton.svelte";
     import Icon from "./ui/Icon.svelte";
     import { slide } from "svelte/transition";
+    import { getSceneCapability } from "$lib/utils/scene-capability";
 
     interface Props {
         column: any;
@@ -108,7 +109,7 @@
     </div>
 
     <!-- Add Card Section for this column -->
-    {#if currentScene?.allowAddCards}
+    {#if getSceneCapability(currentScene, board?.status, 'allowAddCards')}
         <div class="add-card-section" transition:slide>
             <TextareaWithButton
                 value={onGetColumnContent(column.id)}

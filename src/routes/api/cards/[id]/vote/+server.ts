@@ -9,6 +9,7 @@ import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVoteUpdatesB
 import { updatePresence } from '$lib/server/repositories/presence.js';
 import { buildComprehensiveVotingData } from '$lib/server/utils/voting-data.js';
 import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
@@ -88,8 +89,8 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Check if current scene allows voting
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene || !currentScene.allowVoting) {
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowVoting')) {
       return json(
         { success: false, error: 'Voting not allowed in current scene' },
         { status: 403 }
@@ -147,8 +148,12 @@ export const POST: RequestHandler = async (event) => {
       voting_stats: comprehensiveVotingData.voting_stats
     };
 
+    // Check capabilities based on scene and board status
+    const canShowVotes = getSceneCapability(currentScene, board.status, 'showVotes');
+    const canAllowVoting = getSceneCapability(currentScene, board.status, 'allowVoting');
+
     // If "show votes" is enabled, include total votes for all cards
-    if (currentScene.showVotes) {
+    if (canShowVotes) {
       const { getAllUsersVotesForBoard } = await import('$lib/server/repositories/vote.js');
       const allVotes = await getAllUsersVotesForBoard(board.id);
 
@@ -162,18 +167,18 @@ export const POST: RequestHandler = async (event) => {
     }
 
     // Broadcast vote changes based on scene settings
-    if (currentScene.showVotes) {
+    if (canShowVotes) {
       // Broadcast the specific card vote count update first for immediate UI feedback
       await broadcastVoteChanged(board.id, cardId, voteCount, user.userId);
-    } else if (currentScene.allowVoting) {
+    } else if (canAllowVoting) {
       // Broadcast individual vote to the voting user for immediate feedback
       await broadcastVoteChangedToUser(board.id, cardId, voteCount, user.userId);
     }
 
     // Then broadcast comprehensive updates based on scene settings
     await broadcastVoteUpdatesBasedOnScene(board.id, {
-      showVotes: currentScene.showVotes ?? undefined,
-      allowVoting: currentScene.allowVoting ?? undefined
+      showVotes: canShowVotes || undefined,
+      allowVoting: canAllowVoting || undefined
     }, user.userId);
 
     return json(response);

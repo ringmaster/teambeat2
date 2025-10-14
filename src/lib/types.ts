@@ -10,7 +10,7 @@ export interface Board {
   id: string;
   name: string;
   seriesId: string;
-  status: 'draft' | 'active' | 'closed';
+  status: 'draft' | 'active' | 'completed' | 'archived';
   blameFreeMode: boolean;
   votingAllocation: number;
   currentSceneId?: string;

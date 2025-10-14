@@ -5,6 +5,7 @@ import { groupCards } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated } from '$lib/server/sse/broadcast.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 import { z } from 'zod';
 
 const groupCardsSchema = z.object({
@@ -37,8 +38,8 @@ export const POST: RequestHandler = async (event) => {
 		}
 		
 		// Check if current scene allows editing cards
-		const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-		if (!currentScene || !currentScene.allowEditCards) {
+		const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+		if (!getSceneCapability(currentScene, board.status, 'allowEditCards')) {
 			return json(
 				{ success: false, error: 'Editing cards not allowed in current scene' },
 				{ status: 403 }

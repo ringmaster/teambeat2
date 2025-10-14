@@ -6,6 +6,7 @@ import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositori
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastCardUpdated, broadcastCardDeleted } from '$lib/server/sse/broadcast.js';
 import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 import { z } from 'zod';
 
 const updateCardSchema = z.object({
@@ -54,8 +55,8 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     // Check if current scene allows editing cards
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene || !currentScene.allowEditCards) {
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowEditCards')) {
       return json(
         { success: false, error: 'Editing cards not allowed in current scene' },
         { status: 403 }
@@ -136,6 +137,15 @@ export const DELETE: RequestHandler = async (event) => {
     if (!userRole) {
       return json(
         { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    // Check if current scene allows editing cards (delete is an edit action)
+    const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
+    if (!getSceneCapability(currentScene, board.status, 'allowEditCards')) {
+      return json(
+        { success: false, error: 'Deleting cards not allowed in current scene' },
         { status: 403 }
       );
     }

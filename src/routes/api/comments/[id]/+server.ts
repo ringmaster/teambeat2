@@ -5,6 +5,8 @@ import { db } from '$lib/server/db';
 import { comments, cards, boards, columns, seriesMembers } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
+import { getBoardWithDetails } from '$lib/server/repositories/board.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 
 export const DELETE: RequestHandler = async (event) => {
   try {
@@ -27,6 +29,21 @@ export const DELETE: RequestHandler = async (event) => {
 
     if (!commentData) {
       return json({ success: false, error: 'Comment not found' }, { status: 404 });
+    }
+
+    // Get board with scenes to check scene capabilities
+    const boardWithScenes = await getBoardWithDetails(commentData.board.id);
+    if (!boardWithScenes) {
+      return json({ success: false, error: 'Board not found' }, { status: 404 });
+    }
+
+    // Check if current scene allows commenting (delete is an edit action)
+    const currentScene = getCurrentScene(boardWithScenes.scenes, boardWithScenes.currentSceneId);
+    if (!getSceneCapability(currentScene, boardWithScenes.status, 'allowComments')) {
+      return json(
+        { success: false, error: 'Deleting comments not allowed in current scene' },
+        { status: 403 }
+      );
     }
 
     // Check permissions: user must be either the comment author, admin, or facilitator

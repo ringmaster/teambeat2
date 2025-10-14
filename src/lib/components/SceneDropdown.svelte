@@ -19,7 +19,7 @@
 
     // Button should only be disabled if board is completed or archived
     const isButtonDisabled = $derived(() => {
-        return board.status === "completed" || board.status === "archived";
+        return false; //board.status === "completed" || board.status === "archived";
     });
 
     function handleNextScene() {
@@ -43,7 +43,9 @@
         }}
         aria-label="Select a scene"
     >
-        <button class="toolbar-button toolbar-button-primary toolbar-button-left">
+        <button
+            class="toolbar-button toolbar-button-primary toolbar-button-left"
+        >
             <span>{currentScene?.title || "Scene"}</span>
             <svg
                 class="icon-sm"
@@ -68,7 +70,8 @@
                             onSceneChange(scene.id);
                             onShowSceneDropdown(false);
                         }}
-                        class="scene-dropdown-item {scene.id === currentScene?.id ||
+                        class="scene-dropdown-item {scene.id ===
+                            currentScene?.id ||
                         scene.id === board.currentSceneId
                             ? 'scene-dropdown-item-active'
                             : ''}"

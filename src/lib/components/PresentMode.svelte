@@ -3,6 +3,7 @@
     import { fade, scale } from "svelte/transition";
     import Card from "$lib/components/Card.svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
+    import { getSceneCapability } from "$lib/utils/scene-capability";
     import type {
         Board,
         Scene,
@@ -72,6 +73,19 @@
     let notesTextarea = $state<HTMLTextAreaElement>();
 
     const canSelectCards = isAdmin || isFacilitator;
+
+    // Check if comments/notes are allowed based on scene capabilities and board status
+    const canComment = $derived(
+        getSceneCapability(scene, board.status, 'allowComments')
+    );
+
+    const showComments = $derived(
+        getSceneCapability(scene, board.status, 'showComments')
+    );
+
+    const showVotes = $derived(
+        getSceneCapability(scene, board.status, 'showVotes')
+    );
 
     // Filter reactions from regular comments
     const regularComments = $derived(
@@ -178,7 +192,7 @@
     }
 
     async function acquireNotesLock() {
-        if (!selectedCard || notesLocked || hasTyped || acquiringLock) return;
+        if (!selectedCard || notesLocked || hasTyped || acquiringLock || !canComment) return;
 
         try {
             acquiringLock = true;
@@ -292,7 +306,7 @@
     }
 
     async function addComment() {
-        if (!selectedCard || !newCommentContent.trim() || !scene.allowComments)
+        if (!selectedCard || !newCommentContent.trim() || !canComment)
             return;
 
         try {
@@ -315,7 +329,7 @@
     }
 
     async function addReaction(emoji: string) {
-        if (!selectedCard || !scene.allowComments) return;
+        if (!selectedCard || !canComment) return;
 
         try {
             const response = await fetch("/api/comments", {
@@ -362,7 +376,7 @@
                     <div class="card-content-display">
                         {selectedCard.content}
                     </div>
-                    {#if scene.showVotes && selectedCard.voteCount !== undefined}
+                    {#if showVotes && selectedCard.voteCount !== undefined}
                         {#key selectedCard.id}
                             <div class="vote-count-box">
                                 <div class="vote-count-number">
@@ -398,8 +412,8 @@
                         oninput={onNotesInput}
                         onfocus={() => (textareaHasFocus = true)}
                         onblur={() => (textareaHasFocus = false)}
-                        placeholder="Add notes..."
-                        readonly={notesLocked}
+                        placeholder={canComment ? "Add notes..." : "Notes (read-only)"}
+                        readonly={notesLocked || !canComment}
                         rows="6"
                         style="resize: none; overflow: hidden; min-height: 150px;"
                     ></textarea>
@@ -415,7 +429,7 @@
                 </div>
             </div>
 
-            {#if scene.showComments && agreements.length > 0}
+            {#if showComments && agreements.length > 0}
                 <div class="agreements-section">
                     <h3 class="section-title">Agreements:</h3>
                     <div class="agreements-list">
@@ -432,7 +446,7 @@
                                         >{agreement.userName}</span
                                     >
                                     <div class="comment-actions">
-                                        {#if (isAdmin || isFacilitator) && scene.allowComments}
+                                        {#if (isAdmin || isFacilitator) && canComment}
                                             <button
                                                 class="agreement-toggle"
                                                 onclick={() =>
@@ -445,7 +459,7 @@
                                                 ↓ Demote
                                             </button>
                                         {/if}
-                                        {#if (isAdmin || isFacilitator || agreement.userId === currentUser.id) && scene.allowComments}
+                                        {#if (isAdmin || isFacilitator || agreement.userId === currentUser.id) && canComment}
                                             <button
                                                 class="delete-button"
                                                 onclick={() =>
@@ -463,14 +477,14 @@
                 </div>
             {/if}
 
-            {#if scene.showComments}
+            {#if showComments}
                 <div class="comments-section">
                     <div class="comments-header">
                         <h3 class="section-title">Comments:</h3>
                         {#if Object.keys(cardReactions).length > 0}
                             <div class="reaction-pills">
                                 {#each Object.entries(cardReactions) as [emoji, count]}
-                                    {#if scene.allowComments}
+                                    {#if canComment}
                                         <button
                                             class="reaction-pill clickable"
                                             title="Click to add {emoji} reaction ({count} total)"
@@ -506,7 +520,7 @@
                             </div>
                         {/if}
                     </div>
-                    {#if scene.allowComments}
+                    {#if canComment}
                         <div class="add-comment">
                             <input
                                 type="text"
@@ -539,7 +553,7 @@
                                         >{comment.userName}</span
                                     >
                                     <div class="comment-actions">
-                                        {#if (isAdmin || isFacilitator) && scene.allowComments}
+                                        {#if (isAdmin || isFacilitator) && canComment}
                                             <button
                                                 class="agreement-toggle"
                                                 onclick={() =>
@@ -552,7 +566,7 @@
                                                 ↑ Promote
                                             </button>
                                         {/if}
-                                        {#if (isAdmin || isFacilitator || comment.userId === currentUser.id) && scene.allowComments}
+                                        {#if (isAdmin || isFacilitator || comment.userId === currentUser.id) && canComment}
                                             <button
                                                 class="delete-button"
                                                 onclick={() =>

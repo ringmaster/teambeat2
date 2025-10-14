@@ -4,6 +4,7 @@ import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardSettings } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastBoardUpdated, broadcastVoteUpdatesBasedOnScene } from '$lib/server/sse/broadcast.js';
+import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
@@ -49,10 +50,17 @@ export const POST: RequestHandler = async (event) => {
       broadcastBoardUpdated(boardId, updatedBoard);
 
       // Get current scene to determine what voting data to broadcast
-      const currentScene = updatedBoard.scenes?.find((s: any) => s.id === updatedBoard.currentSceneId);
+      const currentScene = getCurrentScene(updatedBoard.scenes, updatedBoard.currentSceneId);
+
+      // Check capabilities based on scene and board status
+      const canShowVotes = getSceneCapability(currentScene, updatedBoard.status, 'showVotes');
+      const canAllowVoting = getSceneCapability(currentScene, updatedBoard.status, 'allowVoting');
 
       // Broadcast vote updates based on scene settings (no triggering user since this is admin action)
-      await broadcastVoteUpdatesBasedOnScene(boardId, currentScene);
+      await broadcastVoteUpdatesBasedOnScene(boardId, {
+        showVotes: canShowVotes || undefined,
+        allowVoting: canAllowVoting || undefined
+      });
     }
 
     return json({
