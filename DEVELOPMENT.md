@@ -347,16 +347,41 @@ The database type cannot be changed at runtime - it's determined at application 
 
 ## Authentication System
 
-### Email-Based Authentication
-- **No username field** - Users authenticate with email addresses only
-- Session management uses in-memory storage with cleanup intervals
-- Session data includes `{ userId, email, expiresAt }` structure
-- Password hashing uses bcryptjs with proper salt rounds
+### Multi-Factor Authentication Support
 
-### Session Management
+TeamBeat supports two authentication methods:
+
+#### Password Authentication
+- **Email-based login** - Users authenticate with email addresses only (no username field)
+- Password hashing uses bcryptjs with proper salt rounds
+- Session-based authentication with 7-day expiration
+- Session data includes `{ userId, email, expiresAt }` structure
+
+#### WebAuthn/Passkey Authentication
+- **Passwordless login** - Users can authenticate with biometrics or security keys
+- Full WebAuthn support using `@simplewebauthn/server` and `@simplewebauthn/browser`
+- Users can register multiple passkeys per account
+- Passkey management interface for adding/removing authenticators
+- Challenge-response authentication flow:
+  1. Client requests authentication challenge (`/api/auth/webauthn/authenticate/begin`)
+  2. Browser prompts for biometric/security key
+  3. Client submits signed response (`/api/auth/webauthn/authenticate/complete`)
+  4. Server validates signature and creates session
+
+#### Session Management
 - 7-day session expiration with automatic cleanup
+- In-memory session storage (suitable for single-instance deployment)
 - Session structure changes require server restart and user re-authentication
 - Session validation in `requireUser()` function throws Response objects for proper HTTP status codes
+- Sessions created identically for password and WebAuthn authentication
+
+#### Admin Users
+- Users can be marked as admin via `is_admin` boolean field
+- Admin status grants access to:
+  - Performance monitoring dashboard (`/admin/performance`)
+  - HTTP header inspection (`/admin/headers`)
+  - Admin API endpoints (`/api/admin/*`)
+- Grant admin access via SQL: `UPDATE users SET is_admin = true WHERE email = 'user@example.com'`
 
 ## Real-time Features
 
@@ -390,6 +415,240 @@ The database type cannot be changed at runtime - it's determined at application 
 - Field-level validation feedback
 - Loading states during async operations
 - No browser dialogs for error communication
+
+## Scorecard System
+
+### Purpose and Architecture
+
+The scorecard system enables data collection and analysis during retrospective meetings. It allows teams to:
+- Define reusable data collection templates
+- Execute data collection during specific meeting scenes
+- Evaluate collected data using RPN (Reverse Polish Notation) formulas
+- Track results over time and flag important findings
+
+### Core Components
+
+#### Scorecards
+- **Definition**: Templates for data collection owned by a board series
+- **Storage**: `scorecards` table with fields: name, description, series_id
+- **Scope**: Shared across all boards in a series
+- **Management**: CRUD operations via `/api/series/[seriesId]/scorecards`
+
+#### Data Sources
+- **Definition**: Individual data points to collect for a scorecard
+- **Types**:
+  - Manual input fields (text, number, boolean)
+  - API endpoints (HTTP GET with JSON path extraction)
+  - Formula-based (RPN expressions referencing other sources)
+- **Storage**: `scorecard_datasources` table with JSON configuration
+- **Order**: Explicit sequencing for display and formula dependency resolution
+
+#### Scene Scorecards
+- **Definition**: Scorecard instances attached to specific meeting scenes
+- **Purpose**: Execute data collection when scene is active
+- **Storage**: `scene_scorecards` table linking scenes to scorecards
+- **Activation**: Manual trigger via "Collect Data" button in scene UI
+
+#### Results & Tracking
+- **Collection**: User submits values via form, triggers formula evaluation
+- **Storage**: `scene_scorecard_results` table with timestamp and values JSON
+- **Flagging**: Results can be marked important via `/api/scene-scorecard-results/[id]/flag`
+- **History**: Results preserved for trend analysis
+
+### RPN Formula System
+
+#### Why RPN?
+- Unambiguous evaluation order without operator precedence rules
+- Simple stack-based evaluation
+- Easy to parse and validate
+- Supports complex nested expressions
+
+#### Supported Operations
+- **Arithmetic**: `+`, `-`, `*`, `/`, `%` (modulo), `^` (power)
+- **Comparison**: `=`, `!=`, `<`, `>`, `<=`, `>=`
+- **Logical**: `AND`, `OR`, `NOT`
+- **Functions**: `AVG`, `SUM`, `MIN`, `MAX`, `IF`
+
+#### Formula Evaluation Flow
+1. Parse formula string into RPN tokens (`src/lib/utils/rpn-parser.ts`)
+2. Validate token sequence and variable references (`src/lib/utils/rpn-validator.ts`)
+3. Resolve variable values from data sources
+4. Evaluate using stack-based algorithm (`src/lib/utils/rpn-evaluator.ts`)
+5. Return computed value or error
+
+#### Example Formula
+```
+// Infix: (score1 + score2) / 2 > 7
+// RPN: score1 score2 + 2 / 7 >
+// Stack evaluation:
+//   1. Push score1 (5)
+//   2. Push score2 (9)
+//   3. Pop both, add (14), push result
+//   4. Push 2
+//   5. Pop both, divide (7), push result
+//   6. Push 7
+//   7. Pop both, compare (false), push result
+```
+
+### Data Collection Workflow
+
+1. **Setup Phase**: Series admin creates scorecard with data sources
+2. **Scene Configuration**: Facilitator adds scorecard to scene
+3. **Meeting Execution**: When scene is active, participants click "Collect Data"
+4. **Form Display**: UI shows input fields for manual sources, auto-fetches API sources
+5. **Submission**: User enters values, submits form
+6. **Processing**: Server evaluates formulas, saves result
+7. **Broadcasting**: SSE event notifies all users of new result
+8. **Review**: Results visible in scene UI, can be flagged for follow-up
+
+### Implementation Files
+
+- `src/lib/server/repositories/scorecard.ts` - CRUD operations
+- `src/lib/server/repositories/scorecard-datasource.ts` - Data source management
+- `src/lib/server/repositories/scene-scorecard.ts` - Scene attachments
+- `src/lib/server/utils/scorecard-processor.ts` - Data collection and evaluation
+- `src/lib/utils/rpn-parser.ts` - Formula parsing
+- `src/lib/utils/rpn-evaluator.ts` - Formula evaluation
+- `src/lib/utils/rpn-validator.ts` - Formula validation
+- `src/lib/utils/json-path-extractor.ts` - Extract values from API responses
+- `src/lib/components/ScorecardManager.svelte` - Scorecard UI
+- `src/lib/components/ScorecardScene.svelte` - Scene execution UI
+
+## Performance Monitoring System
+
+### Architecture Overview
+
+TeamBeat includes a comprehensive performance monitoring system designed for single-instance deployments. It tracks:
+- System metrics (uptime, memory usage)
+- SSE connection statistics (concurrent users, broadcast latency)
+- API performance (request counts, response times)
+- Database performance (slow queries >100ms)
+
+### Key Design Decisions
+
+#### In-Memory Storage
+- All metrics stored in memory for zero database overhead during collection
+- Snapshots persisted to database every 1 minute
+- 7-day retention with automatic cleanup
+- Trade-off: Metrics lost on restart, but performance monitoring shouldn't impact application performance
+
+#### Singleton Pattern
+- Single `PerformanceTracker` instance shared across application
+- Initialized once in `src/lib/server/performance/tracker.ts`
+- Accessed via module-level export
+- Thread-safe for concurrent access (Node.js single-threaded event loop)
+
+#### Percentile Calculations
+- P50, P95, P99 latency percentiles for broadcasts and API requests
+- Calculated from in-memory sorted arrays
+- Configurable sample limits (default: 1000 broadcasts, 5000 API requests)
+- Old samples automatically discarded when limits exceeded
+
+### Integration Points
+
+#### SSE Manager (`src/lib/server/sse/manager.ts`)
+- Tracks connection/disconnection events
+- Records broadcast duration and recipient count
+- Updates concurrent user count and peak metrics
+
+#### Request Hooks (`src/hooks.server.ts`)
+- Middleware wraps all HTTP requests
+- Measures request duration (start to finish)
+- Records method, path, status code, duration
+- Admin endpoints excluded from tracking to avoid recursion
+
+#### Persistence (`src/lib/server/performance/persistence.ts`)
+- Interval-based snapshot saving (every 60 seconds)
+- Saves to `metric_snapshots` table with timestamp
+- Cleans up snapshots older than 7 days
+- Board-specific metrics saved to `board_metrics` table
+
+### Database Schema
+
+#### metric_snapshots
+- System-wide metrics with timestamp
+- JSON fields for complex data (percentiles, recent events)
+- Indexed by timestamp for time-series queries
+
+#### board_metrics
+- Per-board performance data
+- Card counts, user counts, activity metrics
+- Used for capacity planning and usage analysis
+
+#### slow_queries
+- Queries exceeding 100ms threshold
+- Includes query text, duration, timestamp
+- Used for identifying optimization opportunities
+
+### Admin Dashboard
+
+**Location**: `/admin/performance`
+
+**Features**:
+- Real-time metrics display
+- Auto-refresh every 5 seconds (toggleable)
+- Time series charts for historical data
+- Tables for recent broadcasts, slow queries, API requests
+- Manual metrics reset button
+
+**Access Control**:
+- Requires `is_admin = true` on user account
+- Returns 403 Forbidden for non-admin users
+- Checks performed in both route loader and API endpoints
+
+### Monitoring Best Practices
+
+#### What to Watch
+1. **Concurrent Users**: Baseline vs peak usage patterns
+2. **Broadcast P99 Latency**: Should stay <100ms for good UX
+3. **API P95 Response Time**: Should stay <500ms
+4. **Slow Queries**: Investigate anything >500ms
+5. **Memory Growth**: Monitor for potential leaks
+
+#### Performance Targets
+- SSE broadcast latency: <50ms (P95)
+- API response time: <300ms (P95)
+- Database queries: <100ms (P95)
+- Memory growth: <10MB per 1000 requests
+
+#### Troubleshooting
+- High broadcast latency → Check SSE recipient count, network conditions
+- Slow API responses → Check slow_queries table, database indexes
+- Memory growth → Check retention settings, sample limits
+- Missing metrics → Verify auto-save interval, check for errors
+
+### Future Improvements
+
+#### Considered for v2:
+- OpenTelemetry integration for standardized observability
+- Prometheus metrics export
+- Grafana dashboard templates
+- Distributed tracing for multi-instance deployments
+- Redis-backed metrics for horizontal scaling
+
+## Card Notes System
+
+### Locking Mechanism
+
+The card notes feature includes a collaborative locking system to prevent edit conflicts:
+
+#### Lock Behavior
+- **Lock Acquisition**: User clicks "Edit Notes" → server grants 5-minute exclusive lock
+- **Lock Display**: Other users see "Notes locked by [username]" with lock icon
+- **Auto-Release**: Locks expire after 5 minutes of inactivity
+- **Manual Release**: User cancels edit → lock immediately released
+- **Lock Stealing**: Not supported - must wait for expiration
+
+#### Implementation
+- Locks stored in-memory in `src/lib/server/notes-lock.ts`
+- Map structure: `cardId -> { userId, userName, expiresAt }`
+- Automatic cleanup of expired locks on lock check
+- SSE broadcasts lock status changes to all connected users
+
+#### API Endpoints
+- `POST /api/cards/[id]/notes/lock` - Acquire or release lock
+- `GET /api/cards/[id]/notes` - Check lock status before fetching notes
+- `PUT /api/cards/[id]/notes` - Save notes (requires active lock)
 
 ## Post-Tailwind Design System
 

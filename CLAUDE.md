@@ -42,20 +42,28 @@ This project prioritizes **developer autonomy** over framework magic. We choose 
 - **Usage**: Server-side rendering, API routes, websocket handling
 - **Avoid**: Over-relying on client-side state for server data
 
-### Database: SQLite + Drizzle ORM
-- **Why**: Single-file deployment, excellent performance, familiar SQL
-- **Usage**: Drizzle for schema/types, raw SQL when beneficial
-- **Avoid**: Complex migrations during rapid development
+### Database: SQLite + PostgreSQL with Drizzle ORM
+- **Why**: Flexible deployment (SQLite for simplicity, PostgreSQL for scale), excellent performance, familiar SQL
+- **Usage**: Drizzle for schema/types, generate migrations with drizzle-kit
+- **Avoid**: Using drizzle-kit push for PostgreSQL (known bugs with composite keys)
+- **Note**: Same schema works for both databases with conditional type builders
 
-### Real-time: Native Server Side Events (SSE)
-- **Why**: Direct control, minimal overhead, standard protocol
+### Real-time: Server-Side Events (SSE)
+- **Why**: Direct control, minimal overhead, standard protocol, works through proxies/firewalls
 - **Usage**: Board state sync, presence tracking, live collaboration
-- **Avoid**: Over-abstracting websocket lifecycle
+- **Architecture**: Same port as HTTP, EventSource API on client
+- **Avoid**: Incomplete SSE messages that require follow-up API calls
 
 ### Validation: Zod
 - **Why**: TypeScript-first, composable, runtime safety
 - **Usage**: API input validation, form validation, data parsing
 - **Avoid**: Duplicate validation logic between client/server
+
+### Formula Evaluation: Custom RPN System
+- **Why**: Unambiguous evaluation, no operator precedence complexity, easy to validate
+- **Usage**: Scorecard formula evaluation, data source calculations
+- **Implementation**: Parser, validator, and stack-based evaluator
+- **Avoid**: Using eval() or complex expression parsers
 
 ### Style Management: Custom Design System
 - **Why**: Full control over UI, no dependency on third-party themes
@@ -102,10 +110,11 @@ src/
 - Return consistent error formats
 
 ### 3. Real-time Integration
-- Plan websocket message types alongside API design
+- Plan SSE (Server-Side Events) message types alongside API design
 - Test real-time features with multiple browser windows
-- Handle connection drops gracefully
+- Handle connection drops and reconnection gracefully
 - Consider message ordering and race conditions
+- Include complete data in SSE messages to avoid follow-up API calls
 
 ### 4. Component Development
 - Build components in isolation first
@@ -147,6 +156,7 @@ src/
 - **Single-file consolidation** - don't create new files for each feature
 - **Optimize for fewer docs** as a token conservation effort
 - **Avoid documentation sprawl** - consolidate related information
+- **Additional files as needed**: STYLEGUIDE.md for design system, PERFORMANCE_SETUP.md for monitoring setup
 
 ### Code Comments
 - **Inline comments only for complexity** - explain business logic, not obvious operations
@@ -171,10 +181,11 @@ src/
 ## Security Guidelines
 
 ### Authentication
-- Session-based authentication with secure cookies
-- JWT tokens only for stateless API access
-- Password hashing with modern algorithms
-- Proper session timeout and cleanup
+- Session-based authentication with secure cookies (7-day expiration)
+- Password authentication with bcryptjs hashing
+- WebAuthn/Passkey support for passwordless authentication
+- Proper session timeout and automatic cleanup
+- Admin users marked with is_admin flag for privileged access
 
 ### Authorization
 - Role-based access control (RBAC) in API endpoints
@@ -191,15 +202,57 @@ src/
 ## Deployment Considerations
 
 ### Single Instance Deployment
-- SQLite database file with regular backups
-- WebSocket connections handled in-process
+- SQLite database file with regular backups (or PostgreSQL for production)
+- SSE connections handled in-process on same port as HTTP
 - Static assets served by SvelteKit
-- Environment configuration through files, not external services
+- Environment configuration through DATABASE_URL and PORT variables
+- Docker deployment with multi-stage builds
+- Digital Ocean App Platform support with pre-deploy migrations
 
 ### Scaling Preparation
-- Database connection pooling ready for PostgreSQL migration
-- WebSocket handling designed for horizontal scaling
-- Session storage abstracted for external stores
-- Feature flags for gradual rollouts
+- PostgreSQL support already implemented
+- SSE handling can be migrated to Redis pub/sub for horizontal scaling
+- Session storage can be moved to Redis for multi-instance deployments
+- Performance monitoring system provides baseline metrics
+- Database migrations use generate + migrate workflow (not push)
+
+## Architectural Patterns Established
+
+### Performance-First Monitoring
+The performance monitoring system exemplifies good architectural decisions:
+- **In-memory collection** - Zero database overhead during metric collection
+- **Periodic persistence** - Snapshots saved every 60 seconds, not on every request
+- **Singleton pattern** - Single tracker instance, simple to integrate
+- **Percentile tracking** - P50/P95/P99 provide actionable insights
+- **Admin-only access** - Monitoring data protected, doesn't expose security issues
+
+### Formula Evaluation System
+The RPN scorecard system demonstrates thoughtful library choices:
+- **Custom implementation** - Simple stack-based evaluation beats heavy parser libraries
+- **Clear separation** - Parser, validator, evaluator as distinct modules
+- **Extensible operations** - Easy to add new operators and functions
+- **Error handling** - Validation catches issues before evaluation
+- **Why not a library?** - Standard expression parsers add complexity without benefit for our constrained use case
+
+### SSE Data Completeness
+Real-time updates are designed to eliminate unnecessary API calls:
+- **Complete data in broadcasts** - No follow-up requests needed
+- **Shared builders** - Same functions generate API responses and SSE messages
+- **User-specific messages** - Different users get relevant data based on permissions
+- **Concurrent broadcasting** - User messages sent as soon as data is ready, not sequentially
+
+### Lock Systems
+The card notes locking mechanism shows good collaborative UX:
+- **In-memory locks** - Fast, simple, appropriate for single-instance deployment
+- **Time-based expiration** - Prevents permanent locks from crashes
+- **SSE notifications** - All users see lock status in real-time
+- **No lock stealing** - Prevents conflicts, forces communication
+
+### Repository Pattern Consistency
+All data access follows consistent patterns:
+- **MUST return values** - Never leave functions without explicit returns
+- **Typed results** - Drizzle ORM provides type safety
+- **Error propagation** - Let errors bubble to API layer for consistent handling
+- **Transaction helper** - Database-agnostic transaction wrapper handles SQLite/PostgreSQL differences
 
 This document should be revisited as the project evolves, but these principles should guide architectural decisions throughout development.
