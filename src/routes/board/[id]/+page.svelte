@@ -2713,7 +2713,7 @@
     {:else if currentScene?.mode === "static"}
         <StaticScene scene={currentScene} />
     {:else if currentScene?.mode === "survey"}
-        <HealthSurvey scene={currentScene} {boardId} boardStatus={board.status} />
+        <HealthSurvey scene={currentScene} {boardId} boardStatus={board.status} {userRole} />
     {:else}
         <BoardColumns
             board={displayBoard}

@@ -6,7 +6,7 @@ import { createOrUpdateHealthResponse } from '$lib/server/repositories/health.js
 import { findSceneById } from '$lib/server/repositories/scene.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { db } from '$lib/server/db/index.js';
-import { healthQuestions } from '$lib/server/db/schema.js';
+import { healthQuestions, scenes } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -21,17 +21,31 @@ export const POST: RequestHandler = async (event) => {
     const body = await event.request.json();
     const data = createResponseSchema.parse(body);
 
-    // Get question to find scene and verify access
-    const [question] = await db
-      .select()
+    // Get question and scene to verify access and check display mode
+    const result = await db
+      .select({
+        question: healthQuestions,
+        sceneDisplayMode: scenes.displayMode
+      })
       .from(healthQuestions)
+      .innerJoin(scenes, eq(healthQuestions.sceneId, scenes.id))
       .where(eq(healthQuestions.id, data.questionId))
       .limit(1);
 
-    if (!question) {
+    if (result.length === 0) {
       return json(
         { success: false, error: 'Question not found' },
         { status: 404 }
+      );
+    }
+
+    const { question, sceneDisplayMode } = result[0];
+
+    // Check if scene is in results mode - if so, reject new responses
+    if (sceneDisplayMode === 'results') {
+      return json(
+        { success: false, error: 'Survey is in results mode, responses are locked' },
+        { status: 403 }
       );
     }
 

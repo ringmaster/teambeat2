@@ -15,6 +15,8 @@ const updateSceneSchema = z.object({
   description: z.string().optional(),
   mode: z.enum(['columns', 'present', 'review', 'agreements', 'scorecard', 'static', 'survey']).optional(),
   displayRule: z.string().nullish(),
+  displayMode: z.enum(['collecting', 'results']).optional(),
+  focusedQuestionId: z.string().nullish(),
   allowAddCards: z.boolean().optional(),
   allowEditCards: z.boolean().optional(),
   allowObscureCards: z.boolean().optional(),

@@ -4,15 +4,20 @@
     import Range1to5Input from "./health/Range1to5Input.svelte";
     import AgreeDisagreeInput from "./health/AgreeDisagreeInput.svelte";
     import RedYellowGreenInput from "./health/RedYellowGreenInput.svelte";
+    import FacilitatorToolbar from "./health/FacilitatorToolbar.svelte";
+    import SurveyResults from "./health/SurveyResults.svelte";
     import { toastStore } from "$lib/stores/toast";
 
     interface Props {
         scene: any;
         boardId: string;
         boardStatus: string;
+        userRole: string;
     }
 
-    const { scene, boardId, boardStatus }: Props = $props();
+    const { scene, boardId, boardStatus, userRole }: Props = $props();
+
+    const isFacilitator = $derived(['admin', 'facilitator'].includes(userRole));
 
     let questions = $state<any[]>([]);
     let responses = $state<Map<string, number>>(new Map());
@@ -82,6 +87,48 @@
         }
     }
 
+    async function handleModeChange(mode: 'collecting' | 'results') {
+        try {
+            const res = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ displayMode: mode })
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to change mode');
+            }
+
+            // Scene will be updated via SSE event
+        } catch (err) {
+            console.error('Failed to change mode:', err);
+            toastStore.error(err instanceof Error ? err.message : 'Failed to change mode');
+        }
+    }
+
+    async function handleFocusChange(questionId: string | null) {
+        try {
+            const res = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ focusedQuestionId: questionId })
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to change focus');
+            }
+
+            // Scene will be updated via SSE event
+        } catch (err) {
+            console.error('Failed to change focus:', err);
+            toastStore.error(err instanceof Error ? err.message : 'Failed to change focus');
+        }
+    }
+
     onMount(() => {
         loadQuestions();
 
@@ -108,67 +155,85 @@
 </script>
 
 <div class="health-survey">
-    <div class="survey-content">
-        {#if loading}
-            <div class="loading-state">
-                <p>Loading survey...</p>
-            </div>
-        {:else if error}
-            <div class="error-state">
-                <p>Error: {error}</p>
-                <button onclick={loadQuestions} type="button">Retry</button>
-            </div>
-        {:else if questions.length === 0}
-            <div class="empty-state">
-                <p>No questions configured for this survey</p>
-            </div>
-        {:else}
-            <div class="questions-list">
-                {#each questions as question (question.id)}
-                    <div class="question-item">
-                        <div class="question-header">
-                            <h3 class="question-text">{question.question}</h3>
-                            {#if question.description}
-                                <p class="question-description">{question.description}</p>
-                            {/if}
-                        </div>
+    <FacilitatorToolbar
+        sceneId={scene.id}
+        {boardId}
+        displayMode={scene.displayMode || 'collecting'}
+        {isFacilitator}
+        onModeChange={handleModeChange}
+    />
 
-                        <div class="question-input">
-                            {#if question.questionType === 'boolean'}
-                                <BooleanInput
-                                    {question}
-                                    value={responses.get(question.id)}
-                                    disabled={isDisabled}
-                                    onchange={(rating) => handleResponse(question.id, rating)}
-                                />
-                            {:else if question.questionType === 'range1to5'}
-                                <Range1to5Input
-                                    {question}
-                                    value={responses.get(question.id)}
-                                    disabled={isDisabled}
-                                    onchange={(rating) => handleResponse(question.id, rating)}
-                                />
-                            {:else if question.questionType === 'agreetodisagree'}
-                                <AgreeDisagreeInput
-                                    {question}
-                                    value={responses.get(question.id)}
-                                    disabled={isDisabled}
-                                    onchange={(rating) => handleResponse(question.id, rating)}
-                                />
-                            {:else if question.questionType === 'redyellowgreen'}
-                                <RedYellowGreenInput
-                                    {question}
-                                    value={responses.get(question.id)}
-                                    disabled={isDisabled}
-                                    onchange={(rating) => handleResponse(question.id, rating)}
-                                />
-                            {/if}
+    {#if scene.displayMode === 'results'}
+        <SurveyResults
+            sceneId={scene.id}
+            {boardId}
+            focusedQuestionId={scene.focusedQuestionId}
+            {isFacilitator}
+            onFocusChange={handleFocusChange}
+        />
+    {:else}
+        <div class="survey-content">
+            {#if loading}
+                <div class="loading-state">
+                    <p>Loading survey...</p>
+                </div>
+            {:else if error}
+                <div class="error-state">
+                    <p>Error: {error}</p>
+                    <button onclick={loadQuestions} type="button">Retry</button>
+                </div>
+            {:else if questions.length === 0}
+                <div class="empty-state">
+                    <p>No questions configured for this survey</p>
+                </div>
+            {:else}
+                <div class="questions-list">
+                    {#each questions as question (question.id)}
+                        <div class="question-item">
+                            <div class="question-header">
+                                <h3 class="question-text">{question.question}</h3>
+                                {#if question.description}
+                                    <p class="question-description">{question.description}</p>
+                                {/if}
+                            </div>
+
+                            <div class="question-input">
+                                {#if question.questionType === 'boolean'}
+                                    <BooleanInput
+                                        {question}
+                                        value={responses.get(question.id)}
+                                        disabled={isDisabled}
+                                        onchange={(rating) => handleResponse(question.id, rating)}
+                                    />
+                                {:else if question.questionType === 'range1to5'}
+                                    <Range1to5Input
+                                        {question}
+                                        value={responses.get(question.id)}
+                                        disabled={isDisabled}
+                                        onchange={(rating) => handleResponse(question.id, rating)}
+                                    />
+                                {:else if question.questionType === 'agreetodisagree'}
+                                    <AgreeDisagreeInput
+                                        {question}
+                                        value={responses.get(question.id)}
+                                        disabled={isDisabled}
+                                        onchange={(rating) => handleResponse(question.id, rating)}
+                                    />
+                                {:else if question.questionType === 'redyellowgreen'}
+                                    <RedYellowGreenInput
+                                        {question}
+                                        value={responses.get(question.id)}
+                                        disabled={isDisabled}
+                                        onchange={(rating) => handleResponse(question.id, rating)}
+                                    />
+                                {/if}
+                            </div>
                         </div>
-                    </div>
-                {/each}
-            </div>
-        {/if}
-    </div>
+                    {/each}
+                </div>
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style lang="less">

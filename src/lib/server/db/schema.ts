@@ -92,6 +92,9 @@ export const scenes = table('scenes', {
   seq: integer('seq').notNull(),
   selectedCardId: text('selected_card_id').references(() => cards.id, { onDelete: 'set null' }),
   displayRule: text('display_rule'), // RPN rule to determine if scene should be displayed
+  // Survey scene display mode
+  displayMode: text('display_mode').notNull().default('collecting').$type<'collecting' | 'results'>(),
+  focusedQuestionId: text('focused_question_id').references((): any => healthQuestions.id, { onDelete: 'set null' }),
   // Permission fields
   allowAddCards: booleanField('allow_add_cards').notNull().default(true),
   allowEditCards: booleanField('allow_edit_cards').notNull().default(true),
@@ -170,7 +173,7 @@ export const healthQuestions = table('health_questions', {
   sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
   question: text('question').notNull(),
   description: text('description'),
-  questionType: text('question_type').notNull().$type<'boolean' | 'range1to5' | 'agreetodisagree'>(),
+  questionType: text('question_type').notNull().$type<'boolean' | 'range1to5' | 'agreetodisagree' | 'redyellowgreen'>(),
   seq: integer('seq').notNull(),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 });
