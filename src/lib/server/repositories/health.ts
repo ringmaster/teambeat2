@@ -3,19 +3,20 @@ import { withTransaction } from '../db/transaction.js';
 import { healthQuestions, healthResponses } from '../db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { getPresetById } from '$lib/presets/health-question-sets';
 
 export interface CreateHealthQuestionData {
   sceneId: string;
   question: string;
   description?: string;
-  questionType: 'boolean' | 'range1to5' | 'agreetodisagree';
+  questionType: 'boolean' | 'range1to5' | 'agreetodisagree' | 'redyellowgreen';
   seq: number;
 }
 
 export interface UpdateHealthQuestionData {
   question?: string;
   description?: string;
-  questionType?: 'boolean' | 'range1to5' | 'agreetodisagree';
+  questionType?: 'boolean' | 'range1to5' | 'agreetodisagree' | 'redyellowgreen';
 }
 
 export interface CreateHealthResponseData {
@@ -136,4 +137,52 @@ export async function getHealthResponsesByUserAndScene(userId: string, sceneId: 
     ));
 
   return responses;
+}
+
+/**
+ * Apply a preset question set to a scene
+ * Creates all questions from the preset and appends them to existing questions
+ */
+export async function applyHealthQuestionPreset(sceneId: string, presetId: string) {
+  const preset = getPresetById(presetId);
+
+  if (!preset) {
+    throw new Error(`Preset not found: ${presetId}`);
+  }
+
+  return await withTransaction(async (tx) => {
+    // Get existing questions to find the next seq value
+    const existingQuestions = await tx
+      .select()
+      .from(healthQuestions)
+      .where(eq(healthQuestions.sceneId, sceneId))
+      .orderBy(healthQuestions.seq);
+
+    const nextSeq = existingQuestions.length > 0
+      ? Math.max(...existingQuestions.map(q => q.seq)) + 1
+      : 1;
+
+    // Create all questions from preset
+    const createdQuestions = [];
+    for (let i = 0; i < preset.questions.length; i++) {
+      const presetQuestion = preset.questions[i];
+      const id = uuidv4();
+
+      const [question] = await tx
+        .insert(healthQuestions)
+        .values({
+          id,
+          sceneId,
+          question: presetQuestion.question,
+          description: presetQuestion.description,
+          questionType: presetQuestion.questionType,
+          seq: nextSeq + i
+        })
+        .returning();
+
+      createdQuestions.push(question);
+    }
+
+    return createdQuestions;
+  });
 }

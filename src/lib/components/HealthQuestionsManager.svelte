@@ -10,10 +10,13 @@
     const { sceneId }: Props = $props();
 
     let questions = $state<any[]>([]);
+    let presets = $state<any[]>([]);
     let loading = $state(true);
     let error = $state<string | null>(null);
     let draggedQuestionId = $state<string | null>(null);
     let dragOverQuestionId = $state<string | null>(null);
+    let showPresetDropdown = $state(false);
+    let applyingPreset = $state(false);
 
     const UNWRITTEN_QUESTION = "UNWRITTEN QUESTION";
 
@@ -36,6 +39,21 @@
             toastStore.error('Failed to load questions');
         } finally {
             loading = false;
+        }
+    }
+
+    async function loadPresets() {
+        try {
+            const res = await fetch('/api/health-question-presets');
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load presets');
+            }
+
+            presets = data.presets;
+        } catch (err) {
+            console.error('Failed to load presets:', err);
         }
     }
 
@@ -186,8 +204,36 @@
         return question === UNWRITTEN_QUESTION ? '' : question;
     }
 
+    async function applyPreset(presetId: string) {
+        try {
+            applyingPreset = true;
+            showPresetDropdown = false;
+
+            const res = await fetch(`/api/scenes/${sceneId}/apply-health-preset`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ presetId })
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to apply preset');
+            }
+
+            await loadQuestions();
+            toastStore.success('Preset questions added');
+        } catch (err) {
+            console.error('Failed to apply preset:', err);
+            toastStore.error(err instanceof Error ? err.message : 'Failed to apply preset');
+        } finally {
+            applyingPreset = false;
+        }
+    }
+
     onMount(() => {
         loadQuestions();
+        loadPresets();
     });
 
     // Reload when scene changes
@@ -201,10 +247,40 @@
 <div class="health-questions-manager">
     <div class="manager-header">
         <h3>Survey Questions</h3>
-        <button onclick={addQuestion} class="btn-primary" type="button">
-            <Icon name="plus" size="sm" />
-            Add Question
-        </button>
+        <div class="header-actions">
+            <div class="preset-dropdown-container">
+                <button
+                    onclick={() => showPresetDropdown = !showPresetDropdown}
+                    class="btn-secondary"
+                    type="button"
+                    disabled={applyingPreset}
+                >
+                    <Icon name="book-open" size="sm" />
+                    Add Preset
+                </button>
+                {#if showPresetDropdown}
+                    <div class="preset-dropdown">
+                        {#each presets as preset}
+                            <button
+                                class="preset-option"
+                                onclick={() => applyPreset(preset.id)}
+                                type="button"
+                            >
+                                <div class="preset-name">{preset.name}</div>
+                                {#if preset.description}
+                                    <div class="preset-description">{preset.description}</div>
+                                {/if}
+                                <div class="preset-count">{preset.questionCount} questions</div>
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+            <button onclick={addQuestion} class="btn-primary" type="button">
+                <Icon name="plus" size="sm" />
+                Add Question
+            </button>
+        </div>
     </div>
 
     {#if loading}
@@ -296,6 +372,16 @@
         }
     }
 
+    .header-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .preset-dropdown-container {
+        position: relative;
+    }
+
     .btn-primary {
         display: flex;
         align-items: center;
@@ -303,16 +389,92 @@
         padding: 0.5rem 1rem;
         border: none;
         border-radius: 0.375rem;
-        background-color: var(--accent-primary);
-        color: var(--text-on-accent);
+        background-color: var(--btn-accent-bg);
+        color: var(--btn-accent-text);
         font-size: 0.875rem;
         font-weight: 500;
         cursor: pointer;
         transition: background-color 0.2s ease;
 
         &:hover {
-            background-color: var(--accent-hover);
+            background-color: var(--btn-accent-bg-hover);
         }
+    }
+
+    .btn-secondary {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-primary);
+        border-radius: 0.375rem;
+        background-color: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+            background-color: var(--surface-tertiary);
+            border-color: var(--border-hover, var(--accent-secondary));
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+
+    .preset-dropdown {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        right: 0;
+        min-width: 300px;
+        max-width: 400px;
+        background-color: var(--surface-primary);
+        border: 1px solid var(--border-primary);
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        overflow: hidden;
+    }
+
+    .preset-option {
+        width: 100%;
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid var(--border-secondary);
+        background-color: var(--surface-primary);
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background-color: var(--surface-secondary);
+        }
+    }
+
+    .preset-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .preset-description {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+    }
+
+    .preset-count {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
     }
 
     .status-message {
