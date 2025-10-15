@@ -33,6 +33,7 @@
         } | null;
         cards?: any[];
         agreements?: any[];
+        lastHealthCheckDate?: string | null;
         showSceneDropdown: boolean;
         showBoardConfig?: boolean;
         connectedUsers?: number;
@@ -68,6 +69,7 @@
         currentScene,
         cards = [],
         agreements = [],
+        lastHealthCheckDate = null,
         showSceneDropdown,
         showBoardConfig = false,
         connectedUsers = 0,
@@ -164,6 +166,7 @@
                         {currentScene}
                         {cards}
                         {agreements}
+                        {lastHealthCheckDate}
                         {showSceneDropdown}
                         {onSceneChange}
                         {onNextScene}

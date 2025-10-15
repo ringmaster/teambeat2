@@ -28,6 +28,7 @@
     interface Props {
         data: {
             board: any;
+            lastHealthCheckDate: string | null;
             pageTitle: string;
             description: string;
         };
@@ -126,6 +127,7 @@
     // Comment state for present mode
     let comments = $state<any[]>([]);
     let agreements = $state<any[]>([]);
+    let lastHealthCheckDate = $state<string | null>(null);
 
     // Poll/Timer state
     let showPollDropdown = $state(false);
@@ -171,6 +173,7 @@
 
     onMount(async () => {
         boardId = $page.params.id!;
+        lastHealthCheckDate = data.lastHealthCheckDate;
 
         try {
             // Load user info
@@ -230,12 +233,12 @@
                     );
 
                     // Check if the current scene should be displayed
-                    if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements)) {
+                    if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements, lastHealthCheckDate)) {
                         currentScene = requestedScene;
                     } else {
                         // Find the first valid scene
                         for (const scene of scenes) {
-                            if (evaluateDisplayRule(scene, board, cards, agreements)) {
+                            if (evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate)) {
                                 currentScene = scene;
                                 // Update the board's current scene
                                 await fetch(`/api/boards/${boardId}/scene`, {
@@ -1036,7 +1039,7 @@
             // Find the next scene that should be displayed
             for (let i = currentIndex + 1; i < board.scenes.length; i++) {
                 const candidateScene = board.scenes[i];
-                const shouldDisplay = evaluateDisplayRule(candidateScene, board, cards, agreements);
+                const shouldDisplay = evaluateDisplayRule(candidateScene, board, cards, agreements, lastHealthCheckDate);
 
                 if (shouldDisplay) {
                     changeScene(candidateScene.id);
@@ -2597,6 +2600,7 @@
         {board}
         {userRole}
         {agreements}
+        {lastHealthCheckDate}
         onClose={() => (showBoardConfig = false)}
         onUpdateBoardConfig={updateBoardConfigImmediate}
         onAddNewColumn={addNewColumnRow}
@@ -2621,6 +2625,7 @@
         {currentScene}
         {cards}
         {agreements}
+        {lastHealthCheckDate}
         {showSceneDropdown}
         {showBoardConfig}
         {connectedUsers}

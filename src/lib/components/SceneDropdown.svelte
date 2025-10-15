@@ -7,6 +7,7 @@
         currentScene: any;
         cards?: any[];
         agreements?: any[];
+        lastHealthCheckDate?: string | null;
         showSceneDropdown: boolean;
         onSceneChange: (sceneId: string) => void;
         onShowSceneDropdown: (show: boolean) => void;
@@ -18,6 +19,7 @@
         currentScene,
         cards = [],
         agreements = [],
+        lastHealthCheckDate = null,
         showSceneDropdown = $bindable(),
         onSceneChange,
         onShowSceneDropdown,
@@ -31,7 +33,7 @@
 
     // Check if a scene would be skipped based on its display rule
     function wouldSceneBeSkipped(scene: any): boolean {
-        return !evaluateDisplayRule(scene, board, cards, agreements);
+        return !evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate);
     }
 
     function handleNextScene() {

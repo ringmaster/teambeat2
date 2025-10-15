@@ -6,7 +6,7 @@
  */
 
 import { db } from '../db/index.js';
-import { sceneScorecards, sceneScorecardResults, scorecardDatasources, cards, scorecards } from '../db/schema.js';
+import { sceneScorecards, sceneScorecardResults, scorecardDatasources, cards, scorecards, scenes, boards } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { ScorecardRule, ProcessedResult } from '$lib/types/scorecard.js';
@@ -129,6 +129,36 @@ export async function collectDataAndProcess(
     throw new Error('Scene scorecard not found');
   }
 
+  // Get scene and board to find seriesId
+  const [scene] = await db
+    .select({
+      id: scenes.id,
+      boardId: scenes.boardId
+    })
+    .from(scenes)
+    .where(eq(scenes.id, sceneScorecard.sceneId))
+    .limit(1);
+
+  let seriesId: string | undefined;
+  if (scene) {
+    const [board] = await db
+      .select({
+        seriesId: boards.seriesId
+      })
+      .from(boards)
+      .where(eq(boards.id, scene.boardId))
+      .limit(1);
+
+    seriesId = board?.seriesId;
+  }
+
+  // Get the most recent health check date for this series
+  let lastHealthCheckDate: string | null = null;
+  if (seriesId) {
+    const { getLastHealthCheckDate } = await import('./health.js');
+    lastHealthCheckDate = await getLastHealthCheckDate(seriesId);
+  }
+
   // Get all datasources for this scorecard
   const datasources = await db
     .select({
@@ -168,8 +198,13 @@ export async function collectDataAndProcess(
     // Parse rules
     const rules: ScorecardRule[] = JSON.parse(datasource.rules);
 
-    // Process rules
-    const { results, errors } = processAllRules(rules, data, datasource.id);
+    // Process rules with additional context
+    const { results, errors } = processAllRules(
+      rules,
+      data,
+      datasource.id,
+      { seriesId, lastHealthCheckDate }
+    );
     allResults.push(...results.map(r => ({ ...r, datasourceId: datasource.id })));
     allErrors.push(...errors.map(e => ({ ...e, datasourceName: datasource.name })));
   }

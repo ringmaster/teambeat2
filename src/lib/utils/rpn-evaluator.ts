@@ -136,7 +136,11 @@ function isOperation(token: string): boolean {
     // Aggregation
     'count', 'sum', 'avg', 'min', 'max',
     // Date operations
-    'days_since', 'days_since_uk'
+    'days_since', 'days_since_uk',
+    // Date/time context operations
+    'day_of_week', 'day_of_month', 'week_of_month',
+    // Health check operations
+    'last_healthcheck'
   ];
   return operations.includes(token);
 }
@@ -462,6 +466,50 @@ function executeOperation(
         } catch (error) {
           throw new Error(`days_since_uk failed to parse date: ${dateStr}`);
         }
+      }
+      return 1;
+
+    // Date/time context operations
+    case 'day_of_week':
+      {
+        const now = new Date();
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = dayNames[now.getDay()];
+        stack.push(dayName);
+      }
+      return 1;
+
+    case 'day_of_month':
+      {
+        const now = new Date();
+        stack.push(now.getDate());
+      }
+      return 1;
+
+    case 'week_of_month':
+      {
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const dayOfWeek = firstDayOfMonth.getDay();
+        const currentDate = now.getDate();
+
+        // Calculate which week of the month this is
+        // Week 1 starts on the first occurrence of the target day
+        // For example, if today is the 2nd Monday, this returns 2
+        const firstWeekDay = (7 - dayOfWeek + now.getDay()) % 7;
+        const adjustedDate = currentDate + dayOfWeek - now.getDay();
+        const weekNumber = Math.floor(adjustedDate / 7) + 1;
+
+        stack.push(weekNumber);
+      }
+      return 1;
+
+    case 'last_healthcheck':
+      {
+        // Get the most recent health check date from context
+        // This should be a string (ISO date) or null, not an array
+        const lastHealthCheckDate = context.lastHealthCheckDate;
+        stack.push(lastHealthCheckDate !== undefined ? lastHealthCheckDate : null);
       }
       return 1;
 

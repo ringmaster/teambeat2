@@ -4,7 +4,13 @@ import { evaluateRPN } from './rpn-evaluator';
 /**
  * Build the data context for display rule RPN evaluation
  */
-export function buildDisplayRuleContext(board: any, scene: any, cards: any[], agreements?: any[]): Record<string, any> {
+export function buildDisplayRuleContext(
+    board: any,
+    scene: any,
+    cards: any[],
+    agreements?: any[],
+    lastHealthCheckDate?: string | null
+): Record<string, any> {
     // Build columns object with card data
     const columns: Record<string, any> = {};
 
@@ -45,7 +51,9 @@ export function buildDisplayRuleContext(board: any, scene: any, cards: any[], ag
             totalCount: agreementsData.length,
             incompleteCount: incompleteAgreements.length,
             completedCount: completedAgreements.length
-        }
+        },
+        seriesId: board?.seriesId,
+        lastHealthCheckDate: lastHealthCheckDate !== undefined ? lastHealthCheckDate : null
     };
 }
 
@@ -53,7 +61,13 @@ export function buildDisplayRuleContext(board: any, scene: any, cards: any[], ag
  * Evaluate a scene's display rule
  * Returns true if scene should be displayed, false if it should be skipped
  */
-export function evaluateDisplayRule(scene: any, board: any, cards: any[], agreements?: any[]): boolean {
+export function evaluateDisplayRule(
+    scene: any,
+    board: any,
+    cards: any[],
+    agreements?: any[],
+    lastHealthCheckDate?: string | null
+): boolean {
     // If no display rule, always show the scene
     if (!scene?.displayRule || scene.displayRule.trim() === '') {
         return true;
@@ -61,7 +75,7 @@ export function evaluateDisplayRule(scene: any, board: any, cards: any[], agreem
 
     try {
         // Build the context for evaluation
-        const context = buildDisplayRuleContext(board, scene, cards, agreements);
+        const context = buildDisplayRuleContext(board, scene, cards, agreements, lastHealthCheckDate);
 
         console.log(`[Display Rule] Evaluating scene "${scene.title}"`, {
             rule: scene.displayRule,

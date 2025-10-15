@@ -29,7 +29,8 @@ export interface ProcessingError {
 export function processRule(
   rule: ScorecardRule,
   data: any,
-  datasourceId: string
+  datasourceId: string,
+  additionalContext?: { seriesId?: string; lastHealthCheckDate?: string | null }
 ): { results: ProcessedResult[]; errors: ProcessingError[] } {
   const results: ProcessedResult[] = [];
   const errors: ProcessingError[] = [];
@@ -37,7 +38,7 @@ export function processRule(
   // Check if this is an aggregate rule (no iteration) or detail filter
   if (rule.iterate_over === null) {
     // Aggregate metric - evaluate once
-    const ruleResult = processAggregateRule(rule, data, datasourceId);
+    const ruleResult = processAggregateRule(rule, data, datasourceId, additionalContext);
     if (ruleResult.result) {
       results.push(ruleResult.result);
     }
@@ -46,7 +47,7 @@ export function processRule(
     }
   } else {
     // Detail filter - iterate over array
-    const detailResult = processDetailRule(rule, data, datasourceId);
+    const detailResult = processDetailRule(rule, data, datasourceId, additionalContext);
     results.push(...detailResult.results);
     errors.push(...detailResult.errors);
   }
@@ -60,10 +61,17 @@ export function processRule(
 function processAggregateRule(
   rule: ScorecardRule,
   data: any,
-  datasourceId: string
+  datasourceId: string,
+  additionalContext?: { seriesId?: string; lastHealthCheckDate?: string | null }
 ): { result: ProcessedResult | null; error: ProcessingError | null } {
+  // Build evaluation context with additional context
+  const evaluationContext = {
+    ...data,
+    ...(additionalContext || {})
+  };
+
   // Evaluate the condition to get the metric value
-  const conditionResult = evaluateRPN(rule.condition, data);
+  const conditionResult = evaluateRPN(rule.condition, evaluationContext);
 
   if (!conditionResult.success) {
     console.error(`RPN evaluation failed for rule ${rule.id}:`, conditionResult.error);
@@ -117,7 +125,8 @@ function processAggregateRule(
 function processDetailRule(
   rule: ScorecardRule,
   data: any,
-  datasourceId: string
+  datasourceId: string,
+  additionalContext?: { seriesId?: string; lastHealthCheckDate?: string | null }
 ): { results: ProcessedResult[]; errors: ProcessingError[] } {
   const results: ProcessedResult[] = [];
   const errors: ProcessingError[] = [];
@@ -142,11 +151,12 @@ function processDetailRule(
 
   // Process each item
   items.forEach((item, index) => {
-    // Create context with current item
+    // Create context with current item and additional context
     const context: EvaluationContext = {
       ...data,
       [itemName]: item,
-      _index: index
+      _index: index,
+      ...(additionalContext || {})
     };
 
     // Evaluate condition
@@ -309,13 +319,14 @@ function getItemName(arrayPath: string): string {
 export function processAllRules(
   rules: ScorecardRule[],
   data: any,
-  datasourceId: string
+  datasourceId: string,
+  additionalContext?: { seriesId?: string; lastHealthCheckDate?: string | null }
 ): { results: ProcessedResult[]; errors: ProcessingError[] } {
   const allResults: ProcessedResult[] = [];
   const allErrors: ProcessingError[] = [];
 
   for (const rule of rules) {
-    const { results, errors } = processRule(rule, data, datasourceId);
+    const { results, errors } = processRule(rule, data, datasourceId, additionalContext);
     allResults.push(...results);
     allErrors.push(...errors);
   }

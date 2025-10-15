@@ -3,6 +3,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { boards, boardSeries } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { getLastHealthCheckDate } from '$lib/server/repositories/health';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
@@ -28,6 +29,12 @@ export const load: PageServerLoad = async ({ params }) => {
 
     const board = boardData[0];
 
+    // Get the most recent health check date if this board is part of a series
+    let lastHealthCheckDate: string | null = null;
+    if (board.seriesId) {
+      lastHealthCheckDate = await getLastHealthCheckDate(board.seriesId);
+    }
+
     // Create page title
     const pageTitle = board.seriesName
       ? `${board.name} - ${board.seriesName} - TeamBeat`
@@ -48,6 +55,7 @@ export const load: PageServerLoad = async ({ params }) => {
         seriesName: board.seriesName,
         seriesDescription: board.seriesDescription
       },
+      lastHealthCheckDate,
       pageTitle,
       description
     };

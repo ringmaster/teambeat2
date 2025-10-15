@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { withTransaction } from '../db/transaction.js';
-import { healthQuestions, healthResponses } from '../db/schema.js';
-import { eq, and, inArray } from 'drizzle-orm';
+import { healthQuestions, healthResponses, scenes, boards } from '../db/schema.js';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { getPresetById } from '$lib/presets/health-question-sets';
 
@@ -185,4 +185,28 @@ export async function applyHealthQuestionPreset(sceneId: string, presetId: strin
 
     return createdQuestions;
   });
+}
+
+/**
+ * Get the most recent health check timestamp for a series
+ * Returns just the createdAt timestamp string, not full records
+ */
+export async function getLastHealthCheckDate(seriesId: string): Promise<string | null> {
+  const result = await db
+    .select({
+      createdAt: healthResponses.createdAt
+    })
+    .from(healthResponses)
+    .innerJoin(healthQuestions, eq(healthResponses.questionId, healthQuestions.id))
+    .innerJoin(scenes, eq(healthQuestions.sceneId, scenes.id))
+    .innerJoin(boards, eq(scenes.boardId, boards.id))
+    .where(eq(boards.seriesId, seriesId))
+    .orderBy(desc(healthResponses.createdAt))
+    .limit(1);
+
+  if (result.length === 0) {
+    return null;
+  }
+
+  return result[0].createdAt;
 }

@@ -13,6 +13,7 @@
         board: any;
         userRole: string;
         agreements?: any[];
+        lastHealthCheckDate?: string | null;
         onClose: () => void;
         onUpdateBoardConfig: (config: any) => void;
         onAddNewColumn: () => void;
@@ -51,6 +52,7 @@
         board,
         userRole,
         agreements = [],
+        lastHealthCheckDate = null,
         onClose,
         onUpdateBoardConfig,
         onAddNewColumn,
@@ -1190,7 +1192,7 @@ Date:                   days_since days_since_uk</code></pre>
     <RPNTestModal
         show={showRPNTestModal}
         initialRule={selectedScene.displayRule || ""}
-        initialData={JSON.stringify(buildDisplayRuleContext(board, selectedScene, [], agreements), null, 2)}
+        initialData={JSON.stringify(buildDisplayRuleContext(board, selectedScene, [], agreements, lastHealthCheckDate), null, 2)}
         onClose={() => showRPNTestModal = false}
         onUpdateRule={(rule) => {
             onUpdateScene(selectedScene.id, { displayRule: rule || null });
