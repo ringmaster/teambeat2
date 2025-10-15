@@ -439,3 +439,14 @@ export function broadcastScorecardResultFlagged(boardId: string, resultId: strin
 
   sseManager.broadcastToBoard(boardId, message);
 }
+
+export function broadcastSceneUpdated(boardId: string, sceneId: string) {
+  const message: SSEMessage = {
+    type: 'scene_updated',
+    board_id: boardId,
+    scene_id: sceneId,
+    timestamp: Date.now()
+  };
+
+  sseManager.broadcastToBoard(boardId, message);
+}

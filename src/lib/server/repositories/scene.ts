@@ -8,7 +8,7 @@ export interface CreateSceneData {
   boardId: string;
   title: string;
   description?: string;
-  mode: 'columns' | 'present' | 'review';
+  mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey';
   seq: number;
   allowAddCards?: boolean;
   allowEditCards?: boolean;
@@ -93,7 +93,7 @@ export async function updateScene(
   sceneId: string,
   data: {
     title?: string;
-    mode?: 'columns' | 'present' | 'review';
+    mode?: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey';
     allowAddCards?: boolean;
     allowEditCards?: boolean;
     allowComments?: boolean;

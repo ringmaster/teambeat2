@@ -35,7 +35,7 @@ interface TemplateColumn {
 interface TemplateScene {
   title: string;
   description?: string;  // Optional description/markdown content for the scene
-  mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static';
+  mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey';
   seq: number;
   displayRule?: string;  // Optional RPN expression to conditionally display this scene
   allowAddCards: boolean;

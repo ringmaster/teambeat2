@@ -15,6 +15,13 @@
       "when": 1759451453296,
       "tag": "0001_add_agreements",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760494816800,
+      "tag": "0002_spicy_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

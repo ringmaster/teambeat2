@@ -88,7 +88,7 @@ export const scenes = table('scenes', {
   boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static'>(),
+  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey'>(),
   seq: integer('seq').notNull(),
   selectedCardId: text('selected_card_id').references(() => cards.id, { onDelete: 'set null' }),
   displayRule: text('display_rule'), // RPN rule to determine if scene should be displayed

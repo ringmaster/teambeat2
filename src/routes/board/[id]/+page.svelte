@@ -13,6 +13,7 @@
     import AgreementsScene from "$lib/components/AgreementsScene.svelte";
     import ScorecardScene from "$lib/components/ScorecardScene.svelte";
     import StaticScene from "$lib/components/StaticScene.svelte";
+    import HealthSurvey from "$lib/components/HealthSurvey.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
@@ -802,6 +803,16 @@
                     window.dispatchEvent(
                         new CustomEvent("agreements_updated", {
                             detail: data.agreements,
+                        }),
+                    );
+                }
+                break;
+            case "scene_updated":
+                // Reload health survey questions when scene is updated
+                if (data.scene_id && currentScene?.id === data.scene_id && currentScene?.mode === "survey") {
+                    window.dispatchEvent(
+                        new CustomEvent("scene_updated", {
+                            detail: { sceneId: data.scene_id },
                         }),
                     );
                 }
@@ -2696,6 +2707,8 @@
         />
     {:else if currentScene?.mode === "static"}
         <StaticScene scene={currentScene} />
+    {:else if currentScene?.mode === "survey"}
+        <HealthSurvey scene={currentScene} {boardId} boardStatus={board.status} />
     {:else}
         <BoardColumns
             board={displayBoard}

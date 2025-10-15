@@ -122,6 +122,11 @@ src/
 - Test with realistic data, not just happy paths
 - Consider loading and error states
 
+### 5. User Feedback
+- **NEVER use `alert()`, `prompt()`, or `confirm()` for user feedback**
+- **ALWAYS use the toast system** (`toastStore.success()`, `toastStore.error()`, `toastStore.info()`) for notifications and confirmations
+- For confirmations, use modal components with proper UI
+
 ## Quality Standards
 
 ### Code Readability - **MUST-HAVE**

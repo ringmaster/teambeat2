@@ -4,6 +4,7 @@
     import Modal from "./ui/Modal.svelte";
     import RPNTestModal from "./RPNTestModal.svelte";
     import UserManagement from "./UserManagement.svelte";
+    import HealthQuestionsManager from "./HealthQuestionsManager.svelte";
     import flatpickr from "flatpickr";
     import "flatpickr/dist/flatpickr.min.css";
     import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
@@ -772,8 +773,15 @@
                         <option value="agreements">Agreements</option>
                         <option value="scorecard">Scorecard</option>
                         <option value="static">Static Content</option>
+                        <option value="survey">Survey</option>
                     </select>
                 </div>
+
+                {#if selectedScene.mode === "survey"}
+                    <div class="form-section">
+                        <HealthQuestionsManager sceneId={selectedScene.id} />
+                    </div>
+                {/if}
 
                 {#if selectedScene.mode === "static"}
                     <div class="form-group">
@@ -793,7 +801,7 @@
                     </div>
                 {/if}
 
-                {#if selectedScene.mode !== "static" && selectedScene.mode !== "agreements" && selectedScene.mode !== "scorecard"}
+                {#if selectedScene.mode !== "static" && selectedScene.mode !== "agreements" && selectedScene.mode !== "scorecard" && selectedScene.mode !== "survey"}
                     <div class="form-section">
                         <h3>Options</h3>
                     <div class="checkbox-grid">
@@ -909,7 +917,7 @@
                 </div>
                 {/if}
 
-                {#if selectedScene.mode !== "static"}
+                {#if selectedScene.mode !== "static" && selectedScene.mode !== "survey"}
                 <div class="form-section">
                     <h3>Columns</h3>
                     <div class="checkbox-grid">
