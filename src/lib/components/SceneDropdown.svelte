@@ -1,7 +1,12 @@
 <script lang="ts">
+    import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
+    import { onMount, onDestroy } from "svelte";
+
     interface Props {
         board: any;
         currentScene: any;
+        cards?: any[];
+        agreements?: any[];
         showSceneDropdown: boolean;
         onSceneChange: (sceneId: string) => void;
         onShowSceneDropdown: (show: boolean) => void;
@@ -11,6 +16,8 @@
     let {
         board,
         currentScene,
+        cards = [],
+        agreements = [],
         showSceneDropdown = $bindable(),
         onSceneChange,
         onShowSceneDropdown,
@@ -22,11 +29,33 @@
         return false; //board.status === "completed" || board.status === "archived";
     });
 
+    // Check if a scene would be skipped based on its display rule
+    function wouldSceneBeSkipped(scene: any): boolean {
+        return !evaluateDisplayRule(scene, board, cards, agreements);
+    }
+
     function handleNextScene() {
         if (!isButtonDisabled() && onNextScene) {
             onNextScene();
         }
     }
+
+    // Keyboard shortcut handler
+    function handleKeydown(e: KeyboardEvent) {
+        // Control+G or Cmd+G for Next Scene
+        if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+            e.preventDefault();
+            handleNextScene();
+        }
+    }
+
+    onMount(() => {
+        window.addEventListener('keydown', handleKeydown);
+    });
+
+    onDestroy(() => {
+        window.removeEventListener('keydown', handleKeydown);
+    });
 </script>
 
 <div class="scene-button-group">
@@ -65,16 +94,17 @@
         {#if showSceneDropdown}
             <div class="scene-dropdown-menu">
                 {#each board.scenes as scene (scene.id)}
+                    {@const isSkipped = wouldSceneBeSkipped(scene)}
+                    {@const isActive = scene.id === currentScene?.id || scene.id === board.currentSceneId}
                     <button
                         onclick={() => {
                             onSceneChange(scene.id);
                             onShowSceneDropdown(false);
                         }}
-                        class="scene-dropdown-item {scene.id ===
-                            currentScene?.id ||
-                        scene.id === board.currentSceneId
-                            ? 'scene-dropdown-item-active'
-                            : ''}"
+                        class="scene-dropdown-item"
+                        class:scene-dropdown-item-active={isActive}
+                        class:scene-dropdown-item-skipped={isSkipped}
+                        title={isSkipped ? 'This scene will be skipped due to its display rule' : ''}
                     >
                         {scene.title}
                     </button>
@@ -84,10 +114,10 @@
     </div>
 
     <button
-        class="toolbar-button toolbar-button-primary toolbar-button-right"
+        class="toolbar-button toolbar-button-primary toolbar-button-right cooltipz--bottom"
         onclick={handleNextScene}
         disabled={isButtonDisabled()}
-        aria-label="Next scene"
+        aria-label="Next scene (Ctrl+G)"
         data-testid="next-scene-button"
     >
         <svg
@@ -128,5 +158,15 @@
     .toolbar-button-right:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    :global(.scene-dropdown-item-skipped) {
+        opacity: 0.5;
+        font-style: italic;
+        color: #999 !important;
+    }
+
+    :global(.scene-dropdown-item-skipped:hover) {
+        opacity: 0.7;
     }
 </style>

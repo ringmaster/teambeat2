@@ -71,9 +71,9 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    if (!mode || !['columns', 'present', 'review', 'agreements'].includes(mode)) {
+    if (!mode || !['columns', 'present', 'review', 'agreements', 'scorecard', 'static'].includes(mode)) {
       return json(
-        { success: false, error: 'Valid scene mode is required (columns, present, review, or agreements)' },
+        { success: false, error: 'Valid scene mode is required (columns, present, review, agreements, scorecard, or static)' },
         { status: 400 }
       );
     }

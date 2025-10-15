@@ -88,9 +88,10 @@ export const scenes = table('scenes', {
   boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements' | 'scorecard'>(),
+  mode: text('mode').notNull().$type<'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static'>(),
   seq: integer('seq').notNull(),
   selectedCardId: text('selected_card_id').references(() => cards.id, { onDelete: 'set null' }),
+  displayRule: text('display_rule'), // RPN rule to determine if scene should be displayed
   // Permission fields
   allowAddCards: booleanField('allow_add_cards').notNull().default(true),
   allowEditCards: booleanField('allow_edit_cards').notNull().default(true),
@@ -166,8 +167,10 @@ export const agreements = table('agreements', {
 
 export const healthQuestions = table('health_questions', {
   id: text('id').primaryKey(),
-  boardId: text('board_id').notNull().references(() => boards.id, { onDelete: 'cascade' }),
+  sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
   question: text('question').notNull(),
+  description: text('description'),
+  questionType: text('question_type').notNull().$type<'boolean' | 'range1to5' | 'agreetodisagree'>(),
   seq: integer('seq').notNull(),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 });

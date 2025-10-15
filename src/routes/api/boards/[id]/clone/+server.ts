@@ -143,6 +143,7 @@ export const POST: RequestHandler = async (event) => {
             description: scene.description,
             mode: scene.mode,
             seq: scene.seq,
+            displayRule: scene.displayRule,
             allowAddCards: scene.allowAddCards,
             allowEditCards: scene.allowEditCards,
             allowObscureCards: scene.allowObscureCards,

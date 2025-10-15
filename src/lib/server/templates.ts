@@ -34,8 +34,10 @@ interface TemplateColumn {
 
 interface TemplateScene {
   title: string;
-  mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard';
+  description?: string;  // Optional description/markdown content for the scene
+  mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static';
   seq: number;
+  displayRule?: string;  // Optional RPN expression to conditionally display this scene
   allowAddCards: boolean;
   allowEditCards: boolean;
   allowObscureCards: boolean;
@@ -202,8 +204,10 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
       },
       {
         title: 'Review Last Time',
+        description: 'Review outstanding action items from the previous meeting',
         mode: 'agreements' as const,
         seq: 2,
+        displayRule: '$.agreements.totalCount 0 gt',
         allowAddCards: false,
         allowEditCards: false,
         allowObscureCards: false,

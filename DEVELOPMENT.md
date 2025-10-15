@@ -1177,3 +1177,75 @@ export const seriesMembers = table('series_members', {
 - Define primary key in table callback, not inline
 - Use `drizzle-kit migrate` for production deployments
 
+
+## Scene Types and Configuration
+
+### Static Scene Type
+
+The "static" scene type displays static markdown content without interactive elements like cards, columns, or voting. This is useful for:
+- Displaying instructions or guidelines
+- Showing informational content between interactive scenes
+- Presenting meeting agendas or documentation
+
+**Implementation:**
+- Scene mode: `"static"`
+- Content stored in `scenes.description` field (markdown format)
+- Rendered using the `marked` library with GitHub-flavored markdown
+- Configuration UI provides a large textarea for editing markdown content
+- No permission options or column configuration displayed for static scenes
+
+**Components:**
+- `StaticScene.svelte` - Renders markdown content with appropriate styling
+- `BoardConfigPage.svelte` - Conditional UI for static scene configuration
+
+**Example use case:**
+```markdown
+# Team Retrospective Guidelines
+
+## What went well?
+Discuss positive outcomes from the sprint...
+
+## What could be improved?
+Identify areas for growth...
+```
+
+### Display Rule Feature (Future)
+
+The `scenes.display_rule` field will hold an RPN expression to conditionally display scenes. When implemented:
+
+**Behavior:**
+- Evaluated when board loads and when navigating between scenes
+- If rule evaluates to `false`, skip to next available scene
+- If rule evaluates to `true` (or is empty/null), display the scene normally
+
+**Use cases:**
+- Show health check scene only if previous sprint had issues
+- Display certain scenes based on board state or card counts
+- Conditional workflow based on team size or other metrics
+
+**Data context for RPN evaluation:**
+- Board fields (title, settings, etc.)
+- Current scene and its properties  
+- Columns and their card counts
+- Card structures and nested content
+- Custom properties from board configuration
+
+**Implementation notes:**
+- RPN evaluator already exists (`/src/lib/utils/rpn-evaluator.ts`)
+- Needs integration into scene navigation logic
+- Should gracefully handle evaluation errors (default to showing scene)
+
+### Health Questions Migration
+
+Health questions have been migrated from board-scoped to scene-scoped:
+
+**Schema changes:**
+- `health_questions.board_id` → `health_questions.scene_id`
+- Added `description` field for additional context
+- Added `question_type` field: `"boolean"`, `"range1to5"`, or `"agreetodisagree"`
+
+**Migration path:**
+- Existing health questions need manual association with scenes
+- Migration 0005 creates new table structure
+- Old board_id data not automatically migrated to preserve data integrity
+

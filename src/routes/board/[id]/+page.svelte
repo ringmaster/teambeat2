@@ -12,6 +12,7 @@
     import ReviewScene from "$lib/components/ReviewScene.svelte";
     import AgreementsScene from "$lib/components/AgreementsScene.svelte";
     import ScorecardScene from "$lib/components/ScorecardScene.svelte";
+    import StaticScene from "$lib/components/StaticScene.svelte";
     import Icon from "$lib/components/ui/Icon.svelte";
     import Modal from "$lib/components/ui/Modal.svelte";
     import CommentModal from "$lib/components/CommentModal.svelte";
@@ -21,6 +22,7 @@
     import { resolve } from "$app/paths";
     import { SSEClient } from "$lib/client/sse-client.js";
     import { getSceneCapability } from "$lib/utils/scene-capability";
+    import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
 
     interface Props {
         data: {
@@ -179,12 +181,13 @@
             const userData = await userResponse.json();
             user = userData.user;
 
-            // Load templates and board data
-            const [templatesResponse, boardResponse, cardsResponse] =
+            // Load templates, board data, cards, and agreements
+            const [templatesResponse, boardResponse, cardsResponse, agreementsResponse] =
                 await Promise.all([
                     fetch(`/api/templates`),
                     fetch(`/api/boards/${boardId}`),
                     fetch(`/api/boards/${boardId}/cards`),
+                    fetch(`/api/boards/${boardId}/agreements`),
                 ]);
 
             // Load templates
@@ -202,7 +205,18 @@
             board = boardData.board;
             userRole = boardData.userRole;
 
-            // Set current scene if available
+            // Load cards and agreements first (we need them for display rule evaluation)
+            if (cardsResponse.ok) {
+                const cardsData = await cardsResponse.json();
+                cards = cardsData.cards || [];
+            }
+
+            if (agreementsResponse.ok) {
+                const agreementsData = await agreementsResponse.json();
+                agreements = agreementsData.agreements || [];
+            }
+
+            // Set current scene if available, checking display rules
             if (board.currentSceneId) {
                 const sceneResponse = await fetch(
                     `/api/boards/${boardId}/scenes`,
@@ -210,10 +224,28 @@
                 if (sceneResponse.ok) {
                     const scenesData = await sceneResponse.json();
                     const scenes = scenesData.scenes || [];
-                    currentScene =
-                        scenes.find(
-                            (s: any) => s.id === board.currentSceneId,
-                        ) || null;
+                    const requestedScene = scenes.find(
+                        (s: any) => s.id === board.currentSceneId,
+                    );
+
+                    // Check if the current scene should be displayed
+                    if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements)) {
+                        currentScene = requestedScene;
+                    } else {
+                        // Find the first valid scene
+                        for (const scene of scenes) {
+                            if (evaluateDisplayRule(scene, board, cards, agreements)) {
+                                currentScene = scene;
+                                // Update the board's current scene
+                                await fetch(`/api/boards/${boardId}/scene`, {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ sceneId: scene.id }),
+                                });
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -224,14 +256,8 @@
 
             // Load cards based on the current scene mode
             if (currentScene?.mode === "present") {
-                // For Present mode, only load filtered/sorted cards
+                // For Present mode, reload with filtered/sorted cards
                 await loadPresentModeData();
-            } else {
-                // For Column mode and other modes, load all cards
-                if (cardsResponse.ok) {
-                    const cardsData = await cardsResponse.json();
-                    cards = cardsData.cards || [];
-                }
             }
 
             // Initialize timer from board data if active
@@ -770,6 +796,9 @@
                 break;
             case "agreements_updated":
                 if (data.board_id === boardId) {
+                    // Update local agreements state for display rule evaluation
+                    agreements = data.agreements || [];
+
                     window.dispatchEvent(
                         new CustomEvent("agreements_updated", {
                             detail: data.agreements,
@@ -991,10 +1020,57 @@
             return;
         }
 
-        // Not on last scene, proceed to next scene normally
+        // Not on last scene, find next valid scene (where display rule evaluates to true)
         if (currentIndex >= 0 && currentIndex < board.scenes.length - 1) {
-            const nextSceneId = board.scenes[currentIndex + 1].id;
-            changeScene(nextSceneId);
+            // Find the next scene that should be displayed
+            for (let i = currentIndex + 1; i < board.scenes.length; i++) {
+                const candidateScene = board.scenes[i];
+                const shouldDisplay = evaluateDisplayRule(candidateScene, board, cards, agreements);
+
+                if (shouldDisplay) {
+                    changeScene(candidateScene.id);
+                    return;
+                }
+            }
+
+            // If we get here, all remaining scenes are skipped
+            // Treat as if we're on the last scene
+            if (board.status === "active") {
+                toastStore.warning("No more scenes to display. Mark this board as completed?", {
+                    autoHide: false,
+                    actions: [
+                        {
+                            label: "Yes",
+                            onClick: async () => {
+                                try {
+                                    const response = await fetch(`/api/boards/${boardId}`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ status: "completed" }),
+                                    });
+
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        board.status = data.board.status;
+                                        toastStore.success("Board marked as completed");
+                                    } else {
+                                        toastStore.error("Failed to mark board as completed");
+                                    }
+                                } catch (error) {
+                                    console.error("Error updating board status:", error);
+                                    toastStore.error("Error updating board status");
+                                }
+                            },
+                            variant: "primary",
+                        },
+                        {
+                            label: "Cancel",
+                            onClick: () => {},
+                            variant: "secondary",
+                        },
+                    ],
+                });
+            }
         }
     }
 
@@ -2509,6 +2585,7 @@
     <BoardConfigPage
         {board}
         {userRole}
+        {agreements}
         onClose={() => (showBoardConfig = false)}
         onUpdateBoardConfig={updateBoardConfigImmediate}
         onAddNewColumn={addNewColumnRow}
@@ -2531,6 +2608,8 @@
         {board}
         {userRole}
         {currentScene}
+        {cards}
+        {agreements}
         {showSceneDropdown}
         {showBoardConfig}
         {connectedUsers}
@@ -2615,6 +2694,8 @@
             canEdit={userRole === "admin" || userRole === "facilitator"}
             {userRole}
         />
+    {:else if currentScene?.mode === "static"}
+        <StaticScene scene={currentScene} />
     {:else}
         <BoardColumns
             board={displayBoard}

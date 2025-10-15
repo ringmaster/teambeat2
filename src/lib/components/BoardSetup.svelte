@@ -1,4 +1,6 @@
 <script lang="ts">
+    import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
+
     interface Props {
         showTemplateSelector: boolean;
         templates: any[];
@@ -45,12 +47,6 @@
                 loadingCloneSources = false;
             }
         }
-    }
-
-    function formatDate(dateString: string) {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
     }
 
     function handleCloneBoard(sourceId: string) {
@@ -140,8 +136,8 @@
                     {:else if cloneSources}
                         <div class="clone-grid">
                             <!-- Current Series Boards -->
-                            <div>
-                                <h4 class="clone-section-title">
+                            <div class="board-section">
+                                <h4 class="board-section-title">
                                     From This Series
                                 </h4>
                                 {#if cloneSources.currentSeries.length === 0}
@@ -149,46 +145,23 @@
                                         No other boards in this series
                                     </div>
                                 {:else}
-                                    <div class="space-y-3">
+                                    <div class="board-list">
                                         {#each cloneSources.currentSeries as board (board.id)}
-                                            <button
-                                                onclick={() =>
-                                                    handleCloneBoard(board.id)}
-                                                class="clone-board-card"
-                                            >
-                                                <div
-                                                    class="flex justify-between items-start"
-                                                >
-                                                    <div class="flex-1">
-                                                        <h5
-                                                            class="clone-board-name"
-                                                        >
-                                                            {board.name}
-                                                        </h5>
-                                                        <div
-                                                            class="clone-board-date"
-                                                        >
-                                                            {formatDate(
-                                                                board.meetingDate ||
-                                                                    board.createdAt,
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <span
-                                                        class="clone-board-status status-primary"
-                                                    >
-                                                        {board.status}
-                                                    </span>
-                                                </div>
-                                            </button>
+                                            <BoardListingItem
+                                                name={board.name}
+                                                meetingDate={board.meetingDate}
+                                                createdAt={board.createdAt}
+                                                status={board.status}
+                                                onclick={() => handleCloneBoard(board.id)}
+                                            />
                                         {/each}
                                     </div>
                                 {/if}
                             </div>
 
                             <!-- Other Series Boards -->
-                            <div>
-                                <h4 class="clone-section-title">
+                            <div class="board-section">
+                                <h4 class="board-section-title">
                                     From Other Series
                                 </h4>
                                 {#if cloneSources.otherSeries.length === 0}
@@ -196,39 +169,15 @@
                                         No boards available from other series
                                     </div>
                                 {:else}
-                                    <div class="space-y-3">
+                                    <div class="board-list">
                                         {#each cloneSources.otherSeries as board (board.id)}
-                                            <button
-                                                onclick={() =>
-                                                    handleCloneBoard(board.id)}
-                                                class="clone-board-card"
-                                            >
-                                                <div
-                                                    class="flex justify-between items-start"
-                                                >
-                                                    <div class="flex-1">
-                                                        <h5
-                                                            class="clone-board-name"
-                                                        >
-                                                            {board.seriesName} -
-                                                            {board.name}
-                                                        </h5>
-                                                        <div
-                                                            class="clone-board-date"
-                                                        >
-                                                            {formatDate(
-                                                                board.meetingDate ||
-                                                                    board.createdAt,
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <span
-                                                        class="clone-board-status status-secondary"
-                                                    >
-                                                        {board.status}
-                                                    </span>
-                                                </div>
-                                            </button>
+                                            <BoardListingItem
+                                                name={board.seriesName ? `${board.seriesName} - ${board.name}` : board.name}
+                                                meetingDate={board.meetingDate}
+                                                createdAt={board.createdAt}
+                                                status={board.status}
+                                                onclick={() => handleCloneBoard(board.id)}
+                                            />
                                         {/each}
                                     </div>
                                 {/if}
@@ -424,10 +373,20 @@
         }
     }
 
-    .clone-section-title {
+    .board-section {
+        margin-bottom: var(--spacing-4);
+    }
+
+    .board-section-title {
         font-weight: 500;
         color: var(--color-text-primary);
         margin-bottom: var(--spacing-4);
+    }
+
+    .board-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-3);
     }
 
     .clone-empty-state {
@@ -437,49 +396,6 @@
         border: 1px solid var(--color-border);
         border-radius: var(--radius-lg);
         background: var(--surface-elevated);
-    }
-
-    .clone-board-card {
-        width: 100%;
-        text-align: left;
-        padding: var(--spacing-4);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        background: white;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .clone-board-card:hover {
-        background: var(--surface-elevated);
-        border-color: var(--color-border-hover);
-    }
-
-    .clone-board-name {
-        font-weight: 500;
-        color: var(--color-text-primary);
-    }
-
-    .clone-board-date {
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-        margin-top: var(--spacing-1);
-    }
-
-    .clone-board-status {
-        font-size: 0.75rem;
-        padding: var(--spacing-1) var(--spacing-2);
-        border-radius: var(--radius-full);
-    }
-
-    .clone-board-status.status-primary {
-        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-        color: var(--color-primary);
-    }
-
-    .clone-board-status.status-secondary {
-        background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
-        color: var(--color-secondary);
     }
 
     /* Setup Manual Section */

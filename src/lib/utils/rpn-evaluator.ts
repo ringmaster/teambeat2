@@ -119,12 +119,18 @@ function isOperation(token: string): boolean {
     'dup', 'swap', 'drop',
     // Data access
     'get', 'literal',
-    // Comparisons
+    // Comparisons (word forms)
     'eq', 'ne', 'gt', 'lt', 'gte', 'lte',
-    // Logic
+    // Comparisons (symbol forms)
+    '=', '!=', '<>', '>', '<', '>=', '<=',
+    // Logic (word forms)
     'and', 'or', 'not',
-    // Arithmetic
+    // Logic (symbol forms)
+    '&&', '||', '!',
+    // Arithmetic (word forms)
     'add', 'sub', 'mul', 'div', 'mod',
+    // Arithmetic (symbol forms)
+    '+', '-', '*', '/', '%',
     // String operations
     'concat', 'contains', 'matches_regex',
     // Aggregation
@@ -192,7 +198,8 @@ function executeOperation(
 
     // Comparisons
     case 'eq':
-      if (stack.length < 2) throw new Error('Stack underflow for eq');
+    case '=':
+      if (stack.length < 2) throw new Error('Stack underflow for eq/=');
       {
         const b = stack.pop();
         const a = stack.pop();
@@ -201,7 +208,9 @@ function executeOperation(
       return 1;
 
     case 'ne':
-      if (stack.length < 2) throw new Error('Stack underflow for ne');
+    case '!=':
+    case '<>':
+      if (stack.length < 2) throw new Error('Stack underflow for ne/!=/<>');
       {
         const b = stack.pop();
         const a = stack.pop();
@@ -210,7 +219,8 @@ function executeOperation(
       return 1;
 
     case 'gt':
-      if (stack.length < 2) throw new Error('Stack underflow for gt');
+    case '>':
+      if (stack.length < 2) throw new Error('Stack underflow for gt/>');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -219,7 +229,8 @@ function executeOperation(
       return 1;
 
     case 'lt':
-      if (stack.length < 2) throw new Error('Stack underflow for lt');
+    case '<':
+      if (stack.length < 2) throw new Error('Stack underflow for lt/<');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -228,7 +239,8 @@ function executeOperation(
       return 1;
 
     case 'gte':
-      if (stack.length < 2) throw new Error('Stack underflow for gte');
+    case '>=':
+      if (stack.length < 2) throw new Error('Stack underflow for gte/>=');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -237,7 +249,8 @@ function executeOperation(
       return 1;
 
     case 'lte':
-      if (stack.length < 2) throw new Error('Stack underflow for lte');
+    case '<=':
+      if (stack.length < 2) throw new Error('Stack underflow for lte/<=');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -247,7 +260,8 @@ function executeOperation(
 
     // Logic
     case 'and':
-      if (stack.length < 2) throw new Error('Stack underflow for and');
+    case '&&':
+      if (stack.length < 2) throw new Error('Stack underflow for and/&&');
       {
         const b = stack.pop() as boolean;
         const a = stack.pop() as boolean;
@@ -256,7 +270,8 @@ function executeOperation(
       return 1;
 
     case 'or':
-      if (stack.length < 2) throw new Error('Stack underflow for or');
+    case '||':
+      if (stack.length < 2) throw new Error('Stack underflow for or/||');
       {
         const b = stack.pop() as boolean;
         const a = stack.pop() as boolean;
@@ -265,7 +280,8 @@ function executeOperation(
       return 1;
 
     case 'not':
-      if (stack.length < 1) throw new Error('Stack underflow for not');
+    case '!':
+      if (stack.length < 1) throw new Error('Stack underflow for not/!');
       {
         const a = stack.pop() as boolean;
         stack.push(!a);
@@ -274,7 +290,8 @@ function executeOperation(
 
     // Arithmetic
     case 'add':
-      if (stack.length < 2) throw new Error('Stack underflow for add');
+    case '+':
+      if (stack.length < 2) throw new Error('Stack underflow for add/+');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -283,7 +300,8 @@ function executeOperation(
       return 1;
 
     case 'sub':
-      if (stack.length < 2) throw new Error('Stack underflow for sub');
+    case '-':
+      if (stack.length < 2) throw new Error('Stack underflow for sub/-');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -292,7 +310,8 @@ function executeOperation(
       return 1;
 
     case 'mul':
-      if (stack.length < 2) throw new Error('Stack underflow for mul');
+    case '*':
+      if (stack.length < 2) throw new Error('Stack underflow for mul/*');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -301,7 +320,8 @@ function executeOperation(
       return 1;
 
     case 'div':
-      if (stack.length < 2) throw new Error('Stack underflow for div');
+    case '/':
+      if (stack.length < 2) throw new Error('Stack underflow for div//');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;
@@ -311,7 +331,8 @@ function executeOperation(
       return 1;
 
     case 'mod':
-      if (stack.length < 2) throw new Error('Stack underflow for mod');
+    case '%':
+      if (stack.length < 2) throw new Error('Stack underflow for mod/%');
       {
         const b = stack.pop() as number;
         const a = stack.pop() as number;

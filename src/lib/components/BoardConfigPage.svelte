@@ -1,13 +1,17 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Icon from "./ui/Icon.svelte";
+    import Modal from "./ui/Modal.svelte";
+    import RPNTestModal from "./RPNTestModal.svelte";
     import UserManagement from "./UserManagement.svelte";
     import flatpickr from "flatpickr";
     import "flatpickr/dist/flatpickr.min.css";
+    import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
 
     interface Props {
         board: any;
         userRole: string;
+        agreements?: any[];
         onClose: () => void;
         onUpdateBoardConfig: (config: any) => void;
         onAddNewColumn: () => void;
@@ -45,6 +49,7 @@
     let {
         board,
         userRole,
+        agreements = [],
         onClose,
         onUpdateBoardConfig,
         onAddNewColumn,
@@ -87,6 +92,10 @@
     let availableScorecards = $state<any[]>([]);
     let attachedScorecards = $state<any[]>([]);
     let loadingScorecards = $state(false);
+
+    // Display rule context modal
+    let showDisplayRuleContext = $state(false);
+    let showRPNTestModal = $state(false);
 
     // Update form when board changes
     $effect(() => {
@@ -762,11 +771,31 @@
                         <option value="review">Review</option>
                         <option value="agreements">Agreements</option>
                         <option value="scorecard">Scorecard</option>
+                        <option value="static">Static Content</option>
                     </select>
                 </div>
 
-                <div class="form-section">
-                    <h3>Options</h3>
+                {#if selectedScene.mode === "static"}
+                    <div class="form-group">
+                        <label for="scene-description">Content (Markdown)</label>
+                        <textarea
+                            id="scene-description"
+                            value={selectedScene.description || ""}
+                            oninput={(e) =>
+                                onUpdateScene(selectedScene.id, {
+                                    description: e.currentTarget.value,
+                                })}
+                            class="input"
+                            rows="15"
+                            placeholder="Enter markdown content to display in this scene..."
+                        ></textarea>
+                        <p class="field-hint">Use GitHub-flavored markdown to format your content.</p>
+                    </div>
+                {/if}
+
+                {#if selectedScene.mode !== "static" && selectedScene.mode !== "agreements" && selectedScene.mode !== "scorecard"}
+                    <div class="form-section">
+                        <h3>Options</h3>
                     <div class="checkbox-grid">
                         <label>
                             <input
@@ -855,18 +884,6 @@
                         <label>
                             <input
                                 type="checkbox"
-                                checked={selectedScene.multipleVotesPerCard}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "multipleVotesPerCard",
-                                    )}
-                            />
-                            Multiple Votes Per Card
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
                                 checked={selectedScene.showComments}
                                 onchange={() =>
                                     togglePermission(
@@ -890,7 +907,9 @@
                         </label>
                     </div>
                 </div>
+                {/if}
 
+                {#if selectedScene.mode !== "static"}
                 <div class="form-section">
                     <h3>Columns</h3>
                     <div class="checkbox-grid">
@@ -916,6 +935,7 @@
                         {/each}
                     </div>
                 </div>
+                {/if}
 
                 {#if selectedScene.mode === "scorecard"}
                     <div class="form-section">
@@ -969,6 +989,48 @@
                     </div>
                 {/if}
 
+                <div class="form-section">
+                    <h3>Display Rule</h3>
+                    <div class="form-group">
+                        <label for="scene-display-rule">
+                            RPN Expression
+                            <button
+                                type="button"
+                                onclick={() => showDisplayRuleContext = true}
+                                class="info-button"
+                                title="Show available data context"
+                            >
+                                <Icon name="info" size="sm" />
+                            </button>
+                        </label>
+                        <div class="display-rule-input-group">
+                            <input
+                                id="scene-display-rule"
+                                type="text"
+                                value={selectedScene.displayRule || ""}
+                                onblur={(e) =>
+                                    onUpdateScene(selectedScene.id, {
+                                        displayRule: e.currentTarget.value || null,
+                                    })}
+                                class="input"
+                                placeholder="e.g., $.columns.Kvetches.cards.length 0 >"
+                            />
+                            <button
+                                type="button"
+                                onclick={() => showRPNTestModal = true}
+                                class="test-button"
+                                title="Test this RPN rule"
+                            >
+                                🧪 Test
+                            </button>
+                        </div>
+                        <p class="field-hint">
+                            Optional RPN expression to conditionally display this scene.
+                            Leave empty to always show. Scene is skipped if rule evaluates to false.
+                        </p>
+                    </div>
+                </div>
+
                 <div class="form-section manage-section">
                     <h3>Manage</h3>
                     <button
@@ -1013,6 +1075,120 @@
         {/if}
     </div>
 </div>
+
+<!-- Display Rule Context Modal -->
+<Modal
+    show={showDisplayRuleContext}
+    title="Display Rule Data Context"
+    onClose={() => showDisplayRuleContext = false}
+>
+        <div class="context-help">
+            <p>
+                The following data structure is available when your display rule is evaluated.
+                Access values using <code>$</code> followed by the path:
+            </p>
+
+            <div class="context-section">
+                <h4>Board Data</h4>
+                <pre><code>$.board.title          - Board title (string)
+$.board.status         - Board status (string)
+$.board.blameFreeMode  - Blame-free mode (boolean)</code></pre>
+            </div>
+
+            <div class="context-section">
+                <h4>Scene Data</h4>
+                <pre><code>$.scene.title          - Current scene title (string)
+$.scene.mode           - Scene mode (string)</code></pre>
+            </div>
+
+            <div class="context-section">
+                <h4>Columns Data</h4>
+                <pre><code>$.columns                        - Object with column data by title
+$.columns.&lt;ColumnTitle&gt;.cards   - Array of cards in that column
+
+Examples:
+  $.columns.Kvetches.cards.length                - Number of cards (single word)
+  $.columns["Issues to Discuss"].cards.length    - Number of cards (multi-word)
+
+Single-word column titles:
+  $.columns.Kvetches.cards
+
+Multi-word column titles (use bracket notation):
+  $.columns["Issues to Discuss"].cards
+  $.columns["Action Items"].cards.length</code></pre>
+                <p class="context-note">
+                    <strong>Note:</strong> Replace <code>&lt;ColumnTitle&gt;</code> with the actual column title from your board.
+                    For titles with spaces or special characters, use bracket notation with quotes.
+                    <br><strong>Current columns:</strong> {#if board?.allColumns}{board.allColumns.map((c: any) => c.title).join(', ')}{:else}none{/if}
+                </p>
+            </div>
+
+            <div class="context-section">
+                <h4>Agreements Data</h4>
+                <pre><code>$.agreements.all                 - Array of all agreements
+$.agreements.incomplete          - Array of incomplete agreements
+$.agreements.completed           - Array of completed agreements
+$.agreements.totalCount          - Total number of agreements (number)
+$.agreements.incompleteCount     - Number of incomplete agreements (number)
+$.agreements.completedCount      - Number of completed agreements (number)
+
+Examples:
+  $.agreements.incompleteCount 0 >    - Has incomplete agreements
+  $.agreements.totalCount 5 >=        - Has at least 5 agreements
+  $.agreements.completedCount 10 >    - More than 10 completed</code></pre>
+            </div>
+
+            <div class="context-section">
+                <h4>Example Rules</h4>
+                <pre><code>// Skip scene if "Kvetches" column has no cards
+$.columns.Kvetches.cards.length 0 =
+
+// Show scene only if board is active
+$.board.status "active" =
+
+// Show scene if "Kvetches" has more than 5 cards
+$.columns.Kvetches.cards.length 5 >
+
+// Skip scene if "Issues to Discuss" column is empty (multi-word)
+$.columns["Issues to Discuss"].cards.length 0 =
+
+// Show scene only if there are incomplete agreements
+$.agreements.incompleteCount 0 >
+
+// Show scene if more than 3 agreements were completed
+$.agreements.completedCount 3 ></code></pre>
+            </div>
+
+            <div class="context-section">
+                <h4>RPN Operators</h4>
+                <pre><code>Comparison (symbols):   =  !=  &lt;&gt;  &gt;  &lt;  &gt;=  &lt;=
+Comparison (words):     eq ne  ne  gt lt gte lte
+
+Arithmetic (symbols):   +   -   *   /   %
+Arithmetic (words):     add sub mul div mod
+
+Logic (symbols):        &&  ||  !
+Logic (words):          and or  not
+
+Aggregation:            count sum avg min max
+String:                 concat contains matches_regex
+Date:                   days_since days_since_uk</code></pre>
+            </div>
+        </div>
+</Modal>
+
+<!-- RPN Test Modal -->
+{#if selectedScene}
+    <RPNTestModal
+        show={showRPNTestModal}
+        initialRule={selectedScene.displayRule || ""}
+        initialData={JSON.stringify(buildDisplayRuleContext(board, selectedScene, [], agreements), null, 2)}
+        onClose={() => showRPNTestModal = false}
+        onUpdateRule={(rule) => {
+            onUpdateScene(selectedScene.id, { displayRule: rule || null });
+        }}
+    />
+{/if}
 
 <style lang="less">
     @import "$lib/styles/_mixins.less";
@@ -1345,6 +1521,108 @@
     .maintenance-section {
         h3 {
             color: #dc3545;
+        }
+    }
+
+    .info-button {
+        background: none;
+        border: none;
+        color: var(--color-primary);
+        cursor: pointer;
+        padding: 0;
+        margin-left: 0.5rem;
+        vertical-align: middle;
+
+        &:hover {
+            color: var(--color-teal-600);
+        }
+    }
+
+    .display-rule-input-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+
+        input {
+            flex: 1;
+        }
+    }
+
+    .test-button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #28a745;
+        background-color: #28a745;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+
+        &:active {
+            transform: translateY(1px);
+        }
+    }
+
+    .context-help {
+        max-height: 70vh;
+        overflow-y: auto;
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        code {
+            background-color: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: #f5f5f5;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+
+            code {
+                background: none;
+                padding: 0;
+            }
+        }
+    }
+
+    .context-section {
+        margin-bottom: 1.5rem;
+
+        h4 {
+            margin-bottom: 0.5rem;
+            color: var(--color-gray-700);
+        }
+
+        .context-note {
+            background-color: #e3f2fd;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-size: 0.9em;
+
+            strong {
+                color: var(--color-teal-700);
+            }
+
+            code {
+                background-color: #bbdefb;
+            }
         }
     }
 </style>

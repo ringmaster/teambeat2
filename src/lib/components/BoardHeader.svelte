@@ -31,6 +31,8 @@
             name: string;
             allowVoting?: boolean;
         } | null;
+        cards?: any[];
+        agreements?: any[];
         showSceneDropdown: boolean;
         showBoardConfig?: boolean;
         connectedUsers?: number;
@@ -64,6 +66,8 @@
         board,
         userRole,
         currentScene,
+        cards = [],
+        agreements = [],
         showSceneDropdown,
         showBoardConfig = false,
         connectedUsers = 0,
@@ -158,6 +162,8 @@
                     <SceneDropdown
                         {board}
                         {currentScene}
+                        {cards}
+                        {agreements}
                         {showSceneDropdown}
                         {onSceneChange}
                         {onNextScene}
