@@ -77,6 +77,13 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
+    if (question.questionType === 'redyellowgreen' && ![1, 3, 5].includes(data.rating)) {
+      return json(
+        { success: false, error: 'Red/Yellow/Green questions require rating of 1, 3, or 5' },
+        { status: 400 }
+      );
+    }
+
     // Create or update response
     const response = await createOrUpdateHealthResponse({
       questionId: data.questionId,

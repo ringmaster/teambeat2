@@ -3,6 +3,7 @@
     import BooleanInput from "./health/BooleanInput.svelte";
     import Range1to5Input from "./health/Range1to5Input.svelte";
     import AgreeDisagreeInput from "./health/AgreeDisagreeInput.svelte";
+    import RedYellowGreenInput from "./health/RedYellowGreenInput.svelte";
     import { toastStore } from "$lib/stores/toast";
 
     interface Props {
@@ -149,6 +150,13 @@
                                 />
                             {:else if question.questionType === 'agreetodisagree'}
                                 <AgreeDisagreeInput
+                                    {question}
+                                    value={responses.get(question.id)}
+                                    disabled={isDisabled}
+                                    onchange={(rating) => handleResponse(question.id, rating)}
+                                />
+                            {:else if question.questionType === 'redyellowgreen'}
+                                <RedYellowGreenInput
                                     {question}
                                     value={responses.get(question.id)}
                                     disabled={isDisabled}

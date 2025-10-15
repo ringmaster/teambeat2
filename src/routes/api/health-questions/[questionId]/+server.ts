@@ -17,7 +17,7 @@ import { z } from 'zod';
 const updateQuestionSchema = z.object({
   question: z.string().min(1).max(500).optional(),
   description: z.string().max(1000).optional(),
-  questionType: z.enum(['boolean', 'range1to5', 'agreetodisagree']).optional()
+  questionType: z.enum(['boolean', 'range1to5', 'agreetodisagree', 'redyellowgreen']).optional()
 });
 
 export const PUT: RequestHandler = async (event) => {

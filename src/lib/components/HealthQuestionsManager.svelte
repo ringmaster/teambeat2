@@ -253,6 +253,7 @@
                         <option value="boolean">Yes/No</option>
                         <option value="range1to5">1-5 Scale</option>
                         <option value="agreetodisagree">Agree/Disagree</option>
+                        <option value="redyellowgreen">Red/Yellow/Green</option>
                     </select>
                     <button
                         onclick={() => deleteQuestion(question.id)}

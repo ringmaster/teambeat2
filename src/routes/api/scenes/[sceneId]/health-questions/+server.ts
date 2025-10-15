@@ -14,7 +14,7 @@ import { z } from 'zod';
 const createQuestionSchema = z.object({
   question: z.string().min(1).max(500),
   description: z.string().max(1000).optional(),
-  questionType: z.enum(['boolean', 'range1to5', 'agreetodisagree'])
+  questionType: z.enum(['boolean', 'range1to5', 'agreetodisagree', 'redyellowgreen'])
 });
 
 export const GET: RequestHandler = async (event) => {
