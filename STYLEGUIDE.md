@@ -309,3 +309,438 @@ When updating existing code that uses color-named variables:
 | `--color-teal-500` | `--card-interactive-highlight` | Interactive accents |
 
 This semantic color system ensures consistency, maintainability, and makes the design system more intuitive for developers working with the codebase.
+
+## Layout Patterns
+
+### Spacing System
+TeamBeat uses a consistent spacing scale based on 0.25rem (4px) increments:
+
+- `--spacing-1`: 0.25rem (4px)
+- `--spacing-2`: 0.5rem (8px)
+- `--spacing-3`: 0.75rem (12px)
+- `--spacing-4`: 1rem (16px)
+- `--spacing-5`: 1.25rem (20px)
+- `--spacing-6`: 1.5rem (24px)
+- `--spacing-8`: 2rem (32px)
+- `--spacing-12`: 3rem (48px)
+
+**Common Usage:**
+- Gap between elements: `--spacing-2` to `--spacing-4`
+- Component padding: `--spacing-4` to `--spacing-6`
+- Section spacing: `--spacing-6` to `--spacing-8`
+- Page margins: `--spacing-8` to `--spacing-12`
+
+### Border Radius System
+- `--radius-sm`: 0.125rem - Small elements, badges
+- `--radius-md`: 0.375rem - Inputs, buttons (default)
+- `--radius-lg`: 0.5rem - Cards, modals
+- `--radius-xl`: 0.75rem - Large cards
+- `--radius-full`: 9999px - Pills, circular elements
+
+### Container Widths
+- Forms/narrow content: `max-width: 800px`
+- Wide content (dashboards, results): `max-width: 1200px`
+- Page container: `max-width: 80rem` (1280px)
+- Modals: `max-width: 28rem` (448px)
+- Large modals: `max-width: 64rem` (1024px)
+
+### Responsive Padding
+Components should increase padding at breakpoints:
+```css
+padding: 1.5rem; /* mobile */
+@media (min-width: 768px) {
+    padding: 2rem; /* tablet+ */
+}
+```
+
+## Button Patterns
+
+### Primary Button
+Standard primary action button using brand colors:
+```css
+.btn-primary {
+    padding: 0.625rem 1.5rem;
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    min-height: 44px; /* Touch-friendly */
+}
+
+.btn-primary:hover {
+    background: var(--btn-primary-bg-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+```
+
+### Secondary Button
+Supporting actions with lighter styling:
+```css
+.btn-secondary {
+    padding: 0.625rem 1.5rem;
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    min-height: 44px;
+}
+
+.btn-secondary:hover {
+    background: var(--btn-secondary-bg-hover);
+    border-color: var(--color-border-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+```
+
+### Danger Button
+Destructive actions in red:
+```css
+.btn-danger {
+    background: var(--btn-danger-bg);
+    color: var(--btn-danger-text);
+    /* Same structure as primary */
+}
+
+.btn-danger:hover {
+    background: var(--btn-danger-bg-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+```
+
+### Button Sizing
+- Padding: `0.5rem 1rem` (compact) to `0.625rem 1.5rem` (standard)
+- Font size: `0.875rem` (14px)
+- Min height: `44px` for touch-friendliness
+- Font weight: `500` to `600`
+
+## Form Input Patterns
+
+### Text Input
+Standard text input styling:
+```css
+.input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.875rem;
+    background-color: white;
+    transition: all 0.2s ease;
+    min-height: 44px;
+}
+
+.input:hover {
+    border-color: var(--color-border-hover);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.input::placeholder {
+    color: var(--color-text-muted);
+}
+```
+
+### Textarea
+Vertically resizable text area:
+```css
+textarea.input {
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; /* For code */
+}
+```
+
+### Select Dropdown
+```css
+.select {
+    /* Same base styling as .input */
+    cursor: pointer;
+}
+```
+
+## Content Box Patterns
+
+**Important Note**: The application has a specialized `Card.svelte` component used for board cards with voting, comments, and reactions. These patterns are for generic content containers and list items - **do not use `.card` as a class name** to avoid confusion with the board card component.
+
+### Standard Content Box
+Basic container for content grouping:
+```css
+.content-box {
+    padding: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: white;
+    box-shadow: var(--shadow-sm);
+}
+```
+
+### Interactive Content Box
+Containers that respond to hover (e.g., datasource cards, list items):
+```css
+.content-box-interactive {
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.content-box-interactive::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--color-accent), var(--color-secondary));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.content-box-interactive:hover {
+    background-color: var(--surface-elevated);
+    border-color: var(--color-primary);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
+}
+
+.content-box-interactive:hover::before {
+    opacity: 1;
+}
+```
+
+**Alternative Class Names for Specific Use Cases:**
+- `.datasource-card`, `.scorecard-item`, `.question-item` - Specific component list items
+- `.list-item` - Generic list items in configuration pages
+- `.question-summary-item` - Survey question summary items
+
+### Content Box with Gradient Background
+Subtle gradient for visual interest:
+```css
+.content-box-gradient {
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-primary) 3%, transparent),
+        color-mix(in srgb, var(--color-secondary) 3%, transparent)
+    );
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+```
+
+## Empty State Patterns
+
+### Standard Empty State
+Centered message for empty content areas:
+```css
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px; /* Or min-height */
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: 0.9375rem;
+    padding: var(--spacing-6);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-primary) 2%, transparent),
+        color-mix(in srgb, var(--color-secondary) 2%, transparent)
+    );
+}
+
+.empty-state p {
+    margin: 0.5rem 0;
+}
+```
+
+## Loading & Error State Patterns
+
+### Loading State
+```css
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-secondary);
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.loading-state p {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+```
+
+### Error State
+```css
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-secondary);
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.error-state p {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
+/* Retry button in error state */
+.error-state button {
+    padding: 0.625rem 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px;
+}
+```
+
+## Shadow & Elevation Patterns
+
+### Shadow Scale
+- `--shadow-sm`: `0 1px 2px 0 rgb(0 0 0 / 0.05)` - Subtle depth
+- `--shadow-md`: `0 4px 6px -1px rgb(0 0 0 / 0.1)` - Standard cards
+- `--shadow-lg`: `0 10px 15px -3px rgb(0 0 0 / 0.1)` - Elevated elements
+- `--shadow-xl`: `0 20px 25px -5px rgb(0 0 0 / 0.1)` - Modals, popovers
+
+### Usage Guidelines
+- Resting elements: `var(--shadow-sm)`
+- Hover states: Increase to `var(--shadow-md)`
+- Cards: `var(--shadow-sm)` resting, `var(--shadow-md)` hover
+- Modals/Dialogs: `var(--shadow-xl)`
+
+## Typography Patterns
+
+### Heading Hierarchy
+```css
+h2 {
+    margin: 0 0 var(--spacing-6) 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h3 {
+    margin: 0 0 var(--spacing-3) 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+h4 {
+    margin: 0 0 var(--spacing-2) 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+```
+
+### Body Text
+- Primary: `0.875rem` to `0.9375rem`, weight `400` to `500`
+- Secondary/meta: `0.8125rem` to `0.875rem`, color `var(--color-text-secondary)`
+- Muted: `0.875rem`, color `var(--color-text-muted)`
+
+### Text Colors
+- Primary content: `var(--color-text-primary)`
+- Supporting text: `var(--color-text-secondary)`
+- Placeholder/disabled: `var(--color-text-muted)`
+
+## Common Component Combinations
+
+### Section Header with Action
+```html
+<div class="section-header">
+    <h3>Section Title</h3>
+    <button class="btn-primary">+ Add Item</button>
+</div>
+```
+
+```css
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+```
+
+### Form Group
+```html
+<div class="form-group">
+    <label for="field">Field Label</label>
+    <input id="field" type="text" class="input" />
+    <p class="help-text">Optional help text</p>
+</div>
+```
+
+```css
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.form-group label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.help-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+    font-style: italic;
+}
+```

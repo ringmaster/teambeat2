@@ -26,7 +26,7 @@
   <ScorecardManager seriesId={data.seriesId} canEdit={data.canEdit} />
 </div>
 
-<style>
+<style lang="less">
   .scorecard-page {
     height: 100vh;
     display: flex;
@@ -36,30 +36,49 @@
 
   .page-header {
     flex: 0 0 auto;
-    padding: 1rem 1.5rem;
-    background-color: #fff;
-    border-bottom: 1px solid #ddd;
+    padding: var(--spacing-4) var(--spacing-6);
+    background-color: white;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
-    gap: 1rem;
-  }
+    gap: var(--spacing-4);
 
-  .page-header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      background: linear-gradient(
+        135deg,
+        var(--color-primary),
+        var(--color-secondary)
+      );
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
   }
 
   .back-link {
-    color: #007bff;
+    color: var(--color-primary);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 0.875rem;
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-  }
+    gap: var(--spacing-2);
+    transition: all 0.2s ease;
+    padding: var(--spacing-2);
+    border-radius: var(--radius-md);
 
-  .back-link:hover {
-    text-decoration: underline;
+    &:hover {
+      color: var(--color-primary-hover);
+      background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+      transform: translateX(-2px);
+    }
+
+    &:active {
+      transform: translateX(0);
+    }
   }
 </style>

@@ -43,4 +43,4 @@ ADD CONSTRAINT health_questions_scene_id_scenes_id_fk
 FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE;
 
 -- Step 6: Set scene_id as NOT NULL after data is populated
--- ALTER TABLE health_questions ALTER COLUMN scene_id SET NOT NULL;
+ALTER TABLE health_questions ALTER COLUMN scene_id SET NOT NULL;

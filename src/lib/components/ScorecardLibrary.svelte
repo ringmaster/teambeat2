@@ -200,87 +200,94 @@
   {/if}
 </div>
 
-<style>
+<style lang="less">
   .scorecard-library {
-    padding: 1.5rem;
+    padding: var(--spacing-6);
   }
 
   .library-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-  }
+    margin-bottom: var(--spacing-6);
 
-  .library-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--color-text-primary);
+    }
   }
 
   .error-message {
-    padding: 0.75rem;
-    background-color: #fee;
-    border: 1px solid #fcc;
-    border-radius: 4px;
-    color: #c33;
-    margin-bottom: 1rem;
+    padding: var(--spacing-3);
+    background-color: var(--status-error-bg);
+    border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+    border-radius: var(--radius-md);
+    color: var(--status-error-text);
+    margin-bottom: var(--spacing-4);
   }
 
   .loading {
     text-align: center;
-    padding: 2rem;
-    color: #666;
+    padding: var(--spacing-8);
+    color: var(--color-text-secondary);
   }
 
   .empty-state {
     text-align: center;
-    padding: 3rem;
-    color: #666;
-  }
+    padding: var(--spacing-12);
+    color: var(--color-text-secondary);
 
-  .empty-state p {
-    margin: 0.5rem 0;
+    p {
+      margin: var(--spacing-2) 0;
+    }
   }
 
   .scorecard-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--spacing-4);
   }
 
   .scorecard-card {
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-5);
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    background-color: #fff;
+    background-color: var(--card-background);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      box-shadow: var(--shadow-sm);
+    }
   }
 
   .scorecard-info {
     flex: 1;
-  }
 
-  .scorecard-info h3 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.125rem;
-  }
+    h3 {
+      margin: 0 0 var(--spacing-2) 0;
+      font-size: 1.125rem;
+      color: var(--color-text-primary);
+    }
 
-  .scorecard-info .description {
-    margin: 0 0 0.5rem 0;
-    color: #666;
-  }
+    .description {
+      margin: 0 0 var(--spacing-2) 0;
+      color: var(--color-text-secondary);
+    }
 
-  .scorecard-info .meta {
-    margin: 0;
-    font-size: 0.875rem;
-    color: #999;
+    .meta {
+      margin: 0;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
   }
 
   .scorecard-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--spacing-2);
   }
 
   .dialog-overlay {
@@ -297,91 +304,107 @@
   }
 
   .dialog {
-    background-color: #fff;
-    border-radius: 8px;
-    padding: 1.5rem;
+    background-color: var(--card-background);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-6);
     max-width: 500px;
     width: 90%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
+    box-shadow: var(--shadow-xl);
 
-  .dialog h3 {
-    margin: 0 0 1rem 0;
+    h3 {
+      margin: 0 0 var(--spacing-4) 0;
+      color: var(--color-text-primary);
+    }
   }
 
   .form-group {
-    margin-bottom: 1rem;
-  }
+    margin-bottom: var(--spacing-4);
 
-  .form-group label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-weight: 500;
-  }
+    label {
+      display: block;
+      margin-bottom: var(--spacing-1);
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
 
-  .form-group input,
-  .form-group textarea {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 1rem;
-  }
+    input,
+    textarea {
+      width: 100%;
+      padding: var(--spacing-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all var(--transition-fast);
 
-  .form-group textarea {
-    resize: vertical;
+      &:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+      }
+    }
+
+    textarea {
+      resize: vertical;
+    }
   }
 
   .dialog-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-6);
   }
 
   .btn-primary,
   .btn-secondary,
   .btn-danger {
-    padding: 0.5rem 1rem;
+    padding: var(--spacing-2) var(--spacing-4);
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     text-decoration: none;
     display: inline-block;
+    transition: all var(--transition-fast);
   }
 
   .btn-primary {
-    background-color: #007bff;
-    color: white;
-  }
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
 
-  .btn-primary:hover:not(:disabled) {
-    background-color: #0056b3;
-  }
+    &:hover:not(:disabled) {
+      background: var(--btn-primary-bg-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
 
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   }
 
   .btn-secondary {
-    background-color: #6c757d;
-    color: white;
-  }
+    background: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
 
-  .btn-secondary:hover {
-    background-color: #545b62;
+    &:hover:not(:disabled) {
+      background: var(--btn-secondary-bg-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
   }
 
   .btn-danger {
-    background-color: #dc3545;
-    color: white;
-  }
+    background: var(--btn-danger-bg);
+    color: var(--btn-danger-text);
 
-  .btn-danger:hover {
-    background-color: #bd2130;
+    &:hover:not(:disabled) {
+      background: var(--btn-danger-bg-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
   }
 </style>
