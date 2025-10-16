@@ -109,7 +109,7 @@
     </div>
 
     <!-- Add Card Section for this column -->
-    {#if getSceneCapability(currentScene, board?.status, 'allowAddCards')}
+    {#if getSceneCapability(currentScene, board?.status, 'allow_add_cards')}
         <div class="add-card-section" transition:slide>
             <TextareaWithButton
                 value={onGetColumnContent(column.id)}

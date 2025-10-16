@@ -8,6 +8,8 @@ import { db } from '$lib/server/db/index.js';
 import { scenes, boards } from '$lib/server/db/schema.js';
 import { eq, desc, asc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { getSceneFlags, setSceneFlags } from '$lib/server/repositories/scene.js';
+import type { SceneFlag } from '$lib/server/db/scene-flags.js';
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -38,9 +40,20 @@ export const GET: RequestHandler = async (event) => {
       .where(eq(scenes.boardId, boardId))
       .orderBy(asc(scenes.seq));
 
+    // Fetch flags for all scenes
+    const scenesWithFlags = await Promise.all(
+      boardScenes.map(async (scene) => {
+        const flags = await getSceneFlags(scene.id);
+        return {
+          ...scene,
+          flags
+        };
+      })
+    );
+
     return json({
       success: true,
-      scenes: boardScenes
+      scenes: scenesWithFlags
     });
   } catch (error) {
     if (error instanceof Response) {
@@ -62,7 +75,7 @@ export const POST: RequestHandler = async (event) => {
     const body = await event.request.json();
 
     // Validate input
-    const { title, description, mode, allowAddCards, allowEditCards, allowComments, allowVoting } = body;
+    const { title, description, mode, flags } = body;
 
     if (!title?.trim()) {
       return json(
@@ -116,18 +129,13 @@ export const POST: RequestHandler = async (event) => {
         description: description?.trim() || null,
         mode: mode,
         seq: nextSeq,
-        allowAddCards: allowAddCards ?? true,
-        allowEditCards: allowEditCards ?? true,
-        allowObscureCards: body.allowObscureCards ?? false,
-        allowMoveCards: body.allowMoveCards ?? true,
-        allowGroupCards: body.allowGroupCards ?? false,
-        showVotes: body.showVotes ?? true,
-        allowVoting: allowVoting ?? false,
-        showComments: body.showComments ?? true,
-        allowComments: allowComments ?? true,
-        multipleVotesPerCard: body.multipleVotesPerCard ?? true,
         createdAt: new Date().toISOString()
       });
+
+    // Set flags if provided
+    if (flags && Array.isArray(flags) && flags.length > 0) {
+      await setSceneFlags(sceneId, flags as SceneFlag[]);
+    }
 
     // Get the created scene with all its details
     const [newScene] = await db
@@ -135,6 +143,13 @@ export const POST: RequestHandler = async (event) => {
       .from(scenes)
       .where(eq(scenes.id, sceneId))
       .limit(1);
+
+    // Add flags to the response
+    const sceneFlags = await getSceneFlags(sceneId);
+    const newSceneWithFlags = {
+      ...newScene,
+      flags: sceneFlags
+    };
 
     // If this is the first scene and board doesn't have a current scene, make it current
     const boardWithCurrentScene = await findBoardById(boardId);
@@ -145,12 +160,12 @@ export const POST: RequestHandler = async (event) => {
         .where(eq(boards.id, boardId));
 
       // Broadcast the scene change
-      await broadcastSceneChanged(boardId, newScene);
+      await broadcastSceneChanged(boardId, newSceneWithFlags);
     }
 
     return json({
       success: true,
-      scene: newScene
+      scene: newSceneWithFlags
     });
   } catch (error) {
     if (error instanceof Response) {

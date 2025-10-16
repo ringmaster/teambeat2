@@ -8,6 +8,10 @@ import { db } from '$lib/server/db/index.js';
 import { healthQuestions, healthResponses, scenes, boards, columns } from '$lib/server/db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { z } from 'zod';
+import { getSceneFlags } from '$lib/server/repositories/scene.js';
+import { getSceneCapability } from '$lib/utils/scene-capability.js';
+import type { BoardStatus } from '$lib/types.js';
+import { SCENE_FLAGS } from '$lib/scene-flags.js';
 
 const copyToCardSchema = z.object({
   column_id: z.string()
@@ -24,7 +28,9 @@ export const POST: RequestHandler = async (event) => {
     const questionData = await db
       .select({
         question: healthQuestions,
+        scene: scenes,
         boardId: boards.id,
+        boardStatus: boards.status,
         seriesId: boards.seriesId
       })
       .from(healthQuestions)
@@ -40,7 +46,19 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    const { question, boardId, seriesId } = questionData[0];
+    const { question, scene, boardId, boardStatus, seriesId } = questionData[0];
+
+    // Fetch scene flags
+    const sceneFlags = await getSceneFlags(scene.id);
+    const sceneWithFlags = { ...scene, flags: sceneFlags };
+
+    // Check if adding cards is allowed using getSceneCapability
+    if (!getSceneCapability(sceneWithFlags, boardStatus as BoardStatus, SCENE_FLAGS.ALLOW_ADD_CARDS)) {
+      return json(
+        { success: false, error: 'Adding cards is not allowed for this scene' },
+        { status: 403 }
+      );
+    }
 
     // Check if user has facilitator/admin permission
     const userRole = await getUserRoleInSeries(user.userId, seriesId);

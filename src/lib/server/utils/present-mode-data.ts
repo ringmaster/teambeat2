@@ -255,11 +255,11 @@ export async function buildPresentModeData(
     comments: cardComments,
     agreements: cardAgreements,
     scene_permissions: {
-      allow_comments: getSceneCapability(currentScene, board.status, 'allowComments'),
-      allow_voting: getSceneCapability(currentScene, board.status, 'allowVoting'),
-      allow_edit_cards: getSceneCapability(currentScene, board.status, 'allowEditCards'),
-      show_votes: getSceneCapability(currentScene, board.status, 'showVotes'),
-      show_comments: getSceneCapability(currentScene, board.status, 'showComments')
+      allow_comments: getSceneCapability(currentScene, board.status, 'allow_comments'),
+      allow_voting: getSceneCapability(currentScene, board.status, 'allow_voting'),
+      allow_edit_cards: getSceneCapability(currentScene, board.status, 'allow_edit_cards'),
+      show_votes: getSceneCapability(currentScene, board.status, 'show_votes'),
+      show_comments: getSceneCapability(currentScene, board.status, 'show_comments')
     },
     notes_lock: notesLock
   };

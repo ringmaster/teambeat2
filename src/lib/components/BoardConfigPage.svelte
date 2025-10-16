@@ -5,6 +5,7 @@
     import RPNTestModal from "./RPNTestModal.svelte";
     import UserManagement from "./UserManagement.svelte";
     import HealthQuestionsManager from "./HealthQuestionsManager.svelte";
+    import SceneOptionsConfig from "./SceneOptionsConfig.svelte";
     import flatpickr from "flatpickr";
     import "flatpickr/dist/flatpickr.min.css";
     import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
@@ -271,14 +272,14 @@
         onUpdateScene(sceneId, { mode });
     }
 
-    function togglePermission(sceneId: string, permission: string) {
-        const scene = board.scenes.find((s: any) => s.id === sceneId);
-        if (!scene) return;
-        const updates = { [permission]: !scene[permission] };
-        onUpdateScene(sceneId, updates);
+    function updateSceneFlags(sceneId: string, flags: string[]) {
+        onUpdateScene(sceneId, { flags });
     }
 
-    function debouncedUpdateSceneDescription(sceneId: string, description: string) {
+    function debouncedUpdateSceneDescription(
+        sceneId: string,
+        description: string,
+    ) {
         if (contentDebounceTimer) {
             clearTimeout(contentDebounceTimer);
         }
@@ -781,10 +782,10 @@
                             )}
                         class="select"
                     >
+                        <option value="agreements">Agreements</option>
                         <option value="columns">Columns</option>
                         <option value="present">Present</option>
                         <option value="review">Review</option>
-                        <option value="agreements">Agreements</option>
                         <option value="scorecard">Scorecard</option>
                         <option value="static">Static Content</option>
                         <option value="survey">Survey</option>
@@ -799,165 +800,65 @@
 
                 {#if selectedScene.mode === "static"}
                     <div class="form-group">
-                        <label for="scene-description">Content (Markdown)</label>
+                        <label for="scene-description">Content (Markdown)</label
+                        >
                         <textarea
                             id="scene-description"
                             value={selectedScene.description || ""}
                             oninput={(e) =>
                                 debouncedUpdateSceneDescription(
                                     selectedScene.id,
-                                    e.currentTarget.value
+                                    e.currentTarget.value,
                                 )}
                             class="input"
                             rows="15"
                             placeholder="Enter markdown content to display in this scene..."
                         ></textarea>
-                        <p class="field-hint">Use GitHub-flavored markdown to format your content.</p>
+                        <p class="field-hint">
+                            Use GitHub-flavored markdown to format your content.
+                        </p>
                     </div>
                 {/if}
 
-                {#if selectedScene.mode !== "static" && selectedScene.mode !== "agreements" && selectedScene.mode !== "scorecard" && selectedScene.mode !== "survey"}
-                    <div class="form-section">
-                        <h3>Options</h3>
-                    <div class="checkbox-grid">
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowAddCards}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowAddCards",
-                                    )}
-                            />
-                            Allow Add Cards
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowEditCards}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowEditCards",
-                                    )}
-                            />
-                            Allow Edit Cards
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowObscureCards}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowObscureCards",
-                                    )}
-                            />
-                            Allow Obscure Cards
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowMoveCards}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowMoveCards",
-                                    )}
-                            />
-                            Allow Move Cards
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowGroupCards}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowGroupCards",
-                                    )}
-                            />
-                            Allow Group Cards
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.showVotes}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "showVotes",
-                                    )}
-                            />
-                            Show Votes
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowVoting}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowVoting",
-                                    )}
-                            />
-                            Allow Voting
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.showComments}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "showComments",
-                                    )}
-                            />
-                            Show Comments
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={selectedScene.allowComments}
-                                onchange={() =>
-                                    togglePermission(
-                                        selectedScene.id,
-                                        "allowComments",
-                                    )}
-                            />
-                            Allow Comments
-                        </label>
-                    </div>
-                </div>
+                {#if selectedScene.flags}
+                    <SceneOptionsConfig
+                        sceneMode={selectedScene.mode}
+                        bind:selectedFlags={selectedScene.flags}
+                        onchange={() =>
+                            updateSceneFlags(
+                                selectedScene.id,
+                                selectedScene.flags,
+                            )}
+                    />
                 {/if}
 
                 {#if selectedScene.mode !== "static" && selectedScene.mode !== "survey"}
-                <div class="form-section">
-                    <h3>Columns</h3>
-                    <div class="checkbox-grid">
-                        {#each board.allColumns || board.columns || [] as column (column.id)}
-                            {@const currentState =
-                                columnStates[selectedScene.id]?.[column.id] ||
-                                "visible"}
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    checked={currentState === "visible"}
-                                    onchange={() =>
-                                        updateColumnDisplay(
-                                            selectedScene.id,
-                                            column.id,
-                                            currentState === "visible"
-                                                ? "hidden"
-                                                : "visible",
-                                        )}
-                                />
-                                {column.title}
-                            </label>
-                        {/each}
+                    <div class="form-section">
+                        <h3>Columns</h3>
+                        <div class="checkbox-grid">
+                            {#each board.allColumns || board.columns || [] as column (column.id)}
+                                {@const currentState =
+                                    columnStates[selectedScene.id]?.[
+                                        column.id
+                                    ] || "visible"}
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={currentState === "visible"}
+                                        onchange={() =>
+                                            updateColumnDisplay(
+                                                selectedScene.id,
+                                                column.id,
+                                                currentState === "visible"
+                                                    ? "hidden"
+                                                    : "visible",
+                                            )}
+                                    />
+                                    {column.title}
+                                </label>
+                            {/each}
+                        </div>
                     </div>
-                </div>
                 {/if}
 
                 {#if selectedScene.mode === "scorecard"}
@@ -967,7 +868,7 @@
                             <p>Loading scorecards...</p>
                         {:else if availableScorecards.length > 0}
                             <div class="checkbox-grid">
-                                {#each availableScorecards as scorecard(scorecard.id)}
+                                {#each availableScorecards as scorecard (scorecard.id)}
                                     {@const isAttached =
                                         attachedScorecards.some(
                                             (ss) =>
@@ -1019,7 +920,7 @@
                             RPN Expression
                             <button
                                 type="button"
-                                onclick={() => showDisplayRuleContext = true}
+                                onclick={() => (showDisplayRuleContext = true)}
                                 class="info-button"
                                 title="Show available data context"
                             >
@@ -1033,14 +934,15 @@
                                 value={selectedScene.displayRule || ""}
                                 onblur={(e) =>
                                     onUpdateScene(selectedScene.id, {
-                                        displayRule: e.currentTarget.value || null,
+                                        displayRule:
+                                            e.currentTarget.value || null,
                                     })}
                                 class="input"
                                 placeholder="e.g., $.columns.Kvetches.cards.length 0 >"
                             />
                             <button
                                 type="button"
-                                onclick={() => showRPNTestModal = true}
+                                onclick={() => (showRPNTestModal = true)}
                                 class="test-button"
                                 title="Test this RPN rule"
                             >
@@ -1048,8 +950,9 @@
                             </button>
                         </div>
                         <p class="field-hint">
-                            Optional RPN expression to conditionally display this scene.
-                            Leave empty to always show. Scene is skipped if rule evaluates to false.
+                            Optional RPN expression to conditionally display
+                            this scene. Leave empty to always show. Scene is
+                            skipped if rule evaluates to false.
                         </p>
                     </div>
                 </div>
@@ -1103,30 +1006,35 @@
 <Modal
     show={showDisplayRuleContext}
     title="Display Rule Data Context"
-    onClose={() => showDisplayRuleContext = false}
+    onClose={() => (showDisplayRuleContext = false)}
 >
-        <div class="context-help">
-            <p>
-                The following data structure is available when your display rule is evaluated.
-                Access values using <code>$</code> followed by the path:
-            </p>
+    <div class="context-help">
+        <p>
+            The following data structure is available when your display rule is
+            evaluated. Access values using <code>$</code> followed by the path:
+        </p>
 
-            <div class="context-section">
-                <h4>Board Data</h4>
-                <pre><code>$.board.title          - Board title (string)
+        <div class="context-section">
+            <h4>Board Data</h4>
+            <pre><code
+                    >$.board.title          - Board title (string)
 $.board.status         - Board status (string)
-$.board.blameFreeMode  - Blame-free mode (boolean)</code></pre>
-            </div>
+$.board.blameFreeMode  - Blame-free mode (boolean)</code
+                ></pre>
+        </div>
 
-            <div class="context-section">
-                <h4>Scene Data</h4>
-                <pre><code>$.scene.title          - Current scene title (string)
-$.scene.mode           - Scene mode (string)</code></pre>
-            </div>
+        <div class="context-section">
+            <h4>Scene Data</h4>
+            <pre><code
+                    >$.scene.title          - Current scene title (string)
+$.scene.mode           - Scene mode (string)</code
+                ></pre>
+        </div>
 
-            <div class="context-section">
-                <h4>Columns Data</h4>
-                <pre><code>$.columns                        - Object with column data by title
+        <div class="context-section">
+            <h4>Columns Data</h4>
+            <pre><code
+                    >$.columns                        - Object with column data by title
 $.columns.&lt;ColumnTitle&gt;.cards   - Array of cards in that column
 
 Examples:
@@ -1138,17 +1046,23 @@ Single-word column titles:
 
 Multi-word column titles (use bracket notation):
   $.columns["Issues to Discuss"].cards
-  $.columns["Action Items"].cards.length</code></pre>
-                <p class="context-note">
-                    <strong>Note:</strong> Replace <code>&lt;ColumnTitle&gt;</code> with the actual column title from your board.
-                    For titles with spaces or special characters, use bracket notation with quotes.
-                    <br><strong>Current columns:</strong> {#if board?.allColumns}{board.allColumns.map((c: any) => c.title).join(', ')}{:else}none{/if}
-                </p>
-            </div>
+  $.columns["Action Items"].cards.length</code
+                ></pre>
+            <p class="context-note">
+                <strong>Note:</strong> Replace <code>&lt;ColumnTitle&gt;</code>
+                with the actual column title from your board. For titles with
+                spaces or special characters, use bracket notation with quotes.
+                <br /><strong>Current columns:</strong>
+                {#if board?.allColumns}{board.allColumns
+                        .map((c: any) => c.title)
+                        .join(", ")}{:else}none{/if}
+            </p>
+        </div>
 
-            <div class="context-section">
-                <h4>Agreements Data</h4>
-                <pre><code>$.agreements.all                 - Array of all agreements
+        <div class="context-section">
+            <h4>Agreements Data</h4>
+            <pre><code
+                    >$.agreements.all                 - Array of all agreements
 $.agreements.incomplete          - Array of incomplete agreements
 $.agreements.completed           - Array of completed agreements
 $.agreements.totalCount          - Total number of agreements (number)
@@ -1158,12 +1072,14 @@ $.agreements.completedCount      - Number of completed agreements (number)
 Examples:
   $.agreements.incompleteCount 0 >    - Has incomplete agreements
   $.agreements.totalCount 5 >=        - Has at least 5 agreements
-  $.agreements.completedCount 10 >    - More than 10 completed</code></pre>
-            </div>
+  $.agreements.completedCount 10 >    - More than 10 completed</code
+                ></pre>
+        </div>
 
-            <div class="context-section">
-                <h4>Example Rules</h4>
-                <pre><code>// Skip scene if "Kvetches" column has no cards
+        <div class="context-section">
+            <h4>Example Rules</h4>
+            <pre><code
+                    >// Skip scene if "Kvetches" column has no cards
 $.columns.Kvetches.cards.length 0 =
 
 // Show scene only if board is active
@@ -1179,12 +1095,14 @@ $.columns["Issues to Discuss"].cards.length 0 =
 $.agreements.incompleteCount 0 >
 
 // Show scene if more than 3 agreements were completed
-$.agreements.completedCount 3 ></code></pre>
-            </div>
+$.agreements.completedCount 3 ></code
+                ></pre>
+        </div>
 
-            <div class="context-section">
-                <h4>RPN Operators</h4>
-                <pre><code>Comparison (symbols):   =  !=  &lt;&gt;  &gt;  &lt;  &gt;=  &lt;=
+        <div class="context-section">
+            <h4>RPN Operators</h4>
+            <pre><code
+                    >Comparison (symbols):   =  !=  &lt;&gt;  &gt;  &lt;  &gt;=  &lt;=
 Comparison (words):     eq ne  ne  gt lt gte lte
 
 Arithmetic (symbols):   +   -   *   /   %
@@ -1195,9 +1113,10 @@ Logic (words):          and or  not
 
 Aggregation:            count sum avg min max
 String:                 concat contains matches_regex
-Date:                   days_since days_since_uk</code></pre>
-            </div>
+Date:                   days_since days_since_uk</code
+                ></pre>
         </div>
+    </div>
 </Modal>
 
 <!-- RPN Test Modal -->
@@ -1205,8 +1124,18 @@ Date:                   days_since days_since_uk</code></pre>
     <RPNTestModal
         show={showRPNTestModal}
         initialRule={selectedScene.displayRule || ""}
-        initialData={JSON.stringify(buildDisplayRuleContext(board, selectedScene, [], agreements, lastHealthCheckDate), null, 2)}
-        onClose={() => showRPNTestModal = false}
+        initialData={JSON.stringify(
+            buildDisplayRuleContext(
+                board,
+                selectedScene,
+                [],
+                agreements,
+                lastHealthCheckDate,
+            ),
+            null,
+            2,
+        )}
+        onClose={() => (showRPNTestModal = false)}
         onUpdateRule={(rule) => {
             onUpdateScene(selectedScene.id, { displayRule: rule || null });
         }}
@@ -1340,7 +1269,7 @@ Date:                   days_since days_since_uk</code></pre>
             box-shadow: var(--shadow-sm);
 
             &::before {
-                content: '';
+                content: "";
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -1395,7 +1324,7 @@ Date:                   days_since days_since_uk</code></pre>
         z-index: 1;
 
         &::before {
-            content: '';
+            content: "";
             position: absolute;
             left: 0;
             top: 0;
@@ -1453,7 +1382,8 @@ Date:                   days_since days_since_uk</code></pre>
 
         &.drag-over-bottom {
             border-bottom: 3px solid var(--color-accent);
-            box-shadow: 0 4px 8px color-mix(in srgb, var(--color-accent) 20%, transparent);
+            box-shadow: 0 4px 8px
+                color-mix(in srgb, var(--color-accent) 20%, transparent);
         }
 
         span {
@@ -1591,7 +1521,8 @@ Date:                   days_since days_since_uk</code></pre>
             &:focus {
                 outline: none;
                 border-color: var(--color-primary);
-                box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+                box-shadow: 0 0 0 3px
+                    color-mix(in srgb, var(--color-primary) 15%, transparent);
             }
 
             &::placeholder {
@@ -1603,7 +1534,7 @@ Date:                   days_since days_since_uk</code></pre>
             resize: vertical;
             min-height: 120px;
             line-height: 1.6;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
         }
 
         &.checkbox-group {
@@ -1655,7 +1586,8 @@ Date:                   days_since days_since_uk</code></pre>
                 color-mix(in srgb, var(--color-danger) 3%, transparent),
                 color-mix(in srgb, var(--color-danger) 5%, transparent)
             );
-            border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+            border: 1px solid
+                color-mix(in srgb, var(--color-danger) 30%, transparent);
             border-radius: var(--radius-lg);
         }
     }
@@ -1816,11 +1748,15 @@ Date:                   days_since days_since_uk</code></pre>
         }
 
         code {
-            background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--color-primary) 8%,
+                transparent
+            );
             color: var(--color-primary);
             padding: 0.25rem 0.5rem;
             border-radius: var(--radius-md);
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
             font-size: 0.875em;
             font-weight: 500;
         }
@@ -1876,7 +1812,11 @@ Date:                   days_since days_since_uk</code></pre>
             }
 
             code {
-                background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+                background-color: color-mix(
+                    in srgb,
+                    var(--color-accent) 15%,
+                    transparent
+                );
                 color: var(--color-accent);
             }
         }

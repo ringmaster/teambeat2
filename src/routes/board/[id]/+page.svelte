@@ -1167,7 +1167,7 @@
 
     async function addCardToColumn(columnId: string) {
         const content = newCardContentByColumn.get(columnId) || "";
-        if (!content.trim() || !getSceneCapability(currentScene, board?.status, 'allowAddCards')) return;
+        if (!content.trim() || !getSceneCapability(currentScene, board?.status, 'allow_add_cards')) return;
 
         try {
             const response = await fetch(`/api/boards/${boardId}/cards`, {
@@ -1700,7 +1700,7 @@
 
     function handleDragStart(event: DragEvent, cardId: string) {
         // Check if moving cards is allowed in current scene
-        if (!getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
+        if (!getSceneCapability(currentScene, board?.status, 'allow_move_cards')) {
             event.preventDefault();
             return;
         }
@@ -1715,7 +1715,7 @@
         event.preventDefault();
 
         // Don't allow drop if moving cards is not allowed
-        if (!getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
+        if (!getSceneCapability(currentScene, board?.status, 'allow_move_cards')) {
             if (event.dataTransfer) {
                 event.dataTransfer.dropEffect = "none";
             }
@@ -1732,7 +1732,7 @@
 
     function handleDragEnter(event: DragEvent, columnId: string) {
         event.preventDefault();
-        if (draggedCardId && getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
+        if (draggedCardId && getSceneCapability(currentScene, board?.status, 'allow_move_cards')) {
             cardDropTargetColumnId = columnId;
         }
     }
@@ -1757,7 +1757,7 @@
     async function handleDrop(event: DragEvent, targetColumnId: string) {
         event.preventDefault();
 
-        if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allowMoveCards')) {
+        if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allow_move_cards')) {
             draggedCardId = "";
             cardDropTargetColumnId = "";
             return;
@@ -1792,7 +1792,7 @@
     async function handleCardDrop(event: DragEvent, targetCardId: string) {
         event.preventDefault();
 
-        if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allowGroupCards')) {
+        if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allow_group_cards')) {
             draggedCardId = "";
             return;
         }

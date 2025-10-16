@@ -72,7 +72,7 @@
     let canDelete = $derived.by(() => {
         // Author can always delete (if scene allows editing for members)
         if (card.userId === currentUserId) {
-            return userRole !== "member" || getSceneCapability(currentScene, board?.status, 'allowEditCards');
+            return userRole !== "member" || getSceneCapability(currentScene, board?.status, 'allow_edit_cards');
         }
         // Admin and facilitator can always delete
         return ["admin", "facilitator"].includes(userRole);
@@ -81,7 +81,7 @@
     // Check if user can edit this card
     let canEdit = $derived.by(() => {
         // Only allow editing if the current scene allows it
-        if (!getSceneCapability(currentScene, board?.status, 'allowEditCards')) return false;
+        if (!getSceneCapability(currentScene, board?.status, 'allow_edit_cards')) return false;
 
         // Author can always edit their own cards
         if (card.userId === currentUserId) {
@@ -93,16 +93,16 @@
 
     // Check if card should be obscured
     let isObscured = $derived.by(() => {
-        return getSceneCapability(currentScene, board?.status, 'allowObscureCards') && card.userId !== currentUserId;
+        return getSceneCapability(currentScene, board?.status, 'allow_obscure_cards') && card.userId !== currentUserId;
     });
 
     // Check if card can be moved/dragged
     let canMove = $derived(
-        getSceneCapability(currentScene, board?.status, 'allowMoveCards') && !isObscured,
+        getSceneCapability(currentScene, board?.status, 'allow_move_cards') && !isObscured,
     );
 
     // Check if grouping is enabled
-    let canGroup = $derived(getSceneCapability(currentScene, board?.status, 'allowGroupCards'));
+    let canGroup = $derived(getSceneCapability(currentScene, board?.status, 'allow_group_cards'));
 
     // State for drag targeting
     let isDragTarget = $state(false);
@@ -307,7 +307,7 @@
             </span>
 
             <div class="card-menu-container">
-                {#if getSceneCapability(currentScene, board?.status, 'allowComments') || canEdit || canDelete}
+                {#if getSceneCapability(currentScene, board?.status, 'allow_comments') || canEdit || canDelete}
                     <button
                         class="menu-button"
                         onclick={toggleMenu}
@@ -322,9 +322,9 @@
                     </button>
                 {/if}
 
-                {#if isMenuOpen && (getSceneCapability(currentScene, board?.status, 'allowComments') || canEdit || canDelete)}
+                {#if isMenuOpen && (getSceneCapability(currentScene, board?.status, 'allow_comments') || canEdit || canDelete)}
                     <div class="card-menu">
-                        {#if getSceneCapability(currentScene, board?.status, 'allowComments')}
+                        {#if getSceneCapability(currentScene, board?.status, 'allow_comments')}
                             <div class="card-menu-button-row">
                                 <button
                                     title="Add Comment"
@@ -412,7 +412,7 @@
                                 >
                             </div>
                         {/if}
-                        {#if (canDelete || canEdit) && getSceneCapability(currentScene, board?.status, 'allowComments')}
+                        {#if (canDelete || canEdit) && getSceneCapability(currentScene, board?.status, 'allow_comments')}
                             <hr class="menu-separator" />
                         {/if}
                         {#if canDelete || canEdit}
@@ -457,15 +457,15 @@
 
     <div class="card-footer">
         <div class="card-footer-left">
-            {#if (getSceneCapability(currentScene, board?.status, 'showVotes') || getSceneCapability(currentScene, board?.status, 'allowVoting')) && !isSubordinate}
+            {#if (getSceneCapability(currentScene, board?.status, 'show_votes') || getSceneCapability(currentScene, board?.status, 'allow_voting')) && !isSubordinate}
                 <Vote
                     votes={userVotesOnCard}
                     total={allUsersVotesOnCard ?? card.voteCount ?? 0}
-                    enabled={getSceneCapability(currentScene, board?.status, 'allowVoting')}
+                    enabled={getSceneCapability(currentScene, board?.status, 'allow_voting')}
                     {hasVotes}
                     view={getVoteViewMode(
-                        getSceneCapability(currentScene, board?.status, 'showVotes'),
-                        getSceneCapability(currentScene, board?.status, 'allowVoting'),
+                        getSceneCapability(currentScene, board?.status, 'show_votes'),
+                        getSceneCapability(currentScene, board?.status, 'allow_voting'),
                     )}
                     itemID={card.id}
                     onVote={(itemID, delta) => onVote(itemID, delta)}
@@ -474,10 +474,10 @@
         </div>
 
         <div class="card-footer-right">
-            {#if getSceneCapability(currentScene, board?.status, 'showComments') && card.reactions && Object.keys(card.reactions).length > 0}
+            {#if getSceneCapability(currentScene, board?.status, 'show_comments') && card.reactions && Object.keys(card.reactions).length > 0}
                 <div class="reaction-pills">
                     {#each Object.entries(card.reactions) as [emoji, count]}
-                        {#if getSceneCapability(currentScene, board?.status, 'allowComments')}
+                        {#if getSceneCapability(currentScene, board?.status, 'allow_comments')}
                             <button
                                 class="reaction-pill clickable"
                                 title="Click to add {emoji} reaction ({count} total)"
@@ -504,8 +504,8 @@
                 </div>
             {/if}
 
-            {#if getSceneCapability(currentScene, board?.status, 'showComments') && card.commentCount > 0}
-                {#if getSceneCapability(currentScene, board?.status, 'allowComments')}
+            {#if getSceneCapability(currentScene, board?.status, 'show_comments') && card.commentCount > 0}
+                {#if getSceneCapability(currentScene, board?.status, 'allow_comments')}
                     <button
                         onclick={(e) => {
                             e.stopPropagation();

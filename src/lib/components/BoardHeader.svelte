@@ -210,7 +210,7 @@
     </div>
 </div>
 
-{#if board?.votingEnabled && getSceneCapability(currentScene, board?.status, 'allowVoting') && userVoteAllocation && votingStats}
+{#if board?.votingEnabled && getSceneCapability(currentScene, board?.status, 'allow_voting') && userVoteAllocation && votingStats}
     <VotingToolbar
         board={{
             id: board.id,

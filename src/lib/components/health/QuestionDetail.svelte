@@ -1,15 +1,39 @@
 <script lang="ts">
-    import { toastStore } from '$lib/stores/toast';
+    import { toastStore } from "$lib/stores/toast";
+    import { getSceneCapability } from "$lib/utils/scene-capability";
+    import type { BoardStatus } from "$lib/types";
+    import { SCENE_FLAGS } from "$lib/scene-flags";
 
     interface Props {
         result: any;
         sceneId: string;
         boardId: string;
+        boardStatus: string;
         isFacilitator: boolean;
+        sceneFlags: string[];
         onBack: () => void;
     }
 
-    const { result, sceneId, boardId, isFacilitator, onBack }: Props = $props();
+    const {
+        result,
+        sceneId,
+        boardId,
+        boardStatus,
+        isFacilitator,
+        sceneFlags,
+        onBack,
+    }: Props = $props();
+
+    // Create a minimal scene object for capability checking
+    const scene = $derived({ id: sceneId, flags: sceneFlags });
+
+    const canAddCards = $derived(
+        getSceneCapability(
+            scene,
+            boardStatus as BoardStatus,
+            SCENE_FLAGS.ALLOW_ADD_CARDS,
+        ),
+    );
 
     let columns = $state<any[]>([]);
     let loadingColumns = $state(false);
@@ -26,7 +50,7 @@
                 columns = data.board.columns;
             }
         } catch (err) {
-            console.error('Failed to load columns:', err);
+            console.error("Failed to load columns:", err);
         } finally {
             loadingColumns = false;
         }
@@ -35,23 +59,28 @@
     async function handleCopyToCard(columnId: string) {
         try {
             copyingToCard = true;
-            const res = await fetch(`/api/health-questions/${result.question.id}/copy-to-card`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ column_id: columnId })
-            });
+            const res = await fetch(
+                `/api/health-questions/${result.question.id}/copy-to-card`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ column_id: columnId }),
+                },
+            );
 
             const data = await res.json();
 
             if (!data.success) {
-                throw new Error(data.error || 'Failed to copy to card');
+                throw new Error(data.error || "Failed to copy to card");
             }
 
-            toastStore.success('Question results copied to column');
+            toastStore.success("Question results copied to column");
             dropdownOpen = false;
         } catch (err) {
-            console.error('Failed to copy to card:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to copy to card');
+            console.error("Failed to copy to card:", err);
+            toastStore.error(
+                err instanceof Error ? err.message : "Failed to copy to card",
+            );
         } finally {
             copyingToCard = false;
         }
@@ -68,32 +97,42 @@
             }
         };
 
-        document.addEventListener('click', handleClick, true);
+        document.addEventListener("click", handleClick, true);
 
         return {
             destroy() {
-                document.removeEventListener('click', handleClick, true);
-            }
+                document.removeEventListener("click", handleClick, true);
+            },
         };
     }
 
-    function getDistributionLabel(questionType: string, rating: number): string {
-        if (questionType === 'redyellowgreen') {
-            if (rating === 1) return '🔴 Red';
-            if (rating === 3) return '🟡 Yellow';
-            if (rating === 5) return '🟢 Green';
-        } else if (questionType === 'boolean') {
-            return rating === 0 ? 'No' : 'Yes';
-        } else if (questionType === 'agreetodisagree') {
-            const labels = ['', 'Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'];
+    function getDistributionLabel(
+        questionType: string,
+        rating: number,
+    ): string {
+        if (questionType === "redyellowgreen") {
+            if (rating === 1) return "🔴 Red";
+            if (rating === 3) return "🟡 Yellow";
+            if (rating === 5) return "🟢 Green";
+        } else if (questionType === "boolean") {
+            return rating === 0 ? "No" : "Yes";
+        } else if (questionType === "agreetodisagree") {
+            const labels = [
+                "",
+                "Strongly Disagree",
+                "Disagree",
+                "Neutral",
+                "Agree",
+                "Strongly Agree",
+            ];
             return labels[rating] || String(rating);
         }
         return String(rating);
     }
 
-    // Load columns when component mounts if user is facilitator
+    // Load columns when component mounts if user is facilitator and can edit cards
     $effect(() => {
-        if (isFacilitator && columns.length === 0) {
+        if (isFacilitator && canAddCards && columns.length === 0) {
             loadColumns();
         }
     });
@@ -124,16 +163,19 @@
             </div>
         </div>
 
-        {#if isFacilitator && columns.length > 0}
+        {#if isFacilitator && canAddCards && columns.length > 0}
             <div class="facilitator-actions">
-                <div class="copy-to-column-menu" use:clickOutside={closeDropdown}>
+                <div
+                    class="copy-to-column-menu"
+                    use:clickOutside={closeDropdown}
+                >
                     <button
                         type="button"
                         class="menu-button"
-                        onclick={() => dropdownOpen = !dropdownOpen}
+                        onclick={() => (dropdownOpen = !dropdownOpen)}
                         disabled={copyingToCard}
                     >
-                        {copyingToCard ? 'Copying...' : 'Copy to Column...'}
+                        {copyingToCard ? "Copying..." : "Copy to Column..."}
                     </button>
                     {#if dropdownOpen}
                         <div class="dropdown-menu">
@@ -160,12 +202,18 @@
                 {#each Object.entries(result.distribution).sort((a, b) => Number(a[0]) - Number(b[0])) as [rating, count] (rating)}
                     <div class="distribution-bar">
                         <span class="bar-label">
-                            {getDistributionLabel(result.question.questionType, Number(rating))}
+                            {getDistributionLabel(
+                                result.question.questionType,
+                                Number(rating),
+                            )}
                         </span>
                         <div class="bar-container">
                             <div
                                 class="bar-fill"
-                                style="width: {result.totalResponses > 0 ? (Number(count) / result.totalResponses * 100) : 0}%"
+                                style="width: {result.totalResponses > 0
+                                    ? (Number(count) / result.totalResponses) *
+                                      100
+                                    : 0}%"
                             ></div>
                         </div>
                         <span class="bar-count">{count}</span>
@@ -298,7 +346,8 @@
             color-mix(in srgb, var(--color-accent) 5%, transparent),
             color-mix(in srgb, var(--color-secondary) 5%, transparent)
         );
-        border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+        border: 1px solid
+            color-mix(in srgb, var(--color-accent) 30%, transparent);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
     }
@@ -372,7 +421,8 @@
             font-weight: 500;
             color: var(--color-text-primary);
             transition: all 0.15s ease;
-            border-bottom: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
+            border-bottom: 1px solid
+                color-mix(in srgb, var(--color-border) 30%, transparent);
 
             &:last-child {
                 border-bottom: none;
@@ -436,7 +486,11 @@
         .bar-container {
             flex: 1;
             height: 32px;
-            background-color: color-mix(in srgb, var(--color-border) 30%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--color-border) 30%,
+                transparent
+            );
             border-radius: var(--radius-md);
             overflow: hidden;
             border: 1px solid var(--color-border);

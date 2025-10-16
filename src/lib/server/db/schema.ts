@@ -95,17 +95,6 @@ export const scenes = table('scenes', {
   // Survey scene display mode
   displayMode: text('display_mode').notNull().default('collecting').$type<'collecting' | 'results'>(),
   focusedQuestionId: text('focused_question_id').references((): any => healthQuestions.id, { onDelete: 'set null' }),
-  // Permission fields
-  allowAddCards: booleanField('allow_add_cards').notNull().default(true),
-  allowEditCards: booleanField('allow_edit_cards').notNull().default(true),
-  allowObscureCards: booleanField('allow_obscure_cards').notNull().default(false),
-  allowMoveCards: booleanField('allow_move_cards').notNull().default(true),
-  allowGroupCards: booleanField('allow_group_cards').notNull().default(false),
-  showVotes: booleanField('show_votes').notNull().default(true),
-  allowVoting: booleanField('allow_voting').notNull().default(false),
-  showComments: booleanField('show_comments').notNull().default(true),
-  allowComments: booleanField('allow_comments').notNull().default(true),
-  multipleVotesPerCard: booleanField('multiple_votes_per_card').notNull().default(true),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 });
 
@@ -115,6 +104,13 @@ export const scenesColumns = table('scenes_columns', {
   state: text('state').notNull().$type<'visible' | 'hidden'>().default('visible')
 }, (table) => ({
   pk: primaryKey({ columns: [table.sceneId, table.columnId] })
+}));
+
+export const sceneFlags = table('scene_flags', {
+  sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
+  flag: text('flag').notNull()
+}, (table) => ({
+  pk: primaryKey({ columns: [table.sceneId, table.flag] })
 }));
 
 export const cards = table('cards', {

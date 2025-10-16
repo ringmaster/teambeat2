@@ -80,7 +80,7 @@ export const POST: RequestHandler = async (event) => {
 
     // Check if current scene allows grouping cards
     const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
-    if (!getSceneCapability(currentScene, board.status, 'allowGroupCards')) {
+    if (!getSceneCapability(currentScene, board.status, 'allow_group_cards')) {
       return json(
         { success: false, error: 'Grouping cards not allowed in current scene' },
         { status: 403 }
@@ -178,7 +178,7 @@ export const DELETE: RequestHandler = async (event) => {
 
     // Check if current scene allows grouping cards
     const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
-    if (!getSceneCapability(currentScene, board.status, 'allowGroupCards')) {
+    if (!getSceneCapability(currentScene, board.status, 'allow_group_cards')) {
       return json(
         { success: false, error: 'Grouping cards not allowed in current scene' },
         { status: 403 }

@@ -28,15 +28,7 @@ export interface Scene {
   mode: 'columns' | 'present' | 'review';
   seq: number;
   selectedCardId?: string | null;
-  allowAddCards?: boolean;
-  allowEditCards?: boolean;
-  allowObscureCards?: boolean;
-  allowMoveCards?: boolean;
-  allowGroupCards?: boolean;
-  showVotes?: boolean;
-  allowVoting?: boolean;
-  showComments?: boolean;
-  allowComments?: boolean;
+  flags: string[]; // Scene capability flags
   createdAt?: string;
 }
 

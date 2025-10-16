@@ -167,8 +167,10 @@
         <SurveyResults
             sceneId={scene.id}
             {boardId}
+            {boardStatus}
             focusedQuestionId={scene.focusedQuestionId}
             {isFacilitator}
+            sceneFlags={scene.flags || []}
             onFocusChange={handleFocusChange}
         />
     {:else}

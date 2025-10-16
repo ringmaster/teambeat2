@@ -78,7 +78,7 @@ export const POST: RequestHandler = async (event) => {
 
     // Check if current scene allows commenting
     const currentScene = getCurrentScene(boardWithScenes.scenes, boardWithScenes.currentSceneId);
-    if (!getSceneCapability(currentScene, boardWithScenes.status, 'allowComments')) {
+    if (!getSceneCapability(currentScene, boardWithScenes.status, 'allow_comments')) {
       return json(
         { success: false, error: 'Adding comments not allowed in current scene' },
         { status: 403 }

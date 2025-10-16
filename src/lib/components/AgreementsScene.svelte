@@ -2,6 +2,7 @@
     import type { Board, Scene } from "$lib/types";
     import Icon from "./ui/Icon.svelte";
     import { toastStore } from "$lib/stores/toast";
+    import { getSceneCapability } from "$lib/utils/scene-capability";
 
     interface Props {
         board: Board;
@@ -10,6 +11,8 @@
     }
 
     const { board, scene, userRole }: Props = $props();
+
+    const canAddCards = $derived(getSceneCapability(scene, board.status, 'allow_add_cards'));
 
     interface UnifiedAgreement {
         id: string;
@@ -443,7 +446,7 @@
                                     >
                                         <Icon name="edit" />
                                     </button>
-                                    {#if visibleColumns().length > 0}
+                                    {#if canAddCards && visibleColumns().length > 0}
                                         <button
                                             class="icon-button"
                                             onclick={() =>
@@ -499,7 +502,7 @@
                                     {/if}
                                 </div>
                             {/if}
-                            {#if isFacilitator && agreement.source === "comment" && visibleColumns().length > 0}
+                            {#if isFacilitator && canAddCards && agreement.source === "comment" && visibleColumns().length > 0}
                                 <div
                                     class="agreement-actions"
                                     use:clickOutside={closeDropdown}

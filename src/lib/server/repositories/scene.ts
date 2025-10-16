@@ -1,8 +1,9 @@
 import { db } from '../db/index.js';
 import { withTransaction } from '../db/transaction.js';
-import { scenes, boards } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { scenes, boards, sceneFlags } from '../db/schema.js';
+import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import type { SceneFlag } from '../db/scene-flags.js';
 
 export interface CreateSceneData {
   boardId: string;
@@ -10,12 +11,7 @@ export interface CreateSceneData {
   description?: string;
   mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey';
   seq: number;
-  allowAddCards?: boolean;
-  allowEditCards?: boolean;
-  allowComments?: boolean;
-  allowVoting?: boolean;
-  showVotes?: boolean;
-  multipleVotesPerCard?: boolean;
+  flags?: SceneFlag[];
 }
 
 export async function createScene(data: CreateSceneData) {
@@ -25,17 +21,25 @@ export async function createScene(data: CreateSceneData) {
     .insert(scenes)
     .values({
       id,
-      ...data,
-      allowAddCards: data.allowAddCards ?? true,
-      allowEditCards: data.allowEditCards ?? true,
-      allowComments: data.allowComments ?? true,
-      allowVoting: data.allowVoting ?? false,
-      showVotes: data.showVotes ?? true,
-      multipleVotesPerCard: data.multipleVotesPerCard ?? true
+      boardId: data.boardId,
+      title: data.title,
+      description: data.description,
+      mode: data.mode,
+      seq: data.seq
     })
     .returning();
 
-  return scene;
+  // Set flags if provided
+  if (data.flags && data.flags.length > 0) {
+    await setSceneFlags(id, data.flags);
+  }
+
+  // Return scene with flags
+  const flags = await getSceneFlags(id);
+  return {
+    ...scene,
+    flags
+  };
 }
 
 export async function findSceneById(sceneId: string) {
@@ -48,16 +52,6 @@ export async function findSceneById(sceneId: string) {
       mode: scenes.mode,
       seq: scenes.seq,
       selectedCardId: scenes.selectedCardId,
-      allowAddCards: scenes.allowAddCards,
-      allowEditCards: scenes.allowEditCards,
-      allowObscureCards: scenes.allowObscureCards,
-      allowMoveCards: scenes.allowMoveCards,
-      allowGroupCards: scenes.allowGroupCards,
-      showVotes: scenes.showVotes,
-      allowVoting: scenes.allowVoting,
-      showComments: scenes.showComments,
-      allowComments: scenes.allowComments,
-      multipleVotesPerCard: scenes.multipleVotesPerCard,
       createdAt: scenes.createdAt,
       seriesId: boards.seriesId
     })
@@ -66,40 +60,27 @@ export async function findSceneById(sceneId: string) {
     .where(eq(scenes.id, sceneId))
     .limit(1);
 
-  return result;
-}
-
-export async function updateScenePermissions(
-  sceneId: string,
-  permissions: {
-    allowAddCards?: boolean;
-    allowEditCards?: boolean;
-    allowComments?: boolean;
-    allowVoting?: boolean;
-    showVotes?: boolean;
-    multipleVotesPerCard?: boolean;
+  if (!result) {
+    return undefined;
   }
-) {
-  const [scene] = await db
-    .update(scenes)
-    .set(permissions)
-    .where(eq(scenes.id, sceneId))
-    .returning();
 
-  return scene;
+  const flags = await getSceneFlags(sceneId);
+
+  return {
+    ...result,
+    flags
+  };
 }
 
 export async function updateScene(
   sceneId: string,
   data: {
     title?: string;
+    description?: string;
     mode?: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey';
-    allowAddCards?: boolean;
-    allowEditCards?: boolean;
-    allowComments?: boolean;
-    allowVoting?: boolean;
-    showVotes?: boolean;
-    multipleVotesPerCard?: boolean;
+    displayRule?: string | null;
+    displayMode?: 'collecting' | 'results';
+    focusedQuestionId?: string | null;
   }
 ) {
   const [scene] = await db
@@ -108,7 +89,11 @@ export async function updateScene(
     .where(eq(scenes.id, sceneId))
     .returning();
 
-  return scene;
+  const flags = await getSceneFlags(sceneId);
+  return {
+    ...scene,
+    flags
+  };
 }
 
 export async function getScenesByBoard(boardId: string) {
@@ -118,7 +103,18 @@ export async function getScenesByBoard(boardId: string) {
     .where(eq(scenes.boardId, boardId))
     .orderBy(scenes.seq);
 
-  return boardScenes;
+  // Fetch flags for all scenes
+  const scenesWithFlags = await Promise.all(
+    boardScenes.map(async (scene) => {
+      const flags = await getSceneFlags(scene.id);
+      return {
+        ...scene,
+        flags
+      };
+    })
+  );
+
+  return scenesWithFlags;
 }
 
 export async function deleteScene(sceneId: string) {
@@ -137,4 +133,43 @@ export async function reorderScenes(boardId: string, sceneOrders: { id: string; 
     }
     return { success: true };
   });
+}
+
+// Scene flags methods
+export async function getSceneFlags(sceneId: string): Promise<SceneFlag[]> {
+  const flags = await db
+    .select({ flag: sceneFlags.flag })
+    .from(sceneFlags)
+    .where(eq(sceneFlags.sceneId, sceneId));
+
+  return flags.map(f => f.flag as SceneFlag);
+}
+
+export async function setSceneFlags(sceneId: string, flags: SceneFlag[]): Promise<void> {
+  await withTransaction(async (tx) => {
+    // Clear existing flags
+    await tx.delete(sceneFlags).where(eq(sceneFlags.sceneId, sceneId));
+
+    // Insert new flags
+    if (flags.length > 0) {
+      await tx.insert(sceneFlags).values(
+        flags.map(flag => ({ sceneId, flag }))
+      );
+    }
+  });
+}
+
+export async function hasSceneFlag(sceneId: string, flag: SceneFlag): Promise<boolean> {
+  const result = await db
+    .select()
+    .from(sceneFlags)
+    .where(
+      and(
+        eq(sceneFlags.sceneId, sceneId),
+        eq(sceneFlags.flag, flag)
+      )
+    )
+    .limit(1);
+
+  return result.length > 0;
 }

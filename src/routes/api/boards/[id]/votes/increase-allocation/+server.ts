@@ -53,8 +53,8 @@ export const POST: RequestHandler = async (event) => {
       const currentScene = getCurrentScene(updatedBoard.scenes, updatedBoard.currentSceneId);
 
       // Check capabilities based on scene and board status
-      const canShowVotes = getSceneCapability(currentScene, updatedBoard.status, 'showVotes');
-      const canAllowVoting = getSceneCapability(currentScene, updatedBoard.status, 'allowVoting');
+      const canShowVotes = getSceneCapability(currentScene, updatedBoard.status, 'show_votes');
+      const canAllowVoting = getSceneCapability(currentScene, updatedBoard.status, 'allow_voting');
 
       // Broadcast vote updates based on scene settings (no triggering user since this is admin action)
       await broadcastVoteUpdatesBasedOnScene(boardId, {

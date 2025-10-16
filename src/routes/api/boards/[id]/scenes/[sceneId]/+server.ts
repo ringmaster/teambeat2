@@ -3,12 +3,13 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { updateScene, deleteScene } from '$lib/server/repositories/scene.js';
+import { updateScene, deleteScene, getSceneFlags, setSceneFlags, findSceneById } from '$lib/server/repositories/scene.js';
 import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
 import { db } from '$lib/server/db/index.js';
 import { boards } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import type { SceneFlag } from '$lib/server/db/scene-flags.js';
 
 const updateSceneSchema = z.object({
   title: z.string().min(1).max(100).optional(),
@@ -17,16 +18,7 @@ const updateSceneSchema = z.object({
   displayRule: z.string().nullish(),
   displayMode: z.enum(['collecting', 'results']).optional(),
   focusedQuestionId: z.string().nullish(),
-  allowAddCards: z.boolean().optional(),
-  allowEditCards: z.boolean().optional(),
-  allowObscureCards: z.boolean().optional(),
-  allowMoveCards: z.boolean().optional(),
-  allowGroupCards: z.boolean().optional(),
-  showVotes: z.boolean().optional(),
-  allowVoting: z.boolean().optional(),
-  showComments: z.boolean().optional(),
-  allowComments: z.boolean().optional(),
-  multipleVotesPerCard: z.boolean().optional()
+  flags: z.array(z.string()).optional()
 });
 
 export const PATCH: RequestHandler = async (event) => {
@@ -54,16 +46,38 @@ export const PATCH: RequestHandler = async (event) => {
       );
     }
 
-    const updatedScene = await updateScene(sceneId, data);
+    // Update flags if provided
+    if (data.flags !== undefined) {
+      await setSceneFlags(sceneId, data.flags as SceneFlag[]);
+    }
+
+    // Remove flags from data before calling updateScene
+    const { flags, ...sceneData } = data;
+
+    // Only call updateScene if there are other fields to update
+    let updatedScene;
+    if (Object.keys(sceneData).length > 0) {
+      updatedScene = await updateScene(sceneId, sceneData);
+    } else {
+      // If only flags were updated, fetch the scene
+      updatedScene = await findSceneById(sceneId);
+    }
+
+    // Add flags to the response
+    const sceneFlags = await getSceneFlags(sceneId);
+    const sceneWithFlags = {
+      ...updatedScene,
+      flags: sceneFlags
+    };
 
     // If this is the current scene for the board, broadcast the change
     if (board.currentSceneId === sceneId) {
-      await broadcastSceneChanged(boardId, updatedScene);
+      await broadcastSceneChanged(boardId, sceneWithFlags);
     }
 
     return json({
       success: true,
-      scene: updatedScene
+      scene: sceneWithFlags
     });
   } catch (error) {
     if (error instanceof Response) {

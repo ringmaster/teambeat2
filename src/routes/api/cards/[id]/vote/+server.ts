@@ -90,7 +90,7 @@ export const POST: RequestHandler = async (event) => {
 
     // Check if current scene allows voting
     const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
-    if (!getSceneCapability(currentScene, board.status, 'allowVoting')) {
+    if (!getSceneCapability(currentScene, board.status, 'allow_voting')) {
       return json(
         { success: false, error: 'Voting not allowed in current scene' },
         { status: 403 }
@@ -149,8 +149,8 @@ export const POST: RequestHandler = async (event) => {
     };
 
     // Check capabilities based on scene and board status
-    const canShowVotes = getSceneCapability(currentScene, board.status, 'showVotes');
-    const canAllowVoting = getSceneCapability(currentScene, board.status, 'allowVoting');
+    const canShowVotes = getSceneCapability(currentScene, board.status, 'show_votes');
+    const canAllowVoting = getSceneCapability(currentScene, board.status, 'allow_voting');
 
     // If "show votes" is enabled, include total votes for all cards
     if (canShowVotes) {

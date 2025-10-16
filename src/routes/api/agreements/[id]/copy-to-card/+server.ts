@@ -10,6 +10,9 @@ import { handleApiError } from '$lib/server/api-utils.js';
 import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
 import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
 import { z } from 'zod';
+import { getSceneCapability } from '$lib/utils/scene-capability.js';
+import type { BoardStatus } from '$lib/types.js';
+import { SCENE_FLAGS } from "$lib/scene-flags";
 
 const copyToCardSchema = z.object({
   column_id: z.string().uuid()
@@ -54,6 +57,14 @@ export const POST: RequestHandler = async (event) => {
       return json(
         { success: false, error: 'No active scene' },
         { status: 400 }
+      );
+    }
+
+    // Check if adding cards is allowed using getSceneCapability
+    if (!getSceneCapability(currentScene, board.status as BoardStatus, SCENE_FLAGS.ALLOW_ADD_CARDS)) {
+      return json(
+        { success: false, error: 'Adding cards is not allowed for this scene' },
+        { status: 403 }
       );
     }
 

@@ -56,7 +56,7 @@ export const PUT: RequestHandler = async (event) => {
 
     // Check if current scene allows moving cards
     const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
-    if (!getSceneCapability(currentScene, board.status, 'allowMoveCards')) {
+    if (!getSceneCapability(currentScene, board.status, 'allow_move_cards')) {
       return json(
         { success: false, error: 'Moving cards not allowed in current scene' },
         { status: 403 }

@@ -39,7 +39,7 @@ export const POST: RequestHandler = async (event) => {
 		
 		// Check if current scene allows editing cards
 		const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
-		if (!getSceneCapability(currentScene, board.status, 'allowEditCards')) {
+		if (!getSceneCapability(currentScene, board.status, 'allow_edit_cards')) {
 			return json(
 				{ success: false, error: 'Editing cards not allowed in current scene' },
 				{ status: 403 }

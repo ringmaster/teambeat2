@@ -76,15 +76,15 @@
 
     // Check if comments/notes are allowed based on scene capabilities and board status
     const canComment = $derived(
-        getSceneCapability(scene, board.status, 'allowComments')
+        getSceneCapability(scene, board.status, 'allow_comments')
     );
 
     const showComments = $derived(
-        getSceneCapability(scene, board.status, 'showComments')
+        getSceneCapability(scene, board.status, 'show_comments')
     );
 
     const showVotes = $derived(
-        getSceneCapability(scene, board.status, 'showVotes')
+        getSceneCapability(scene, board.status, 'show_votes')
     );
 
     // Filter reactions from regular comments

@@ -6,6 +6,7 @@ import { broadcastToBoardUsers } from '$lib/server/sse/broadcast';
 import { boards, columns, scenes, cards, scenesColumns, boardSeries } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { getSceneFlags } from './scene.js';
 
 // In-memory store for timer votes
 const timerVotes = new Map<string, { A: Set<string>; B: Set<string> }>();
@@ -221,6 +222,17 @@ export async function getBoardWithDetails(boardId: string) {
     .where(eq(scenes.boardId, boardId))
     .orderBy(scenes.seq);
 
+  // Fetch flags for all scenes
+  const scenesWithFlags = await Promise.all(
+    boardScenes.map(async (scene) => {
+      const flags = await getSceneFlags(scene.id);
+      return {
+        ...scene,
+        flags
+      };
+    })
+  );
+
   const boardCards = await db
     .select({
       id: cards.id,
@@ -268,7 +280,7 @@ export async function getBoardWithDetails(boardId: string) {
     ...board,
     columns: visibleColumns,
     allColumns: boardColumns, // Keep all columns for configuration
-    scenes: boardScenes,
+    scenes: scenesWithFlags,
     cards: boardCards,
     hiddenColumnsByScene,
     cloneSource

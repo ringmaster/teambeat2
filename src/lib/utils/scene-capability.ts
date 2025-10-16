@@ -21,20 +21,21 @@ import type { Scene } from '$lib/types';
  */
 
 export type SceneCapability =
-  | 'allowAddCards'
-  | 'allowEditCards'
-  | 'allowMoveCards'
-  | 'allowGroupCards'
-  | 'allowVoting'
-  | 'allowComments'
-  | 'allowObscureCards'
-  | 'showVotes'
-  | 'showComments';
+  | 'allow_add_cards'
+  | 'allow_edit_cards'
+  | 'allow_move_cards'
+  | 'allow_group_cards'
+  | 'allow_voting'
+  | 'allow_comments'
+  | 'allow_obscure_cards'
+  | 'show_votes'
+  | 'show_comments'
+  | 'multiple_votes_per_card';
 
 export type BoardStatus = 'draft' | 'active' | 'completed' | 'archived';
 
 // View-only capabilities that should always work regardless of board status
-const VIEW_ONLY_CAPABILITIES: SceneCapability[] = ['showVotes', 'showComments', 'allowObscureCards'];
+const VIEW_ONLY_CAPABILITIES: SceneCapability[] = ['show_votes', 'show_comments', 'allow_obscure_cards'];
 
 /**
  * Get the effective capability value based on scene settings and board status.
@@ -49,19 +50,19 @@ export function getSceneCapability(
   boardStatus: BoardStatus,
   capability: SceneCapability
 ): boolean {
-  // If scene doesn't exist or capability is explicitly false, return false
-  if (!scene || !scene[capability]) {
+  // If scene doesn't exist or capability flag is not set, return false
+  if (!scene || !scene.flags?.includes(capability)) {
     return false;
   }
 
   // View-only capabilities are always returned as-is
   if (VIEW_ONLY_CAPABILITIES.includes(capability)) {
-    return scene[capability] ?? false;
+    return true; // Flag is present, capability is enabled
   }
 
   // For editing capabilities, check board status
   const isBoardEditable = boardStatus !== 'completed' && boardStatus !== 'archived';
-  return (scene[capability] ?? false) && isBoardEditable;
+  return isBoardEditable;
 }
 
 /**

@@ -6,12 +6,14 @@
     interface Props {
         sceneId: string;
         boardId: string;
+        boardStatus: string;
         focusedQuestionId: string | null;
         isFacilitator: boolean;
+        sceneFlags: string[];
         onFocusChange: (questionId: string | null) => void;
     }
 
-    const { sceneId, boardId, focusedQuestionId, isFacilitator, onFocusChange }: Props = $props();
+    const { sceneId, boardId, boardStatus, focusedQuestionId, isFacilitator, sceneFlags, onFocusChange }: Props = $props();
 
     let results = $state<any[]>([]);
     let loading = $state(true);
@@ -78,7 +80,9 @@
             result={focusedQuestion}
             {sceneId}
             {boardId}
+            {boardStatus}
             {isFacilitator}
+            {sceneFlags}
             onBack={handleBackToOverview}
         />
     {:else}

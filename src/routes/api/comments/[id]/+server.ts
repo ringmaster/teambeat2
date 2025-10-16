@@ -39,7 +39,7 @@ export const DELETE: RequestHandler = async (event) => {
 
     // Check if current scene allows commenting (delete is an edit action)
     const currentScene = getCurrentScene(boardWithScenes.scenes, boardWithScenes.currentSceneId);
-    if (!getSceneCapability(currentScene, boardWithScenes.status, 'allowComments')) {
+    if (!getSceneCapability(currentScene, boardWithScenes.status, 'allow_comments')) {
       return json(
         { success: false, error: 'Deleting comments not allowed in current scene' },
         { status: 403 }
