@@ -55,8 +55,8 @@
     }
 
     .options-list {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 0.5rem;
     }
 
@@ -74,7 +74,10 @@
       }
 
       input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
         cursor: pointer;
+        accent-color: var(--color-primary);
       }
 
       span {
