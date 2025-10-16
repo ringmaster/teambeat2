@@ -5,6 +5,13 @@
     import Vote from "./ui/Vote.svelte";
     import { createAvatar } from "@dicebear/core";
     import { adventurer } from "@dicebear/collection";
+    import { marked } from "marked";
+
+    // Configure marked for GitHub-flavored markdown
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
 
     interface Props {
         card: any;
@@ -72,7 +79,14 @@
     let canDelete = $derived.by(() => {
         // Author can always delete (if scene allows editing for members)
         if (card.userId === currentUserId) {
-            return userRole !== "member" || getSceneCapability(currentScene, board?.status, 'allow_edit_cards');
+            return (
+                userRole !== "member" ||
+                getSceneCapability(
+                    currentScene,
+                    board?.status,
+                    "allow_edit_cards",
+                )
+            );
         }
         // Admin and facilitator can always delete
         return ["admin", "facilitator"].includes(userRole);
@@ -81,7 +95,10 @@
     // Check if user can edit this card
     let canEdit = $derived.by(() => {
         // Only allow editing if the current scene allows it
-        if (!getSceneCapability(currentScene, board?.status, 'allow_edit_cards')) return false;
+        if (
+            !getSceneCapability(currentScene, board?.status, "allow_edit_cards")
+        )
+            return false;
 
         // Author can always edit their own cards
         if (card.userId === currentUserId) {
@@ -93,16 +110,28 @@
 
     // Check if card should be obscured
     let isObscured = $derived.by(() => {
-        return getSceneCapability(currentScene, board?.status, 'allow_obscure_cards') && card.userId !== currentUserId;
+        return (
+            getSceneCapability(
+                currentScene,
+                board?.status,
+                "allow_obscure_cards",
+            ) && card.userId !== currentUserId
+        );
     });
+
+    // Render card content as markdown
+    let renderedContent = $derived(marked.parse(card.content) as string);
 
     // Check if card can be moved/dragged
     let canMove = $derived(
-        getSceneCapability(currentScene, board?.status, 'allow_move_cards') && !isObscured,
+        getSceneCapability(currentScene, board?.status, "allow_move_cards") &&
+            !isObscured,
     );
 
     // Check if grouping is enabled
-    let canGroup = $derived(getSceneCapability(currentScene, board?.status, 'allow_group_cards'));
+    let canGroup = $derived(
+        getSceneCapability(currentScene, board?.status, "allow_group_cards"),
+    );
 
     // State for drag targeting
     let isDragTarget = $state(false);
@@ -266,13 +295,13 @@
     }}
 >
     <div class="card-main">
-        <p class="card-content {isObscured ? 'obscured' : ''}">
+        <div class="card-content markdown {isObscured ? 'obscured' : ''}">
             {#if isObscured}
                 {greekText(card.content)}
             {:else}
-                {card.content}
+                {@html renderedContent}
             {/if}
-        </p>
+        </div>
 
         <div class="card-sidebar">
             <span
@@ -297,6 +326,8 @@
                                 seed: `${card.userId}-${board.id}`,
                                 size: 24,
                                 radius: 12,
+                                scale: 100,
+                                backgroundColor: ["transparent"],
                             }).toDataUri()}
                             alt="User avatar"
                             width="24"
@@ -307,7 +338,7 @@
             </span>
 
             <div class="card-menu-container">
-                {#if getSceneCapability(currentScene, board?.status, 'allow_comments') || canEdit || canDelete}
+                {#if getSceneCapability(currentScene, board?.status, "allow_comments") || canEdit || canDelete}
                     <button
                         class="menu-button"
                         onclick={toggleMenu}
@@ -322,9 +353,9 @@
                     </button>
                 {/if}
 
-                {#if isMenuOpen && (getSceneCapability(currentScene, board?.status, 'allow_comments') || canEdit || canDelete)}
+                {#if isMenuOpen && (getSceneCapability(currentScene, board?.status, "allow_comments") || canEdit || canDelete)}
                     <div class="card-menu">
-                        {#if getSceneCapability(currentScene, board?.status, 'allow_comments')}
+                        {#if getSceneCapability(currentScene, board?.status, "allow_comments")}
                             <div class="card-menu-button-row">
                                 <button
                                     title="Add Comment"
@@ -412,7 +443,7 @@
                                 >
                             </div>
                         {/if}
-                        {#if (canDelete || canEdit) && getSceneCapability(currentScene, board?.status, 'allow_comments')}
+                        {#if (canDelete || canEdit) && getSceneCapability(currentScene, board?.status, "allow_comments")}
                             <hr class="menu-separator" />
                         {/if}
                         {#if canDelete || canEdit}
@@ -457,15 +488,27 @@
 
     <div class="card-footer">
         <div class="card-footer-left">
-            {#if (getSceneCapability(currentScene, board?.status, 'show_votes') || getSceneCapability(currentScene, board?.status, 'allow_voting')) && !isSubordinate}
+            {#if (getSceneCapability(currentScene, board?.status, "show_votes") || getSceneCapability(currentScene, board?.status, "allow_voting")) && !isSubordinate}
                 <Vote
                     votes={userVotesOnCard}
                     total={allUsersVotesOnCard ?? card.voteCount ?? 0}
-                    enabled={getSceneCapability(currentScene, board?.status, 'allow_voting')}
+                    enabled={getSceneCapability(
+                        currentScene,
+                        board?.status,
+                        "allow_voting",
+                    )}
                     {hasVotes}
                     view={getVoteViewMode(
-                        getSceneCapability(currentScene, board?.status, 'show_votes'),
-                        getSceneCapability(currentScene, board?.status, 'allow_voting'),
+                        getSceneCapability(
+                            currentScene,
+                            board?.status,
+                            "show_votes",
+                        ),
+                        getSceneCapability(
+                            currentScene,
+                            board?.status,
+                            "allow_voting",
+                        ),
                     )}
                     itemID={card.id}
                     onVote={(itemID, delta) => onVote(itemID, delta)}
@@ -474,10 +517,10 @@
         </div>
 
         <div class="card-footer-right">
-            {#if getSceneCapability(currentScene, board?.status, 'show_comments') && card.reactions && Object.keys(card.reactions).length > 0}
+            {#if getSceneCapability(currentScene, board?.status, "show_comments") && card.reactions && Object.keys(card.reactions).length > 0}
                 <div class="reaction-pills">
                     {#each Object.entries(card.reactions) as [emoji, count]}
-                        {#if getSceneCapability(currentScene, board?.status, 'allow_comments')}
+                        {#if getSceneCapability(currentScene, board?.status, "allow_comments")}
                             <button
                                 class="reaction-pill clickable"
                                 title="Click to add {emoji} reaction ({count} total)"
@@ -504,8 +547,8 @@
                 </div>
             {/if}
 
-            {#if getSceneCapability(currentScene, board?.status, 'show_comments') && card.commentCount > 0}
-                {#if getSceneCapability(currentScene, board?.status, 'allow_comments')}
+            {#if getSceneCapability(currentScene, board?.status, "show_comments") && card.commentCount > 0}
+                {#if getSceneCapability(currentScene, board?.status, "allow_comments")}
                     <button
                         onclick={(e) => {
                             e.stopPropagation();
@@ -802,10 +845,10 @@
     .user-avatar {
         width: 24px;
         height: 24px;
-        border-radius: 50%;
+        /* border-radius: 50%; */
         overflow: hidden;
-        background: var(--surface-secondary);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        /* background: var(--surface-secondary);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);*/
         flex-shrink: 0;
     }
 

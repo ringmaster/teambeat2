@@ -4,6 +4,7 @@
     import Card from "$lib/components/Card.svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
     import { getSceneCapability } from "$lib/utils/scene-capability";
+    import { marked } from 'marked';
     import type {
         Board,
         Scene,
@@ -11,6 +12,12 @@
         Comment,
         User,
     } from "$lib/types";
+
+    // Configure marked for GitHub-flavored markdown
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
 
     // Extended Card type with enriched data
     interface EnrichedCard extends CardType {
@@ -73,6 +80,9 @@
     let notesTextarea = $state<HTMLTextAreaElement>();
 
     const canSelectCards = isAdmin || isFacilitator;
+
+    // Render selected card content as markdown
+    const renderedCardContent = $derived(selectedCard ? marked.parse(selectedCard.content) as string : '');
 
     // Check if comments/notes are allowed based on scene capabilities and board status
     const canComment = $derived(
@@ -373,8 +383,8 @@
         {#if selectedCard}
             <div class="selected-card-content">
                 <div class="card-content-with-votes">
-                    <div class="card-content-display">
-                        {selectedCard.content}
+                    <div class="card-content-display markdown">
+                        {@html renderedCardContent}
                     </div>
                     {#if showVotes && selectedCard.voteCount !== undefined}
                         {#key selectedCard.id}

@@ -2,6 +2,13 @@
     import type { Comment } from "$lib/types";
     import Icon from "./ui/Icon.svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
+    import { marked } from 'marked';
+
+    // Configure marked for GitHub-flavored markdown
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
 
     interface CardGroup {
         leadCard: any;
@@ -28,6 +35,8 @@
 
     const voteCount = $derived(group.leadCard.voteCount || 0);
     const cardComments = $derived(commentsByCard(group.leadCard.id));
+    const renderedLeadContent = $derived(marked.parse(group.leadCard.content) as string);
+    const renderedSubordinateContent = (content: string) => marked.parse(content) as string;
 
     function getDisplayName(comment: Comment): string {
         const userName = comment.userName || "Anonymous";
@@ -77,15 +86,17 @@
                     />
                 </svg>
             </div>
-            <h3 class="lead-card-title">
-                {group.leadCard.content}
+            <div class="lead-card-content-wrapper">
+                <div class="lead-card-title markdown">
+                    {@html renderedLeadContent}
+                </div>
                 {#if voteCount > 0}
-                    <span class="vote-count">
+                    <div class="vote-count">
                         ({voteCount}
                         {voteCount === 1 ? "vote" : "votes"})
-                    </span>
+                    </div>
                 {/if}
-            </h3>
+            </div>
         </div>
 
         {#if group.subordinateCards.length > 0}
@@ -95,8 +106,8 @@
                     <div class="subordinate-card">
                         <div class="subordinate-indicator"></div>
                         <div class="subordinate-content">
-                            <div class="subordinate-title">
-                                {subCard.content}
+                            <div class="subordinate-title markdown">
+                                {@html renderedSubordinateContent(subCard.content)}
                             </div>
                             {#if subComments.length > 0}
                                 <div class="subordinate-comments">
@@ -185,12 +196,17 @@
         }
     }
 
-    .lead-card-title {
+    .lead-card-content-wrapper {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .lead-card-title {
         font-size: 1.125rem;
         font-weight: 600;
         color: var(--text-primary);
-        margin: 0;
         line-height: 1.4;
     }
 
@@ -198,7 +214,6 @@
         font-size: 0.9375rem;
         font-weight: 400;
         color: var(--text-secondary);
-        margin-left: 0.5rem;
     }
 
     .column-context {

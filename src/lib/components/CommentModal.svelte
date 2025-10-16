@@ -2,6 +2,13 @@
     import Modal from "$lib/components/ui/Modal.svelte";
     import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
     import { getUserDisplayName } from "$lib/utils/animalNames";
+    import { marked } from 'marked';
+
+    // Configure marked for GitHub-flavored markdown
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
 
     interface Props {
         show: boolean;
@@ -23,6 +30,9 @@
     let newCommentContent = $state("");
     let loadingComments = $state(false);
     let savingComment = $state(false);
+
+    // Render card content as markdown
+    let renderedCardContent = $derived(card ? marked.parse(card.content) as string : '');
 
     // Load comments when modal opens or card changes
     $effect(() => {
@@ -111,7 +121,7 @@
         <div class="comment-modal-content">
             {#if card}
                 <div class="card-preview">
-                    <div class="card-content">{card.content}</div>
+                    <div class="card-content markdown">{@html renderedCardContent}</div>
                 </div>
 
                 <div class="comments-section">
