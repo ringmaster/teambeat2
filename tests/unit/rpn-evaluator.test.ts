@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateRPN } from '$lib/server/utils/rpn-evaluator';
+import { evaluateRPN } from '$lib/utils/rpn-evaluator';
 import type { RPNExpression, EvaluationContext } from '$lib/types/scorecard';
 
 describe('RPN Evaluator', () => {

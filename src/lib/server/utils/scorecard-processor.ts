@@ -65,10 +65,10 @@ function processAggregateRule(
   additionalContext?: { seriesId?: string; lastHealthCheckDate?: string | null }
 ): { result: ProcessedResult | null; error: ProcessingError | null } {
   // Build evaluation context with additional context
-  const evaluationContext = {
-    ...data,
-    ...(additionalContext || {})
-  };
+  // If data is an array (like CSV data), wrap it in $root property
+  const evaluationContext = Array.isArray(data)
+    ? { $root: data, ...(additionalContext || {}) }
+    : { ...data, ...(additionalContext || {}) };
 
   // Evaluate the condition to get the metric value
   const conditionResult = evaluateRPN(rule.condition, evaluationContext);
@@ -94,10 +94,9 @@ function processAggregateRule(
   }
 
   // Create context with result for template interpolation
-  const context: EvaluationContext = {
-    ...data,
-    result: conditionResult.value
-  };
+  const context: EvaluationContext = Array.isArray(data)
+    ? { $root: data, result: conditionResult.value }
+    : { ...data, result: conditionResult.value };
 
   // Interpolate section, title and value templates
   const section = interpolateTemplate(rule.section, context);

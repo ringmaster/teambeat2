@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PUT, DELETE } from '../../../src/routes/api/cards/[id]/+server';
 import { createMockRequestEvent } from '../helpers/mock-request';
+import { SCENE_FLAGS } from '../../../src/lib/scene-flags';
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
@@ -57,8 +58,9 @@ describe('PUT /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		const updatedCard = { ...mockCard, content: 'New content' };
@@ -100,8 +102,9 @@ describe('PUT /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		const updatedCard = { ...mockCard, content: 'New content' };
@@ -162,8 +165,9 @@ describe('PUT /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -199,8 +203,9 @@ describe('PUT /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: false }]
+			scenes: [{ id: 'scene-1', flags: [] }] // No ALLOW_EDIT_CARDS flag
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -236,8 +241,9 @@ describe('PUT /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -258,7 +264,7 @@ describe('PUT /api/cards/[id]', () => {
 
 		expect(response.status).toBe(403);
 		expect(data.success).toBe(false);
-		expect(data.error).toBe('Access denied');
+		expect(data.error).toBe('Access denied'); // Correctly fails at ownership check, not scene check
 	});
 
 	it('returns 400 for invalid input', async () => {
@@ -299,8 +305,9 @@ describe('DELETE /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -336,8 +343,9 @@ describe('DELETE /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -372,8 +380,9 @@ describe('DELETE /api/cards/[id]', () => {
 		const mockBoard = {
 			id: 'board-1',
 			seriesId: 'series-1',
+			status: 'active',
 			currentSceneId: 'scene-1',
-			scenes: [{ id: 'scene-1', allowEditCards: true }]
+			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -393,6 +402,6 @@ describe('DELETE /api/cards/[id]', () => {
 
 		expect(response.status).toBe(403);
 		expect(data.success).toBe(false);
-		expect(data.error).toBe('Access denied');
+		expect(data.error).toBe('Access denied'); // Correctly fails at ownership check, not scene check
 	});
 });

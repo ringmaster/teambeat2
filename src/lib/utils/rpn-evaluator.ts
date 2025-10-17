@@ -524,6 +524,10 @@ function executeOperation(
 function getValueByPath(obj: any, path: string): any {
   // Empty path or '$root' returns the whole object
   if (path === '' || path === '$root') {
+    // If the object is wrapped with $root property, unwrap it
+    if (obj && typeof obj === 'object' && '$root' in obj && Object.keys(obj).length === 1) {
+      return obj.$root;
+    }
     return obj;
   }
 
