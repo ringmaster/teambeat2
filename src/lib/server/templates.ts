@@ -9,6 +9,7 @@
  */
 
 import { COLUMN_PRESETS } from '$lib/data/column-presets';
+import { SCENE_FLAGS, type SceneFlag } from '$lib/scene-flags';
 
 /**
  * Get a random description for a column from the presets
@@ -38,15 +39,7 @@ interface TemplateScene {
   mode: 'columns' | 'present' | 'review' | 'agreements' | 'scorecard' | 'static' | 'survey';
   seq: number;
   displayRule?: string;  // Optional RPN expression to conditionally display this scene
-  allowAddCards: boolean;
-  allowEditCards: boolean;
-  allowObscureCards: boolean;
-  allowMoveCards: boolean;
-  allowGroupCards: boolean;
-  showVotes: boolean;
-  allowVoting: boolean;
-  showComments: boolean;
-  allowComments: boolean;
+  flags: SceneFlag[];  // Array of scene flags from SCENE_FLAGS constants
   visibleColumns?: string[];  // Optional array of column titles that should be visible (if omitted, all columns are visible)
 }
 
@@ -74,103 +67,73 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'Gather',
         mode: 'columns' as const,
         seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: true,
-        allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: false,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_OBSCURE_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS
+        ]
       },
       {
         title: 'Group',
         mode: 'columns' as const,
         seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: true,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Kvetch',
         mode: 'present' as const,
         seq: 3,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true,
+        flags: [
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ],
         visibleColumns: ['Kvetches']
       },
       {
         title: 'Vote',
         mode: 'columns' as const,
         seq: 4,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true,
+        flags: [
+          SCENE_FLAGS.ALLOW_VOTING,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ],
         visibleColumns: ['Flaws', 'Experiments']
       },
       {
         title: 'Discuss',
         mode: 'present' as const,
         seq: 5,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true,
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ],
         visibleColumns: ['Flaws', 'Experiments']
       },
       {
         title: 'Appreciate',
         mode: 'present' as const,
         seq: 6,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true,
+        flags: [
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ],
         visibleColumns: ['Appreciations']
       },
       {
         title: 'Review',
         mode: 'review' as const,
         seq: 7,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: false,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES
+        ]
       }
     ]
   },
@@ -192,15 +155,13 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'Propose Topics',
         mode: 'columns' as const,
         seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Review Last Time',
@@ -208,60 +169,39 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         mode: 'agreements' as const,
         seq: 2,
         displayRule: '$.agreements.totalCount 0 gt',
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: false,
-        allowComments: false,
+        flags: [],
         visibleColumns: ['Issues to Discuss']
       },
       {
         title: 'Vote on Topics',
         mode: 'columns' as const,
         seq: 3,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true,
+        flags: [
+          SCENE_FLAGS.ALLOW_VOTING,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ],
         visibleColumns: ['Issues to Discuss']
       },
       {
         title: 'Discuss Topics',
         mode: 'present' as const,
         seq: 4,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true,
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ],
         visibleColumns: ['Issues to Discuss']
       },
       {
         title: 'Review Topics',
         mode: 'review' as const,
         seq: 5,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS
+        ]
       }
     ]
   },
@@ -277,72 +217,48 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'To-Do List',
         mode: 'agreements' as const,
         seq: 1,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Scorecard',
         mode: 'scorecard' as const,
         seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: false,
-        allowComments: false,
+        flags: [],
         visibleColumns: []
       },
       {
         title: 'Issue List',
         mode: 'columns' as const,
         seq: 3,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: true,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Identify, Discuss, Solve (IDS)',
         mode: 'present' as const,
         seq: 4,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Close',
         mode: 'review' as const,
         seq: 5,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       }
     ]
   },
@@ -360,57 +276,43 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'Brainstorm',
         mode: 'columns' as const,
         seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: true,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.SHOW_COMMENTS
+        ]
       },
       {
         title: 'Prioritize',
         mode: 'columns' as const,
         seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: true,
-        showVotes: false,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.ALLOW_VOTING,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Discuss',
         mode: 'present' as const,
         seq: 3,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Plan Actions',
         mode: 'review' as const,
         seq: 4,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS
+        ]
       }
     ]
   },
@@ -428,57 +330,43 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'Share Feelings',
         mode: 'columns' as const,
         seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: true,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.SHOW_COMMENTS
+        ]
       },
       {
         title: 'Prioritize',
         mode: 'columns' as const,
         seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: true,
-        showVotes: false,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.ALLOW_VOTING,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Explore Together',
         mode: 'present' as const,
         seq: 3,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Find Solutions',
         mode: 'review' as const,
         seq: 4,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS
+        ]
       }
     ]
   },
@@ -497,57 +385,47 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
         title: 'Reflect',
         mode: 'columns' as const,
         seq: 1,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: false
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS
+        ]
       },
       {
         title: 'Share Insights',
         mode: 'present' as const,
         seq: 2,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: false,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Prioritize Improvements',
         mode: 'present' as const,
         seq: 3,
-        allowAddCards: false,
-        allowEditCards: false,
-        allowObscureCards: false,
-        allowMoveCards: false,
-        allowGroupCards: false,
-        showVotes: true,
-        allowVoting: true,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.ALLOW_VOTING,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       },
       {
         title: 'Create Action Plan',
         mode: 'review' as const,
         seq: 4,
-        allowAddCards: true,
-        allowEditCards: true,
-        allowObscureCards: false,
-        allowMoveCards: true,
-        allowGroupCards: true,
-        showVotes: true,
-        allowVoting: false,
-        showComments: true,
-        allowComments: true
+        flags: [
+          SCENE_FLAGS.ALLOW_ADD_CARDS,
+          SCENE_FLAGS.ALLOW_EDIT_CARDS,
+          SCENE_FLAGS.ALLOW_MOVE_CARDS,
+          SCENE_FLAGS.ALLOW_GROUP_CARDS,
+          SCENE_FLAGS.SHOW_VOTES,
+          SCENE_FLAGS.SHOW_COMMENTS,
+          SCENE_FLAGS.ALLOW_COMMENTS
+        ]
       }
     ]
   },

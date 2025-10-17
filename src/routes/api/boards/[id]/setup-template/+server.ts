@@ -7,7 +7,7 @@ import { getTemplate } from '$lib/server/templates.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { withTransaction } from '$lib/server/db/transaction.js';
-import { columns, scenes, boards, scenesColumns } from '$lib/server/db/schema.js';
+import { columns, scenes, boards, scenesColumns, sceneFlags } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -89,8 +89,8 @@ export const POST: RequestHandler = async (event) => {
         const sceneId = uuidv4();
         if (!currentSceneId) currentSceneId = sceneId;
 
-        // Remove visibleColumns from the scene data as it's not a database field
-        const { visibleColumns, ...sceneData } = scene;
+        // Remove visibleColumns and flags from the scene data as they're not database fields
+        const { visibleColumns, flags, ...sceneData } = scene;
 
         await tx
           .insert(scenes)
@@ -99,6 +99,18 @@ export const POST: RequestHandler = async (event) => {
             boardId: board.id,
             ...sceneData
           });
+
+        // Create scene flags
+        if (flags && flags.length > 0) {
+          for (const flag of flags) {
+            await tx
+              .insert(sceneFlags)
+              .values({
+                sceneId,
+                flag
+              });
+          }
+        }
 
         // Create scene-column relationships based on visibleColumns
         if (visibleColumns && visibleColumns.length > 0) {
