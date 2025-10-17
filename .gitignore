@@ -43,4 +43,7 @@ specifications/*
 /playwright-report/
 /playwright/.cache/
 
+# perf test binary
+/tests/perf/perf
+
 # Test databases (now using in-memory, so no files to ignore)

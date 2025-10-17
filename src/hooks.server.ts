@@ -1,5 +1,9 @@
 import type { Handle, RequestEvent } from '@sveltejs/kit';
 import { performanceTracker } from '$lib/server/performance/tracker';
+import { env } from '$env/dynamic/private';
+
+// Check if rate limiting is disabled via environment variable
+const RATE_LIMITING_DISABLED = env.DISABLE_RATE_LIMITING === 'true';
 
 function getRateLimitKey(event: RequestEvent): string {
   // Try multiple headers in order of reliability
@@ -39,6 +43,11 @@ function getRateLimitKey(event: RequestEvent): string {
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
+  // If rate limiting is disabled, always allow
+  if (RATE_LIMITING_DISABLED) {
+    return true;
+  }
+
   const now = Date.now();
   const limit = rateLimits.get(key);
 
