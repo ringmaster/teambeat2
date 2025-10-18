@@ -9,6 +9,8 @@
     import flatpickr from "flatpickr";
     import "flatpickr/dist/flatpickr.min.css";
     import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
+    import { COLUMN_PRESETS } from "$lib/data/column-presets";
+    import Autocomplete from "./ui/Autocomplete.svelte";
 
     interface Props {
         board: any;
@@ -101,6 +103,9 @@
     let showDisplayRuleContext = $state(false);
     let showRPNTestModal = $state(false);
 
+    // Column presets for autocomplete
+    let columnPresets = $state<Array<{ value: string; used?: boolean }>>([]);
+
     // Debounce timer for static scene content
     let contentDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -127,6 +132,23 @@
                 }
             } catch (error) {
                 console.error("Failed to load users:", error);
+            }
+        }
+    });
+
+    // Load column presets when columns tab is active and user can edit
+    $effect(async () => {
+        if (activeTab === "columns" && board?.id && ['admin', 'facilitator'].includes(userRole)) {
+            try {
+                const response = await fetch(`/api/boards/${board.id}/column-presets`);
+                if (response.ok) {
+                    const data = await response.json();
+                    columnPresets = data.presets || [];
+                }
+            } catch (error) {
+                console.error("Failed to load column presets:", error);
+                // Fallback to presets without usage tracking
+                columnPresets = (COLUMN_PRESETS['Icebreaker'] || []).map(value => ({ value }));
             }
         }
     });
@@ -707,17 +729,11 @@
 
                 <div class="form-group">
                     <label for="column-description">Description</label>
-                    <input
-                        id="column-description"
-                        type="text"
-                        value={selectedColumn.description || ""}
+                    <Autocomplete
+                        bind:value={selectedColumn.description}
+                        options={columnPresets}
                         placeholder="Enter description..."
-                        onblur={(e) =>
-                            updateColumnDescription(
-                                selectedColumn.id,
-                                e.currentTarget.value,
-                            )}
-                        class="input"
+                        onSelect={(value) => updateColumnDescription(selectedColumn.id, value)}
                     />
                 </div>
 

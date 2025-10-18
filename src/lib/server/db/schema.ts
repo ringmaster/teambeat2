@@ -1,5 +1,6 @@
 import { sqliteTable, text as sqliteText, integer as sqliteInteger, real as sqliteReal, index as sqliteIndex, primaryKey as sqlitePrimaryKey, unique as sqliteUnique } from 'drizzle-orm/sqlite-core';
 import { pgTable, text as pgText, integer as pgInteger, serial as pgSerial, real as pgReal, bigint as pgBigint, boolean as pgBoolean, index as pgIndex, primaryKey as pgPrimaryKey, unique as pgUnique } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // Detect database type from environment variable at module load time
 const DATABASE_URL = process.env.DATABASE_URL || './teambeat.db';
@@ -302,4 +303,229 @@ export const sceneScorecardResults = table('scene_scorecard_results', {
   seq: integer('seq').notNull()
 }, (table) => ({
   sceneScorecardIdx: indexField('scene_scorecard_results_scene_scorecard_idx').on(table.sceneScorecardId)
+}));
+
+// Drizzle ORM Relations - required for relational queries with .query API
+export const boardsRelations = relations(boards, ({ one, many }) => ({
+  series: one(boardSeries, {
+    fields: [boards.seriesId],
+    references: [boardSeries.id]
+  }),
+  columns: many(columns),
+  scenes: many(scenes),
+  agreements: many(agreements),
+  presence: many(presence)
+}));
+
+export const columnsRelations = relations(columns, ({ one, many }) => ({
+  board: one(boards, {
+    fields: [columns.boardId],
+    references: [boards.id]
+  }),
+  cards: many(cards),
+  scenesColumns: many(scenesColumns)
+}));
+
+export const boardSeriesRelations = relations(boardSeries, ({ many }) => ({
+  boards: many(boards),
+  members: many(seriesMembers),
+  scorecards: many(scorecards)
+}));
+
+export const seriesMembersRelations = relations(seriesMembers, ({ one }) => ({
+  series: one(boardSeries, {
+    fields: [seriesMembers.seriesId],
+    references: [boardSeries.id]
+  }),
+  user: one(users, {
+    fields: [seriesMembers.userId],
+    references: [users.id]
+  })
+}));
+
+export const scenesRelations = relations(scenes, ({ one, many }) => ({
+  board: one(boards, {
+    fields: [scenes.boardId],
+    references: [boards.id]
+  }),
+  selectedCard: one(cards, {
+    fields: [scenes.selectedCardId],
+    references: [cards.id]
+  }),
+  focusedQuestion: one(healthQuestions, {
+    fields: [scenes.focusedQuestionId],
+    references: [healthQuestions.id]
+  }),
+  scenesColumns: many(scenesColumns),
+  sceneFlags: many(sceneFlags),
+  healthQuestions: many(healthQuestions),
+  sceneScorecards: many(sceneScorecards)
+}));
+
+export const scenesColumnsRelations = relations(scenesColumns, ({ one }) => ({
+  scene: one(scenes, {
+    fields: [scenesColumns.sceneId],
+    references: [scenes.id]
+  }),
+  column: one(columns, {
+    fields: [scenesColumns.columnId],
+    references: [columns.id]
+  })
+}));
+
+export const sceneFlagsRelations = relations(sceneFlags, ({ one }) => ({
+  scene: one(scenes, {
+    fields: [sceneFlags.sceneId],
+    references: [scenes.id]
+  })
+}));
+
+export const cardsRelations = relations(cards, ({ one, many }) => ({
+  column: one(columns, {
+    fields: [cards.columnId],
+    references: [columns.id]
+  }),
+  user: one(users, {
+    fields: [cards.userId],
+    references: [users.id]
+  }),
+  votes: many(votes),
+  comments: many(comments)
+}));
+
+export const votesRelations = relations(votes, ({ one }) => ({
+  card: one(cards, {
+    fields: [votes.cardId],
+    references: [cards.id]
+  }),
+  user: one(users, {
+    fields: [votes.userId],
+    references: [users.id]
+  })
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  card: one(cards, {
+    fields: [comments.cardId],
+    references: [cards.id]
+  }),
+  user: one(users, {
+    fields: [comments.userId],
+    references: [users.id]
+  }),
+  completedBy: one(users, {
+    fields: [comments.completedByUserId],
+    references: [users.id]
+  })
+}));
+
+export const agreementsRelations = relations(agreements, ({ one }) => ({
+  board: one(boards, {
+    fields: [agreements.boardId],
+    references: [boards.id]
+  }),
+  user: one(users, {
+    fields: [agreements.userId],
+    references: [users.id]
+  }),
+  completedBy: one(users, {
+    fields: [agreements.completedByUserId],
+    references: [users.id]
+  }),
+  sourceAgreement: one(agreements, {
+    fields: [agreements.sourceAgreementId],
+    references: [agreements.id]
+  })
+}));
+
+export const healthQuestionsRelations = relations(healthQuestions, ({ one, many }) => ({
+  scene: one(scenes, {
+    fields: [healthQuestions.sceneId],
+    references: [scenes.id]
+  }),
+  responses: many(healthResponses)
+}));
+
+export const healthResponsesRelations = relations(healthResponses, ({ one }) => ({
+  question: one(healthQuestions, {
+    fields: [healthResponses.questionId],
+    references: [healthQuestions.id]
+  }),
+  user: one(users, {
+    fields: [healthResponses.userId],
+    references: [users.id]
+  })
+}));
+
+export const presenceRelations = relations(presence, ({ one }) => ({
+  user: one(users, {
+    fields: [presence.userId],
+    references: [users.id]
+  }),
+  board: one(boards, {
+    fields: [presence.boardId],
+    references: [boards.id]
+  })
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  seriesMembers: many(seriesMembers),
+  cards: many(cards),
+  votes: many(votes),
+  comments: many(comments),
+  agreements: many(agreements),
+  healthResponses: many(healthResponses),
+  presence: many(presence),
+  authenticators: many(userAuthenticators)
+}));
+
+export const userAuthenticatorsRelations = relations(userAuthenticators, ({ one }) => ({
+  user: one(users, {
+    fields: [userAuthenticators.userId],
+    references: [users.id]
+  })
+}));
+
+export const scorecardsRelations = relations(scorecards, ({ one, many }) => ({
+  series: one(boardSeries, {
+    fields: [scorecards.seriesId],
+    references: [boardSeries.id]
+  }),
+  createdBy: one(users, {
+    fields: [scorecards.createdByUserId],
+    references: [users.id]
+  }),
+  datasources: many(scorecardDatasources),
+  sceneScorecards: many(sceneScorecards)
+}));
+
+export const scorecardDatasourcesRelations = relations(scorecardDatasources, ({ one, many }) => ({
+  scorecard: one(scorecards, {
+    fields: [scorecardDatasources.scorecardId],
+    references: [scorecards.id]
+  }),
+  results: many(sceneScorecardResults)
+}));
+
+export const sceneScorecardsRelations = relations(sceneScorecards, ({ one, many }) => ({
+  scene: one(scenes, {
+    fields: [sceneScorecards.sceneId],
+    references: [scenes.id]
+  }),
+  scorecard: one(scorecards, {
+    fields: [sceneScorecards.scorecardId],
+    references: [scorecards.id]
+  }),
+  results: many(sceneScorecardResults)
+}));
+
+export const sceneScorecardResultsRelations = relations(sceneScorecardResults, ({ one }) => ({
+  sceneScorecard: one(sceneScorecards, {
+    fields: [sceneScorecardResults.sceneScorecardId],
+    references: [sceneScorecards.id]
+  }),
+  datasource: one(scorecardDatasources, {
+    fields: [sceneScorecardResults.datasourceId],
+    references: [scorecardDatasources.id]
+  })
 }));

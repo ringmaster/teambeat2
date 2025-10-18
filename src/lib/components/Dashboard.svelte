@@ -792,8 +792,8 @@
                                                 status={latestBoard.status}
                                                 onclick={() => goto(`/board/${latestBoard.id}`)}
                                             >
-                                                {#if latestBoard.status === 'completed' && (s.role === 'admin' || s.role === 'facilitator')}
-                                                    {#snippet actions()}
+                                                {#snippet actions()}
+                                                    {#if latestBoard.status === 'completed' && (s.role === 'admin' || s.role === 'facilitator')}
                                                         <button
                                                             class="icon-button icon-button-secondary cooltipz--bottom"
                                                             aria-label="Clone board"
@@ -809,8 +809,8 @@
                                                                 <Icon name="clone" size="sm" />
                                                             {/if}
                                                         </button>
-                                                    {/snippet}
-                                                {/if}
+                                                    {/if}
+                                                {/snippet}
                                             </BoardListingItem>
                                         {:else}
                                             <div class="no-boards-message">
