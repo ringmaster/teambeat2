@@ -49,6 +49,59 @@ export const GET: RequestHandler = async (event) => {
   }
 };
 
+export const PUT: RequestHandler = async (event) => {
+  try {
+    const user = requireUser(event);
+    const seriesId = event.params.id;
+    const { name } = await event.request.json();
+
+    // Validate name
+    if (!name || typeof name !== 'string') {
+      return json(
+        { success: false, error: 'Series name is required' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      return json(
+        { success: false, error: 'Series name must be at least 2 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user has admin role for this series
+    const userRole = await getUserRoleInSeries(user.userId, seriesId);
+
+    if (userRole !== 'admin') {
+      return json(
+        { success: false, error: 'Only series administrators can rename series' },
+        { status: 403 }
+      );
+    }
+
+    // Update series name
+    await db
+      .update(boardSeries)
+      .set({ name: trimmedName, updatedAt: new Date() })
+      .where(eq(boardSeries.id, seriesId));
+
+    return json({ success: true, name: trimmedName });
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
+    console.error('Failed to rename series:', error);
+
+    return json(
+      { success: false, error: 'Failed to rename series' },
+      { status: 500 }
+    );
+  }
+};
+
 export const DELETE: RequestHandler = async (event) => {
   try {
     const user = requireUser(event);

@@ -7,6 +7,7 @@
     import Icon from "$lib/components/ui/Icon.svelte";
     import Pill from "$lib/components/ui/Pill.svelte";
     import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
+    import DropdownMenu from "$lib/components/ui/DropdownMenu.svelte";
 
     interface Props {
         user: any;
@@ -29,6 +30,11 @@
     let currentSeriesUsers = $state([]);
     let cloningBoards = $state({} as Record<string, boolean>);
     let collapsedSeries = $state({} as Record<string, boolean>);
+    let showRenameModal = $state(false);
+    let seriesToRename: any = $state(null);
+    let renameSeriesName = $state("");
+    let renameSeriesError = $state("");
+    let openDropdownSeriesId: string | null = $state(null);
 
     onMount(async () => {
         try {
@@ -40,6 +46,8 @@
 
                 series.forEach((s) => {
                     initializeBoardName(s.id, s.name);
+                    // Set all series to collapsed by default
+                    collapsedSeries[s.id] = true;
                 });
             }
         } catch (error) {
@@ -458,6 +466,90 @@
     function toggleSeriesCollapse(seriesId: string) {
         collapsedSeries[seriesId] = !collapsedSeries[seriesId];
     }
+
+    function getLatestBoardForCollapsed(seriesItem: any) {
+        if (!seriesItem.boards || seriesItem.boards.length === 0) {
+            return null;
+        }
+
+        // For admin/facilitator, show latest active or draft board
+        // For members, show only latest active board
+        let eligibleBoards = seriesItem.boards.filter((b: any) => {
+            if (seriesItem.role === 'admin' || seriesItem.role === 'facilitator') {
+                return b.status === 'active' || b.status === 'draft';
+            }
+            return b.status === 'active';
+        });
+
+        // If no active/draft boards, fall back to completed boards
+        if (eligibleBoards.length === 0) {
+            eligibleBoards = seriesItem.boards.filter((b: any) => b.status === 'completed');
+        }
+
+        if (eligibleBoards.length === 0) {
+            return null;
+        }
+
+        // Sort by meeting date (descending), then by created date (descending)
+        const sorted = [...eligibleBoards].sort((a: any, b: any) => {
+            const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
+            const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+            return bDate.getTime() - aDate.getTime();
+        });
+
+        return sorted[0];
+    }
+
+    function openRenameSeries(seriesItem: any) {
+        seriesToRename = seriesItem;
+        renameSeriesName = seriesItem.name;
+        renameSeriesError = "";
+        showRenameModal = true;
+    }
+
+    function closeRenameModal() {
+        showRenameModal = false;
+        seriesToRename = null;
+        renameSeriesName = "";
+        renameSeriesError = "";
+    }
+
+    async function renameSeries() {
+        if (!seriesToRename) return;
+
+        if (!renameSeriesName.trim()) {
+            renameSeriesError = "Series name is required";
+            return;
+        }
+
+        if (renameSeriesName.trim().length < 2) {
+            renameSeriesError = "Series name must be at least 2 characters";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/series/${seriesToRename.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: renameSeriesName.trim() }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                series = series.map((s) =>
+                    s.id === seriesToRename.id
+                        ? { ...s, name: renameSeriesName.trim() }
+                        : s,
+                );
+                closeRenameModal();
+            } else {
+                renameSeriesError = data.error || "Failed to rename series";
+            }
+        } catch (error) {
+            renameSeriesError = `Network error. Please try again. Error: ${error}`;
+        }
+    }
 </script>
 
 {#if loading}
@@ -580,7 +672,11 @@
             {:else}
                 <div class="series-grid">
                     {#each series as s (s.id)}
-                        <div class="series-card" class:collapsed={collapsedSeries[s.id]}>
+                        <div
+                            class="series-card"
+                            class:collapsed={collapsedSeries[s.id]}
+                            class:has-open-dropdown={openDropdownSeriesId === s.id}
+                        >
                             <div class="card-content">
                                 <div class="series-card-header">
                                     <div class="series-card-info">
@@ -601,184 +697,261 @@
                                     </div>
                                     <div class="series-card-actions">
                                         <button
-                                            onclick={() => toggleSeriesCollapse(s.id)}
-                                            class="collapse-toggle"
-                                            class:expanded={!collapsedSeries[s.id]}
-                                            aria-label={collapsedSeries[s.id] ? 'Expand series' : 'Collapse series'}
-                                            aria-expanded={!collapsedSeries[s.id]}
+                                            onclick={() =>
+                                                toggleSeriesCollapse(s.id)}
+                                            class="collapse-toggle-icon"
+                                            class:expanded={!collapsedSeries[
+                                                s.id
+                                            ]}
+                                            aria-label={collapsedSeries[s.id]
+                                                ? "Expand series"
+                                                : "Collapse series"}
+                                            aria-expanded={!collapsedSeries[
+                                                s.id
+                                            ]}
                                         >
-                                            <Icon name="chevron-down" size="sm" />
-                                            {collapsedSeries[s.id] ? 'Expand' : 'Collapse'}
+                                            <Icon
+                                                name="chevron-down"
+                                                size="sm"
+                                            />
                                         </button>
                                         {#if s.role === "admin"}
-                                            <a
-                                                href="/series/{s.id}/scorecards"
-                                                class="icon-button icon-button-primary cooltipz--bottom"
-                                                aria-label="Scorecards"
+                                            <DropdownMenu
+                                                buttonIcon="ellipsis-vertical"
+                                                buttonClass="icon-button icon-button-secondary cooltipz--bottom"
+                                                onOpenChange={(isOpen) => {
+                                                    openDropdownSeriesId = isOpen ? s.id : null;
+                                                }}
                                             >
-                                                <Icon
-                                                    name="scorecard"
-                                                    size="sm"
-                                                />
-                                            </a>
-                                        {/if}
-                                        {#if s.role === "admin"}
-                                            <button
-                                                onclick={() =>
-                                                    openSeriesUserManagement(s)}
-                                                class="icon-button icon-button-primary cooltipz--bottom"
-                                                aria-label="Manage users"
-                                            >
-                                                <Icon
-                                                    name="users-cog"
-                                                    size="sm"
-                                                />
-                                            </button>
-                                            <button
-                                                onclick={() =>
-                                                    confirmDeleteSeries(s)}
-                                                class="icon-button icon-button-danger cooltipz--bottom"
-                                                aria-label="Delete series"
-                                            >
-                                                <Icon name="trash" size="sm" />
-                                            </button>
-                                        {/if}
-                                    </div>
-                                </div>
-
-                                {#if !collapsedSeries[s.id]}
-                                <!-- Create New Board -->
-                                <InputWithButton
-                                    type="text"
-                                    bind:value={boardNames[s.id]}
-                                    placeholder="Board name..."
-                                    buttonVariant="primary"
-                                    buttonDisabled={creatingBoards[s.id] ||
-                                        !boardNames[s.id]?.trim()}
-                                    onButtonClick={() =>
-                                        createBoard(s.id, s.name)}
-                                    onkeydown={(e) => {
-                                        if (e.key === "Enter")
-                                            createBoard(s.id, s.name);
-                                    }}
-                                    class="board-input-with-button"
-                                    buttonClass="cooltipz--bottom"
-                                    buttonAriaLabel="Add board"
-                                >
-                                    {#snippet buttonContent()}
-                                        {#if creatingBoards[s.id]}
-                                            ...
-                                        {:else}
-                                            <Icon name="plus" size="sm" />
-                                        {/if}
-                                    {/snippet}
-                                </InputWithButton>
-                                {#if boardErrors[s.id]}
-                                    <div class="alert alert-error">
-                                        <svg
-                                            class="w-4 h-4"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fill-rule="evenodd"
-                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                clip-rule="evenodd"
-                                            />
-                                        </svg>
-                                        <span>{boardErrors[s.id]}</span>
-                                    </div>
-                                {/if}
-
-                                <div class="space-y-3">
-                                    <!-- Active and Draft Boards -->
-                                    {#if s.boards && s.boards.filter( (b) => ["active", "draft"].includes(b.status), ).length > 0}
-                                        <div class="board-section">
-                                            <h4 class="board-section-title">
-                                                Active & Draft Boards:
-                                            </h4>
-                                            <div class="board-list">
-                                                {#each s.boards.filter( (b) => ["active", "draft"].includes(b.status), ) as board (board.id)}
-                                                    <BoardListingItem
-                                                        name={board.name}
-                                                        meetingDate={board.meetingDate}
-                                                        createdAt={board.createdAt}
-                                                        status={board.status}
-                                                        onclick={() =>
-                                                            goto(
-                                                                `/board/${board.id}`,
-                                                            )}
+                                                <button
+                                                    onclick={() =>
+                                                        openRenameSeries(s)}
+                                                    class="dropdown-menu-item"
+                                                    role="menuitem"
+                                                >
+                                                    <Icon
+                                                        name="edit"
+                                                        size="sm"
                                                     />
-                                                {/each}
+                                                    Rename Series
+                                                </button>
+                                                <button
+                                                    onclick={() =>
+                                                        openSeriesUserManagement(
+                                                            s,
+                                                        )}
+                                                    class="dropdown-menu-item"
+                                                    role="menuitem"
+                                                >
+                                                    <Icon
+                                                        name="users-cog"
+                                                        size="sm"
+                                                    />
+                                                    Manage Users
+                                                </button>
+                                                <a
+                                                    href="/series/{s.id}/scorecards"
+                                                    class="dropdown-menu-item"
+                                                    role="menuitem"
+                                                >
+                                                    <Icon
+                                                        name="scorecard"
+                                                        size="sm"
+                                                    />
+                                                    Scorecards
+                                                </a>
+                                                <div
+                                                    class="dropdown-menu-separator"
+                                                ></div>
+                                                <button
+                                                    onclick={() =>
+                                                        confirmDeleteSeries(s)}
+                                                    class="dropdown-menu-item danger"
+                                                    role="menuitem"
+                                                >
+                                                    <Icon
+                                                        name="trash"
+                                                        size="sm"
+                                                    />
+                                                    Delete Series
+                                                </button>
+                                            </DropdownMenu>
+                                        {/if}
+                                    </div>
+                                </div>
+
+                                {#if collapsedSeries[s.id]}
+                                    <!-- Collapsed view - show only latest active/draft/completed board -->
+                                    {@const latestBoard = getLatestBoardForCollapsed(s)}
+                                    <div class="collapsed-board-preview">
+                                        {#if latestBoard}
+                                            <BoardListingItem
+                                                name={latestBoard.name}
+                                                meetingDate={latestBoard.meetingDate}
+                                                createdAt={latestBoard.createdAt}
+                                                status={latestBoard.status}
+                                                onclick={() => goto(`/board/${latestBoard.id}`)}
+                                            >
+                                                {#if latestBoard.status === 'completed' && (s.role === 'admin' || s.role === 'facilitator')}
+                                                    {#snippet actions()}
+                                                        <button
+                                                            class="icon-button icon-button-secondary cooltipz--bottom"
+                                                            aria-label="Clone board"
+                                                            onclick={(e) => {
+                                                                e.stopPropagation();
+                                                                cloneBoard(latestBoard, s.id);
+                                                            }}
+                                                            disabled={cloningBoards[latestBoard.id]}
+                                                        >
+                                                            {#if cloningBoards[latestBoard.id]}
+                                                                <Icon name="spinner" size="sm" />
+                                                            {:else}
+                                                                <Icon name="clone" size="sm" />
+                                                            {/if}
+                                                        </button>
+                                                    {/snippet}
+                                                {/if}
+                                            </BoardListingItem>
+                                        {:else}
+                                            <div class="no-boards-message">
+                                                There are no active boards in this series.
                                             </div>
-                                        </div>
-                                    {:else}
-                                        <div class="alert">
-                                            <p class="text-sm text-muted">
-                                                No active or draft boards for
-                                                this series
-                                            </p>
+                                        {/if}
+                                    </div>
+                                {:else}
+                                    <!-- Expanded view - show all boards and create new board form -->
+                                    <!-- Create New Board -->
+                                    <InputWithButton
+                                        type="text"
+                                        bind:value={boardNames[s.id]}
+                                        placeholder="Board name..."
+                                        buttonVariant="primary"
+                                        buttonDisabled={creatingBoards[s.id] ||
+                                            !boardNames[s.id]?.trim()}
+                                        onButtonClick={() =>
+                                            createBoard(s.id, s.name)}
+                                        onkeydown={(e) => {
+                                            if (e.key === "Enter")
+                                                createBoard(s.id, s.name);
+                                        }}
+                                        class="board-input-with-button"
+                                        buttonClass="cooltipz--bottom"
+                                        buttonAriaLabel="Add board"
+                                    >
+                                        {#snippet buttonContent()}
+                                            {#if creatingBoards[s.id]}
+                                                ...
+                                            {:else}
+                                                <Icon name="plus" size="sm" />
+                                            {/if}
+                                        {/snippet}
+                                    </InputWithButton>
+                                    {#if boardErrors[s.id]}
+                                        <div class="alert alert-error">
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="currentColor"
+                                                viewBox="0 0 20 20"
+                                            >
+                                                <path
+                                                    fill-rule="evenodd"
+                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                                    clip-rule="evenodd"
+                                                />
+                                            </svg>
+                                            <span>{boardErrors[s.id]}</span>
                                         </div>
                                     {/if}
 
-                                    <!-- Completed Boards -->
-                                    {#if s.boards && s.boards.filter((b) => b.status === "completed").length > 0}
-                                        <div
-                                            class="board-section completed-boards-section"
-                                        >
-                                            <h4 class="board-section-title">
-                                                Completed Boards:
-                                            </h4>
-                                            <div class="board-list">
-                                                {#each s.boards
-                                                    .filter((b) => b.status === "completed")
-                                                    .slice(0, 5) as board (board.id)}
-                                                    <BoardListingItem
-                                                        name={board.name}
-                                                        meetingDate={board.meetingDate}
-                                                        createdAt={board.createdAt}
-                                                        status="complete"
-                                                        onclick={() =>
-                                                            goto(
-                                                                `/board/${board.id}`,
-                                                            )}
-                                                    >
-                                                        {#snippet actions()}
-                                                            <button
-                                                                class="icon-button icon-button-secondary cooltipz--bottom"
-                                                                aria-label="Clone board"
-                                                                onclick={(
-                                                                    e,
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    cloneBoard(
-                                                                        board,
-                                                                        s.id,
-                                                                    );
-                                                                }}
-                                                                disabled={cloningBoards[
-                                                                    board.id
-                                                                ]}
-                                                            >
-                                                                {#if cloningBoards[board.id]}
-                                                                    <Icon
-                                                                        name="spinner"
-                                                                        size="sm"
-                                                                    />
-                                                                {:else}
-                                                                    <Icon
-                                                                        name="clone"
-                                                                        size="sm"
-                                                                    />
-                                                                {/if}
-                                                            </button>
-                                                        {/snippet}
-                                                    </BoardListingItem>
-                                                {/each}
+                                    <div class="space-y-3">
+                                        <!-- Active and Draft Boards -->
+                                        {#if s.boards && s.boards.filter( (b) => ["active", "draft"].includes(b.status), ).length > 0}
+                                            <div class="board-section">
+                                                <h4 class="board-section-title">
+                                                    Active & Draft Boards:
+                                                </h4>
+                                                <div class="board-list">
+                                                    {#each s.boards.filter( (b) => ["active", "draft"].includes(b.status), ) as board (board.id)}
+                                                        <BoardListingItem
+                                                            name={board.name}
+                                                            meetingDate={board.meetingDate}
+                                                            createdAt={board.createdAt}
+                                                            status={board.status}
+                                                            onclick={() =>
+                                                                goto(
+                                                                    `/board/${board.id}`,
+                                                                )}
+                                                        />
+                                                    {/each}
+                                                </div>
                                             </div>
-                                        </div>
-                                    {/if}
-                                </div>
+                                        {:else}
+                                            <div class="alert">
+                                                <p class="text-sm text-muted">
+                                                    No active or draft boards
+                                                    for this series
+                                                </p>
+                                            </div>
+                                        {/if}
+
+                                        <!-- Completed Boards -->
+                                        {#if s.boards && s.boards.filter((b) => b.status === "completed").length > 0}
+                                            <div
+                                                class="board-section completed-boards-section"
+                                            >
+                                                <h4 class="board-section-title">
+                                                    Completed Boards:
+                                                </h4>
+                                                <div class="board-list">
+                                                    {#each s.boards
+                                                        .filter((b) => b.status === "completed")
+                                                        .slice(0, 5) as board (board.id)}
+                                                        <BoardListingItem
+                                                            name={board.name}
+                                                            meetingDate={board.meetingDate}
+                                                            createdAt={board.createdAt}
+                                                            status="complete"
+                                                            onclick={() =>
+                                                                goto(
+                                                                    `/board/${board.id}`,
+                                                                )}
+                                                        >
+                                                            {#snippet actions()}
+                                                                <button
+                                                                    class="icon-button icon-button-secondary cooltipz--bottom"
+                                                                    aria-label="Clone board"
+                                                                    onclick={(
+                                                                        e,
+                                                                    ) => {
+                                                                        e.stopPropagation();
+                                                                        cloneBoard(
+                                                                            board,
+                                                                            s.id,
+                                                                        );
+                                                                    }}
+                                                                    disabled={cloningBoards[
+                                                                        board.id
+                                                                    ]}
+                                                                >
+                                                                    {#if cloningBoards[board.id]}
+                                                                        <Icon
+                                                                            name="spinner"
+                                                                            size="sm"
+                                                                        />
+                                                                    {:else}
+                                                                        <Icon
+                                                                            name="clone"
+                                                                            size="sm"
+                                                                        />
+                                                                    {/if}
+                                                                </button>
+                                                            {/snippet}
+                                                        </BoardListingItem>
+                                                    {/each}
+                                                </div>
+                                            </div>
+                                        {/if}
+                                    </div>
                                 {/if}
                             </div>
                         </div>
@@ -912,6 +1085,75 @@
     </div>
 {/if}
 
+<!-- Rename Series Modal -->
+{#if showRenameModal && seriesToRename}
+    <div
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
+        onclick={closeRenameModal}
+        onkeydown={(e) => e.key === "Escape" && closeRenameModal()}
+        transition:fade={{ duration: 300 }}
+    >
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <div
+            class="modal-dialog"
+            role="document"
+            onclick={(e) => e.stopPropagation()}
+        >
+            <div class="modal-content">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="info-icon">
+                        <Icon name="edit" size="md" color="primary" circle />
+                    </div>
+                    <div>
+                        <h3 class="modal-title">Rename Series</h3>
+                        <p class="modal-subtitle">Update the series name</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label for="renameSeriesInput" class="form-label">
+                        Series Name
+                    </label>
+                    <input
+                        id="renameSeriesInput"
+                        type="text"
+                        bind:value={renameSeriesName}
+                        placeholder="Enter series name..."
+                        class="form-input"
+                        onkeydown={(e) => {
+                            if (e.key === "Enter") renameSeries();
+                        }}
+                        autofocus
+                    />
+                    {#if renameSeriesError}
+                        <div class="form-error">
+                            <Icon name="warning" size="sm" color="danger" />
+                            <span>{renameSeriesError}</span>
+                        </div>
+                    {/if}
+                </div>
+
+                <div class="modal-actions">
+                    <button onclick={closeRenameModal} class="btn-secondary">
+                        Cancel
+                    </button>
+                    <button
+                        onclick={renameSeries}
+                        class="btn-primary"
+                        disabled={!renameSeriesName.trim()}
+                    >
+                        Rename Series
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{/if}
+
 <style lang="less">
     .loading-page {
         min-height: 100vh;
@@ -1024,7 +1266,11 @@
         font-size: clamp(1.5rem, 4vw, 2rem);
         font-weight: 700;
         margin: 0;
-        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        background: linear-gradient(
+            135deg,
+            var(--color-primary),
+            var(--color-secondary)
+        );
         background-clip: text;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -1065,7 +1311,8 @@
         color: var(--color-text-primary);
         margin: 0;
         padding-bottom: var(--spacing-2);
-        border-bottom: 2px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+        border-bottom: 2px solid
+            color-mix(in srgb, var(--color-primary) 20%, transparent);
     }
 
     /* Empty State - Enhanced visual design */
@@ -1094,23 +1341,21 @@
         font-weight: 500;
     }
 
-    /* Series Grid - Masonry layout for proper stacking */
+    /* Series Grid - CSS Grid layout for proper horizontal then vertical tiling */
     .series-grid {
-        display: block;
-        column-gap: var(--spacing-6);
+        display: grid;
+        gap: var(--spacing-6);
+        grid-template-columns: 1fr;
+        position: relative;
+        isolation: isolate;
 
-        /* Single column on mobile */
-        @media (max-width: 1023px) {
-            columns: 1;
-        }
-
-        /* Two columns on desktop with masonry layout */
+        /* Two columns on desktop */
         @media (min-width: 1024px) {
-            columns: 2;
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 
-    /* Series Card - Enhanced visual hierarchy with masonry support */
+    /* Series Card - Enhanced visual hierarchy */
     .series-card {
         background: white;
         border: 1px solid var(--color-border);
@@ -1119,23 +1364,23 @@
         padding: var(--spacing-6);
         transition: all var(--transition-fast);
         position: relative;
-        overflow: hidden;
-        /* Masonry layout support */
-        break-inside: avoid;
-        page-break-inside: avoid;
-        margin-bottom: var(--spacing-6);
-        display: inline-block;
-        width: 100%;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
 
         /* Subtle left border accent */
         &::before {
-            content: '';
+            content: "";
             position: absolute;
             left: 0;
             top: 0;
             bottom: 0;
             width: 4px;
-            background: linear-gradient(180deg, var(--color-accent), var(--color-secondary));
+            background: linear-gradient(
+                180deg,
+                var(--color-accent),
+                var(--color-secondary)
+            );
             opacity: 0;
             transition: opacity var(--transition-fast);
         }
@@ -1153,6 +1398,10 @@
         &.collapsed {
             padding: var(--spacing-4) var(--spacing-6);
         }
+
+        &.has-open-dropdown {
+            z-index: 10002;
+        }
     }
 
     .series-card-header {
@@ -1161,6 +1410,8 @@
         align-items: flex-start;
         gap: var(--spacing-4);
         margin-bottom: var(--spacing-4);
+        position: relative;
+        z-index: 1;
     }
 
     .series-card-info {
@@ -1205,20 +1456,19 @@
         }
     }
 
-    /* Collapse Toggle Button */
-    .collapse-toggle {
+    /* Collapse Toggle Button - Icon Only */
+    .collapse-toggle-icon {
         display: flex;
         align-items: center;
-        gap: var(--spacing-2);
-        padding: var(--spacing-2) var(--spacing-3);
+        justify-content: center;
+        padding: var(--spacing-2);
         background: color-mix(in srgb, var(--color-primary) 5%, transparent);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         color: var(--color-text-secondary);
-        font-size: 0.875rem;
-        font-weight: 500;
         cursor: pointer;
         transition: all var(--transition-fast);
+        min-width: 44px;
         min-height: 44px;
 
         :global(svg) {
@@ -1230,15 +1480,36 @@
         }
 
         &:hover {
-            background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+            background: color-mix(
+                in srgb,
+                var(--color-primary) 10%,
+                transparent
+            );
             border-color: var(--color-primary);
             color: var(--color-primary);
         }
 
         &:focus {
             outline: none;
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+            box-shadow: 0 0 0 3px
+                color-mix(in srgb, var(--color-primary) 15%, transparent);
         }
+    }
+
+    /* Collapsed Board Preview */
+    .collapsed-board-preview {
+        padding-top: var(--spacing-3);
+    }
+
+    .no-boards-message {
+        padding: var(--spacing-4);
+        text-align: center;
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+        font-style: italic;
+        background: color-mix(in srgb, var(--color-primary) 2%, white);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
     }
 
     /* Board Section */
@@ -1303,7 +1574,8 @@
         gap: var(--spacing-2);
         padding: var(--spacing-3) var(--spacing-4);
         background: var(--status-error-bg);
-        border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+        border: 1px solid
+            color-mix(in srgb, var(--color-danger) 20%, transparent);
         border-radius: var(--radius-lg);
         color: var(--status-error-text);
         font-size: 0.875rem;
@@ -1324,7 +1596,8 @@
         width: 2.5rem;
         height: 2.5rem;
         background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-        border: 2px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+        border: 2px solid
+            color-mix(in srgb, var(--color-danger) 20%, transparent);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -1332,10 +1605,56 @@
         flex-shrink: 0;
     }
 
+    /* Info Icon */
+    .info-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+        border: 2px solid
+            color-mix(in srgb, var(--color-primary) 20%, transparent);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Form Elements */
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: var(--spacing-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        color: var(--color-text-primary);
+        background: var(--color-bg-primary);
+        transition: all var(--transition-fast);
+
+        &:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px
+                color-mix(in srgb, var(--color-primary) 15%, transparent);
+        }
+
+        &::placeholder {
+            color: var(--color-text-tertiary);
+        }
+    }
+
     /* Warning Section */
     .warning-section {
         background: var(--status-error-bg);
-        border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+        border: 1px solid
+            color-mix(in srgb, var(--color-danger) 20%, transparent);
         border-radius: var(--radius-lg);
         padding: var(--spacing-4);
 
