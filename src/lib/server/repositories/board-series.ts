@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { withTransaction } from '../db/transaction.js';
-import { boardSeries, seriesMembers, boards, users } from '../db/schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { boardSeries, seriesMembers, boards, users, presence } from '../db/schema.js';
+import { eq, and, desc, sql, count, lte } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface CreateSeriesData {
@@ -98,18 +98,22 @@ export async function findSeriesById(seriesId: string) {
 }
 
 export async function getUserRoleInSeries(userId: string, seriesId: string) {
-  const [membership] = await db
-    .select({ role: seriesMembers.role })
-    .from(seriesMembers)
-    .where(
-      and(
-        eq(seriesMembers.userId, userId),
-        eq(seriesMembers.seriesId, seriesId)
-      )
-    )
+  const [result] = await db
+    .select({
+      isAdmin: users.is_admin,
+      role: seriesMembers.role
+    })
+    .from(users)
+    .leftJoin(seriesMembers, and(
+      eq(seriesMembers.userId, users.id),
+      eq(seriesMembers.seriesId, seriesId)
+    ))
+    .where(eq(users.id, userId))
     .limit(1);
 
-  return membership?.role || null;
+  if (!result) return null;
+  if (result.isAdmin) return 'admin';
+  return result.role || null;
 }
 
 export async function addSeriesMember(seriesId: string, userId: string, role: 'admin' | 'facilitator' | 'member') {
@@ -183,4 +187,165 @@ export async function hasActiveBoards(seriesId: string): Promise<boolean> {
     .limit(1);
 
   return !!result;
+}
+
+export interface SeriesStats {
+  id: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+  createdAt: string;
+  userCount: number;
+  boardCount: number;
+  lastAccessTime: string | null;
+  adminIsMember: boolean;
+}
+
+export async function getAllSeriesStats(adminUserId: string, page: number = 1, pageSize: number = 50): Promise<{
+  series: SeriesStats[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}> {
+  const offset = (page - 1) * pageSize;
+
+  // Get total count
+  const [countResult] = await db
+    .select({ count: count() })
+    .from(boardSeries);
+
+  const total = countResult?.count || 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  // Get series with stats
+  const seriesData = await db
+    .select({
+      id: boardSeries.id,
+      name: boardSeries.name,
+      slug: boardSeries.slug,
+      description: boardSeries.description,
+      createdAt: boardSeries.createdAt
+    })
+    .from(boardSeries)
+    .orderBy(desc(boardSeries.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  // For each series, get stats
+  const seriesStats: SeriesStats[] = await Promise.all(
+    seriesData.map(async (series) => {
+      // Get user count
+      const [userCountResult] = await db
+        .select({ count: count() })
+        .from(seriesMembers)
+        .where(eq(seriesMembers.seriesId, series.id));
+
+      // Get board count
+      const [boardCountResult] = await db
+        .select({ count: count() })
+        .from(boards)
+        .where(eq(boards.seriesId, series.id));
+
+      // Get last access time from presence table (exclude future dates)
+      const now = Date.now();
+      const [lastAccessResult] = await db
+        .select({ lastSeen: presence.lastSeen })
+        .from(presence)
+        .innerJoin(boards, eq(boards.id, presence.boardId))
+        .where(and(
+          eq(boards.seriesId, series.id),
+          lte(presence.lastSeen, now.toString())
+        ))
+        .orderBy(desc(presence.lastSeen))
+        .limit(1);
+
+      // If no presence data, fall back to board updated_at
+      let lastAccessTime: string | null = null;
+      if (lastAccessResult?.lastSeen) {
+        lastAccessTime = new Date(Number(lastAccessResult.lastSeen)).toISOString();
+      } else {
+        const [lastBoardUpdate] = await db
+          .select({ updatedAt: boards.updatedAt })
+          .from(boards)
+          .where(and(
+            eq(boards.seriesId, series.id),
+            lte(boards.updatedAt, new Date().toISOString())
+          ))
+          .orderBy(desc(boards.updatedAt))
+          .limit(1);
+
+        if (lastBoardUpdate?.updatedAt) {
+          lastAccessTime = lastBoardUpdate.updatedAt;
+        }
+      }
+
+      // Check if admin is a member
+      const [membershipResult] = await db
+        .select({ userId: seriesMembers.userId })
+        .from(seriesMembers)
+        .where(and(
+          eq(seriesMembers.seriesId, series.id),
+          eq(seriesMembers.userId, adminUserId)
+        ))
+        .limit(1);
+
+      return {
+        ...series,
+        userCount: userCountResult?.count || 0,
+        boardCount: boardCountResult?.count || 0,
+        lastAccessTime,
+        adminIsMember: !!membershipResult
+      };
+    })
+  );
+
+  return {
+    series: seriesStats,
+    total,
+    page,
+    pageSize,
+    totalPages
+  };
+}
+
+export async function deleteSeries(seriesId: string): Promise<void> {
+  // Delete series - cascade will handle related data
+  await db
+    .delete(boardSeries)
+    .where(eq(boardSeries.id, seriesId));
+}
+
+export async function toggleAdminMembership(seriesId: string, adminUserId: string): Promise<boolean> {
+  // Check if admin is already a member
+  const [existingMembership] = await db
+    .select({ role: seriesMembers.role })
+    .from(seriesMembers)
+    .where(and(
+      eq(seriesMembers.seriesId, seriesId),
+      eq(seriesMembers.userId, adminUserId)
+    ))
+    .limit(1);
+
+  if (existingMembership) {
+    // Remove membership
+    await db
+      .delete(seriesMembers)
+      .where(and(
+        eq(seriesMembers.seriesId, seriesId),
+        eq(seriesMembers.userId, adminUserId)
+      ));
+    return false; // Now not a member
+  } else {
+    // Add membership as admin
+    await db
+      .insert(seriesMembers)
+      .values({
+        seriesId,
+        userId: adminUserId,
+        role: 'admin',
+        joinedAt: new Date().toISOString()
+      });
+    return true; // Now a member
+  }
 }

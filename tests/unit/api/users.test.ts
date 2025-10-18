@@ -343,32 +343,6 @@ describe('POST /api/series/[id]/users', () => {
 		expect(data.success).toBe(false);
 		expect(data.error).toBe('User is already a member of this series');
 	});
-
-	it('should fail when series has no active boards', async () => {
-		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
-		const mockTargetUser = { id: '00000000-0000-4000-8000-000000000002', email: 'newuser@example.com', name: 'New User' };
-
-		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce(null);
-		vi.mocked(findUserByEmail).mockResolvedValue(mockTargetUser);
-		vi.mocked(hasActiveBoards).mockResolvedValue(false);
-
-		const event = createMockRequestEvent({
-			method: 'POST',
-			url: 'http://localhost:5173/api/series/series-1/users',
-			body: {
-				email: 'newuser@example.com'
-			}
-		});
-		event.params = { id: 'series-1' };
-
-		const response = await AddUserToSeries(event);
-		const data = await response.json();
-
-		expect(response.status).toBe(403);
-		expect(data.success).toBe(false);
-		expect(data.error).toBe('Cannot add users to a series with no active boards');
-	});
 });
 
 describe('DELETE /api/series/[id]/users', () => {

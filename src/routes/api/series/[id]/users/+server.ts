@@ -23,7 +23,7 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const user = requireUser(event);
 		const seriesId = event.params.id;
-		
+
 		// Check if user has access to this series
 		const userRole = await getUserRoleInSeries(user.userId, seriesId);
 		if (!userRole) {
@@ -32,9 +32,9 @@ export const GET: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		const members = await getSeriesMembers(seriesId);
-		
+
 		return json({
 			success: true,
 			users: members
@@ -43,7 +43,7 @@ export const GET: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to fetch users' },
 			{ status: 500 }
@@ -57,7 +57,7 @@ export const POST: RequestHandler = async (event) => {
 		const seriesId = event.params.id;
 		const body = await event.request.json();
 		const data = addUserSchema.parse(body);
-		
+
 		// Check if user is admin of this series
 		const userRole = await getUserRoleInSeries(user.userId, seriesId);
 		if (userRole !== 'admin') {
@@ -66,7 +66,7 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Find the user by email
 		const targetUser = await findUserByEmail(data.email);
 		if (!targetUser) {
@@ -75,22 +75,13 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Check if user is already in the series
 		const existingRole = await getUserRoleInSeries(targetUser.id, seriesId);
 		if (existingRole) {
 			return json(
 				{ success: false, error: 'User is already a member of this series' },
 				{ status: 409 }
-			);
-		}
-
-		// Check if series has any active boards before adding new member
-		const hasActive = await hasActiveBoards(seriesId);
-		if (!hasActive) {
-			return json(
-				{ success: false, error: 'Cannot add users to a series with no active boards' },
-				{ status: 403 }
 			);
 		}
 
@@ -105,14 +96,14 @@ export const POST: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		if (error instanceof z.ZodError) {
 			return json(
 				{ success: false, error: 'Invalid input', details: error.errors },
 				{ status: 400 }
 			);
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to add user' },
 			{ status: 500 }
@@ -126,7 +117,7 @@ export const PUT: RequestHandler = async (event) => {
 		const seriesId = event.params.id;
 		const body = await event.request.json();
 		const data = updateUserRoleSchema.parse(body);
-		
+
 		// Check if user is admin of this series
 		const userRole = await getUserRoleInSeries(user.userId, seriesId);
 		if (userRole !== 'admin') {
@@ -135,7 +126,7 @@ export const PUT: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Check if target user exists in series
 		const targetUserRole = await getUserRoleInSeries(data.userId, seriesId);
 		if (!targetUserRole) {
@@ -144,7 +135,7 @@ export const PUT: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Don't allow changing role of other admins
 		if (targetUserRole === 'admin' && user.userId !== data.userId) {
 			return json(
@@ -152,10 +143,10 @@ export const PUT: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Update user role
 		await updateUserRoleInSeries(seriesId, data.userId, data.role);
-		
+
 		return json({
 			success: true,
 			message: 'User role updated successfully'
@@ -164,14 +155,14 @@ export const PUT: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		if (error instanceof z.ZodError) {
 			return json(
 				{ success: false, error: 'Invalid input', details: error.errors },
 				{ status: 400 }
 			);
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to update user role' },
 			{ status: 500 }
@@ -185,14 +176,14 @@ export const DELETE: RequestHandler = async (event) => {
 		const seriesId = event.params.id;
 		const url = new URL(event.request.url);
 		const userIdToRemove = url.searchParams.get('userId');
-		
+
 		if (!userIdToRemove) {
 			return json(
 				{ success: false, error: 'User ID is required' },
 				{ status: 400 }
 			);
 		}
-		
+
 		// Check if user is admin of this series
 		const userRole = await getUserRoleInSeries(user.userId, seriesId);
 		if (userRole !== 'admin') {
@@ -201,7 +192,7 @@ export const DELETE: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Check if target user exists in series
 		const targetUserRole = await getUserRoleInSeries(userIdToRemove, seriesId);
 		if (!targetUserRole) {
@@ -210,7 +201,7 @@ export const DELETE: RequestHandler = async (event) => {
 				{ status: 404 }
 			);
 		}
-		
+
 		// Don't allow removing other admins
 		if (targetUserRole === 'admin' && user.userId !== userIdToRemove) {
 			return json(
@@ -218,10 +209,10 @@ export const DELETE: RequestHandler = async (event) => {
 				{ status: 403 }
 			);
 		}
-		
+
 		// Remove user from series
 		await removeUserFromSeries(seriesId, userIdToRemove);
-		
+
 		return json({
 			success: true,
 			message: 'User removed successfully'
@@ -230,7 +221,7 @@ export const DELETE: RequestHandler = async (event) => {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		return json(
 			{ success: false, error: 'Failed to remove user' },
 			{ status: 500 }

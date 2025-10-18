@@ -31,6 +31,11 @@ export const db = isPostgres
 export const dbSupportsAsyncTransactions = isPostgres;
 export const dbRequiresManualClose = !isPostgres;
 
+// Export database type for introspection
+export const getDatabaseType = (): 'postgresql' | 'sqlite' => {
+  return isPostgres ? 'postgresql' : 'sqlite';
+};
+
 // Export for cleanup/shutdown if needed
 export const closeDatabase = () => {
   if (dbRequiresManualClose) {

@@ -15,6 +15,62 @@
       "when": 1759451417678,
       "tag": "0001_add_agreements",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1759545678000,
+      "tag": "0002_add_scorecards",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1759645678000,
+      "tag": "0003_add_completed_to_comments",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1759745678000,
+      "tag": "0004_add_clone_of_to_boards",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1759845678000,
+      "tag": "0005_add_static_scenes_and_health_updates",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1759945678000,
+      "tag": "0006_add_health_responses_unique_constraint",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1760045678000,
+      "tag": "0007_add_survey_results_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1760145678000,
+      "tag": "0008_add_scene_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1760245678000,
+      "tag": "0009_remove_scene_boolean_columns",
+      "breakpoints": true
     }
   ]
 }

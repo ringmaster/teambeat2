@@ -3,6 +3,7 @@
     import type { PerformanceStats } from "$lib/server/performance/tracker";
     import TimeSeriesChart from "$lib/components/TimeSeriesChart.svelte";
     import { toastStore } from "$lib/stores/toast";
+    import AdminNav from "$lib/components/AdminNav.svelte";
 
     let stats: PerformanceStats | null = $state(null);
     let loading = $state(true);
@@ -103,6 +104,7 @@
     });
 </script>
 
+<AdminNav />
 <div class="page-container">
     <div class="performance-dashboard">
         <header class="dashboard-header">
@@ -429,6 +431,7 @@
             display: flex;
             gap: 1rem;
             align-items: center;
+            flex-wrap: wrap;
 
             label {
                 display: flex;
