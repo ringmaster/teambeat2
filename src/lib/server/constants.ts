@@ -6,3 +6,4 @@ export const PRESENCE_CLEANUP_INTERVAL_MS = 60 * 1000; // 1 minute cleanup inter
 // SSE heartbeat constants
 export const SSE_HEARTBEAT_INTERVAL_MS = 30 * 1000; // 30 seconds
 export const SSE_STALE_CONNECTION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+export const MAX_CONNECTIONS_PER_USER = 10; // Prevents accidental DoS from buggy clients

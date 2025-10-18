@@ -63,12 +63,11 @@
 
     // SSE Connection Health Monitoring
     let sseConnectionState = $state<
-        "connecting" | "connected" | "disconnected" | "error"
+        "connecting" | "connected" | "disconnected" | "error" | "limit_exceeded"
     >("disconnected");
     let sseReconnectAttempts = $state(0);
-    let sseMaxReconnectAttempts = 5;
-    let sseReconnectTimeout: number | ReturnType<typeof setTimeout> | null =
-        null;
+    let sseMaxReconnectAttempts = $state(10);
+    let sseErrorMessage = $state<string | null>(null);
 
     // UI State
     let newCardContentByColumn = new SvelteMap<string, string>();
@@ -288,16 +287,12 @@
     });
 
     onDestroy(() => {
-        clearSSETimers();
         if (eventSource) {
             eventSource.close();
         }
     });
 
     function setupSSE() {
-        // Clear any existing timers - let custom SSE client handle reconnection
-        clearSSETimers();
-
         // Set connecting state
         sseConnectionState = "connecting";
 
@@ -339,6 +334,23 @@
                 }
             });
 
+            eventSource.addEventListener("error", (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.error === "Connection limit exceeded") {
+                        sseConnectionState = "limit_exceeded";
+                        sseErrorMessage = "Too many connections open. Please close other browser tabs or windows viewing this board, then refresh this page.";
+                        // Don't attempt reconnection for limit exceeded errors
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Failed to parse SSE error message:", error);
+                }
+            });
+
             eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -356,36 +368,33 @@
 
             eventSource.onerror = (error) => {
                 console.error("SSE error:", error);
-                sseConnectionState = "error";
 
-                // Track reconnection attempts for UI state
-                sseReconnectAttempts++;
-
-                if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
-                    console.error(
-                        "Max SSE reconnection attempts reached, reloading page",
-                    );
-                    window.location.reload();
+                // Check if this is a connection limit error
+                if (error?.message && (error.message.includes('Connection limit exceeded') || error.message.includes('Too many SSE connections'))) {
+                    sseConnectionState = "limit_exceeded";
+                    sseErrorMessage = "Too many connections open. Please close other browser tabs or windows viewing this board, then refresh this page.";
+                    return;
                 }
+
+                // For other errors, set error state - the SSE client handles reconnection
+                sseConnectionState = "error";
+            };
+
+            eventSource.onreconnect = (attempt, maxAttempts) => {
+                console.log(`SSE reconnecting: attempt ${attempt}/${maxAttempts}`);
+                sseReconnectAttempts = attempt;
+                sseMaxReconnectAttempts = maxAttempts;
+                sseConnectionState = "error";
             };
 
             eventSource.onclose = () => {
                 console.log("SSE connection closed");
+                // Only called when max reconnection attempts exhausted
                 sseConnectionState = "disconnected";
             };
         } catch (error) {
             console.error("Failed to create SSE connection:", error);
             sseConnectionState = "error";
-
-            // Fallback to manual reconnection for initialization errors
-            attemptReconnection();
-        }
-    }
-
-    function clearSSETimers() {
-        if (sseReconnectTimeout) {
-            clearTimeout(sseReconnectTimeout);
-            sseReconnectTimeout = null;
         }
     }
 
@@ -527,31 +536,6 @@
         }
     }
 
-    function attemptReconnection() {
-        if (sseReconnectAttempts >= sseMaxReconnectAttempts) {
-            console.error(
-                "Max SSE reconnection attempts reached, reloading page",
-            );
-            sseConnectionState = "error";
-            // Reload the page as final fallback
-            window.location.reload();
-            return;
-        }
-
-        sseReconnectAttempts++;
-        const delay = Math.min(
-            1000 * Math.pow(2, sseReconnectAttempts - 1),
-            30000,
-        ); // Exponential backoff, max 30s
-
-        console.log(
-            `SSE reconnection attempt ${sseReconnectAttempts}/${sseMaxReconnectAttempts} in ${delay}ms`,
-        );
-
-        sseReconnectTimeout = setTimeout(() => {
-            setupSSE();
-        }, delay);
-    }
 
     function handleSSEMessage(data: any) {
         console.log("Handling SSE Message", data);
@@ -2652,17 +2636,41 @@
                     <span>Connecting...</span>
                 {:else if sseConnectionState === "disconnected"}
                     <div
-                        class="connection-status__indicator connection-status__indicator--disconnected"
+                        class="connection-status__indicator connection-status__indicator--error"
                     ></div>
-                    <span
-                        >Reconnecting... (Attempt {sseReconnectAttempts}/{sseMaxReconnectAttempts})</span
-                    >
+                    <span>Unable to reconnect. <button class="link-button" onclick={() => window.location.reload()}>Click to reload</button></span>
+                {:else if sseConnectionState === "limit_exceeded"}
+                    <div
+                        class="connection-status__indicator connection-status__indicator--error"
+                    ></div>
+                    <span>Connection limit exceeded</span>
                 {:else}
                     <div
                         class="connection-status__indicator connection-status__indicator--error"
                     ></div>
-                    <span>Connection failed - reloading...</span>
+                    <span>Attempting to reconnect... ({sseReconnectAttempts}/{sseMaxReconnectAttempts} tries)</span>
                 {/if}
+            </div>
+        </div>
+    {/if}
+
+    <!-- Connection Limit Exceeded Overlay -->
+    {#if sseConnectionState === "limit_exceeded"}
+        <div class="connection-error-overlay">
+            <div class="connection-error-dialog">
+                <div class="connection-error-icon">
+                    <Icon name="warning" color="danger" circle={true} size="lg" />
+                </div>
+                <h2 class="connection-error-title">Too Many Connections</h2>
+                <p class="connection-error-message">
+                    {sseErrorMessage}
+                </p>
+                <button
+                    class="btn-primary"
+                    onclick={() => window.location.reload()}
+                >
+                    Refresh Page
+                </button>
             </div>
         </div>
     {/if}
@@ -2907,6 +2915,20 @@
         background-color: #dc2626;
     }
 
+    .link-button {
+        background: none;
+        border: none;
+        color: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 0;
+        font: inherit;
+    }
+
+    .link-button:hover {
+        opacity: 0.8;
+    }
+
     @keyframes pulse {
         0%,
         100% {
@@ -2965,6 +2987,49 @@
         color: var(--color-text-muted);
         font-size: smaller;
         margin: 0 0 var(--spacing-2);
+        line-height: 1.6;
+    }
+
+    /* Connection Error Overlay */
+    .connection-error-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.75);
+        .flex-center();
+        z-index: 9999;
+        padding: var(--spacing-4);
+    }
+
+    .connection-error-dialog {
+        .flex-column-center();
+        gap: var(--spacing-4);
+        max-width: 28rem;
+        background-color: var(--color-bg-primary);
+        padding: var(--spacing-6);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xl);
+        text-align: center;
+    }
+
+    .connection-error-icon {
+        margin-bottom: var(--spacing-2);
+
+        :global(.icon) {
+            width: 4rem;
+            height: 4rem;
+        }
+    }
+
+    .connection-error-title {
+        .heading(2);
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+
+    .connection-error-message {
+        .body-text(base);
+        color: var(--color-text-secondary);
+        margin: 0;
         line-height: 1.6;
     }
 </style>

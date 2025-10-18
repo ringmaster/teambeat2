@@ -27,6 +27,7 @@ export type SSEEventHandler = (event: SSEEvent) => void;
 export type SSEStateHandler = () => void;
 export type SSEErrorHandler = (error: Error) => void;
 export type MessageEventHandler = (event: { data: string }) => void;
+export type SSEReconnectHandler = (attempt: number, maxAttempts: number) => void;
 
 export class SSEClient {
   private url: string;
@@ -41,12 +42,14 @@ export class SSEClient {
   private reconnectAttempts = 0;
   private isConnecting = false;
   private isClosed = false;
+  private receivedFatalError = false;
 
   private eventHandlers: Map<string, SSEEventHandler[]> = new Map();
   private onOpenHandler: SSEStateHandler | null = null;
   private onErrorHandler: SSEErrorHandler | null = null;
   private onCloseHandler: SSEStateHandler | null = null;
   private onMessageHandler: MessageEventHandler | null = null;
+  private onReconnectHandler: SSEReconnectHandler | null = null;
 
   public readyState: number = 0; // 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
 
@@ -93,6 +96,12 @@ export class SSEClient {
       const response = await fetch(this.url, fetchOptions);
 
       if (!response.ok) {
+        // Check for connection limit error (HTTP 429)
+        if (response.status === 429) {
+          this.receivedFatalError = true;
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Connection limit exceeded');
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -110,6 +119,17 @@ export class SSEClient {
 
       await this.processStream(response.body);
 
+      // Stream closed - check if it was due to a fatal error
+      if (this.receivedFatalError) {
+        // Don't reconnect for fatal errors
+        this.readyState = 2; // CLOSED
+        return;
+      }
+
+      // Normal stream closure - attempt reconnection
+      this.readyState = 2; // CLOSED
+      this.scheduleReconnect();
+
     } catch (error) {
       this.isConnecting = false;
 
@@ -122,6 +142,11 @@ export class SSEClient {
 
       if (this.onErrorHandler) {
         this.onErrorHandler(error instanceof Error ? error : new Error(String(error)));
+      }
+
+      // Don't reconnect if this was a fatal error
+      if (this.receivedFatalError) {
+        return;
       }
 
       this.scheduleReconnect();
@@ -138,6 +163,11 @@ export class SSEClient {
         const { done, value } = await reader.read();
 
         if (done) {
+          // Process any remaining buffered data before closing
+          if (buffer.trim()) {
+            const lines = buffer.split('\n');
+            this.processLines(lines);
+          }
           break;
         }
 
@@ -219,6 +249,18 @@ export class SSEClient {
       event.data = event.data.slice(0, -1);
     }
 
+    // Check for fatal errors (connection limit exceeded)
+    if (event.type === 'error') {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.error === 'Connection limit exceeded') {
+          this.receivedFatalError = true;
+        }
+      } catch {
+        // Not JSON, ignore
+      }
+    }
+
     // Dispatch to type-specific handlers
     const handlers = this.eventHandlers.get(event.type) || [];
     handlers.forEach(handler => handler(event));
@@ -245,6 +287,11 @@ export class SSEClient {
     }
 
     this.reconnectAttempts++;
+
+    // Notify about reconnection attempt
+    if (this.onReconnectHandler) {
+      this.onReconnectHandler(this.reconnectAttempts, this.maxReconnectAttempts);
+    }
 
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null;
@@ -304,5 +351,9 @@ export class SSEClient {
 
   public set onmessage(handler: MessageEventHandler | null) {
     this.onMessageHandler = handler;
+  }
+
+  public set onreconnect(handler: SSEReconnectHandler | null) {
+    this.onReconnectHandler = handler;
   }
 }

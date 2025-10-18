@@ -5,6 +5,7 @@ import { sseManager } from '$lib/server/sse/manager.js';
 import { getSession } from '$lib/server/auth/session.js';
 import { broadcastUserJoined, broadcastUserLeft, broadcastPresenceUpdate } from '$lib/server/sse/broadcast.js';
 import { updatePresence, removePresence } from '$lib/server/repositories/presence.js';
+import { MAX_CONNECTIONS_PER_USER } from '$lib/server/constants.js';
 
 // Shared function to create SSE connection for both GET and POST
 const createSSEConnection = async (cookies: any, boardId: string | null) => {
@@ -21,16 +22,43 @@ const createSSEConnection = async (cookies: any, boardId: string | null) => {
 
   const clientId = uuidv4();
 
+  // Check connection limit before creating stream
+  if (userId) {
+    const userConns = sseManager['userConnections'].get(userId) || new Set();
+    if (userConns.size >= MAX_CONNECTIONS_PER_USER) {
+      console.log('SSE connection rejected - limit exceeded for user:', userId);
+      // Return HTTP 429 Too Many Requests with JSON error
+      return json(
+        { error: 'Connection limit exceeded', message: 'Too many SSE connections for this user' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': '60'
+          }
+        }
+      );
+    }
+  }
+
   // Create readable stream for SSE
   const stream = new ReadableStream({
     start(controller) {
+      // Add client to manager
+      const response = new Response();
+      const added = sseManager.addClient(clientId, response, controller, userId, boardId);
+
+      if (!added) {
+        // This shouldn't happen since we checked above, but handle it anyway
+        console.log('SSE connection rejected unexpectedly');
+        controller.enqueue('event: error\n');
+        controller.enqueue(`data: ${JSON.stringify({ error: 'Connection limit exceeded', timestamp: Date.now() })}\n\n`);
+        controller.close();
+        return;
+      }
+
       // Send initial connection event
       controller.enqueue('event: connected\n');
       controller.enqueue(`data: ${JSON.stringify({ clientId, timestamp: Date.now() })}\n\n`);
-
-      // Add client to manager
-      const response = new Response();
-      sseManager.addClient(clientId, response, controller, userId, boardId);
 
       // Join board if specified
       if (boardId && userId) {

@@ -1,4 +1,4 @@
-import { PRESENCE_PING_INTERVAL_MS, SSE_HEARTBEAT_INTERVAL_MS, SSE_STALE_CONNECTION_TIMEOUT_MS } from '../constants.js';
+import { PRESENCE_PING_INTERVAL_MS, SSE_HEARTBEAT_INTERVAL_MS, SSE_STALE_CONNECTION_TIMEOUT_MS, MAX_CONNECTIONS_PER_USER } from '../constants.js';
 import { getUsersNearingTimeout } from '../repositories/presence.js';
 import { performanceTracker } from '../performance/tracker.js';
 
@@ -20,8 +20,18 @@ export interface ConnectedSSEClient {
 class SSEManager {
   private clients = new Map<string, ConnectedSSEClient>();
   private boardClients = new Map<string, Set<string>>();
+  private userConnections = new Map<string, Set<string>>();
 
   addClient(clientId: string, response: Response, controller: ReadableStreamDefaultController<string>, userId: string | null = null, boardId: string | null = null) {
+    // Check per-user connection limit
+    if (userId) {
+      const userConns = this.userConnections.get(userId) || new Set();
+      if (userConns.size >= MAX_CONNECTIONS_PER_USER) {
+        console.warn(`User ${userId} exceeded connection limit (${MAX_CONNECTIONS_PER_USER})`);
+        return false;
+      }
+    }
+
     const client: ConnectedSSEClient = {
       response,
       controller,
@@ -32,6 +42,13 @@ class SSEManager {
 
     this.clients.set(clientId, client);
 
+    // Track user connections
+    if (userId) {
+      const userConns = this.userConnections.get(userId) || new Set();
+      userConns.add(clientId);
+      this.userConnections.set(userId, userConns);
+    }
+
     if (boardId) {
       if (!this.boardClients.has(boardId)) {
         this.boardClients.set(boardId, new Set());
@@ -41,22 +58,35 @@ class SSEManager {
 
     // Track connection in performance metrics
     performanceTracker.recordConnection(true);
+    return true;
   }
 
   removeClient(clientId: string) {
     const client = this.clients.get(clientId);
-    if (client && client.boardId) {
-      const boardClients = this.boardClients.get(client.boardId);
-      if (boardClients) {
-        boardClients.delete(clientId);
-        if (boardClients.size === 0) {
-          this.boardClients.delete(client.boardId);
+    if (client) {
+      // Remove from board tracking
+      if (client.boardId) {
+        const boardClients = this.boardClients.get(client.boardId);
+        if (boardClients) {
+          boardClients.delete(clientId);
+          if (boardClients.size === 0) {
+            this.boardClients.delete(client.boardId);
+          }
         }
       }
-    }
 
-    // Close the SSE stream
-    if (client) {
+      // Remove from user connection tracking
+      if (client.userId) {
+        const userConns = this.userConnections.get(client.userId);
+        if (userConns) {
+          userConns.delete(clientId);
+          if (userConns.size === 0) {
+            this.userConnections.delete(client.userId);
+          }
+        }
+      }
+
+      // Close the SSE stream
       try {
         client.controller.close();
       } catch {
