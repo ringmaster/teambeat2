@@ -136,7 +136,8 @@
                         >
                             <button
                                 class="avatar-dropdown-trigger"
-                                onclick={() => (showUserDropdown = !showUserDropdown)}
+                                onclick={() =>
+                                    (showUserDropdown = !showUserDropdown)}
                                 onkeydown={(e) =>
                                     e.key === "Escape" &&
                                     (showUserDropdown = false)}
@@ -179,7 +180,7 @@
                                             data-sveltekit-preload-data="hover"
                                         >
                                             <Icon name="chart-bar" size="sm" />
-                                            <span>Performance</span>
+                                            <span>Admin</span>
                                         </a>
                                     {/if}
                                     <div class="dropdown-divider"></div>
