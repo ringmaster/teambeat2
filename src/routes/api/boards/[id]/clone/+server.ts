@@ -6,7 +6,7 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { withTransaction } from '$lib/server/db/transaction.js';
-import { boards, columns, scenes, scenesColumns, agreements, sceneScorecards } from '$lib/server/db/schema.js';
+import { boards, columns, scenes, scenesColumns, agreements, sceneScorecards, sceneFlags } from '$lib/server/db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -144,18 +144,29 @@ export const POST: RequestHandler = async (event) => {
             mode: scene.mode,
             seq: scene.seq,
             displayRule: scene.displayRule,
-            allowAddCards: scene.allowAddCards,
-            allowEditCards: scene.allowEditCards,
-            allowObscureCards: scene.allowObscureCards,
-            allowMoveCards: scene.allowMoveCards,
-            allowGroupCards: scene.allowGroupCards,
-            showVotes: scene.showVotes,
-            allowVoting: scene.allowVoting,
-            showComments: scene.showComments,
-            allowComments: scene.allowComments,
-            multipleVotesPerCard: scene.multipleVotesPerCard,
             createdAt: new Date().toISOString()
           });
+      }
+
+      // Clone scene flags
+      if (Object.keys(sceneIdMapping).length > 0) {
+        const sourceSceneIds = Object.keys(sceneIdMapping);
+        const sourceSceneFlags = await tx
+          .select()
+          .from(sceneFlags)
+          .where(inArray(sceneFlags.sceneId, sourceSceneIds));
+
+        for (const sceneFlag of sourceSceneFlags) {
+          const newSceneId = sceneIdMapping[sceneFlag.sceneId];
+          if (newSceneId) {
+            await tx
+              .insert(sceneFlags)
+              .values({
+                sceneId: newSceneId,
+                flag: sceneFlag.flag
+              });
+          }
+        }
       }
 
       // Clone scene column settings
