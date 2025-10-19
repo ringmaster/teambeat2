@@ -167,13 +167,16 @@ export const agreements = table('agreements', {
 
 export const healthQuestions = table('health_questions', {
   id: text('id').primaryKey(),
+  threadId: text('thread_id').notNull(),
   sceneId: text('scene_id').notNull().references(() => scenes.id, { onDelete: 'cascade' }),
   question: text('question').notNull(),
   description: text('description'),
   questionType: text('question_type').notNull().$type<'boolean' | 'range1to5' | 'agreetodisagree' | 'redyellowgreen'>(),
   seq: integer('seq').notNull(),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
-});
+}, (table) => ({
+  threadIdx: indexField('health_questions_thread_id_idx').on(table.threadId)
+}));
 
 export const healthResponses = table('health_responses', {
   id: text('id').primaryKey(),
@@ -411,11 +414,13 @@ export const commentsRelations = relations(comments, ({ one }) => ({
   }),
   user: one(users, {
     fields: [comments.userId],
-    references: [users.id]
+    references: [users.id],
+    relationName: 'commentAuthor'
   }),
   completedBy: one(users, {
     fields: [comments.completedByUserId],
-    references: [users.id]
+    references: [users.id],
+    relationName: 'commentCompleter'
   })
 }));
 
@@ -426,11 +431,13 @@ export const agreementsRelations = relations(agreements, ({ one }) => ({
   }),
   user: one(users, {
     fields: [agreements.userId],
-    references: [users.id]
+    references: [users.id],
+    relationName: 'agreementAuthor'
   }),
   completedBy: one(users, {
     fields: [agreements.completedByUserId],
-    references: [users.id]
+    references: [users.id],
+    relationName: 'agreementCompleter'
   }),
   sourceAgreement: one(agreements, {
     fields: [agreements.sourceAgreementId],
@@ -472,8 +479,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   seriesMembers: many(seriesMembers),
   cards: many(cards),
   votes: many(votes),
-  comments: many(comments),
-  agreements: many(agreements),
+  authoredComments: many(comments, { relationName: 'commentAuthor' }),
+  completedComments: many(comments, { relationName: 'commentCompleter' }),
+  authoredAgreements: many(agreements, { relationName: 'agreementAuthor' }),
+  completedAgreements: many(agreements, { relationName: 'agreementCompleter' }),
   healthResponses: many(healthResponses),
   presence: many(presence),
   authenticators: many(userAuthenticators)

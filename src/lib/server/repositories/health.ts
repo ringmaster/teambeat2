@@ -27,11 +27,13 @@ export interface CreateHealthResponseData {
 
 export async function createHealthQuestion(data: CreateHealthQuestionData) {
   const id = uuidv4();
+  const threadId = uuidv4(); // New questions start their own thread
 
   const [question] = await db
     .insert(healthQuestions)
     .values({
       id,
+      threadId,
       ...data
     })
     .returning();
@@ -167,11 +169,13 @@ export async function applyHealthQuestionPreset(sceneId: string, presetId: strin
     for (let i = 0; i < preset.questions.length; i++) {
       const presetQuestion = preset.questions[i];
       const id = uuidv4();
+      const threadId = uuidv4(); // Each preset question starts its own thread
 
       const [question] = await tx
         .insert(healthQuestions)
         .values({
           id,
+          threadId,
           sceneId,
           question: presetQuestion.question,
           description: presetQuestion.description,

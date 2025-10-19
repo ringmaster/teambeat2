@@ -6,7 +6,7 @@ import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { db } from '$lib/server/db/index.js';
 import { withTransaction } from '$lib/server/db/transaction.js';
-import { boards, columns, scenes, scenesColumns, agreements, sceneScorecards, sceneFlags } from '$lib/server/db/schema.js';
+import { boards, columns, scenes, scenesColumns, agreements, sceneScorecards, sceneFlags, healthQuestions } from '$lib/server/db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -224,6 +224,33 @@ export const POST: RequestHandler = async (event) => {
                 scorecardId: scorecard.scorecardId,
                 collectedData: null,
                 processedAt: null,
+                createdAt: new Date().toISOString()
+              });
+          }
+        }
+      }
+
+      // Clone health questions (preserving thread_id for historical comparison)
+      if (Object.keys(sceneIdMapping).length > 0) {
+        const sourceSceneIds = Object.keys(sceneIdMapping);
+        const sourceHealthQuestions = await tx
+          .select()
+          .from(healthQuestions)
+          .where(inArray(healthQuestions.sceneId, sourceSceneIds));
+
+        for (const question of sourceHealthQuestions) {
+          const newSceneId = sceneIdMapping[question.sceneId];
+          if (newSceneId) {
+            await tx
+              .insert(healthQuestions)
+              .values({
+                id: uuidv4(),
+                threadId: question.threadId, // Preserve thread_id for historical comparison
+                sceneId: newSceneId,
+                question: question.question,
+                description: question.description,
+                questionType: question.questionType,
+                seq: question.seq,
                 createdAt: new Date().toISOString()
               });
           }
