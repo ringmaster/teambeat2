@@ -11,6 +11,7 @@
         { label: "Performance", href: "/admin/performance", path: "/admin/performance" },
         { label: "Schema", href: "/admin/schema", path: "/admin/schema" },
         { label: "Series", href: "/admin/series", path: "/admin/series" },
+        { label: "Users", href: "/admin/users", path: "/admin/users" },
     ];
 
     let currentPath = $derived($page.url.pathname);
