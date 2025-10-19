@@ -103,6 +103,29 @@ export async function findSceneScorecardsByScene(sceneId: string) {
 }
 
 /**
+ * Get scorecard counts by scene for a board
+ * Returns a map of sceneId -> count of attached scorecards
+ */
+export async function getScorecardCountsByBoard(boardId: string): Promise<Record<string, number>> {
+  const results = await db
+    .select({
+      sceneId: sceneScorecards.sceneId,
+      sceneScorecardId: sceneScorecards.id
+    })
+    .from(sceneScorecards)
+    .innerJoin(scenes, eq(sceneScorecards.sceneId, scenes.id))
+    .where(eq(scenes.boardId, boardId));
+
+  // Count scorecards per scene
+  const countsByScene: Record<string, number> = {};
+  for (const row of results) {
+    countsByScene[row.sceneId] = (countsByScene[row.sceneId] || 0) + 1;
+  }
+
+  return countsByScene;
+}
+
+/**
  * Detach a scorecard from a scene
  */
 export async function detachScorecardFromScene(sceneScorecardId: string) {

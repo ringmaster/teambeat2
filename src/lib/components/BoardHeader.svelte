@@ -34,6 +34,7 @@
         cards?: any[];
         agreements?: any[];
         lastHealthCheckDate?: string | null;
+        scorecardCountsByScene?: Record<string, number>;
         showSceneDropdown: boolean;
         showBoardConfig?: boolean;
         connectedUsers?: number;
@@ -70,6 +71,7 @@
         cards = [],
         agreements = [],
         lastHealthCheckDate = null,
+        scorecardCountsByScene = {},
         showSceneDropdown,
         showBoardConfig = false,
         connectedUsers = 0,
@@ -167,6 +169,7 @@
                         {cards}
                         {agreements}
                         {lastHealthCheckDate}
+                        {scorecardCountsByScene}
                         {showSceneDropdown}
                         {onSceneChange}
                         {onNextScene}

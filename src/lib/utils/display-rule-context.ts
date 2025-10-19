@@ -9,7 +9,8 @@ export function buildDisplayRuleContext(
     scene: any,
     cards: any[],
     agreements?: any[],
-    lastHealthCheckDate?: string | null
+    lastHealthCheckDate?: string | null,
+    scorecardCountsByScene?: Record<string, number>
 ): Record<string, any> {
     // Build columns object with card data
     const columns: Record<string, any> = {};
@@ -33,6 +34,9 @@ export function buildDisplayRuleContext(
     const incompleteAgreements = agreementsData.filter(a => !a.completed);
     const completedAgreements = agreementsData.filter(a => a.completed);
 
+    // Get scorecard count for this scene
+    const scorecardCount = scorecardCountsByScene && scene?.id ? (scorecardCountsByScene[scene.id] || 0) : 0;
+
     return {
         board: {
             title: board?.name || '',
@@ -41,7 +45,8 @@ export function buildDisplayRuleContext(
         },
         scene: {
             title: scene?.title || '',
-            mode: scene?.mode || 'columns'
+            mode: scene?.mode || 'columns',
+            scorecardCount: scorecardCount
         },
         columns,
         agreements: {
@@ -66,7 +71,8 @@ export function evaluateDisplayRule(
     board: any,
     cards: any[],
     agreements?: any[],
-    lastHealthCheckDate?: string | null
+    lastHealthCheckDate?: string | null,
+    scorecardCountsByScene?: Record<string, number>
 ): boolean {
     // If no display rule, always show the scene
     if (!scene?.displayRule || scene.displayRule.trim() === '') {
@@ -75,7 +81,7 @@ export function evaluateDisplayRule(
 
     try {
         // Build the context for evaluation
-        const context = buildDisplayRuleContext(board, scene, cards, agreements, lastHealthCheckDate);
+        const context = buildDisplayRuleContext(board, scene, cards, agreements, lastHealthCheckDate, scorecardCountsByScene);
 
         console.log(`[Display Rule] Evaluating scene "${scene.title}"`, {
             rule: scene.displayRule,

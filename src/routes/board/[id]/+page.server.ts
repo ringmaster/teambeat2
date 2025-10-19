@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { boards, boardSeries } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getLastHealthCheckDate } from '$lib/server/repositories/health';
+import { getScorecardCountsByBoard } from '$lib/server/repositories/scene-scorecard';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
@@ -35,6 +36,9 @@ export const load: PageServerLoad = async ({ params }) => {
       lastHealthCheckDate = await getLastHealthCheckDate(board.seriesId);
     }
 
+    // Get scorecard counts by scene for this board
+    const scorecardCountsByScene = await getScorecardCountsByBoard(params.id);
+
     // Create page title
     const pageTitle = board.seriesName
       ? `${board.name} - ${board.seriesName} - TeamBeat`
@@ -56,6 +60,7 @@ export const load: PageServerLoad = async ({ params }) => {
         seriesDescription: board.seriesDescription
       },
       lastHealthCheckDate,
+      scorecardCountsByScene,
       pageTitle,
       description
     };

@@ -29,6 +29,7 @@
         data: {
             board: any;
             lastHealthCheckDate: string | null;
+            scorecardCountsByScene: Record<string, number>;
             pageTitle: string;
             description: string;
         };
@@ -127,6 +128,7 @@
     let comments = $state<any[]>([]);
     let agreements = $state<any[]>([]);
     let lastHealthCheckDate = $state<string | null>(null);
+    let scorecardCountsByScene = $state<Record<string, number>>({});
 
     // Poll/Timer state
     let showPollDropdown = $state(false);
@@ -173,6 +175,7 @@
     onMount(async () => {
         boardId = $page.params.id!;
         lastHealthCheckDate = data.lastHealthCheckDate;
+        scorecardCountsByScene = data.scorecardCountsByScene || {};
 
         try {
             // Load user info
@@ -232,12 +235,12 @@
                     );
 
                     // Check if the current scene should be displayed
-                    if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements, lastHealthCheckDate)) {
+                    if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
                         currentScene = requestedScene;
                     } else {
                         // Find the first valid scene
                         for (const scene of scenes) {
-                            if (evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate)) {
+                            if (evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
                                 currentScene = scene;
                                 // Update the board's current scene
                                 await fetch(`/api/boards/${boardId}/scene`, {
@@ -1023,7 +1026,7 @@
             // Find the next scene that should be displayed
             for (let i = currentIndex + 1; i < board.scenes.length; i++) {
                 const candidateScene = board.scenes[i];
-                const shouldDisplay = evaluateDisplayRule(candidateScene, board, cards, agreements, lastHealthCheckDate);
+                const shouldDisplay = evaluateDisplayRule(candidateScene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene);
 
                 if (shouldDisplay) {
                     changeScene(candidateScene.id);
@@ -2610,6 +2613,7 @@
         {cards}
         {agreements}
         {lastHealthCheckDate}
+        {scorecardCountsByScene}
         {showSceneDropdown}
         {showBoardConfig}
         {connectedUsers}
