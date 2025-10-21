@@ -171,7 +171,12 @@
                 </div>
 
                 <div class="form-field">
-                    <label for="password" class="form-label"> Password </label>
+                    <div class="password-label-row">
+                        <label for="password" class="form-label"> Password </label>
+                        <a href={resolve("/request-password-reset")} class="forgot-password-link">
+                            Forgot password?
+                        </a>
+                    </div>
                     <Input
                         id="password"
                         type="password"
@@ -286,6 +291,24 @@
         font-size: 0.875rem;
         font-weight: 600;
         color: var(--color-text-secondary);
+    }
+
+    .password-label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .forgot-password-link {
+        font-size: 0.875rem;
+        color: var(--color-primary);
+        text-decoration: none;
+        transition: color var(--transition-fast);
+    }
+
+    .forgot-password-link:hover {
+        color: var(--color-secondary);
+        text-decoration: underline;
     }
 
     :global(.login-submit-button) {

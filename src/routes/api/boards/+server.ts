@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { requireUser } from '$lib/server/auth/index.js';
 import { createBoard, findBoardsByUser } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
+import { findUserById, canCreateResources } from '$lib/server/repositories/user.js';
 import { z } from 'zod';
 
 const createBoardSchema = z.object({
@@ -36,15 +37,34 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const sessionUser = requireUser(event);
 		const body = await event.request.json();
 		const data = createBoardSchema.parse(body);
 
+		// Check email verification status
+		const user = await findUserById(sessionUser.userId);
+		if (!user) {
+			return json(
+				{ success: false, error: 'User not found' },
+				{ status: 404 }
+			);
+		}
+
+		if (!canCreateResources(user)) {
+			return json(
+				{
+					success: false,
+					error: 'Email verification required. Please check your email for a verification link.'
+				},
+				{ status: 403 }
+			);
+		}
+
 		// Check if user has access to this series, auto-add if not
-		let userRole = await getUserRoleInSeries(user.userId, data.seriesId);
+		let userRole = await getUserRoleInSeries(sessionUser.userId, data.seriesId);
 		if (!userRole) {
 			// Auto-add user as member when they create a board in a series
-			await addUserToSeries(data.seriesId, user.userId, 'member');
+			await addUserToSeries(data.seriesId, sessionUser.userId, 'member');
 			userRole = 'member';
 		}
 

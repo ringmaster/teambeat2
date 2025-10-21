@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET, POST } from '../../../src/routes/api/boards/+server';
-import { createMockRequestEvent, withAuthenticatedUser } from '../helpers/mock-request';
+import { GET, POST } from '../../../src/routes/api/series/+server';
+import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
@@ -8,14 +8,9 @@ vi.mock('../../../src/lib/server/auth/index', () => ({
 }));
 
 // Mock the repository functions
-vi.mock('../../../src/lib/server/repositories/board', () => ({
-	createBoard: vi.fn(),
-	findBoardsByUser: vi.fn()
-}));
-
 vi.mock('../../../src/lib/server/repositories/board-series', () => ({
-	getUserRoleInSeries: vi.fn(),
-	addUserToSeries: vi.fn()
+	createBoardSeries: vi.fn(),
+	findSeriesWithBoardsByUser: vi.fn()
 }));
 
 vi.mock('../../../src/lib/server/repositories/user', () => ({
@@ -25,33 +20,35 @@ vi.mock('../../../src/lib/server/repositories/user', () => ({
 
 // Import mocked modules
 import { requireUser } from '../../../src/lib/server/auth/index';
-import { createBoard, findBoardsByUser } from '../../../src/lib/server/repositories/board';
-import { getUserRoleInSeries, addUserToSeries } from '../../../src/lib/server/repositories/board-series';
+import { createBoardSeries, findSeriesWithBoardsByUser } from '../../../src/lib/server/repositories/board-series';
 import { findUserById, canCreateResources } from '../../../src/lib/server/repositories/user';
 
-describe('GET /api/boards', () => {
+describe('GET /api/series', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// Mock console methods to prevent output during tests
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
-	it('returns boards for authenticated user', async () => {
+	it('returns series for authenticated user', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
-		const mockBoards = [
-			{ id: '1', name: 'Board 1', seriesId: 'series-1' },
-			{ id: '2', name: 'Board 2', seriesId: 'series-1' }
+		const mockSeries = [
+			{ id: '1', name: 'Series 1', role: 'admin', boards: [] },
+			{ id: '2', name: 'Series 2', role: 'member', boards: [] }
 		];
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findBoardsByUser).mockResolvedValue(mockBoards);
+		vi.mocked(findSeriesWithBoardsByUser).mockResolvedValue(mockSeries);
 
-		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/boards' });
+		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/series' });
 
 		const response = await GET(event);
 		const data = await response.json();
 
 		expect(data.success).toBe(true);
-		expect(data.boards).toEqual(mockBoards);
-		expect(findBoardsByUser).toHaveBeenCalledWith('user-1');
+		expect(data.series).toEqual(mockSeries);
+		expect(findSeriesWithBoardsByUser).toHaveBeenCalledWith('user-1');
 	});
 
 	it('throws 401 when user is not authenticated', async () => {
@@ -59,7 +56,7 @@ describe('GET /api/boards', () => {
 			throw new Response('Unauthorized', { status: 401 });
 		});
 
-		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/boards' });
+		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/series' });
 
 		await expect(GET(event)).rejects.toThrow();
 	});
@@ -68,34 +65,35 @@ describe('GET /api/boards', () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findBoardsByUser).mockRejectedValue(new Error('Database error'));
+		vi.mocked(findSeriesWithBoardsByUser).mockRejectedValue(new Error('Database error'));
 
-		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/boards' });
+		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/series' });
 
 		const response = await GET(event);
 		const data = await response.json();
 
 		expect(response.status).toBe(500);
 		expect(data.success).toBe(false);
-		expect(data.error).toBe('Failed to fetch boards');
+		expect(data.error).toBe('Failed to fetch series');
 	});
 });
 
-describe('POST /api/boards', () => {
+describe('POST /api/series', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// Mock console methods to prevent output during tests
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
-	it('creates board when user has series access', async () => {
+	it('creates series when user email is verified', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
-		const seriesId = '123e4567-e89b-12d3-a456-426614174000';
-		const mockBoard = {
-			id: 'board-1',
-			name: 'New Board',
-			seriesId,
-			meetingDate: '2025-01-01',
-			blameFreeMode: false,
-			votingAllocation: 5
+		const mockSeries = {
+			id: 'series-1',
+			name: 'New Series',
+			slug: 'new-series',
+			description: 'Test series',
+			creatorId: 'user-1'
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
@@ -112,79 +110,38 @@ describe('POST /api/boards', () => {
 			updatedAt: new Date().toISOString()
 		});
 		vi.mocked(canCreateResources).mockReturnValue(true);
-		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
-		vi.mocked(createBoard).mockResolvedValue(mockBoard);
+		vi.mocked(createBoardSeries).mockResolvedValue(mockSeries);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
-			url: 'http://localhost:5173/api/boards',
+			url: 'http://localhost:5173/api/series',
 			body: {
-				name: 'New Board',
-				seriesId,
-				meetingDate: '2025-01-01',
-				blameFreeMode: false,
-				votingAllocation: 5
+				name: 'New Series',
+				slug: 'new-series',
+				description: 'Test series'
 			}
 		});
 
 		const response = await POST(event);
 		const data = await response.json();
 
+		expect(response.status).toBe(200);
 		expect(data.success).toBe(true);
-		expect(data.board).toEqual(mockBoard);
-		expect(createBoard).toHaveBeenCalledWith({
-			name: 'New Board',
-			seriesId,
-			meetingDate: '2025-01-01',
-			blameFreeMode: false,
-			votingAllocation: 5
+		expect(data.series).toEqual({
+			...mockSeries,
+			role: 'admin',
+			boards: []
 		});
-	});
-
-	it('auto-adds user to series when creating board', async () => {
-		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
-		const seriesId = '123e4567-e89b-12d3-a456-426614174001';
-		const mockBoard = {
-			id: 'board-1',
-			name: 'New Board',
-			seriesId
-		};
-
-		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findUserById).mockResolvedValue({
-			id: 'user-1',
-			email: 'test@example.com',
-			emailVerified: true,
-			name: 'Test User',
-			role: 'user',
-			is_admin: false,
-			passwordHash: 'hash',
-			emailVerificationSecret: 'secret',
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString()
+		expect(createBoardSeries).toHaveBeenCalledWith({
+			name: 'New Series',
+			slug: 'new-series',
+			description: 'Test series',
+			creatorId: 'user-1'
 		});
-		vi.mocked(canCreateResources).mockReturnValue(true);
-		vi.mocked(getUserRoleInSeries).mockResolvedValue(null);
-		vi.mocked(addUserToSeries).mockResolvedValue(undefined);
-		vi.mocked(createBoard).mockResolvedValue(mockBoard);
-
-		const event = createMockRequestEvent({
-			method: 'POST',
-			url: 'http://localhost:5173/api/boards',
-			body: { name: 'New Board', seriesId }
-		});
-
-		const response = await POST(event);
-		const data = await response.json();
-
-		expect(data.success).toBe(true);
-		expect(addUserToSeries).toHaveBeenCalledWith(seriesId, 'user-1', 'member');
-		expect(createBoard).toHaveBeenCalled();
 	});
 
 	it('returns 403 when user email is not verified', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
-		const seriesId = '123e4567-e89b-12d3-a456-426614174000';
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
@@ -203,13 +160,11 @@ describe('POST /api/boards', () => {
 
 		const event = createMockRequestEvent({
 			method: 'POST',
-			url: 'http://localhost:5173/api/boards',
+			url: 'http://localhost:5173/api/series',
 			body: {
-				name: 'New Board',
-				seriesId,
-				meetingDate: '2025-01-01',
-				blameFreeMode: false,
-				votingAllocation: 5
+				name: 'New Series',
+				slug: 'new-series',
+				description: 'Test series'
 			}
 		});
 
@@ -219,7 +174,31 @@ describe('POST /api/boards', () => {
 		expect(response.status).toBe(403);
 		expect(data.success).toBe(false);
 		expect(data.error).toBe('Email verification required. Please check your email for a verification link.');
-		expect(createBoard).not.toHaveBeenCalled();
+		expect(createBoardSeries).not.toHaveBeenCalled();
+	});
+
+	it('returns 404 when user is not found', async () => {
+		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
+
+		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(findUserById).mockResolvedValue(null);
+
+		const event = createMockRequestEvent({
+			method: 'POST',
+			url: 'http://localhost:5173/api/series',
+			body: {
+				name: 'New Series',
+				slug: 'new-series'
+			}
+		});
+
+		const response = await POST(event);
+		const data = await response.json();
+
+		expect(response.status).toBe(404);
+		expect(data.success).toBe(false);
+		expect(data.error).toBe('User not found');
+		expect(createBoardSeries).not.toHaveBeenCalled();
 	});
 
 	it('returns 400 for invalid input', async () => {
@@ -242,8 +221,8 @@ describe('POST /api/boards', () => {
 
 		const event = createMockRequestEvent({
 			method: 'POST',
-			url: 'http://localhost:5173/api/boards',
-			body: { name: '', seriesId: 'invalid-uuid' }
+			url: 'http://localhost:5173/api/series',
+			body: { name: '' } // Invalid: empty name
 		});
 
 		const response = await POST(event);
@@ -252,6 +231,7 @@ describe('POST /api/boards', () => {
 		expect(response.status).toBe(400);
 		expect(data.success).toBe(false);
 		expect(data.error).toBe('Invalid input');
+		expect(createBoardSeries).not.toHaveBeenCalled();
 	});
 
 	it('throws 401 when user is not authenticated', async () => {
@@ -261,10 +241,43 @@ describe('POST /api/boards', () => {
 
 		const event = createMockRequestEvent({
 			method: 'POST',
-			url: 'http://localhost:5173/api/boards',
-			body: { name: 'New Board', seriesId: 'series-1' }
+			url: 'http://localhost:5173/api/series',
+			body: { name: 'New Series' }
 		});
 
 		await expect(POST(event)).rejects.toThrow();
+	});
+
+	it('returns 500 on repository error', async () => {
+		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
+
+		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(findUserById).mockResolvedValue({
+			id: 'user-1',
+			email: 'test@example.com',
+			emailVerified: true,
+			name: 'Test User',
+			role: 'user',
+			is_admin: false,
+			passwordHash: 'hash',
+			emailVerificationSecret: 'secret',
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString()
+		});
+		vi.mocked(canCreateResources).mockReturnValue(true);
+		vi.mocked(createBoardSeries).mockRejectedValue(new Error('Database error'));
+
+		const event = createMockRequestEvent({
+			method: 'POST',
+			url: 'http://localhost:5173/api/series',
+			body: { name: 'New Series' }
+		});
+
+		const response = await POST(event);
+		const data = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(data.success).toBe(false);
+		expect(data.error).toBe('Failed to create series');
 	});
 });

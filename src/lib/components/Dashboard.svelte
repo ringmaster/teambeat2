@@ -20,6 +20,15 @@
     let newSeriesName = $state("");
     let seriesError = $state("");
     let creatingNewSeries = $state(false);
+    let isEmailConfigured = $state(false);
+
+    // Computed: Can user create resources (boards/series)?
+    let canCreateResources = $derived(() => {
+        // If email is not configured, everyone can create
+        if (!isEmailConfigured) return true;
+        // If email is configured, only verified users can create
+        return user?.emailVerified === true;
+    });
     let boardNames = $state({} as Record<string, string>);
     let boardErrors = $state({} as Record<string, string>);
     let creatingBoards = $state({} as Record<string, boolean>);
@@ -38,6 +47,13 @@
 
     onMount(async () => {
         try {
+            // Check if email is configured
+            const configResponse = await fetch("/api/auth/email-config");
+            if (configResponse.ok) {
+                const configData = await configResponse.json();
+                isEmailConfigured = configData.isEmailConfigured;
+            }
+
             const seriesResponse = await fetch("/api/series");
 
             if (seriesResponse.ok) {
@@ -577,17 +593,19 @@
                         id="newSeriesInput"
                         type="text"
                         bind:value={newSeriesName}
-                        placeholder="Enter series name..."
+                        placeholder={canCreateResources() ? "Enter series name..." : "Verify your email to create series"}
                         buttonVariant="primary"
                         buttonDisabled={creatingNewSeries ||
-                            !newSeriesName.trim()}
+                            !newSeriesName.trim() ||
+                            !canCreateResources()}
                         onButtonClick={createSeries}
                         onkeydown={(e) => {
                             if (e.key === "Enter") createSeries();
                         }}
                         class="series-input-with-button"
                         buttonClass="cooltipz--bottom"
-                        buttonAriaLabel="Add series"
+                        buttonAriaLabel={canCreateResources() ? "Add series" : "Email verification required"}
+                        disabled={!canCreateResources()}
                     >
                         {#snippet buttonContent()}
                             {#if creatingNewSeries}
@@ -625,49 +643,59 @@
                     <p class="empty-state-text">
                         No series yet. Create your first one to get started!
                     </p>
-                    <div class="space-y-4">
-                        <div class="flex items-center space-x-2 justify-center">
-                            <InputWithButton
-                                type="text"
-                                bind:value={newSeriesName}
-                                placeholder="Enter series name..."
-                                buttonVariant="primary"
-                                buttonDisabled={creatingNewSeries ||
-                                    !newSeriesName.trim()}
-                                onButtonClick={createSeries}
-                                onkeydown={(e) => {
-                                    if (e.key === "Enter") createSeries();
-                                }}
-                                class="min-w-64"
-                            >
-                                {#snippet buttonContent()}
-                                    {#if creatingNewSeries}
-                                        Creating...
-                                    {:else}
-                                        <Icon name="plus" size="sm" />
-                                    {/if}
-                                {/snippet}
-                            </InputWithButton>
+                    {#if !canCreateResources()}
+                        <div class="verification-required-message">
+                            <Icon name="alert" size="sm" />
+                            <p>
+                                Please verify your email address to create series and boards.
+                                <a href="/profile">Go to profile</a> to resend verification email.
+                            </p>
                         </div>
-                        {#if seriesError}
-                            <div
-                                class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2"
-                            >
-                                <svg
-                                    class="w-5 h-5 text-red-500"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
+                    {:else}
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-2 justify-center">
+                                <InputWithButton
+                                    type="text"
+                                    bind:value={newSeriesName}
+                                    placeholder="Enter series name..."
+                                    buttonVariant="primary"
+                                    buttonDisabled={creatingNewSeries ||
+                                        !newSeriesName.trim()}
+                                    onButtonClick={createSeries}
+                                    onkeydown={(e) => {
+                                        if (e.key === "Enter") createSeries();
+                                    }}
+                                    class="min-w-64"
                                 >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                                <span>{seriesError}</span>
+                                    {#snippet buttonContent()}
+                                        {#if creatingNewSeries}
+                                            Creating...
+                                        {:else}
+                                            <Icon name="plus" size="sm" />
+                                        {/if}
+                                    {/snippet}
+                                </InputWithButton>
                             </div>
-                        {/if}
-                    </div>
+                            {#if seriesError}
+                                <div
+                                    class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2"
+                                >
+                                    <svg
+                                        class="w-5 h-5 text-red-500"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                    <span>{seriesError}</span>
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
                 </div>
             {:else}
                 <div class="series-grid">
@@ -821,31 +849,41 @@
                                 {:else}
                                     <!-- Expanded view - show all boards and create new board form -->
                                     <!-- Create New Board -->
-                                    <InputWithButton
-                                        type="text"
-                                        bind:value={boardNames[s.id]}
-                                        placeholder="Board name..."
-                                        buttonVariant="primary"
-                                        buttonDisabled={creatingBoards[s.id] ||
-                                            !boardNames[s.id]?.trim()}
-                                        onButtonClick={() =>
-                                            createBoard(s.id, s.name)}
-                                        onkeydown={(e) => {
-                                            if (e.key === "Enter")
-                                                createBoard(s.id, s.name);
-                                        }}
-                                        class="board-input-with-button"
-                                        buttonClass="cooltipz--bottom"
-                                        buttonAriaLabel="Add board"
-                                    >
-                                        {#snippet buttonContent()}
-                                            {#if creatingBoards[s.id]}
-                                                ...
-                                            {:else}
-                                                <Icon name="plus" size="sm" />
-                                            {/if}
-                                        {/snippet}
-                                    </InputWithButton>
+                                    {#if !canCreateResources()}
+                                        <div class="verification-required-message">
+                                            <Icon name="alert" size="sm" />
+                                            <p>
+                                                Please verify your email address to create boards.
+                                                <a href="/profile">Go to profile</a> to resend verification email.
+                                            </p>
+                                        </div>
+                                    {:else}
+                                        <InputWithButton
+                                            type="text"
+                                            bind:value={boardNames[s.id]}
+                                            placeholder="Board name..."
+                                            buttonVariant="primary"
+                                            buttonDisabled={creatingBoards[s.id] ||
+                                                !boardNames[s.id]?.trim()}
+                                            onButtonClick={() =>
+                                                createBoard(s.id, s.name)}
+                                            onkeydown={(e) => {
+                                                if (e.key === "Enter")
+                                                    createBoard(s.id, s.name);
+                                            }}
+                                            class="board-input-with-button"
+                                            buttonClass="cooltipz--bottom"
+                                            buttonAriaLabel="Add board"
+                                        >
+                                            {#snippet buttonContent()}
+                                                {#if creatingBoards[s.id]}
+                                                    ...
+                                                {:else}
+                                                    <Icon name="plus" size="sm" />
+                                                {/if}
+                                            {/snippet}
+                                        </InputWithButton>
+                                    {/if}
                                     {#if boardErrors[s.id]}
                                         <div class="alert alert-error">
                                             <svg
@@ -1339,6 +1377,41 @@
         margin: 0 0 var(--spacing-6) 0;
         font-size: 1rem;
         font-weight: 500;
+    }
+
+    .verification-required-message {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-3);
+        padding: var(--spacing-4);
+        background: var(--color-warning-bg);
+        border: 1px solid color-mix(in srgb, var(--color-warning) 20%, transparent);
+        border-radius: var(--radius-lg);
+        color: var(--color-text-primary);
+        font-size: 0.875rem;
+        margin: var(--spacing-4) 0;
+
+        :global(svg) {
+            flex-shrink: 0;
+            color: var(--color-warning);
+            margin-top: 2px;
+        }
+
+        p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        a {
+            color: var(--color-primary);
+            font-weight: 600;
+            text-decoration: underline;
+            transition: color var(--transition-fast);
+
+            &:hover {
+                color: var(--color-secondary);
+            }
+        }
     }
 
     /* Series Grid - CSS Grid layout for proper horizontal then vertical tiling */

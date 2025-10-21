@@ -9,6 +9,7 @@
     let searchInput = $state(data.search);
     let isSearching = $state(false);
     let deletingUserId = $state<string | null>(null);
+    let togglingVerificationUserId = $state<string | null>(null);
 
     async function handleSearch(event: Event) {
         event.preventDefault();
@@ -121,6 +122,41 @@
             day: "numeric",
         });
     }
+
+    async function toggleEmailVerification(
+        userId: string,
+        currentStatus: boolean,
+        userEmail: string,
+    ) {
+        togglingVerificationUserId = userId;
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/verify`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ verified: !currentStatus }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Failed to update verification status");
+            }
+
+            const newStatus = !currentStatus;
+            toastStore.success(
+                `Email verification ${newStatus ? "enabled" : "disabled"} for ${userEmail}`,
+            );
+
+            // Reload the page to refresh the user list
+            window.location.reload();
+        } catch (err) {
+            toastStore.error(
+                err instanceof Error ? err.message : "Failed to update verification status",
+            );
+            console.error(err);
+        } finally {
+            togglingVerificationUserId = null;
+        }
+    }
 </script>
 
 <AdminNav />
@@ -168,12 +204,13 @@
                             <th>Email</th>
                             <th>Name</th>
                             <th>Role</th>
+                            <th>Verified</th>
                             <th>Created</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {#each data.users as user}
+                        {#each data.users as user (user.id)}
                             <tr>
                                 <td class="email-cell">{user.email}</td>
                                 <td class="name-cell">{user.name || "-"}</td>
@@ -184,6 +221,32 @@
                                         User
                                     {/if}
                                 </td>
+                                <td class="verified-cell">
+                                    <button
+                                        type="button"
+                                        class="verification-toggle"
+                                        class:verified={user.emailVerified}
+                                        aria-label={user.emailVerified
+                                            ? `Disable email verification for ${user.email}`
+                                            : `Enable email verification for ${user.email}`}
+                                        onclick={() =>
+                                            toggleEmailVerification(
+                                                user.id,
+                                                user.emailVerified,
+                                                user.email,
+                                            )}
+                                        disabled={togglingVerificationUserId ===
+                                            user.id}
+                                    >
+                                        {#if togglingVerificationUserId === user.id}
+                                            ...
+                                        {:else if user.emailVerified}
+                                            Verified
+                                        {:else}
+                                            Unverified
+                                        {/if}
+                                    </button>
+                                </td>
                                 <td class="date-cell"
                                     >{formatDate(user.createdAt)}</td
                                 >
@@ -191,6 +254,7 @@
                                     <button
                                         type="button"
                                         class="action-button copy-button"
+                                        aria-label="Copy password reset URL for {user.email}"
                                         onclick={() =>
                                             generateResetUrl(
                                                 user.id,
@@ -202,6 +266,9 @@
                                     <button
                                         type="button"
                                         class="action-button delete-button"
+                                        aria-label="Delete user {user.email}"
+                                        aria-disabled={user.isAdmin ||
+                                            deletingUserId === user.id}
                                         onclick={() =>
                                             confirmDeleteUser(
                                                 user.id,
@@ -428,6 +495,47 @@
         .date-cell {
             color: var(--color-text-secondary);
             font-size: 0.9rem;
+        }
+
+        .verified-cell {
+            .verification-toggle {
+                padding: 0.375rem 0.875rem;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                white-space: nowrap;
+                min-height: 36px;
+                border: 1px solid;
+
+                &.verified {
+                    background: var(--color-success-bg);
+                    color: var(--color-success);
+                    border-color: var(--color-success);
+
+                    &:hover:not(:disabled) {
+                        background: var(--color-success);
+                        color: var(--color-text-inverse);
+                    }
+                }
+
+                &:not(.verified) {
+                    background: var(--color-warning-bg);
+                    color: var(--color-warning);
+                    border-color: var(--color-warning);
+
+                    &:hover:not(:disabled) {
+                        background: var(--color-warning);
+                        color: var(--color-text-inverse);
+                    }
+                }
+
+                &:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+            }
         }
 
         .actions-cell {

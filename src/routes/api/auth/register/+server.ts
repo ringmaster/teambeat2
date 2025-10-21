@@ -3,6 +3,9 @@ import type { RequestHandler } from './$types';
 import { createUser } from '$lib/server/repositories/user.js';
 import { createSession } from '$lib/server/auth/session.js';
 import { setSessionCookie } from '$lib/server/auth/index.js';
+import { emailService, isEmailConfigured } from '$lib/server/email/index.js';
+import { generateEmailVerificationToken } from '$lib/server/auth/email-verification.js';
+import { emailVerificationTemplate } from '$lib/server/email/templates.js';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -12,15 +15,31 @@ const registerSchema = z.object({
 });
 
 export const POST: RequestHandler = async (event) => {
-	const { request, cookies } = event;
+	const { request, cookies, url } = event;
 	try {
 		const body = await request.json();
 		const data = registerSchema.parse(body);
-		
+
 		const user = await createUser(data);
 		const sessionId = createSession(user.id, user.email);
 
 		setSessionCookie(event, sessionId);
+
+		// Send verification email if email is configured
+		if (isEmailConfigured && user.emailVerificationSecret) {
+			const token = generateEmailVerificationToken(user.id, user.emailVerificationSecret);
+			const verifyUrl = `${url.origin}/verify-email?token=${token}`;
+			const html = emailVerificationTemplate(verifyUrl, user.name || user.email);
+
+			// Send email asynchronously - don't block registration on email delivery
+			emailService.send({
+				to: user.email,
+				subject: 'Verify your TeamBeat email address',
+				html,
+			}).catch(error => {
+				console.error('Failed to send verification email during registration:', error);
+			});
+		}
 
 		return json({
 			success: true,
@@ -37,7 +56,7 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 400 }
 			);
 		}
-		
+
 		return json(
 			{ success: false, error: 'Registration failed' },
 			{ status: 400 }

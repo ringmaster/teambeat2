@@ -19,6 +19,10 @@
     let showDeleteConfirm = $state(false);
     let deleteConfirmText = $state("");
 
+    // Email verification
+    let sendingVerification = $state(false);
+    let verificationMessage = $state("");
+
     onMount(async () => {
         try {
             const response = await fetch("/api/auth/me");
@@ -132,6 +136,30 @@
             saving = false;
         }
     }
+
+    async function resendVerificationEmail() {
+        sendingVerification = true;
+        verificationMessage = "";
+        error = "";
+
+        try {
+            const response = await fetch("/api/auth/send-verification-email", {
+                method: "POST",
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                verificationMessage = "Verification email sent! Please check your inbox.";
+            } else {
+                error = data.error || "Failed to send verification email";
+            }
+        } catch (err) {
+            error = "Failed to send verification email";
+        } finally {
+            sendingVerification = false;
+        }
+    }
 </script>
 
 <div class="profile-container">
@@ -172,6 +200,30 @@
                             disabled
                         />
                         <p class="form-help">Email cannot be changed</p>
+
+                        {#if user.emailVerified}
+                            <div class="verification-status verified">
+                                <Icon name="check" size="sm" />
+                                <span>Email verified</span>
+                            </div>
+                        {:else}
+                            <div class="verification-status unverified">
+                                <Icon name="alert" size="sm" />
+                                <span>Email not verified - you cannot create boards or series</span>
+                            </div>
+                            {#if verificationMessage}
+                                <div class="verification-message success">
+                                    {verificationMessage}
+                                </div>
+                            {/if}
+                            <button
+                                class="btn-secondary"
+                                onclick={resendVerificationEmail}
+                                disabled={sendingVerification}
+                            >
+                                {sendingVerification ? "Sending..." : "Resend Verification Email"}
+                            </button>
+                        {/if}
                     </div>
 
                     <div class="form-group">
@@ -449,5 +501,39 @@
         display: flex;
         gap: var(--spacing-3);
         margin-top: var(--spacing-4);
+    }
+
+    .verification-status {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        padding: var(--spacing-2) var(--spacing-3);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        margin-top: var(--spacing-2);
+        margin-bottom: var(--spacing-3);
+
+        &.verified {
+            background-color: var(--color-success-bg);
+            color: var(--color-success);
+        }
+
+        &.unverified {
+            background-color: var(--color-warning-bg);
+            color: var(--color-warning);
+        }
+    }
+
+    .verification-message {
+        padding: var(--spacing-2) var(--spacing-3);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        margin-top: var(--spacing-2);
+        margin-bottom: var(--spacing-3);
+
+        &.success {
+            background-color: var(--color-info-bg);
+            color: var(--color-info);
+        }
     }
 </style>

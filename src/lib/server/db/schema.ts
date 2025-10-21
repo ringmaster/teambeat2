@@ -35,6 +35,8 @@ export const users = table('users', {
   email: text('email').notNull().unique(),
   name: text('name'),
   passwordHash: text('password_hash').notNull(),
+  emailVerified: booleanField('email_verified').notNull().default(false),
+  emailVerificationSecret: text('email_verification_secret'),
   is_admin: booleanField('is_admin').notNull().default(false),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())

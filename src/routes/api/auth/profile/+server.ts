@@ -41,7 +41,9 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
                 id: updatedUser.id,
                 email: updatedUser.email,
                 name: updatedUser.name,
-                role: updatedUser.role
+                role: updatedUser.role,
+                isAdmin: updatedUser.is_admin || false,
+                emailVerified: updatedUser.emailVerified || false
             }
         });
     } catch (error) {

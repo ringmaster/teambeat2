@@ -37,10 +37,53 @@ This project prioritizes **developer autonomy** over framework magic. We choose 
 
 ## Technology Choices
 
-### Framework: SvelteKit 5
+### Framework: Svelte 5 + SvelteKit
 - **Why**: Minimal runtime, excellent developer experience, full-stack capabilities
 - **Usage**: Server-side rendering, API routes, websocket handling
 - **Avoid**: Over-relying on client-side state for server data
+
+#### Critical Svelte 5 Requirements
+
+**MANDATORY: Write all Svelte components in Runes mode** - This is vital for error-free code
+- Use `$state()`, `$derived()`, `$props()`, `$effect()` instead of legacy reactive declarations
+- Use `let { prop1, prop2 } = $props()` for component props
+- Use `let variable = $state(initialValue)` for reactive state
+- Use `let computed = $derived(expression)` for computed values
+- **Never mix runes with legacy Svelte syntax** - causes compilation errors
+
+Example:
+```svelte
+<script lang="ts">
+  // Correct - Runes mode
+  let count = $state(0);
+  let doubled = $derived(count * 2);
+  let { user } = $props();
+
+  // Wrong - Legacy mode (DO NOT USE)
+  // export let user;
+  // let count = 0;
+  // $: doubled = count * 2;
+</script>
+```
+
+**ALWAYS add `key` attributes to `{#each}` blocks** - Use unique identifiers (user.id, card.id, etc.) to prevent rendering issues
+```svelte
+{#each users as user (user.id)}
+  <!-- content -->
+{/each}
+```
+
+**Implement proper ARIA attributes** for accessibility:
+- Add `aria-label` to all buttons that need context (especially icon-only or action buttons)
+- Use `role` attributes for custom interactive elements
+- Include `aria-disabled` for disabled states
+- Add `aria-live` regions for dynamic content updates
+- Use semantic HTML (`<button>`, `<nav>`, `<main>`) instead of `<div>` with roles where possible
+
+**Avoid unused CSS rules** - Only define CSS classes that are actually used in the component
+- Remove or comment out unused selectors before committing
+- Use CSS variables for values that might be needed across components
+- Move reusable styles to global stylesheets or mixins
 
 ### Database: SQLite + PostgreSQL with Drizzle ORM
 - **Why**: Flexible deployment (SQLite for simplicity, PostgreSQL for scale), excellent performance, familiar SQL
@@ -168,12 +211,71 @@ src/
 - **Focus on why, not what** - document reasoning behind non-obvious implementations
 - **Avoid over-commenting** - code should be self-explanatory where possible
 
-### Testing Strategy - **MINIMAL AND FOCUSED**
-- **Tests only when vital** for making features work correctly
-- **Defer non-critical tests** to REVISIT.md to conserve tokens
-- **Single test directory** with single command to run all tests
-- **Tests must not affect development/production data** - use isolated test databases
-- **Note potential tests** in REVISIT.md rather than implementing immediately unless specifically needed
+### Testing Strategy - **NON-NEGOTIABLE REQUIREMENTS**
+
+**ABSOLUTE RULES - NO EXCEPTIONS:**
+
+1. **WRITE TESTS WHEN TOLD, HOW TOLD, EVERY TIME TOLD**
+   - If the user requests a test, write it immediately
+   - If the user asks "is there a test for X?", write it if it doesn't exist
+   - If the user says "ensure there is a test", write it
+   - **NO EXCUSES** - "it's complex" is not acceptable, follow existing patterns
+
+2. **ALL TESTS MUST USE MOCKS - NEVER USE LIVE DATABASE**
+   - Mock all repository functions using `vi.mock()`
+   - Mock all database operations using `vi.mock('../../../src/lib/server/db/index')`
+   - Mock all external services (email, auth, etc.)
+   - Look at existing tests for patterns - we already do this everywhere
+   - **NEVER** say "mocking the database is complex" - it's already done in every test
+
+3. **TEST COVERAGE HIERARCHY** (in order of priority):
+   - **Authorization/Security** - ALWAYS required for admin endpoints, permission checks, access control
+   - **User-requested tests** - If user asks for a test, write it (API, repository, service, whatever they ask for)
+   - **API endpoints** - Required when specification requests them or describes behavior
+   - **Critical path** - Authentication, data integrity, security features
+   - **Repository functions** - When implementing new data access logic or fixing bugs
+   - **Edge cases** - When user identifies a bug or asks "what if X happens?"
+
+**How to write tests:**
+```typescript
+// ALWAYS follow this pattern from existing tests:
+
+// 1. Mock dependencies
+vi.mock('../../../src/lib/server/repositories/user', () => ({
+	findUserById: vi.fn(),
+	ensureEmailVerificationSecret: vi.fn()
+}));
+
+// 2. Import mocked modules
+import { findUserById, ensureEmailVerificationSecret } from '../../../src/lib/server/repositories/user';
+
+// 3. Set up mocks in tests
+vi.mocked(findUserById).mockResolvedValue({ id: 'user-1', ... });
+
+// 4. Test behavior
+expect(findUserById).toHaveBeenCalledWith('user-1');
+```
+
+**Example: Authorization bug that tests would catch:**
+```typescript
+// BAD - would pass without tests, but breaks in production
+if (!sessionUser.isAdmin) { // isAdmin doesn't exist on SessionData!
+  return 403;
+}
+
+// GOOD - tests force you to verify the actual behavior
+const user = await findUserById(sessionUser.userId);
+if (!user?.is_admin) {
+  return 403;
+}
+```
+
+**When user says "write a test":**
+- Stop whatever you're doing
+- Look at similar existing tests for patterns
+- Write the test using the same mocking approach
+- Run the test to verify it works
+- **NEVER** say "it's complex" or "we don't have repository tests" - just write it
 
 - **Style Observation Upon Change** - When writing code that is meant to change the appearance of the UI, attempt to use MCP tools that might be available to ensure that the change you've applied has had the desired effect. This is not a hard requirement for every visual change, but when given instruction that the UI does not look like desired, changes should be checked with MCP tools to ensure the change has had the desired effect.
 

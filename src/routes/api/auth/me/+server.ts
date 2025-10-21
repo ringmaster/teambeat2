@@ -28,7 +28,8 @@ export const GET: RequestHandler = async (event) => {
 			id: user.id,
 			email: user.email,
 			name: user.name,
-			isAdmin: user.is_admin || false
+			isAdmin: user.is_admin || false,
+			emailVerified: user.emailVerified || false
 		}
 	});
 };
