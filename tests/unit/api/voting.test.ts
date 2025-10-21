@@ -32,7 +32,9 @@ vi.mock('../../../src/lib/server/repositories/vote', () => ({
 	castVote: vi.fn(),
 	getUserVoteCount: vi.fn(),
 	getAllUsersVotesForBoard: vi.fn(),
-	clearBoardVotes: vi.fn()
+	clearBoardVotes: vi.fn(),
+	getVoteContext: vi.fn(),
+	getVoteCountsByCard: vi.fn()
 }));
 
 vi.mock('../../../src/lib/server/repositories/presence', () => ({
@@ -68,7 +70,9 @@ import {
 	castVote,
 	getUserVoteCount,
 	getAllUsersVotesForBoard,
-	clearBoardVotes
+	clearBoardVotes,
+	getVoteContext,
+	getVoteCountsByCard
 } from '../../../src/lib/server/repositories/vote';
 import { updatePresence } from '../../../src/lib/server/repositories/presence';
 import {
@@ -81,48 +85,47 @@ import { buildComprehensiveVotingData } from '../../../src/lib/server/utils/voti
 import { enrichCardWithCounts } from '../../../src/lib/server/utils/cards-data';
 
 describe('POST /api/cards/[id]/vote', () => {
+	const mockCard = {
+		id: 'card-1',
+		columnId: 'column-1',
+		content: 'Test card',
+		groupId: null,
+		isGroupLead: false
+	};
+
+	const mockBoard = {
+		id: 'board-1',
+		seriesId: 'series-1',
+		currentSceneId: 'scene-1',
+		votingAllocation: 5,
+		status: 'active',
+		currentScene: {
+			id: 'scene-1',
+			flags: ['allow_voting']
+		}
+	};
+
+	const createMockVoteContext = (overrides: any = {}) => ({
+		card: mockCard,
+		board: mockBoard,
+		userRole: 'member',
+		currentVoteCount: 0,
+		...overrides
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
 	it('should successfully vote on a card', async () => {
 		const mockUser = { userId: 'user-1', email: 'member@example.com', name: 'Member' };
-		const mockCard = {
-			id: 'card-1',
-			columnId: 'column-1',
-			content: 'Test card',
-			groupId: null,
-			isGroupLead: false
-		};
-		const mockBoard = {
-			id: 'board-1',
-			seriesId: 'series-1',
-			status: 'active',
-			currentSceneId: 'scene-1',
-			votingAllocation: 5,
-			scenes: [
-				{
-					id: 'scene-1',
-					flags: [SCENE_FLAGS.ALLOW_VOTING]
-				}
-			]
-		};
-
-		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findCardById).mockResolvedValue(mockCard);
-		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
-		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
-		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
-		vi.mocked(getUserVoteCount).mockResolvedValue(2);
-		vi.mocked(castVote).mockResolvedValue({ success: true });
-		vi.mocked(getCardsForBoard).mockResolvedValue([{ ...mockCard, id: 'card-1' }]);
-		vi.mocked(enrichCardWithCounts).mockResolvedValue({
+		const mockEnrichedCard = {
 			...mockCard,
 			voteCount: 3,
 			commentCount: 0,
 			reactionCount: 0
-		});
-		vi.mocked(buildComprehensiveVotingData).mockResolvedValue({
+		};
+		const mockVotingData = {
 			user_voting_data: {
 				remaining: 2,
 				allocated: 3,
@@ -133,7 +136,14 @@ describe('POST /api/cards/[id]/vote', () => {
 				total_votes_cast: 10,
 				unique_voters: 3
 			}
-		});
+		};
+
+		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 2 }));
+		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
+		vi.mocked(findCardById).mockResolvedValue(mockCard as any);
+		vi.mocked(enrichCardWithCounts).mockResolvedValue(mockEnrichedCard as any);
+		vi.mocked(buildComprehensiveVotingData).mockResolvedValue(mockVotingData as any);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -153,16 +163,14 @@ describe('POST /api/cards/[id]/vote', () => {
 
 	it('should fail when voting on subordinate card', async () => {
 		const mockUser = { userId: 'user-1', email: 'member@example.com', name: 'Member' };
-		const mockCard = {
-			id: 'card-1',
-			columnId: 'column-1',
-			content: 'Subordinate card',
+		const subordinateCard = {
+			...mockCard,
 			groupId: 'group-1',
 			isGroupLead: false
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findCardById).mockResolvedValue(mockCard);
+		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ card: subordinateCard }));
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -181,32 +189,16 @@ describe('POST /api/cards/[id]/vote', () => {
 
 	it('should fail when voting not allowed in current scene', async () => {
 		const mockUser = { userId: 'user-1', email: 'member@example.com', name: 'Member' };
-		const mockCard = {
-			id: 'card-1',
-			columnId: 'column-1',
-			content: 'Test card',
-			groupId: null,
-			isGroupLead: false
-		};
-		const mockBoard = {
-			id: 'board-1',
-			seriesId: 'series-1',
-			status: 'active',
-			currentSceneId: 'scene-1',
-			votingAllocation: 5,
-			scenes: [
-				{
-					id: 'scene-1',
-					flags: [] // No voting flag
-				}
-			]
+		const boardWithoutVoting = {
+			...mockBoard,
+			currentScene: {
+				id: 'scene-1',
+				flags: [] // No voting flag
+			}
 		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findCardById).mockResolvedValue(mockCard);
-		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
-		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
-		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
+		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ board: boardWithoutVoting }));
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -225,33 +217,9 @@ describe('POST /api/cards/[id]/vote', () => {
 
 	it('should fail when no votes remaining', async () => {
 		const mockUser = { userId: 'user-1', email: 'member@example.com', name: 'Member' };
-		const mockCard = {
-			id: 'card-1',
-			columnId: 'column-1',
-			content: 'Test card',
-			groupId: null,
-			isGroupLead: false
-		};
-		const mockBoard = {
-			id: 'board-1',
-			seriesId: 'series-1',
-			status: 'active',
-			currentSceneId: 'scene-1',
-			votingAllocation: 5,
-			scenes: [
-				{
-					id: 'scene-1',
-					flags: [SCENE_FLAGS.ALLOW_VOTING]
-				}
-			]
-		};
 
 		vi.mocked(requireUser).mockReturnValue(mockUser);
-		vi.mocked(findCardById).mockResolvedValue(mockCard);
-		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
-		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
-		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
-		vi.mocked(getUserVoteCount).mockResolvedValue(5); // Already used all votes
+		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 5 })); // Already used all votes
 
 		const event = createMockRequestEvent({
 			method: 'POST',

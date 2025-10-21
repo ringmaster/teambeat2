@@ -4,7 +4,7 @@ import {
 } from '../repositories/agreement.js';
 import { db } from '../db/index.js';
 import { users, scenesColumns, columns, comments } from '../db/schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { getUserDisplayName } from '$lib/utils/animalNames.js';
 
 export interface UnifiedAgreement {
@@ -30,46 +30,6 @@ export interface UnifiedAgreement {
   cardContent?: string;
   columnId?: string;
   columnTitle?: string;
-}
-
-/**
- * Get user name by ID
- */
-async function getUserName(userId: string | null): Promise<string | null> {
-  if (!userId) return null;
-
-  const [user] = await db
-    .select({ name: users.name })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  return user?.name || null;
-}
-
-/**
- * Get user names for multiple user IDs efficiently
- */
-async function getUserNames(userIds: (string | null)[]): Promise<Map<string, string>> {
-  const uniqueIds = [...new Set(userIds.filter(id => id !== null))] as string[];
-
-  if (uniqueIds.length === 0) {
-    return new Map();
-  }
-
-  const userRecords = await db
-    .select({ id: users.id, name: users.name })
-    .from(users)
-    .where(eq(users.id, uniqueIds[0])); // Drizzle doesn't have IN for multiple values easily
-
-  const nameMap = new Map<string, string>();
-  userRecords.forEach(user => {
-    if (user.name) {
-      nameMap.set(user.id, user.name);
-    }
-  });
-
-  return nameMap;
 }
 
 /**
@@ -121,15 +81,21 @@ async function enrichAgreements(
     userIds.push(a.completedByUserId);
   });
 
-  // Fetch user names in batch
+  // Fetch user names in batch with single query
   const uniqueIds = [...new Set(userIds.filter(id => id !== null))] as string[];
   const userNameMap = new Map<string, string>();
 
-  for (const userId of uniqueIds) {
-    const name = await getUserName(userId);
-    if (name) {
-      userNameMap.set(userId, name);
-    }
+  if (uniqueIds.length > 0) {
+    const usersData = await db
+      .select({ id: users.id, name: users.name })
+      .from(users)
+      .where(inArray(users.id, uniqueIds));
+
+    usersData.forEach(user => {
+      if (user.name) {
+        userNameMap.set(user.id, user.name);
+      }
+    });
   }
 
   // For comment-based agreements, fetch reactions

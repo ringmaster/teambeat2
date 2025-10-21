@@ -62,18 +62,28 @@ export function buildUserVotingData(userVotes: Array<{ cardId: string }>): UserV
  */
 export async function buildComprehensiveVotingData(
   boardId: string,
-  userId?: string
+  userId?: string,
+  seriesId?: string,
+  votingAllocation?: number
 ): Promise<ComprehensiveVotingData> {
   try {
-    const { getBoardWithDetails } = await import('../repositories/board.js');
     const { getUserVotesForBoard } = await import('../repositories/vote.js');
 
-    const board = await getBoardWithDetails(boardId);
-    if (!board) {
-      throw new Error(`Board not found: ${boardId}`);
+    // If seriesId and votingAllocation not provided, fetch board details
+    let actualSeriesId = seriesId;
+    let actualVotingAllocation = votingAllocation;
+
+    if (!actualSeriesId || !actualVotingAllocation) {
+      const { getBoardWithDetails } = await import('../repositories/board.js');
+      const board = await getBoardWithDetails(boardId);
+      if (!board) {
+        throw new Error(`Board not found: ${boardId}`);
+      }
+      actualSeriesId = board.seriesId;
+      actualVotingAllocation = board.votingAllocation;
     }
 
-    const votingStats = await buildVotingStats(boardId);
+    const votingStats = await buildVotingStats(boardId, actualSeriesId, actualVotingAllocation);
 
     let userVotingData: UserVotingData | undefined;
 
@@ -95,15 +105,23 @@ export async function buildComprehensiveVotingData(
 /**
  * Constructs comprehensive voting statistics including presence data
  */
-export async function buildVotingStats(boardId: string): Promise<any> {
+export async function buildVotingStats(boardId: string, seriesId?: string, votingAllocation?: number): Promise<any> {
   try {
-    const { getBoardWithDetails } = await import('../repositories/board.js');
     const { getBoardPresence } = await import('../repositories/presence.js');
     const { calculateAggregateVotingStats } = await import('../repositories/vote.js');
 
-    const board = await getBoardWithDetails(boardId);
-    if (!board) {
-      throw new Error(`Board not found: ${boardId}`);
+    // If seriesId and votingAllocation not provided, fetch board details
+    let actualSeriesId = seriesId;
+    let actualVotingAllocation = votingAllocation;
+
+    if (!actualSeriesId || !actualVotingAllocation) {
+      const { getBoardWithDetails } = await import('../repositories/board.js');
+      const board = await getBoardWithDetails(boardId);
+      if (!board) {
+        throw new Error(`Board not found: ${boardId}`);
+      }
+      actualSeriesId = board.seriesId;
+      actualVotingAllocation = board.votingAllocation;
     }
 
     const presenceData = await getBoardPresence(boardId);
@@ -111,7 +129,7 @@ export async function buildVotingStats(boardId: string): Promise<any> {
     const activeUserIds = new Set(presenceData.map(p => p.userId));
 
     // Pass activeUserIds to avoid duplicate presence queries
-    const comprehensiveStats = await calculateAggregateVotingStats(boardId, board.seriesId, board.votingAllocation, activeUserIds);
+    const comprehensiveStats = await calculateAggregateVotingStats(boardId, actualSeriesId, actualVotingAllocation, activeUserIds);
 
     return comprehensiveStats;
   } catch (error) {

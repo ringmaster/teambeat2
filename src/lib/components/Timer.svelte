@@ -136,7 +136,7 @@
         if (remaining === 0) {
             running = false;
             _stopTick();
-            new Audio("/alarmding1.mp3").play();
+            new Audio("/alarmding3.mp3").play();
         }
         // Only update voting state during tick for timer mode
         // For other poll types, votes are always shown
@@ -331,7 +331,9 @@
                                 </span>
                                 <div class="bar">
                                     <div
-                                        class="fill {isTopVote(option.key) ? 'top-vote' : ''}"
+                                        class="fill {isTopVote(option.key)
+                                            ? 'top-vote'
+                                            : ''}"
                                         style="width: {percent(
                                             votes[option.key] || 0,
                                             totalVotes,
@@ -392,7 +394,9 @@
                         <button onclick={() => handleAdd(300)}>+ 5:00</button>
                         <hr />
                         {#if pollType !== "timer" && question}
-                            <button onclick={handleRecordAgreement}>Record as Agreement</button>
+                            <button onclick={handleRecordAgreement}
+                                >Record as Agreement</button
+                            >
                         {/if}
                         <button onclick={handleStopClick}>Cancel Timer</button>
                     </div>

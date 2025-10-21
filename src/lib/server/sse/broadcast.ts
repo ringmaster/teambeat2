@@ -332,31 +332,42 @@ export async function broadcastVoteUpdatesBasedOnScene(
   boardId: string,
   currentScene: { showVotes?: boolean; allowVoting?: boolean } | null,
   triggeringUserId?: string,
-  votesCleared?: boolean
+  votesCleared?: boolean,
+  voteCountsByCard?: Record<string, number>,
+  votingStats?: any
 ) {
   try {
     if (!currentScene) return;
 
     if (currentScene.showVotes) {
       // If "show votes" is enabled, broadcast all vote totals to all users
-      const { getAllUsersVotesForBoard } = await import('../repositories/vote.js');
-      const allVotes = await getAllUsersVotesForBoard(boardId);
+      let allVoteCountsByCard = voteCountsByCard;
 
-      // Build vote counts by card
-      const allVoteCountsByCard: Record<string, number> = {};
-      allVotes.forEach(vote => {
-        allVoteCountsByCard[vote.cardId] = (allVoteCountsByCard[vote.cardId] || 0) + 1;
-      });
+      // Only fetch if not provided
+      if (!allVoteCountsByCard) {
+        const { getAllUsersVotesForBoard } = await import('../repositories/vote.js');
+        const allVotes = await getAllUsersVotesForBoard(boardId);
 
-      // Also get voting stats
-      const votingStats = await buildVotingStatsUpdatedMessage(boardId);
+        // Build vote counts by card
+        allVoteCountsByCard = {};
+        allVotes.forEach(vote => {
+          allVoteCountsByCard![vote.cardId] = (allVoteCountsByCard![vote.cardId] || 0) + 1;
+        });
+      }
+
+      // Also get voting stats if not provided
+      let stats = votingStats;
+      if (!stats) {
+        const statsMessage = await buildVotingStatsUpdatedMessage(boardId);
+        stats = statsMessage.voting_stats;
+      }
 
       // Broadcast all vote counts and stats to all users
       const allVotesMessage: SSEMessage = {
         type: 'all_votes_updated',
         board_id: boardId,
         all_votes_by_card: allVoteCountsByCard,
-        voting_stats: votingStats.voting_stats,
+        voting_stats: stats,
         votes_cleared: votesCleared,
         timestamp: Date.now()
       };
@@ -367,13 +378,13 @@ export async function broadcastVoteUpdatesBasedOnScene(
       // If only "allow voting" is enabled, broadcast aggregate voting stats
       // Include votes_cleared flag if votes were cleared
       if (votesCleared) {
-        const statsMessage = await buildVotingStatsUpdatedMessage(boardId);
+        const statsMessage = await buildVotingStatsUpdatedMessage(boardId, votingStats);
         (statsMessage as any).votes_cleared = true;
         sseManager.broadcastToBoard(boardId, statsMessage);
       } else if (triggeringUserId) {
-        await broadcastVotingStatsUpdateExcludingUser(boardId, triggeringUserId);
+        await broadcastVotingStatsUpdateExcludingUser(boardId, triggeringUserId, votingStats);
       } else {
-        await broadcastVotingStatsUpdate(boardId);
+        await broadcastVotingStatsUpdate(boardId, votingStats);
       }
     }
   } catch (error) {
