@@ -74,8 +74,33 @@ setInterval(() => {
   }
 }, 60000); // Every minute
 
+// Deprecated API endpoint patterns from old Teambeat version
+const DEPRECATED_ROUTE_PATTERNS = [
+  /^\/api\/realtime/,
+  /^\/api\/collections\/presence/,
+  // Add more patterns as they are discovered
+];
+
 export const handle: Handle = async ({ event, resolve }) => {
   const { pathname } = event.url;
+
+  // Check if this is a deprecated route
+  if (DEPRECATED_ROUTE_PATTERNS.some(pattern => pattern.test(pathname))) {
+    return new Response(
+      JSON.stringify({
+        message: 'This API endpoint has been deprecated. Please reload the page.',
+        deprecated_endpoint: pathname,
+        code: 410
+      }),
+      {
+        status: 410,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      }
+    );
+  }
 
   // Rate limit auth endpoints aggressively
   if (pathname.startsWith('/api/auth/login') || pathname.startsWith('/api/auth/register')) {
