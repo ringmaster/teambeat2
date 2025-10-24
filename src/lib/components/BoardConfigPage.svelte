@@ -246,7 +246,8 @@
             board.scenes &&
             board.scenes.length > 0
         ) {
-            selectedSceneId = board.scenes[0].id;
+            // Default to current scene if available, otherwise first scene
+            selectedSceneId = board.currentSceneId || board.scenes[0].id;
             selectedColumnId = "";
         } else {
             selectedColumnId = "";
