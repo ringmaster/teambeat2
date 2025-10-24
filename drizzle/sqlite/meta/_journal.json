@@ -78,6 +78,20 @@
       "when": 1760345678000,
       "tag": "0010_add_health_questions_thread_id",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1760445678000,
+      "tag": "0011_add_email_verification",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1761173497059,
+      "tag": "0012_add_card_seq",
+      "breakpoints": true
     }
   ]
 }

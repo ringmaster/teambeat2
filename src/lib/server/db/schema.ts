@@ -124,6 +124,7 @@ export const cards = table('cards', {
   notes: text('notes'),
   groupId: text('group_id'),
   isGroupLead: booleanField('is_group_lead').notNull().default(false),
+  seq: integer('seq').default(0),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString())
 });

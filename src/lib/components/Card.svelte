@@ -34,6 +34,8 @@
         onDelete: (cardId: string) => void;
         onEdit: (cardId: string) => void;
         onCardDrop?: (e: DragEvent, targetCardId: string) => void;
+        onCardDragOver?: (e: DragEvent) => void;
+        onCardDragLeave?: (e: DragEvent) => void;
         onReaction?: (cardId: string, emoji: string) => void;
     }
 
@@ -58,6 +60,8 @@
         onDelete,
         onEdit,
         onCardDrop,
+        onCardDragOver,
+        onCardDragLeave,
         onReaction,
     }: Props = $props();
 
@@ -170,8 +174,14 @@
         }
     });
 
-    // Drag and drop handlers for grouping
+    // Drag and drop handlers for grouping and sequencing
     function handleDragOver(e: DragEvent) {
+        // Handle sequencing drag over
+        if (onCardDragOver) {
+            onCardDragOver(e);
+        }
+
+        // Handle grouping drag over
         if (canGroup && onCardDrop && !isObscured) {
             e.preventDefault();
             e.dataTransfer!.dropEffect = "move";
@@ -186,6 +196,12 @@
     }
 
     function handleDragLeave(e: DragEvent) {
+        // Handle sequencing drag leave
+        if (onCardDragLeave) {
+            onCardDragLeave(e);
+        }
+
+        // Handle grouping drag leave
         if (canGroup && onCardDrop && !isObscured) {
             // Only clear target if leaving the card element itself, not its children
             const currentTarget = e.currentTarget as HTMLElement;

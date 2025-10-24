@@ -8,11 +8,16 @@
         groupingMode: boolean;
         selectedCards: Set<string>;
         dragTargetColumnId: string;
+        dragOverCardId?: string;
+        cardDropPosition?: string;
+        draggedCardId?: string;
         onDragOver: (e: DragEvent, columnId: string) => void;
         onDragEnter: (e: DragEvent, columnId: string) => void;
         onDragLeave: (e: DragEvent, columnId: string) => void;
         onDrop: (e: DragEvent, columnId: string) => void;
         onCardDrop: (e: DragEvent, targetCardId: string) => void;
+        onCardDragOver?: (e: DragEvent, cardId: string, cardSeq: number, columnId: string) => void;
+        onCardDragLeave?: (e: DragEvent) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
         onVoteCard: (cardId: string, delta: 1 | -1) => void;
@@ -38,11 +43,16 @@
         groupingMode,
         selectedCards,
         dragTargetColumnId,
+        dragOverCardId,
+        cardDropPosition,
+        draggedCardId,
         onDragOver,
         onDragEnter,
         onDragLeave,
         onDrop,
         onCardDrop,
+        onCardDragOver,
+        onCardDragLeave,
         onDragStart,
         onToggleCardSelection,
         onVoteCard,
@@ -92,11 +102,16 @@
                 {selectedCards}
                 {board}
                 {dragTargetColumnId}
+                {dragOverCardId}
+                {cardDropPosition}
+                {draggedCardId}
                 {onDragOver}
                 {onDragEnter}
                 {onDragLeave}
                 {onDrop}
                 {onCardDrop}
+                {onCardDragOver}
+                {onCardDragLeave}
                 {onDragStart}
                 {onToggleCardSelection}
                 {onVoteCard}

@@ -14,6 +14,14 @@ export interface CreateCardData {
 export async function createCard(data: CreateCardData) {
   const id = uuidv4();
 
+  // Get the count of cards in this column to append to the end
+  const [countResult] = await db
+    .select({ count: count() })
+    .from(cards)
+    .where(eq(cards.columnId, data.columnId));
+
+  const nextSeq = (countResult?.count ?? 0) + 1;
+
   await db
     .insert(cards)
     .values({
@@ -22,7 +30,8 @@ export async function createCard(data: CreateCardData) {
       userId: data.userId,
       content: data.content,
       groupId: data.groupId,
-      isGroupLead: data.isGroupLead || false
+      isGroupLead: data.isGroupLead || false,
+      seq: nextSeq
     });
 
   // Return the card with user name included
@@ -35,6 +44,7 @@ export async function createCard(data: CreateCardData) {
       content: cards.content,
       groupId: cards.groupId,
       isGroupLead: cards.isGroupLead,
+      seq: cards.seq,
       createdAt: cards.createdAt,
       updatedAt: cards.updatedAt
     })
@@ -61,6 +71,8 @@ export interface UpdateCardData {
   groupId?: string | null;
   userId?: string;
   isGroupLead?: boolean;
+  seq?: number;
+  columnId?: string;
 }
 
 export async function updateCard(cardId: string, data: UpdateCardData) {
@@ -84,6 +96,7 @@ export async function updateCard(cardId: string, data: UpdateCardData) {
       content: cards.content,
       groupId: cards.groupId,
       isGroupLead: cards.isGroupLead,
+      seq: cards.seq,
       createdAt: cards.createdAt,
       updatedAt: cards.updatedAt
     })
@@ -114,6 +127,7 @@ export async function getCardsForBoard(boardId: string) {
       notes: cards.notes,
       groupId: cards.groupId,
       isGroupLead: cards.isGroupLead,
+      seq: cards.seq,
       createdAt: cards.createdAt,
       updatedAt: cards.updatedAt,
       voteCount: count(votes.id)
@@ -123,8 +137,8 @@ export async function getCardsForBoard(boardId: string) {
     .innerJoin(users, eq(users.id, cards.userId))
     .leftJoin(votes, eq(votes.cardId, cards.id))
     .where(eq(columns.boardId, boardId))
-    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.notes, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt, users.name)
-    .orderBy(cards.createdAt);
+    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.notes, cards.groupId, cards.isGroupLead, cards.seq, cards.createdAt, cards.updatedAt, users.name)
+    .orderBy(cards.seq, cards.createdAt);
 
   return result;
 }
@@ -138,6 +152,7 @@ export async function getCardsForColumn(columnId: string) {
       content: cards.content,
       groupId: cards.groupId,
       isGroupLead: cards.isGroupLead,
+      seq: cards.seq,
       createdAt: cards.createdAt,
       updatedAt: cards.updatedAt,
       voteCount: count(votes.id)
@@ -145,8 +160,8 @@ export async function getCardsForColumn(columnId: string) {
     .from(cards)
     .leftJoin(votes, eq(votes.cardId, cards.id))
     .where(eq(cards.columnId, columnId))
-    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.groupId, cards.isGroupLead, cards.createdAt, cards.updatedAt)
-    .orderBy(cards.createdAt);
+    .groupBy(cards.id, cards.columnId, cards.userId, cards.content, cards.groupId, cards.isGroupLead, cards.seq, cards.createdAt, cards.updatedAt)
+    .orderBy(cards.seq, cards.createdAt);
 
   return result;
 }
@@ -248,6 +263,7 @@ export async function moveCardToColumn(cardId: string, newColumnId: string) {
       content: cards.content,
       groupId: cards.groupId,
       isGroupLead: cards.isGroupLead,
+      seq: cards.seq,
       createdAt: cards.createdAt,
       updatedAt: cards.updatedAt
     })
@@ -335,4 +351,46 @@ export async function moveGroupToColumn(leadCardId: string, newColumnId: string)
       updatedAt: new Date().toISOString()
     })
     .where(eq(cards.groupId, leadCard.groupId));
+}
+
+export async function resequenceCard(cardId: string, targetColumnId: string, targetSeq: number) {
+  const card = await findCardById(cardId);
+  if (!card) {
+    throw new Error('Card not found');
+  }
+
+  // Step 1: Increment seq for all cards at or after the target position in the destination column
+  const cardsToUpdate = await db
+    .select({ id: cards.id, seq: cards.seq })
+    .from(cards)
+    .where(eq(cards.columnId, targetColumnId));
+
+  const affectedCardIds: string[] = [];
+
+  for (const c of cardsToUpdate) {
+    if (c.seq !== null && c.seq >= targetSeq) {
+      await db
+        .update(cards)
+        .set({
+          seq: c.seq + 1,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(cards.id, c.id));
+      affectedCardIds.push(c.id);
+    }
+  }
+
+  // Step 2: Move the card to the target position
+  await db
+    .update(cards)
+    .set({
+      columnId: targetColumnId,
+      seq: targetSeq,
+      groupId: null, // Ungroup when resequencing
+      isGroupLead: false,
+      updatedAt: new Date().toISOString()
+    })
+    .where(eq(cards.id, cardId));
+
+  return { affectedCardIds };
 }

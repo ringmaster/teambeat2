@@ -2,8 +2,15 @@
     import Card from "./Card.svelte";
     import TextareaWithButton from "./ui/TextareaWithButton.svelte";
     import Icon from "./ui/Icon.svelte";
-    import { slide } from "svelte/transition";
+    import { slide, crossfade } from "svelte/transition";
+    import { quintOut } from "svelte/easing";
+    import { flip } from "svelte/animate";
     import { getSceneCapability } from "$lib/utils/scene-capability";
+
+    const [send, receive] = crossfade({
+        duration: 200,
+        easing: quintOut,
+    });
 
     interface Props {
         column: any;
@@ -13,11 +20,21 @@
         selectedCards: Set<string>;
         board: any;
         dragTargetColumnId: string;
+        dragOverCardId?: string;
+        cardDropPosition?: string;
+        draggedCardId?: string;
         onDragOver: (e: DragEvent, columnId: string) => void;
         onDragEnter: (e: DragEvent, columnId: string) => void;
         onDragLeave: (e: DragEvent, columnId: string) => void;
         onDrop: (e: DragEvent, columnId: string) => void;
         onCardDrop: (e: DragEvent, targetCardId: string) => void;
+        onCardDragOver?: (
+            e: DragEvent,
+            cardId: string,
+            cardSeq: number,
+            columnId: string,
+        ) => void;
+        onCardDragLeave?: (e: DragEvent) => void;
         onDragStart: (e: DragEvent, cardId: string) => void;
         onToggleCardSelection: (cardId: string) => void;
         onVoteCard: (cardId: string, delta: 1 | -1) => void;
@@ -45,11 +62,16 @@
         selectedCards,
         board,
         dragTargetColumnId,
+        dragOverCardId,
+        cardDropPosition,
+        draggedCardId,
         onDragOver,
         onDragEnter,
         onDragLeave,
         onDrop,
         onCardDrop,
+        onCardDragOver,
+        onCardDragLeave,
         onDragStart,
         onToggleCardSelection,
         onVoteCard,
@@ -78,11 +100,57 @@
 
     let ungroupedCards = $derived(columnCards.filter((card) => !card.groupId));
 
+    // Check if sequencing is enabled
+    let canSequence = $derived(
+        getSceneCapability(currentScene, board?.status, "allow_sequence_cards"),
+    );
+
     // Function to get subordinate cards for a lead card
     function getSubordinateCards(leadCard: any) {
         return columnCards.filter(
             (card) => card.groupId === leadCard.groupId && !card.isGroupLead,
         );
+    }
+
+    // Helper function to determine if showing a drop indicator would be redundant
+    function shouldShowDropIndicator(
+        hoveredCard: any,
+        position: "above" | "below",
+    ): boolean {
+        // Don't show indicator on the dragged card itself
+        if (draggedCardId === hoveredCard.id) {
+            return false;
+        }
+
+        // If we don't have a dragged card, don't show
+        if (!draggedCardId) {
+            return false;
+        }
+
+        // Find the dragged card in ungroupedCards
+        const draggedCardIndex = ungroupedCards.findIndex(
+            (c) => c.id === draggedCardId,
+        );
+        const hoveredCardIndex = ungroupedCards.findIndex(
+            (c) => c.id === hoveredCard.id,
+        );
+
+        // If either card isn't found, allow the indicator
+        if (draggedCardIndex === -1 || hoveredCardIndex === -1) {
+            return true;
+        }
+
+        // Check if dropping would be redundant:
+        // - Dropping "above" a card that's directly after the dragged card = no movement
+        // - Dropping "below" a card that's directly before the dragged card = no movement
+        if (position === "above" && hoveredCardIndex === draggedCardIndex + 1) {
+            return false; // Hovering above the card right after the dragged card
+        }
+        if (position === "below" && hoveredCardIndex === draggedCardIndex - 1) {
+            return false; // Hovering below the card right before the dragged card
+        }
+
+        return true;
     }
 </script>
 
@@ -138,7 +206,12 @@
         <!-- Lead cards with their subordinate cards -->
         {#each leadCards as leadCard (leadCard.id)}
             {@const subordinateCards = getSubordinateCards(leadCard)}
-            <div class="card-group">
+            <div
+                class="card-group"
+                in:receive={{ key: leadCard.id }}
+                out:send={{ key: leadCard.id }}
+                animate:flip={{ duration: 200 }}
+            >
                 <!-- Lead card -->
                 <Card
                     card={leadCard}
@@ -166,31 +239,37 @@
                 {#if subordinateCards.length > 0}
                     <div class="subordinate-cards">
                         {#each subordinateCards as subCard (subCard.id)}
-                            <Card
-                                card={subCard}
-                                isSubordinate={true}
-                                {groupingMode}
-                                isSelected={selectedCards.has(subCard.id)}
-                                {currentScene}
-                                {board}
-                                {userRole}
-                                {currentUserId}
-                                userVotesOnCard={userVotesByCard.get(
-                                    subCard.id,
-                                ) || 0}
-                                allUsersVotesOnCard={allVotesByCard.get(
-                                    subCard.id,
-                                )}
-                                {hasVotes}
-                                {onDragStart}
-                                {onCardDrop}
-                                onToggleSelection={onToggleCardSelection}
-                                onVote={onVoteCard}
-                                onComment={onCommentCard}
-                                onDelete={onDeleteCard}
-                                onEdit={onEditCard}
-                                {onReaction}
-                            />
+                            <div
+                                in:receive={{ key: subCard.id }}
+                                out:send={{ key: subCard.id }}
+                                animate:flip={{ duration: 200 }}
+                            >
+                                <Card
+                                    card={subCard}
+                                    isSubordinate={true}
+                                    {groupingMode}
+                                    isSelected={selectedCards.has(subCard.id)}
+                                    {currentScene}
+                                    {board}
+                                    {userRole}
+                                    {currentUserId}
+                                    userVotesOnCard={userVotesByCard.get(
+                                        subCard.id,
+                                    ) || 0}
+                                    allUsersVotesOnCard={allVotesByCard.get(
+                                        subCard.id,
+                                    )}
+                                    {hasVotes}
+                                    {onDragStart}
+                                    {onCardDrop}
+                                    onToggleSelection={onToggleCardSelection}
+                                    onVote={onVoteCard}
+                                    onComment={onCommentCard}
+                                    onDelete={onDeleteCard}
+                                    onEdit={onEditCard}
+                                    {onReaction}
+                                />
+                            </div>
                         {/each}
                     </div>
                 {/if}
@@ -199,26 +278,50 @@
 
         <!-- Ungrouped cards -->
         {#each ungroupedCards as card (card.id)}
-            <Card
-                {card}
-                {groupingMode}
-                isSelected={selectedCards.has(card.id)}
-                {currentScene}
-                {board}
-                {userRole}
-                {currentUserId}
-                userVotesOnCard={userVotesByCard.get(card.id) || 0}
-                allUsersVotesOnCard={allVotesByCard.get(card.id)}
-                {hasVotes}
-                {onDragStart}
-                {onCardDrop}
-                onToggleSelection={onToggleCardSelection}
-                onVote={onVoteCard}
-                onComment={onCommentCard}
-                onDelete={onDeleteCard}
-                onEdit={onEditCard}
-                {onReaction}
-            />
+            <div class="card-wrapper" animate:flip={{ duration: 200 }}>
+                <!-- Drop indicator above card -->
+                {#if canSequence && dragOverCardId === card.id && cardDropPosition === "above" && shouldShowDropIndicator(card, "above")}
+                    <hr class="sequence-drop-indicator sequence-drop-indicator-top" />
+                {/if}
+
+                <div
+                    class="card-drag-area"
+                    in:receive={{ key: card.id }}
+                    out:send={{ key: card.id }}
+                    ondragover={canSequence && onCardDragOver
+                        ? (e) => onCardDragOver(e, card.id, card.seq, column.id)
+                        : undefined}
+                    ondragleave={canSequence && onCardDragLeave
+                        ? onCardDragLeave
+                        : undefined}
+                >
+                    <Card
+                        {card}
+                        {groupingMode}
+                        isSelected={selectedCards.has(card.id)}
+                        {currentScene}
+                        {board}
+                        {userRole}
+                        {currentUserId}
+                        userVotesOnCard={userVotesByCard.get(card.id) || 0}
+                        allUsersVotesOnCard={allVotesByCard.get(card.id)}
+                        {hasVotes}
+                        {onDragStart}
+                        {onCardDrop}
+                        onToggleSelection={onToggleCardSelection}
+                        onVote={onVoteCard}
+                        onComment={onCommentCard}
+                        onDelete={onDeleteCard}
+                        onEdit={onEditCard}
+                        {onReaction}
+                    />
+                </div>
+
+                <!-- Drop indicator below card -->
+                {#if canSequence && dragOverCardId === card.id && cardDropPosition === "below" && shouldShowDropIndicator(card, "below")}
+                    <hr class="sequence-drop-indicator sequence-drop-indicator-bottom" />
+                {/if}
+            </div>
         {/each}
     </div>
 </div>
@@ -280,13 +383,33 @@
 
     /* Cards Container */
     .cards-container {
-        gap: 12px;
+        gap: 0;
         display: flex;
         flex-direction: column;
         min-height: 128px;
         flex: 1;
         overflow-y: auto;
         padding: 8px 8px 50vh;
+    }
+
+    /* Card wrapper - provides spacing and positioning context */
+    .card-wrapper {
+        position: relative;
+        padding: 6px 0;
+    }
+
+    .card-wrapper:first-child {
+        padding-top: 0;
+    }
+
+    .card-wrapper:last-child {
+        padding-bottom: 0;
+    }
+
+    /* Card drag area - expands to cover gaps for smooth drag detection */
+    .card-drag-area {
+        margin: -6px 0;
+        padding: 6px 0;
     }
 
     /* Card group container */
@@ -305,6 +428,28 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+    }
+
+    /* Sequence drop indicator - absolutely positioned to avoid layout shifts */
+    .sequence-drop-indicator {
+        position: absolute;
+        left: 0;
+        right: 0;
+        border: none;
+        border-top: 3px solid var(--color-primary);
+        margin: 0;
+        background: transparent;
+        height: 0;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .sequence-drop-indicator-top {
+        top: 0;
+    }
+
+    .sequence-drop-indicator-bottom {
+        bottom: 0;
     }
 
     :global #board-columns-container #board-columns-flex .column.locked {

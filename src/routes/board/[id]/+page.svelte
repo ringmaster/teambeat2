@@ -96,6 +96,9 @@
     let columnDropPosition = $state("");
     let dragOverColumnEnd = $state(false);
     let cardDropTargetColumnId = $state("");
+    let dragOverCardId = $state("");
+    let cardDropPosition = $state(""); // "above" or "below"
+    let cardSequenceDropIndex = $state<number | null>(null);
 
     // Grouping State
     let groupingMode = $state(false);
@@ -548,12 +551,26 @@
                 handlePresencePing();
                 break;
             case "card_created":
-                cards = [...cards, data.card];
+                cards = [...cards, data.card].sort((a, b) => {
+                    // Sort by seq first (ascending: 0, 1, 2, 3...)
+                    const aSeq = a.seq ?? 0;
+                    const bSeq = b.seq ?? 0;
+                    if (aSeq !== bSeq) return aSeq - bSeq;
+                    // Then by createdAt
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                });
                 break;
             case "card_updated":
-                cards = cards.map((c) =>
-                    c.id === data.card.id ? data.card : c,
-                );
+                cards = cards
+                    .map((c) => (c.id === data.card.id ? data.card : c))
+                    .sort((a, b) => {
+                        // Sort by seq first (ascending: 0, 1, 2, 3...)
+                        const aSeq = a.seq ?? 0;
+                        const bSeq = b.seq ?? 0;
+                        if (aSeq !== bSeq) return aSeq - bSeq;
+                        // Then by createdAt
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                    });
                 break;
             case "card_deleted":
                 cards = cards.filter((c) => c.id !== data.card_id);
@@ -1692,6 +1709,7 @@
             return;
         }
 
+        console.log('[DRAG DEBUG] Drag started:', { cardId });
         draggedCardId = cardId;
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = "move";
@@ -1745,35 +1763,69 @@
         event.preventDefault();
 
         if (!draggedCardId || !getSceneCapability(currentScene, board?.status, 'allow_move_cards')) {
+            console.log('[DRAG DEBUG] Drag ended (invalid/not allowed)');
             draggedCardId = "";
             cardDropTargetColumnId = "";
+            cardSequenceDropIndex = null;
+            dragOverCardId = "";
+            cardDropPosition = "";
             return;
         }
 
         try {
-            const response = await fetch(`/api/cards/${draggedCardId}/move`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ columnId: targetColumnId }),
-            });
+            // Check if sequencing is enabled and we have a specific drop index
+            const canSequence = getSceneCapability(currentScene, board?.status, 'allow_sequence_cards');
 
-            if (response.ok) {
-                const data = await response.json();
-                // Only update local state if it's a single card move
-                // Group moves are handled via WebSocket broadcasts
-                if (data.card) {
-                    cards = cards.map((c) =>
-                        c.id === draggedCardId ? data.card : c,
-                    );
+            if (canSequence && cardSequenceDropIndex !== null) {
+                console.log('[DRAG DEBUG] Drop - sequencing:', {
+                    draggedCardId,
+                    targetColumnId,
+                    targetSeq: cardSequenceDropIndex
+                });
+                // Use PATCH endpoint for sequencing
+                const response = await fetch(`/api/cards/${draggedCardId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        columnId: targetColumnId,
+                        seq: cardSequenceDropIndex
+                    }),
+                });
+
+                if (!response.ok) {
+                    console.error("Failed to resequence card");
                 }
-                // For group moves, the WebSocket broadcasts will update the UI
+                // WebSocket broadcasts will update the UI
+            } else {
+                // Use existing move endpoint
+                const response = await fetch(`/api/cards/${draggedCardId}/move`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ columnId: targetColumnId }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Only update local state if it's a single card move
+                    // Group moves are handled via WebSocket broadcasts
+                    if (data.card) {
+                        cards = cards.map((c) =>
+                            c.id === draggedCardId ? data.card : c,
+                        );
+                    }
+                    // For group moves, the WebSocket broadcasts will update the UI
+                }
             }
         } catch (error) {
             console.error("Failed to move card:", error);
         }
 
+        console.log('[DRAG DEBUG] Drag ended (drop complete)');
         draggedCardId = "";
         cardDropTargetColumnId = "";
+        cardSequenceDropIndex = null;
+        dragOverCardId = "";
+        cardDropPosition = "";
     }
 
     async function handleCardDrop(event: DragEvent, targetCardId: string) {
@@ -1809,6 +1861,70 @@
 
         draggedCardId = "";
         cardDropTargetColumnId = "";
+    }
+
+    function handleCardDragOver(event: DragEvent, cardId: string, cardSeq: number, columnId: string) {
+        // Check if sequencing is enabled
+        if (!getSceneCapability(currentScene, board?.status, 'allow_sequence_cards')) {
+            return;
+        }
+
+        event.preventDefault();
+
+        // Get the card element to calculate position
+        const cardElement = (event.currentTarget as HTMLElement);
+        const rect = cardElement.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        const mouseY = event.clientY;
+
+        // Determine if we're in the top half or bottom half
+        const position = mouseY < midpoint ? "above" : "below";
+
+        const wasOverCard = dragOverCardId;
+        const wasPosition = cardDropPosition;
+
+        dragOverCardId = cardId;
+        cardDropPosition = position;
+
+        // Log when drop indicator visibility changes
+        if (wasOverCard !== cardId || wasPosition !== position) {
+            console.log('[DRAG DEBUG] Drop indicator changed:', {
+                cardId,
+                position,
+                seq: cardSeq,
+                columnId,
+                previousCard: wasOverCard,
+                previousPosition: wasPosition
+            });
+        }
+
+        // Calculate the sequence index for the drop
+        // If "above", use the card's seq; if "below", use seq + 1
+        cardSequenceDropIndex = position === "above" ? cardSeq : cardSeq + 1;
+    }
+
+    function handleCardDragLeave(event: DragEvent) {
+        // Check if sequencing is enabled
+        if (!getSceneCapability(currentScene, board?.status, 'allow_sequence_cards')) {
+            return;
+        }
+
+        const currentTarget = event.currentTarget as HTMLElement;
+        const relatedTarget = event.relatedTarget as HTMLElement;
+
+        // Don't clear if moving to a drop indicator (which would cause flickering)
+        if (relatedTarget && relatedTarget.classList && relatedTarget.classList.contains('sequence-drop-indicator')) {
+            console.log('[DRAG DEBUG] Moved to drop indicator, maintaining state');
+            return;
+        }
+
+        // Only clear if we're actually leaving the card (not just moving to a child)
+        if (currentTarget && (!relatedTarget || !currentTarget.contains(relatedTarget))) {
+            console.log('[DRAG DEBUG] Drop indicator cleared (drag leave)');
+            dragOverCardId = "";
+            cardDropPosition = "";
+            cardSequenceDropIndex = null;
+        }
     }
 
     async function ungroupCard(cardId: string, targetColumnId: string) {
@@ -2734,11 +2850,16 @@
             {groupingMode}
             {selectedCards}
             dragTargetColumnId={cardDropTargetColumnId}
+            {dragOverCardId}
+            {cardDropPosition}
+            {draggedCardId}
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onCardDrop={handleCardDrop}
+            onCardDragOver={handleCardDragOver}
+            onCardDragLeave={handleCardDragLeave}
             onDragStart={handleDragStart}
             onToggleCardSelection={toggleCardSelection}
             onVoteCard={voteCard}
