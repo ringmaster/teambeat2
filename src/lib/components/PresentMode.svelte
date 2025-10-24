@@ -5,6 +5,7 @@
     import { getUserDisplayName } from "$lib/utils/animalNames";
     import { getSceneCapability } from "$lib/utils/scene-capability";
     import { marked } from 'marked';
+    import { toastStore } from "$lib/stores/toast";
     import type {
         Board,
         Scene,
@@ -183,6 +184,39 @@
     async function selectCard(cardId: string) {
         if (!canSelectCards) return;
 
+        // Check if someone else is editing the current card's notes
+        if (notesLocked && notesLockedBy && selectedCard) {
+            toastStore.warning(
+                `${notesLockedBy} is currently editing notes for this card. Switch anyway?`,
+                {
+                    autoHide: false,
+                    actions: [
+                        {
+                            label: 'Switch',
+                            onClick: async () => {
+                                // Save any unsaved notes before switching
+                                if (hasTyped && selectedCard) {
+                                    if (autoSaveTimer) {
+                                        clearTimeout(autoSaveTimer);
+                                        autoSaveTimer = null;
+                                    }
+                                    await saveNotesToCard(selectedCard.id, notesContent);
+                                }
+                                await performCardSwitch(cardId);
+                            },
+                            variant: 'primary'
+                        },
+                        {
+                            label: 'Cancel',
+                            onClick: () => {},
+                            variant: 'secondary'
+                        }
+                    ]
+                }
+            );
+            return;
+        }
+
         // If user has unsaved changes, save them before switching cards
         if (hasTyped && selectedCard) {
             // Clear any pending auto-save timer
@@ -194,6 +228,10 @@
             await saveNotesToCard(selectedCard.id, notesContent);
         }
 
+        await performCardSwitch(cardId);
+    }
+
+    async function performCardSwitch(cardId: string) {
         try {
             const response = await fetch(
                 `/api/scenes/${scene.id}/select-card`,
