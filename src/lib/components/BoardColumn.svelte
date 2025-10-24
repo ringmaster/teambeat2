@@ -464,10 +464,17 @@
             flex-direction: row;
             flex-wrap: wrap;
             flex: none;
-            .card {
+            gap: 12px;
+            align-items: flex-start;
+            .card-wrapper {
                 flex: 1;
                 min-width: 300px;
-                max-width: 49.5%;
+                max-width: calc(50% - 6px);
+                padding: 0;
+            }
+            .card-wrapper .card-drag-area {
+                margin: 0;
+                padding: 0;
             }
         }
     }
