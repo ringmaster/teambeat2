@@ -78,6 +78,7 @@
     let newCommentContent = $state("");
     let cardsListElement = $state<HTMLElement>();
     let notesTextarea = $state<HTMLTextAreaElement>();
+    let autoSaveTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
     const canSelectCards = isAdmin || isFacilitator;
 
@@ -182,6 +183,17 @@
     async function selectCard(cardId: string) {
         if (!canSelectCards) return;
 
+        // If user has unsaved changes, save them before switching cards
+        if (hasTyped && selectedCard) {
+            // Clear any pending auto-save timer
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = null;
+            }
+            // Save the notes to the current card before switching
+            await saveNotesToCard(selectedCard.id, notesContent);
+        }
+
         try {
             const response = await fetch(
                 `/api/scenes/${scene.id}/select-card`,
@@ -258,24 +270,39 @@
         if (!hasTyped && !notesLocked && !acquiringLock) {
             await acquireNotesLock();
         }
+
+        // Clear existing auto-save timer
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+        }
+
+        // Set new auto-save timer for 3 seconds
+        autoSaveTimer = setTimeout(() => {
+            saveNotes();
+        }, 3000);
     }
 
     onMount(() => {
         if (notesTextarea && notesContent) {
             autoResizeTextarea(notesTextarea);
         }
+
+        // Cleanup: clear auto-save timer when component is unmounted
+        return () => {
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
+            }
+        };
     });
 
-    async function saveNotes() {
-        if (!selectedCard || !hasTyped) return;
-
+    async function saveNotesToCard(cardId: string, content: string) {
         try {
             const response = await fetch(
-                `/api/cards/${selectedCard.id}/notes`,
+                `/api/cards/${cardId}/notes`,
                 {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ content: notesContent }),
+                    body: JSON.stringify({ content }),
                 },
             );
 
@@ -285,14 +312,27 @@
                 notesLocked = false;
                 notesLockedBy = null;
 
-                if (selectedCard) {
-                    selectedCard.notes = notesContent;
+                // Update the card's notes if it's still the selected card
+                if (selectedCard && selectedCard.id === cardId) {
+                    selectedCard.notes = content;
                 }
                 // Content and lock status will be updated via SSE broadcast
             }
         } catch (error) {
             console.error("Error saving notes:", error);
         }
+    }
+
+    async function saveNotes() {
+        if (!selectedCard || !hasTyped) return;
+
+        // Clear any pending auto-save timer
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = null;
+        }
+
+        await saveNotesToCard(selectedCard.id, notesContent);
     }
 
     async function toggleAgreement(commentId: string, isAgreement: boolean) {
