@@ -8,6 +8,8 @@
     import Pill from "$lib/components/ui/Pill.svelte";
     import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
     import DropdownMenu from "$lib/components/ui/DropdownMenu.svelte";
+    import * as dashboardApi from "$lib/services/dashboard-api";
+    import { generateBoardName } from "$lib/utils/board-name-generator";
 
     interface Props {
         user: any;
@@ -48,24 +50,18 @@
     onMount(async () => {
         try {
             // Check if email is configured
-            const configResponse = await fetch("/api/auth/email-config");
-            if (configResponse.ok) {
-                const configData = await configResponse.json();
-                isEmailConfigured = configData.isEmailConfigured;
-            }
+            const configData = await dashboardApi.checkEmailConfig();
+            isEmailConfigured = configData.isEmailConfigured;
 
-            const seriesResponse = await fetch("/api/series");
+            // Load series
+            const seriesData = await dashboardApi.listSeries();
+            series = seriesData.series;
 
-            if (seriesResponse.ok) {
-                const seriesData = await seriesResponse.json();
-                series = seriesData.series;
-
-                series.forEach((s) => {
-                    initializeBoardName(s.id, s.name);
-                    // Set all series to collapsed by default
-                    collapsedSeries[s.id] = true;
-                });
-            }
+            series.forEach((s) => {
+                initializeBoardName(s.id, s.name);
+                // Set all series to collapsed by default
+                collapsedSeries[s.id] = true;
+            });
         } catch (error) {
             console.error("Failed to load dashboard data:", error);
         } finally {
@@ -88,158 +84,15 @@
         seriesError = "";
 
         try {
-            const response = await fetch("/api/series", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newSeriesName.trim() }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                series = [...series, data.series];
-                initializeBoardName(data.series.id, data.series.boards.length);
-                newSeriesName = "";
-            } else {
-                seriesError = data.error || "Failed to create series";
-            }
+            const data = await dashboardApi.createSeries(newSeriesName.trim());
+            series = [...series, data.series];
+            initializeBoardName(data.series.id, data.series.boards.length);
+            newSeriesName = "";
         } catch (error) {
-            seriesError = `Network error. Please try again. Error:${error}`;
+            seriesError = error instanceof Error ? error.message : "Failed to create series";
         } finally {
             creatingNewSeries = false;
         }
-    }
-
-    function generateBoardName(seed: string): string {
-        const colors = [
-            "Amber",
-            "Azure",
-            "Crimson",
-            "Emerald",
-            "Golden",
-            "Indigo",
-            "Jade",
-            "Lavender",
-            "Magenta",
-            "Navy",
-            "Olive",
-            "Pearl",
-            "Quartz",
-            "Ruby",
-            "Sage",
-            "Teal",
-            "Violet",
-            "White",
-            "Coral",
-            "Ebony",
-            "Frost",
-            "Gray",
-            "Ivory",
-            "Lime",
-            "Mint",
-            "Onyx",
-            "Pink",
-            "Rose",
-            "Sand",
-            "Tan",
-            "Aqua",
-            "Beige",
-            "Cyan",
-            "Dusk",
-            "Fire",
-            "Gold",
-            "Jade",
-            "Kiwi",
-            "Lava",
-            "Moss",
-            "Opal",
-            "Plum",
-            "Rain",
-            "Snow",
-            "Tusk",
-            "Wine",
-            "Zinc",
-            "Bone",
-            "Clay",
-            "Dawn",
-        ];
-
-        const objects = [
-            "Bridge",
-            "Tower",
-            "Compass",
-            "Arrow",
-            "Shield",
-            "Anchor",
-            "Crown",
-            "Hammer",
-            "Lantern",
-            "Mirror",
-            "Pyramid",
-            "River",
-            "Stone",
-            "Thread",
-            "Vault",
-            "Wheel",
-            "Beacon",
-            "Canyon",
-            "Dagger",
-            "Engine",
-            "Falcon",
-            "Garden",
-            "Harbor",
-            "Island",
-            "Journey",
-            "Kettle",
-            "Ladder",
-            "Mountain",
-            "Needle",
-            "Ocean",
-            "Palace",
-            "Quill",
-            "Ribbon",
-            "Summit",
-            "Temple",
-            "Umbrella",
-            "Valley",
-            "Waterfall",
-            "Axe",
-            "Blade",
-            "Canvas",
-            "Door",
-            "Eagle",
-            "Forge",
-            "Gate",
-            "Horizon",
-            "Iron",
-            "Jewel",
-            "Key",
-            "Lock",
-        ];
-
-        // Improved hash function with better distribution
-        // Uses a larger prime multiplier and incorporates position
-        let hash1 = 5381;
-        let hash2 = 2166136261;
-
-        for (let i = 0; i < seed.length; i++) {
-            const char = seed.charCodeAt(i);
-            // Mix character with its position for more entropy
-            const positionMix = char * (i + 1) * 31;
-
-            // Two different hash calculations for better distribution
-            hash1 = ((hash1 << 5) + hash1) ^ positionMix;
-            hash2 = (hash2 * 16777619) ^ positionMix;
-        }
-
-        // Ensure positive values
-        hash1 = Math.abs(hash1);
-        hash2 = Math.abs(hash2);
-
-        const colorIndex = hash1 % colors.length;
-        const objectIndex = hash2 % objects.length;
-
-        return `${colors[colorIndex]} ${objects[objectIndex]}`;
     }
 
     function initializeBoardName(seriesId: string, boardCount: number) {
@@ -271,22 +124,10 @@
         boardErrors[seriesId] = "";
 
         try {
-            const response = await fetch("/api/boards", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: boardName, seriesId }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                goto(`/board/${data.board.id}`);
-            } else {
-                boardErrors[seriesId] = data.error || "Failed to create board";
-            }
+            const data = await dashboardApi.createBoard(boardName, seriesId);
+            goto(`/board/${data.board.id}`);
         } catch (error) {
-            boardErrors[seriesId] =
-                `Network error. Please try again. Error: ${error}`;
+            boardErrors[seriesId] = error instanceof Error ? error.message : "Failed to create board";
         } finally {
             creatingBoards[seriesId] = false;
         }
@@ -306,27 +147,14 @@
         if (!seriesToDelete) return;
 
         try {
-            const response = await fetch(`/api/series/${seriesToDelete.id}`, {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                series = series.filter((s) => s.id !== seriesToDelete.id);
-                showDeleteModal = false;
-                seriesToDelete = null;
-            } else {
-                const data = await response.json();
-                const errorDetails = data.details
-                    ? `\n\nDetails: ${data.details}`
-                    : "";
-                const errorType = data.type ? `\nType: ${data.type}` : "";
-                alert(
-                    `${data.error || "Failed to delete series"}${errorDetails}${errorType}`,
-                );
-                console.error("Series deletion error:", data);
-            }
+            await dashboardApi.deleteSeries(seriesToDelete.id);
+            series = series.filter((s) => s.id !== seriesToDelete.id);
+            showDeleteModal = false;
+            seriesToDelete = null;
         } catch (error) {
-            alert(`Network error. Please try again. Error: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : "Failed to delete series";
+            alert(errorMessage);
+            console.error("Series deletion error:", error);
         }
     }
 
@@ -335,11 +163,8 @@
         showUserManagementModal = true;
 
         try {
-            const response = await fetch(`/api/series/${seriesItem.id}/users`);
-            if (response.ok) {
-                const data = await response.json();
-                currentSeriesUsers = data.users;
-            }
+            const data = await dashboardApi.listSeriesUsers(seriesItem.id);
+            currentSeriesUsers = data.users;
         } catch (error) {
             console.error("Failed to load users:", error);
         }
@@ -352,43 +177,17 @@
     }
 
     async function handleUserAdded(email: string) {
-        const response = await fetch(`/api/series/${seriesToManage.id}/users`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, role: "member" }),
-        });
-
-        if (response.ok) {
-            const usersResponse = await fetch(
-                `/api/series/${seriesToManage.id}/users`,
-            );
-            if (usersResponse.ok) {
-                const data = await usersResponse.json();
-                currentSeriesUsers = data.users;
-            }
-        } else {
-            const data = await response.json();
-            throw new Error(data.error || "Failed to add user");
-        }
+        await dashboardApi.addSeriesUser(seriesToManage.id, email, "member");
+        const data = await dashboardApi.listSeriesUsers(seriesToManage.id);
+        currentSeriesUsers = data.users;
     }
 
     async function handleUserRemoved(userId: string) {
         try {
-            const response = await fetch(
-                `/api/series/${seriesToManage.id}/users?userId=${userId}`,
-                {
-                    method: "DELETE",
-                },
+            await dashboardApi.removeSeriesUser(seriesToManage.id, userId);
+            currentSeriesUsers = currentSeriesUsers.filter(
+                (u) => u.userId !== userId,
             );
-
-            if (response.ok) {
-                currentSeriesUsers = currentSeriesUsers.filter(
-                    (u) => u.userId !== userId,
-                );
-            } else {
-                const data = await response.json();
-                console.error("Failed to remove user:", data.error);
-            }
         } catch (error) {
             console.error("Failed to remove user:", error);
         }
@@ -396,23 +195,10 @@
 
     async function handleUserRoleChanged(userId: string, newRole: string) {
         try {
-            const response = await fetch(
-                `/api/series/${seriesToManage.id}/users`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId, role: newRole }),
-                },
+            await dashboardApi.updateSeriesUserRole(seriesToManage.id, userId, newRole);
+            currentSeriesUsers = currentSeriesUsers.map((u) =>
+                u.userId === userId ? { ...u, role: newRole } : u,
             );
-
-            if (response.ok) {
-                currentSeriesUsers = currentSeriesUsers.map((u) =>
-                    u.userId === userId ? { ...u, role: newRole } : u,
-                );
-            } else {
-                const data = await response.json();
-                console.error("Failed to update user role:", data.error);
-            }
         } catch (error) {
             console.error("Failed to update user role:", error);
         }
@@ -435,45 +221,15 @@
         boardErrors[seriesId] = "";
 
         try {
-            // Create a new board
-            const createResponse = await fetch("/api/boards", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: boardName,
-                    seriesId,
-                }),
-            });
-
-            if (!createResponse.ok) {
-                const data = await createResponse.json();
-                alert(data.error || "Failed to create new board");
-                return;
-            }
-
-            const createData = await createResponse.json();
-            const newBoardId = createData.board.id;
-
-            // Clone the source board into the new board
-            const cloneResponse = await fetch(
-                `/api/boards/${newBoardId}/clone`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ sourceId: sourceBoard.id }),
-                },
+            const newBoardId = await dashboardApi.createAndCloneBoard(
+                boardName,
+                seriesId,
+                sourceBoard.id
             );
-
-            if (!cloneResponse.ok) {
-                const data = await cloneResponse.json();
-                alert(data.error || "Failed to clone board");
-                return;
-            }
-
-            // Navigate to the new board
             goto(`/board/${newBoardId}`);
         } catch (error) {
-            alert(`Network error. Please try again. Error: ${error}`);
+            const errorMessage = error instanceof Error ? error.message : "Failed to clone board";
+            alert(errorMessage);
         } finally {
             cloningBoards[sourceBoard.id] = false;
         }
@@ -544,26 +300,15 @@
         }
 
         try {
-            const response = await fetch(`/api/series/${seriesToRename.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: renameSeriesName.trim() }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                series = series.map((s) =>
-                    s.id === seriesToRename.id
-                        ? { ...s, name: renameSeriesName.trim() }
-                        : s,
-                );
-                closeRenameModal();
-            } else {
-                renameSeriesError = data.error || "Failed to rename series";
-            }
+            await dashboardApi.renameSeries(seriesToRename.id, renameSeriesName.trim());
+            series = series.map((s) =>
+                s.id === seriesToRename.id
+                    ? { ...s, name: renameSeriesName.trim() }
+                    : s,
+            );
+            closeRenameModal();
         } catch (error) {
-            renameSeriesError = `Network error. Please try again. Error: ${error}`;
+            renameSeriesError = error instanceof Error ? error.message : "Failed to rename series";
         }
     }
 </script>

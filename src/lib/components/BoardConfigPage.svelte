@@ -11,6 +11,9 @@
     import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
     import { COLUMN_PRESETS } from "$lib/data/column-presets";
     import Autocomplete from "./ui/Autocomplete.svelte";
+    import * as dashboardApi from "$lib/services/dashboard-api";
+    import * as scorecardApi from "$lib/services/scorecard-api";
+    import * as boardApi from "$lib/services/board-api";
 
     interface Props {
         board: any;
@@ -123,13 +126,8 @@
     $effect(async () => {
         if (activeTab === "users" && board?.seriesId) {
             try {
-                const response = await fetch(
-                    `/api/series/${board.seriesId}/users`,
-                );
-                if (response.ok) {
-                    const data = await response.json();
-                    seriesUsers = data.users;
-                }
+                const data = await dashboardApi.listSeriesUsers(board.seriesId);
+                seriesUsers = data.users;
             } catch (error) {
                 console.error("Failed to load users:", error);
             }
@@ -140,11 +138,8 @@
     $effect(async () => {
         if (activeTab === "columns" && board?.id && ['admin', 'facilitator'].includes(userRole)) {
             try {
-                const response = await fetch(`/api/boards/${board.id}/column-presets`);
-                if (response.ok) {
-                    const data = await response.json();
-                    columnPresets = data.presets || [];
-                }
+                const data = await boardApi.fetchColumnPresets(board.id);
+                columnPresets = data.presets || [];
             } catch (error) {
                 console.error("Failed to load column presets:", error);
                 // Fallback to presets without usage tracking
@@ -207,21 +202,13 @@
     async function loadScorecardsForScene(sceneId: string) {
         loadingScorecards = true;
         try {
-            const scorecardsResponse = await fetch(
-                `/api/series/${board.seriesId}/scorecards`,
-            );
-            if (scorecardsResponse.ok) {
-                const scorecardsData = await scorecardsResponse.json();
-                availableScorecards = scorecardsData.scorecards || [];
-            }
+            const [scorecardsData, attachedData] = await Promise.all([
+                scorecardApi.listScorecards(board.seriesId),
+                scorecardApi.getSceneScorecards(sceneId)
+            ]);
 
-            const attachedResponse = await fetch(
-                `/api/scenes/${sceneId}/scorecards`,
-            );
-            if (attachedResponse.ok) {
-                const attachedData = await attachedResponse.json();
-                attachedScorecards = attachedData.sceneScorecards || [];
-            }
+            availableScorecards = scorecardsData.scorecards || [];
+            attachedScorecards = attachedData.sceneScorecards || [];
         } catch (error) {
             console.error("Failed to load scorecards:", error);
         } finally {
@@ -317,21 +304,12 @@
         state: string,
     ) {
         try {
-            const response = await fetch(
-                `/api/boards/${board.id}/scenes/${sceneId}/columns`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ columnId, state }),
-                },
-            );
+            await boardApi.updateColumnDisplay(board.id, sceneId, columnId, state as 'visible' | 'hidden');
 
-            if (response.ok) {
-                if (!columnStates[sceneId]) {
-                    columnStates[sceneId] = {};
-                }
-                columnStates[sceneId][columnId] = state;
+            if (!columnStates[sceneId]) {
+                columnStates[sceneId] = {};
             }
+            columnStates[sceneId][columnId] = state;
         } catch (error) {
             console.error("Failed to update column display:", error);
         }
@@ -340,24 +318,10 @@
     // Scorecard handlers
     async function attachScorecard(scorecardId: string) {
         try {
-            const response = await fetch(
-                `/api/scenes/${selectedSceneId}/scorecards`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ scorecard_id: scorecardId }),
-                },
-            );
+            await scorecardApi.attachScorecard(selectedSceneId, scorecardId);
 
-            if (response.ok) {
-                const attachedResponse = await fetch(
-                    `/api/scenes/${selectedSceneId}/scorecards`,
-                );
-                if (attachedResponse.ok) {
-                    const attachedData = await attachedResponse.json();
-                    attachedScorecards = attachedData.sceneScorecards || [];
-                }
-            }
+            const attachedData = await scorecardApi.getSceneScorecards(selectedSceneId);
+            attachedScorecards = attachedData.sceneScorecards || [];
         } catch (error) {
             console.error("Failed to attach scorecard:", error);
         }
@@ -365,18 +329,11 @@
 
     async function detachScorecard(sceneScorecardId: string) {
         try {
-            const response = await fetch(
-                `/api/scene-scorecards/${sceneScorecardId}`,
-                {
-                    method: "DELETE",
-                },
-            );
+            await scorecardApi.detachScorecard(sceneScorecardId);
 
-            if (response.ok) {
-                attachedScorecards = attachedScorecards.filter(
-                    (ss) => ss.id !== sceneScorecardId,
-                );
-            }
+            attachedScorecards = attachedScorecards.filter(
+                (ss) => ss.id !== sceneScorecardId,
+            );
         } catch (error) {
             console.error("Failed to detach scorecard:", error);
         }
@@ -384,36 +341,17 @@
 
     // User management handlers
     async function handleUserAdded(email: string) {
-        const response = await fetch(`/api/series/${board.seriesId}/users`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, role: "member" }),
-        });
+        await dashboardApi.addSeriesUser(board.seriesId, email, "member");
 
-        if (response.ok) {
-            const usersResponse = await fetch(
-                `/api/series/${board.seriesId}/users`,
-            );
-            if (usersResponse.ok) {
-                const data = await usersResponse.json();
-                seriesUsers = data.users;
-            }
-        } else {
-            const data = await response.json();
-            throw new Error(data.error || "Failed to add user");
-        }
+        const data = await dashboardApi.listSeriesUsers(board.seriesId);
+        seriesUsers = data.users;
     }
 
     async function handleUserRemoved(userId: string) {
         try {
-            const response = await fetch(
-                `/api/series/${board.seriesId}/users?userId=${userId}`,
-                { method: "DELETE" },
-            );
+            await dashboardApi.removeSeriesUser(board.seriesId, userId);
 
-            if (response.ok) {
-                seriesUsers = seriesUsers.filter((u) => u.userId !== userId);
-            }
+            seriesUsers = seriesUsers.filter((u) => u.userId !== userId);
         } catch (error) {
             console.error("Failed to remove user:", error);
         }
@@ -421,20 +359,11 @@
 
     async function handleUserRoleChanged(userId: string, newRole: string) {
         try {
-            const response = await fetch(
-                `/api/series/${board.seriesId}/users`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId, role: newRole }),
-                },
-            );
+            await dashboardApi.updateSeriesUserRole(board.seriesId, userId, newRole);
 
-            if (response.ok) {
-                seriesUsers = seriesUsers.map((u) =>
-                    u.userId === userId ? { ...u, role: newRole } : u,
-                );
-            }
+            seriesUsers = seriesUsers.map((u) =>
+                u.userId === userId ? { ...u, role: newRole } : u,
+            );
         } catch (error) {
             console.error("Failed to update user role:", error);
         }

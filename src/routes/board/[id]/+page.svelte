@@ -24,6 +24,7 @@
     import { SSEClient } from "$lib/client/sse-client.js";
     import { getSceneCapability } from "$lib/utils/scene-capability";
     import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
+    import * as boardApi from "$lib/services/board-api";
 
     interface Props {
         data: {
@@ -191,68 +192,44 @@
             user = userData.user;
 
             // Load templates, board data, cards, and agreements
-            const [templatesResponse, boardResponse, cardsResponse, agreementsResponse] =
+            const [templatesData, boardData, cardsData, agreementsData] =
                 await Promise.all([
-                    fetch(`/api/templates`),
-                    fetch(`/api/boards/${boardId}`),
-                    fetch(`/api/boards/${boardId}/cards`),
-                    fetch(`/api/boards/${boardId}/agreements`),
+                    boardApi.fetchTemplates(),
+                    boardApi.fetchBoard(boardId),
+                    boardApi.fetchCards(boardId),
+                    boardApi.fetchAgreements(boardId),
                 ]);
 
             // Load templates
-            if (templatesResponse.ok) {
-                const templatesData = await templatesResponse.json();
-                templates = templatesData.templates || [];
-            }
+            templates = templatesData.templates || [];
 
-            if (!boardResponse.ok) {
-                loading = false;
-                return;
-            }
-
-            const boardData = await boardResponse.json();
+            // Load board data
             board = boardData.board;
             userRole = boardData.userRole;
 
-            // Load cards and agreements first (we need them for display rule evaluation)
-            if (cardsResponse.ok) {
-                const cardsData = await cardsResponse.json();
-                cards = cardsData.cards || [];
-            }
-
-            if (agreementsResponse.ok) {
-                const agreementsData = await agreementsResponse.json();
-                agreements = agreementsData.agreements || [];
-            }
+            // Load cards and agreements (we need them for display rule evaluation)
+            cards = cardsData.cards || [];
+            agreements = agreementsData.agreements || [];
 
             // Set current scene if available, checking display rules
             if (board.currentSceneId) {
-                const sceneResponse = await fetch(
-                    `/api/boards/${boardId}/scenes`,
+                const scenesData = await boardApi.fetchScenes(boardId);
+                const scenes = scenesData.scenes || [];
+                const requestedScene = scenes.find(
+                    (s: any) => s.id === board.currentSceneId,
                 );
-                if (sceneResponse.ok) {
-                    const scenesData = await sceneResponse.json();
-                    const scenes = scenesData.scenes || [];
-                    const requestedScene = scenes.find(
-                        (s: any) => s.id === board.currentSceneId,
-                    );
 
-                    // Check if the current scene should be displayed
-                    if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
-                        currentScene = requestedScene;
-                    } else {
-                        // Find the first valid scene
-                        for (const scene of scenes) {
-                            if (evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
-                                currentScene = scene;
-                                // Update the board's current scene
-                                await fetch(`/api/boards/${boardId}/scene`, {
-                                    method: "PUT",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ sceneId: scene.id }),
-                                });
-                                break;
-                            }
+                // Check if the current scene should be displayed
+                if (requestedScene && evaluateDisplayRule(requestedScene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
+                    currentScene = requestedScene;
+                } else {
+                    // Find the first valid scene
+                    for (const scene of scenes) {
+                        if (evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
+                            currentScene = scene;
+                            // Update the board's current scene
+                            await boardApi.changeScene(boardId, scene.id);
+                            break;
                         }
                     }
                 }
@@ -906,40 +883,29 @@
 
     async function changeScene(sceneId: string) {
         try {
-            const response = await fetch(`/api/boards/${boardId}/scene`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sceneId }),
-            });
+            const data = await boardApi.changeScene(boardId, sceneId);
 
-            if (response.ok) {
-                const data = await response.json();
-
-                // Update scene immediately with API response data (now matches SSE)
-                board.currentSceneId = sceneId;
-                if (data.scene) {
-                    currentScene = data.scene;
-                }
-
-                // Handle scene-specific data from API response
-                if (
-                    data.present_mode_data &&
-                    currentScene?.mode === "present"
-                ) {
-                    cards = data.present_mode_data.visible_cards;
-                    if (data.present_mode_data.selected_card) {
-                        currentScene.selectedCardId =
-                            data.present_mode_data.selected_card.id;
-                    }
-                } else if (data.all_cards) {
-                    cards = data.all_cards;
-                }
-
-                showSceneDropdown = false;
-            } else {
-                const errorData = await response.json();
-                console.error("Failed to change scene:", errorData.error);
+            // Update scene immediately with API response data (now matches SSE)
+            board.currentSceneId = sceneId;
+            if (data.scene) {
+                currentScene = data.scene;
             }
+
+            // Handle scene-specific data from API response
+            if (
+                data.present_mode_data &&
+                currentScene?.mode === "present"
+            ) {
+                cards = data.present_mode_data.visible_cards;
+                if (data.present_mode_data.selected_card) {
+                    currentScene.selectedCardId =
+                        data.present_mode_data.selected_card.id;
+                }
+            } else if (data.all_cards) {
+                cards = data.all_cards;
+            }
+
+            showSceneDropdown = false;
         } catch (error) {
             console.error("Failed to change scene:", error);
         }
@@ -965,22 +931,12 @@
                             label: "Yes",
                             onClick: async () => {
                                 try {
-                                    const response = await fetch(`/api/boards/${boardId}`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ status: "completed" }),
-                                    });
-
-                                    if (response.ok) {
-                                        const data = await response.json();
-                                        board.status = data.board.status;
-                                        toastStore.success("Board marked as completed");
-                                    } else {
-                                        toastStore.error("Failed to mark board as completed");
-                                    }
+                                    const data = await boardApi.updateBoard(boardId, { status: "completed" });
+                                    board.status = data.board.status;
+                                    toastStore.success("Board marked as completed");
                                 } catch (error) {
                                     console.error("Error updating board status:", error);
-                                    toastStore.error("Error updating board status");
+                                    toastStore.error(error instanceof Error ? error.message : "Error updating board status");
                                 }
                             },
                             variant: "primary",
@@ -1001,27 +957,17 @@
                             label: "Yes",
                             onClick: async () => {
                                 try {
-                                    const response = await fetch(`/api/boards/${boardId}`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ status: "active" }),
-                                    });
-
-                                    if (response.ok) {
-                                        const data = await response.json();
-                                        board.status = data.board.status;
-                                        // Navigate to first scene
-                                        if (board.scenes && board.scenes.length > 0) {
-                                            const firstSceneId = board.scenes[0].id;
-                                            changeScene(firstSceneId);
-                                        }
-                                        toastStore.success("Board activated and restarted");
-                                    } else {
-                                        toastStore.error("Failed to activate board");
+                                    const data = await boardApi.updateBoard(boardId, { status: "active" });
+                                    board.status = data.board.status;
+                                    // Navigate to first scene
+                                    if (board.scenes && board.scenes.length > 0) {
+                                        const firstSceneId = board.scenes[0].id;
+                                        changeScene(firstSceneId);
                                     }
+                                    toastStore.success("Board activated and restarted");
                                 } catch (error) {
                                     console.error("Error updating board status:", error);
-                                    toastStore.error("Error updating board status");
+                                    toastStore.error(error instanceof Error ? error.message : "Error updating board status");
                                 }
                             },
                             variant: "primary",
@@ -1061,22 +1007,12 @@
                             label: "Yes",
                             onClick: async () => {
                                 try {
-                                    const response = await fetch(`/api/boards/${boardId}`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ status: "completed" }),
-                                    });
-
-                                    if (response.ok) {
-                                        const data = await response.json();
-                                        board.status = data.board.status;
-                                        toastStore.success("Board marked as completed");
-                                    } else {
-                                        toastStore.error("Failed to mark board as completed");
-                                    }
+                                    const data = await boardApi.updateBoard(boardId, { status: "completed" });
+                                    board.status = data.board.status;
+                                    toastStore.success("Board marked as completed");
                                 } catch (error) {
                                     console.error("Error updating board status:", error);
-                                    toastStore.error("Error updating board status");
+                                    toastStore.error(error instanceof Error ? error.message : "Error updating board status");
                                 }
                             },
                             variant: "primary",
@@ -1209,30 +1145,22 @@
 
     async function voteCard(cardId: string, delta: 1 | -1) {
         try {
-            const response = await fetch(`/api/cards/${cardId}/vote`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ delta }),
-            });
+            const data = await boardApi.voteCard(cardId, delta);
 
-            if (response.ok) {
-                const data = await response.json();
-
-                // Update cards with new vote counts
-                if (data.card) {
-                    cards = cards.map((c) => (c.id === cardId ? data.card : c));
-                }
-
-                // Update voting data with comprehensive data from API response
-                // This includes updated vote counts, so no need for additional processing
-                const votingDataUpdate: VotingData = {
-                    votes_by_card: data.user_voting_data?.votes_by_card,
-                    voting_stats: data.voting_stats,
-                    // Include all votes by card if showVotes is enabled
-                    all_votes_by_card: data.all_votes_by_card,
-                };
-                processVotingData(votingDataUpdate);
+            // Update cards with new vote counts
+            if (data.card) {
+                cards = cards.map((c) => (c.id === cardId ? data.card : c));
             }
+
+            // Update voting data with comprehensive data from API response
+            // This includes updated vote counts, so no need for additional processing
+            const votingDataUpdate: VotingData = {
+                votes_by_card: data.user_voting_data?.votes_by_card,
+                voting_stats: data.voting_stats,
+                // Include all votes by card if showVotes is enabled
+                all_votes_by_card: data.all_votes_by_card,
+            };
+            processVotingData(votingDataUpdate);
         } catch (error) {
             console.error("Failed to vote:", error);
         }
@@ -1280,35 +1208,22 @@
             return;
 
         try {
-            const response = await fetch(`/api/boards/${boardId}/present-data`);
-            if (response.ok) {
-                const data = await response.json();
+            const data = await boardApi.fetchPresentModeData(boardId);
 
-                // Update cards with filtered and sorted cards
-                if (data.visible_cards) {
-                    cards = data.visible_cards;
-                }
+            // Update cards with filtered and sorted cards
+            if (data.cards) {
+                cards = data.cards;
+            }
 
-                // Update selected card
-                if (data.selected_card) {
-                    currentScene.selectedCardId = data.selected_card.id;
-                }
+            // Update notes lock status
+            notesLockStatus = data.notesLockStatus;
 
-                // Update notes lock status
-                notesLockStatus = data.notes_lock;
-
-                // Update comments and agreements
-                if (data.comments) {
-                    comments = data.comments;
-                }
-                if (data.agreements) {
-                    agreements = data.agreements;
-                }
-            } else {
-                console.error(
-                    "Failed to load present mode data:",
-                    response.status,
-                );
+            // Update comments and agreements
+            if (data.comments) {
+                comments = data.comments;
+            }
+            if (data.agreements) {
+                agreements = data.agreements;
             }
         } catch (error) {
             console.error("Error loading present mode data:", error);
@@ -1318,13 +1233,8 @@
     async function reloadAllCards() {
         if (!boardId) return;
         try {
-            const response = await fetch(`/api/boards/${boardId}/cards`);
-            if (response.ok) {
-                const data = await response.json();
-                cards = data.cards || [];
-            } else {
-                console.error("Failed to reload cards:", response.status);
-            }
+            const data = await boardApi.fetchCards(boardId);
+            cards = data.cards || [];
         } catch (error) {
             console.error("Error reloading cards:", error);
         }
@@ -1334,28 +1244,15 @@
         if (!boardId || !user?.id) return;
 
         try {
-            // Load user's voting allocation
-            const allocationResponse = await fetch(
-                `/api/boards/${boardId}/user-votes`,
-            );
-            if (allocationResponse.ok) {
-                const allocationData = await allocationResponse.json();
+            const allocationData = await boardApi.fetchUserVotingData(boardId);
 
-                // Use reusable process function with new API format
-                processVotingData({
-                    votes_by_card:
-                        allocationData.user_voting_data?.votes_by_card,
-                    all_votes_by_card: allocationData.all_votes_by_card,
-                    voting_stats: allocationData.voting_stats,
-                });
-            } else {
-                console.error(
-                    "Failed to load voting allocation, status:",
-                    allocationResponse.status,
-                );
-                const errorText = await allocationResponse.text();
-                console.error("Error response:", errorText);
-            }
+            // Use reusable process function with new API format
+            processVotingData({
+                votes_by_card:
+                    allocationData.user_voting_data?.votes_by_card,
+                all_votes_by_card: allocationData.all_votes_by_card,
+                voting_stats: allocationData.voting_stats,
+            });
 
             // Voting stats and connected users are now included in the main response
             // No need for additional API calls - they're already processed above
@@ -1368,13 +1265,10 @@
         if (!boardId) return;
 
         try {
-            const response = await fetch(`/api/boards/${boardId}/voting-stats`);
-            if (response.ok) {
-                const data = await response.json();
-                processVotingData({
-                    voting_stats: data.voting_stats,
-                });
-            }
+            const votingStats = await boardApi.fetchVotingStats(boardId);
+            processVotingData({
+                voting_stats: votingStats,
+            });
         } catch (error) {
             console.error("Failed to load voting stats:", error);
         }
@@ -1384,12 +1278,9 @@
         if (!boardId) return;
 
         try {
-            const response = await fetch(`/api/boards/${boardId}/presence`);
-            if (response.ok) {
-                const data = await response.json();
-                // Connected users count is now handled through voting_stats.activeUsers
-                connectedUsers = data.presence?.length || 0;
-            }
+            const data = await boardApi.fetchPresence(boardId);
+            // Connected users count is now handled through voting_stats.activeUsers
+            connectedUsers = data.connectedUsers;
         } catch (error) {
             console.error("Failed to load connected users:", error);
         }

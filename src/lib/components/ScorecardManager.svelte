@@ -19,6 +19,7 @@
     import RPNTestModal from "$lib/components/RPNTestModal.svelte";
     import { toastStore } from "$lib/stores/toast";
     import { parseFile } from "$lib/utils/data-parser";
+    import * as scorecardApi from "$lib/services/scorecard-api";
 
     interface Props {
         seriesId: string;
@@ -137,8 +138,7 @@
         try {
             loadingScorecards = true;
             error = null;
-            const response = await fetch(`/api/series/${seriesId}/scorecards`);
-            const data = await response.json();
+            const data = await scorecardApi.listScorecards(seriesId);
 
             if (data.success) {
                 scorecards = data.scorecards;
@@ -161,16 +161,11 @@
                 .toISOString()
                 .replace(/[:.]/g, "-")
                 .slice(0, 19);
-            const response = await fetch(`/api/series/${seriesId}/scorecards`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: `New Scorecard ${timestamp}`,
-                    description: null,
-                }),
-            });
-
-            const data = await response.json();
+            const data = await scorecardApi.createScorecard(
+                seriesId,
+                `New Scorecard ${timestamp}`,
+                null
+            );
 
             if (data.success) {
                 scorecards = [...scorecards, data.scorecard];
@@ -191,19 +186,12 @@
         try {
             saving = true;
             error = null;
-            const response = await fetch(
-                `/api/series/${seriesId}/scorecards/${selectedScorecardId}`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name: editedScorecardName,
-                        description: editedScorecardDescription || null,
-                    }),
-                },
+            const data = await scorecardApi.updateScorecard(
+                seriesId,
+                selectedScorecardId,
+                editedScorecardName,
+                editedScorecardDescription || null
             );
-
-            const data = await response.json();
 
             if (data.success) {
                 selectedScorecard = data.scorecard;
@@ -236,14 +224,7 @@
                         label: "Delete",
                         onClick: async () => {
                             try {
-                                const response = await fetch(
-                                    `/api/series/${seriesId}/scorecards/${scorecardId}`,
-                                    {
-                                        method: "DELETE",
-                                    },
-                                );
-
-                                const data = await response.json();
+                                const data = await scorecardApi.deleteScorecard(seriesId, scorecardId);
 
                                 if (data.success) {
                                     scorecards = scorecards.filter(
@@ -292,10 +273,7 @@
         try {
             loadingScorecardDetail = true;
             error = null;
-            const response = await fetch(
-                `/api/series/${seriesId}/scorecards/${scorecardId}`,
-            );
-            const data = await response.json();
+            const data = await scorecardApi.getScorecardDetail(seriesId, scorecardId);
 
             if (data.success) {
                 selectedScorecard = data.scorecard;
@@ -325,22 +303,11 @@
                 .toISOString()
                 .replace(/[:.]/g, "-")
                 .slice(0, 19);
-            const response = await fetch(
-                `/api/scorecards/${selectedScorecardId}/datasources`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name: `New Datasource ${timestamp}`,
-                        source_type: "paste",
-                        data_schema: null,
-                        rules: [],
-                        api_config: null,
-                    }),
-                },
+            const data = await scorecardApi.createDatasource(
+                selectedScorecardId,
+                `New Datasource ${timestamp}`,
+                "paste"
             );
-
-            const data = await response.json();
 
             if (data.success) {
                 datasources = [...datasources, data.datasource];
@@ -368,10 +335,7 @@
         try {
             loadingDatasourceDetail = true;
             error = null;
-            const response = await fetch(
-                `/api/scorecards/${selectedScorecardId}/datasources/${datasourceId}`,
-            );
-            const data = await response.json();
+            const data = await scorecardApi.getDatasourceDetail(selectedScorecardId, datasourceId);
 
             if (data.success) {
                 selectedDatasource = data.datasource;
@@ -441,21 +405,16 @@
                 }
             });
 
-            const response = await fetch(
-                `/api/scorecards/${selectedScorecardId}/datasources/${selectedDatasourceId}`,
+            const data = await scorecardApi.updateDatasource(
+                selectedScorecardId,
+                selectedDatasourceId,
                 {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        name: editedDatasourceName,
-                        data_schema: editedDatasourceSampleData || null,
-                        rules: parsedRules,
-                        api_config: null,
-                    }),
-                },
+                    name: editedDatasourceName,
+                    data_schema: editedDatasourceSampleData || null,
+                    rules: parsedRules,
+                    api_config: null,
+                }
             );
-
-            const data = await response.json();
 
             if (data.success) {
                 selectedDatasource = data.datasource;
@@ -487,14 +446,7 @@
                     label: "Delete",
                     onClick: async () => {
                         try {
-                            const response = await fetch(
-                                `/api/scorecards/${selectedScorecardId}/datasources/${datasourceId}`,
-                                {
-                                    method: "DELETE",
-                                },
-                            );
-
-                            const data = await response.json();
+                            const data = await scorecardApi.deleteDatasource(selectedScorecardId!, datasourceId);
 
                             if (data.success) {
                                 datasources = datasources.filter(
@@ -555,18 +507,10 @@
 
         // Save new order to server
         try {
-            const response = await fetch(
-                `/api/scorecards/${selectedScorecardId}/datasources/reorder`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        datasource_ids: reordered.map((d) => d.id),
-                    }),
-                },
+            const data = await scorecardApi.reorderDatasources(
+                selectedScorecardId!,
+                reordered.map((d) => d.id)
             );
-
-            const data = await response.json();
 
             if (data.success) {
                 datasources = data.datasources;
