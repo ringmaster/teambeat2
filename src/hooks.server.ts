@@ -136,5 +136,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 		);
 	}
 
+	// Add cache-control headers to all API endpoints to prevent aggressive caching
+	// This is critical for Digital Ocean App Platform and other CDNs that cache GET requests
+	if (pathname.startsWith('/api/')) {
+		const headers = new Headers(response.headers);
+		headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+		headers.set('Pragma', 'no-cache');
+		headers.set('Expires', '0');
+
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers
+		});
+	}
+
 	return response;
 };
