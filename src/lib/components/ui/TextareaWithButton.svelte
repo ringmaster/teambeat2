@@ -1,78 +1,78 @@
 <script lang="ts">
-    interface Props {
-        placeholder?: string;
-        value?: string;
-        disabled?: boolean;
-        required?: boolean;
-        id?: string;
-        name?: string;
-        class?: string;
-        rows?: number;
-        maxlength?: number;
-        buttonVariant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'light';
-        buttonDisabled?: boolean;
-        oninput?: (event: Event) => void;
-        onkeydown?: (event: KeyboardEvent) => void;
-        onButtonClick?: (event: MouseEvent) => void;
-        buttonContent: any;
-    }
+interface Props {
+	placeholder?: string;
+	value?: string;
+	disabled?: boolean;
+	required?: boolean;
+	id?: string;
+	name?: string;
+	class?: string;
+	rows?: number;
+	maxlength?: number;
+	buttonVariant?: "primary" | "secondary" | "danger" | "ghost" | "light";
+	buttonDisabled?: boolean;
+	oninput?: (event: Event) => void;
+	onkeydown?: (event: KeyboardEvent) => void;
+	onButtonClick?: (event: MouseEvent) => void;
+	buttonContent: any;
+}
 
-    let {
-        placeholder = '',
-        value = $bindable(''),
-        disabled = false,
-        required = false,
-        id,
-        name,
-        class: className = '',
-        rows = 3,
-        maxlength,
-        buttonVariant = 'primary',
-        buttonDisabled = false,
-        oninput,
-        onkeydown,
-        onButtonClick,
-        buttonContent
-    }: Props = $props();
+let {
+	placeholder = "",
+	value = $bindable(""),
+	disabled = false,
+	required = false,
+	id,
+	name,
+	class: className = "",
+	rows = 3,
+	maxlength,
+	buttonVariant = "primary",
+	buttonDisabled = false,
+	oninput,
+	onkeydown,
+	onButtonClick,
+	buttonContent,
+}: Props = $props();
 
-    let buttonClass = $derived.by(() => {
-        let classes = ['textarea-button'];
-        
-        // Variant classes
-        switch (buttonVariant) {
-            case 'primary':
-                classes.push('button-primary');
-                break;
-            case 'secondary':
-                classes.push('button-secondary');
-                break;
-            case 'danger':
-                classes.push('button-danger');
-                break;
-            case 'ghost':
-                classes.push('button-ghost');
-                break;
-            case 'light':
-                classes.push('button-light');
-                break;
-        }
-        
-        return classes.join(' ');
-    });
+let buttonClass = $derived.by(() => {
+	let classes = ["textarea-button"];
 
-    function handleKeydown(event: KeyboardEvent) {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            if (onButtonClick && !buttonDisabled && !disabled) {
-                onButtonClick(new MouseEvent('click', { bubbles: true }));
-            }
-        }
-        
-        // Call the original onkeydown handler if provided
-        if (onkeydown) {
-            onkeydown(event);
-        }
-    }
+	// Variant classes
+	switch (buttonVariant) {
+		case "primary":
+			classes.push("button-primary");
+			break;
+		case "secondary":
+			classes.push("button-secondary");
+			break;
+		case "danger":
+			classes.push("button-danger");
+			break;
+		case "ghost":
+			classes.push("button-ghost");
+			break;
+		case "light":
+			classes.push("button-light");
+			break;
+	}
+
+	return classes.join(" ");
+});
+
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === "Enter" && !event.shiftKey) {
+		event.preventDefault();
+		if (onButtonClick && !buttonDisabled && !disabled) {
+			onButtonClick(new MouseEvent("click", { bubbles: true }));
+		}
+	}
+
+	// Call the original onkeydown handler if provided
+	if (onkeydown) {
+		onkeydown(event);
+	}
+}
 </script>
 
 <div class="textarea-with-button {className}">

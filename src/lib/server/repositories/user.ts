@@ -1,8 +1,8 @@
-import { db } from '../db/index.js';
-import { users } from '../db/schema.js';
-import { eq, like, or, sql, count } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
-import { hashPassword } from '../auth/password.js';
+import { count, eq, like, or, sql } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
+import { hashPassword } from "../auth/password.js";
+import { db } from "../db/index.js";
+import { users } from "../db/schema.js";
 
 export interface CreateUserData {
 	email: string;
@@ -22,7 +22,7 @@ export async function createUser(data: CreateUserData) {
 			email: data.email,
 			name: data.name,
 			passwordHash,
-			emailVerificationSecret
+			emailVerificationSecret,
 		})
 		.returning();
 
@@ -35,16 +35,12 @@ export async function findUserByEmail(email: string) {
 		.from(users)
 		.where(eq(users.email, email))
 		.limit(1);
-	
+
 	return user;
 }
 
 export async function findUserById(id: string) {
-	const [user] = await db
-		.select()
-		.from(users)
-		.where(eq(users.id, id))
-		.limit(1);
+	const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
 
 	return user;
 }
@@ -56,7 +52,7 @@ export async function updateUserPassword(userId: string, newPassword: string) {
 		.update(users)
 		.set({
 			passwordHash,
-			updatedAt: new Date().toISOString()
+			updatedAt: new Date().toISOString(),
 		})
 		.where(eq(users.id, userId))
 		.returning();
@@ -67,15 +63,17 @@ export async function updateUserPassword(userId: string, newPassword: string) {
 export async function searchUsers(
 	search: string,
 	page: number,
-	pageSize: number
-): Promise<Array<{
-	id: string;
-	email: string;
-	name: string | null;
-	isAdmin: boolean;
-	emailVerified: boolean;
-	createdAt: string;
-}>> {
+	pageSize: number,
+): Promise<
+	Array<{
+		id: string;
+		email: string;
+		name: string | null;
+		isAdmin: boolean;
+		emailVerified: boolean;
+		createdAt: string;
+	}>
+> {
 	const offset = (page - 1) * pageSize;
 	const searchPattern = `%${search}%`;
 
@@ -86,16 +84,13 @@ export async function searchUsers(
 			name: users.name,
 			isAdmin: users.is_admin,
 			emailVerified: users.emailVerified,
-			createdAt: users.createdAt
+			createdAt: users.createdAt,
 		})
 		.from(users)
 		.where(
 			search
-				? or(
-					like(users.email, searchPattern),
-					like(users.name, searchPattern)
-				)
-				: undefined
+				? or(like(users.email, searchPattern), like(users.name, searchPattern))
+				: undefined,
 		)
 		.orderBy(users.email)
 		.limit(pageSize)
@@ -112,20 +107,15 @@ export async function countUsers(search: string): Promise<number> {
 		.from(users)
 		.where(
 			search
-				? or(
-					like(users.email, searchPattern),
-					like(users.name, searchPattern)
-				)
-				: undefined
+				? or(like(users.email, searchPattern), like(users.name, searchPattern))
+				: undefined,
 		);
 
 	return result?.count ?? 0;
 }
 
 export async function deleteUserById(userId: string): Promise<void> {
-	await db
-		.delete(users)
-		.where(eq(users.id, userId));
+	await db.delete(users).where(eq(users.id, userId));
 }
 
 export async function getUserById(userId: string) {
@@ -153,26 +143,31 @@ export async function markEmailVerified(userId: string): Promise<void> {
 		.update(users)
 		.set({
 			emailVerified: true,
-			updatedAt: new Date().toISOString()
+			updatedAt: new Date().toISOString(),
 		})
 		.where(eq(users.id, userId));
 }
 
-export async function setEmailVerified(userId: string, verified: boolean): Promise<void> {
+export async function setEmailVerified(
+	userId: string,
+	verified: boolean,
+): Promise<void> {
 	await db
 		.update(users)
 		.set({
 			emailVerified: verified,
-			updatedAt: new Date().toISOString()
+			updatedAt: new Date().toISOString(),
 		})
 		.where(eq(users.id, userId));
 }
 
-export async function ensureEmailVerificationSecret(userId: string): Promise<string> {
+export async function ensureEmailVerificationSecret(
+	userId: string,
+): Promise<string> {
 	const user = await findUserById(userId);
 
 	if (!user) {
-		throw new Error('User not found');
+		throw new Error("User not found");
 	}
 
 	// If secret already exists, return it
@@ -186,7 +181,7 @@ export async function ensureEmailVerificationSecret(userId: string): Promise<str
 		.update(users)
 		.set({
 			emailVerificationSecret: newSecret,
-			updatedAt: new Date().toISOString()
+			updatedAt: new Date().toISOString(),
 		})
 		.where(eq(users.id, userId));
 

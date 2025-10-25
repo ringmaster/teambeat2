@@ -1,116 +1,122 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import type { Scorecard } from '$lib/types/scorecard';
-  import { toastStore } from '$lib/stores/toast';
+import { onMount } from "svelte";
+import { toastStore } from "$lib/stores/toast";
+import type { Scorecard } from "$lib/types/scorecard";
 
-  interface Props {
-    seriesId: string;
-    canEdit: boolean;
-  }
+interface Props {
+	seriesId: string;
+	canEdit: boolean;
+}
 
-  let { seriesId, canEdit }: Props = $props();
+let { seriesId, canEdit }: Props = $props();
 
-  let scorecards = $state<Scorecard[]>([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-  let showCreateDialog = $state(false);
-  let newScorecardName = $state('');
-  let newScorecardDescription = $state('');
-  let creating = $state(false);
+let scorecards = $state<Scorecard[]>([]);
+let loading = $state(true);
+let error = $state<string | null>(null);
+let showCreateDialog = $state(false);
+let newScorecardName = $state("");
+let newScorecardDescription = $state("");
+let creating = $state(false);
 
-  async function loadScorecards() {
-    try {
-      loading = true;
-      error = null;
-      const response = await fetch(`/api/series/${seriesId}/scorecards`);
-      const data = await response.json();
+async function loadScorecards() {
+	try {
+		loading = true;
+		error = null;
+		const response = await fetch(`/api/series/${seriesId}/scorecards`);
+		const data = await response.json();
 
-      if (data.success) {
-        scorecards = data.scorecards;
-      } else {
-        error = data.error || 'Failed to load scorecards';
-      }
-    } catch (e) {
-      error = 'Failed to load scorecards';
-      console.error('Error loading scorecards:', e);
-    } finally {
-      loading = false;
-    }
-  }
+		if (data.success) {
+			scorecards = data.scorecards;
+		} else {
+			error = data.error || "Failed to load scorecards";
+		}
+	} catch (e) {
+		error = "Failed to load scorecards";
+		console.error("Error loading scorecards:", e);
+	} finally {
+		loading = false;
+	}
+}
 
-  async function createScorecard() {
-    if (!newScorecardName.trim()) return;
+async function createScorecard() {
+	if (!newScorecardName.trim()) return;
 
-    try {
-      creating = true;
-      const response = await fetch(`/api/series/${seriesId}/scorecards`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newScorecardName,
-          description: newScorecardDescription || null
-        })
-      });
+	try {
+		creating = true;
+		const response = await fetch(`/api/series/${seriesId}/scorecards`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: newScorecardName,
+				description: newScorecardDescription || null,
+			}),
+		});
 
-      const data = await response.json();
+		const data = await response.json();
 
-      if (data.success) {
-        scorecards = [...scorecards, data.scorecard];
-        showCreateDialog = false;
-        newScorecardName = '';
-        newScorecardDescription = '';
-      } else {
-        error = data.error || 'Failed to create scorecard';
-      }
-    } catch (e) {
-      error = 'Failed to create scorecard';
-      console.error('Error creating scorecard:', e);
-    } finally {
-      creating = false;
-    }
-  }
+		if (data.success) {
+			scorecards = [...scorecards, data.scorecard];
+			showCreateDialog = false;
+			newScorecardName = "";
+			newScorecardDescription = "";
+		} else {
+			error = data.error || "Failed to create scorecard";
+		}
+	} catch (e) {
+		error = "Failed to create scorecard";
+		console.error("Error creating scorecard:", e);
+	} finally {
+		creating = false;
+	}
+}
 
-  async function deleteScorecard(scorecardId: string) {
-    toastStore.warning('Are you sure you want to delete this scorecard? This will remove it from all scenes.', {
-      autoHide: false,
-      actions: [
-        {
-          label: 'Delete',
-          onClick: async () => {
-            try {
-              const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`, {
-                method: 'DELETE'
-              });
+async function deleteScorecard(scorecardId: string) {
+	toastStore.warning(
+		"Are you sure you want to delete this scorecard? This will remove it from all scenes.",
+		{
+			autoHide: false,
+			actions: [
+				{
+					label: "Delete",
+					onClick: async () => {
+						try {
+							const response = await fetch(
+								`/api/series/${seriesId}/scorecards/${scorecardId}`,
+								{
+									method: "DELETE",
+								},
+							);
 
-              const data = await response.json();
+							const data = await response.json();
 
-              if (data.success) {
-                scorecards = scorecards.filter(s => s.id !== scorecardId);
-                toastStore.success('Scorecard deleted successfully');
-              } else {
-                error = data.error || 'Failed to delete scorecard';
-                toastStore.error('Failed to delete scorecard');
-              }
-            } catch (e) {
-              error = 'Failed to delete scorecard';
-              toastStore.error('Failed to delete scorecard');
-              console.error('Error deleting scorecard:', e);
-            }
-          },
-          variant: 'primary'
-        },
-        {
-          label: 'Cancel',
-          onClick: () => {},
-          variant: 'secondary'
-        }
-      ]
-    });
-  }
+							if (data.success) {
+								scorecards = scorecards.filter((s) => s.id !== scorecardId);
+								toastStore.success("Scorecard deleted successfully");
+							} else {
+								error = data.error || "Failed to delete scorecard";
+								toastStore.error("Failed to delete scorecard");
+							}
+						} catch (e) {
+							error = "Failed to delete scorecard";
+							toastStore.error("Failed to delete scorecard");
+							console.error("Error deleting scorecard:", e);
+						}
+					},
+					variant: "primary",
+				},
+				{
+					label: "Cancel",
+					onClick: () => {},
+					variant: "secondary",
+				},
+			],
+		},
+	);
+}
 
-  onMount(() => {
-    loadScorecards();
-  });
+onMount(() => {
+	loadScorecards();
+});
 </script>
 
 <div class="scorecard-library">

@@ -1,152 +1,172 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { requireUserForApi } from '$lib/server/auth/index.js';
-import { db } from '$lib/server/db/index.js';
-import { comments, cards, columns } from '$lib/server/db/schema.js';
-import { eq, and, sql } from 'drizzle-orm';
-import { createCard } from '$lib/server/repositories/card.js';
-import { getBoardWithDetails } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastCardCreated } from '$lib/server/sse/broadcast.js';
-import { handleApiError } from '$lib/server/api-utils.js';
-import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
-import { enrichCardWithCounts } from '$lib/server/utils/cards-data.js';
-import { z } from 'zod';
-import { getSceneCapability } from '$lib/utils/scene-capability.js';
-import type { BoardStatus } from '$lib/types.js';
+import { json } from "@sveltejs/kit";
+import { and, eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import { handleApiError } from "$lib/server/api-utils.js";
+import { requireUserForApi } from "$lib/server/auth/index.js";
+import { db } from "$lib/server/db/index.js";
+import { cards, columns, comments } from "$lib/server/db/schema.js";
+import { refreshPresenceOnBoardAction } from "$lib/server/middleware/presence.js";
+import { getBoardWithDetails } from "$lib/server/repositories/board.js";
+import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
+import { createCard } from "$lib/server/repositories/card.js";
+import { broadcastCardCreated } from "$lib/server/sse/broadcast.js";
+import { enrichCardWithCounts } from "$lib/server/utils/cards-data.js";
+import type { BoardStatus } from "$lib/types.js";
+import { getSceneCapability } from "$lib/utils/scene-capability.js";
+import type { RequestHandler } from "./$types";
 
 const copyToCardSchema = z.object({
-  column_id: z.string().uuid()
+	column_id: z.string().uuid(),
 });
 
 export const POST: RequestHandler = async (event) => {
-  try {
-    const user = requireUserForApi(event);
-    const commentId = event.params.id;
-    const body = await event.request.json();
-    const data = copyToCardSchema.parse(body);
+	try {
+		const user = requireUserForApi(event);
+		const commentId = event.params.id;
+		const body = await event.request.json();
+		const data = copyToCardSchema.parse(body);
 
-    // Find the comment and get board info
-    const [commentData] = await db
-      .select({
-        commentId: comments.id,
-        commentContent: comments.content,
-        cardId: cards.id,
-        boardId: columns.boardId,
-        isAgreement: comments.isAgreement
-      })
-      .from(comments)
-      .innerJoin(cards, eq(cards.id, comments.cardId))
-      .innerJoin(columns, eq(columns.id, cards.columnId))
-      .where(eq(comments.id, commentId))
-      .limit(1);
+		// Find the comment and get board info
+		const [commentData] = await db
+			.select({
+				commentId: comments.id,
+				commentContent: comments.content,
+				cardId: cards.id,
+				boardId: columns.boardId,
+				isAgreement: comments.isAgreement,
+			})
+			.from(comments)
+			.innerJoin(cards, eq(cards.id, comments.cardId))
+			.innerJoin(columns, eq(columns.id, cards.columnId))
+			.where(eq(comments.id, commentId))
+			.limit(1);
 
-    if (!commentData) {
-      return json(
-        { success: false, error: 'Comment not found' },
-        { status: 404 }
-      );
-    }
+		if (!commentData) {
+			return json(
+				{ success: false, error: "Comment not found" },
+				{ status: 404 },
+			);
+		}
 
-    if (!commentData.isAgreement) {
-      return json(
-        { success: false, error: 'Comment is not an agreement' },
-        { status: 400 }
-      );
-    }
+		if (!commentData.isAgreement) {
+			return json(
+				{ success: false, error: "Comment is not an agreement" },
+				{ status: 400 },
+			);
+		}
 
-    await refreshPresenceOnBoardAction(event);
+		await refreshPresenceOnBoardAction(event);
 
-    const board = await getBoardWithDetails(commentData.boardId);
-    if (!board) {
-      return json(
-        { success: false, error: 'Board not found' },
-        { status: 404 }
-      );
-    }
+		const board = await getBoardWithDetails(commentData.boardId);
+		if (!board) {
+			return json(
+				{ success: false, error: "Board not found" },
+				{ status: 404 },
+			);
+		}
 
-    const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
-    if (!userRole || (userRole !== 'admin' && userRole !== 'facilitator')) {
-      return json(
-        { success: false, error: 'Only facilitators and admins can copy agreements to cards' },
-        { status: 403 }
-      );
-    }
+		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+		if (!userRole || (userRole !== "admin" && userRole !== "facilitator")) {
+			return json(
+				{
+					success: false,
+					error: "Only facilitators and admins can copy agreements to cards",
+				},
+				{ status: 403 },
+			);
+		}
 
-    // Verify the column is visible in the current scene
-    const currentScene = board.scenes.find(s => s.id === board.currentSceneId);
-    if (!currentScene) {
-      return json(
-        { success: false, error: 'No active scene' },
-        { status: 400 }
-      );
-    }
+		// Verify the column is visible in the current scene
+		const currentScene = board.scenes.find(
+			(s) => s.id === board.currentSceneId,
+		);
+		if (!currentScene) {
+			return json(
+				{ success: false, error: "No active scene" },
+				{ status: 400 },
+			);
+		}
 
-    // Check if adding cards is allowed using getSceneCapability
-    if (!getSceneCapability(currentScene, board.status as BoardStatus, 'allow_add_cards')) {
-      return json(
-        { success: false, error: 'Adding cards is not allowed for this scene' },
-        { status: 403 }
-      );
-    }
+		// Check if adding cards is allowed using getSceneCapability
+		if (
+			!getSceneCapability(
+				currentScene,
+				board.status as BoardStatus,
+				"allow_add_cards",
+			)
+		) {
+			return json(
+				{ success: false, error: "Adding cards is not allowed for this scene" },
+				{ status: 403 },
+			);
+		}
 
-    const hiddenColumnIds = board.hiddenColumnsByScene?.[currentScene.id] || [];
-    const visibleColumns = board.columns.filter(c => !hiddenColumnIds.includes(c.id)).map(c => c.id);
+		const hiddenColumnIds = board.hiddenColumnsByScene?.[currentScene.id] || [];
+		const visibleColumns = board.columns
+			.filter((c) => !hiddenColumnIds.includes(c.id))
+			.map((c) => c.id);
 
-    if (!visibleColumns.includes(data.column_id)) {
-      return json(
-        { success: false, error: 'Column must be visible in current scene' },
-        { status: 400 }
-      );
-    }
+		if (!visibleColumns.includes(data.column_id)) {
+			return json(
+				{ success: false, error: "Column must be visible in current scene" },
+				{ status: 400 },
+			);
+		}
 
-    // Get reactions for the card
-    const reactionCounts = await db
-      .select({
-        emoji: comments.content,
-        count: sql<number>`COUNT(*)`.as('count')
-      })
-      .from(comments)
-      .where(and(
-        eq(comments.cardId, commentData.cardId),
-        eq(comments.isReaction, true)
-      ))
-      .groupBy(comments.content);
+		// Get reactions for the card
+		const reactionCounts = await db
+			.select({
+				emoji: comments.content,
+				count: sql<number>`COUNT(*)`.as("count"),
+			})
+			.from(comments)
+			.where(
+				and(
+					eq(comments.cardId, commentData.cardId),
+					eq(comments.isReaction, true),
+				),
+			)
+			.groupBy(comments.content);
 
-    // Format reactions as text
-    let formattedReactions = '';
-    if (reactionCounts.length > 0) {
-      const reactionTexts = reactionCounts.map(({ emoji, count }) => `(${count}×${emoji})`);
-      formattedReactions = reactionTexts.join(' ');
-    }
+		// Format reactions as text
+		let formattedReactions = "";
+		if (reactionCounts.length > 0) {
+			const reactionTexts = reactionCounts.map(
+				({ emoji, count }) => `(${count}×${emoji})`,
+			);
+			formattedReactions = reactionTexts.join(" ");
+		}
 
-    // Format content with indentation for markdown
-    // Replace newlines with 4 spaces + tab for markdown indentation
-    const formattedContent = commentData.commentContent.replace(/\n/g, '\n    \t');
+		// Format content with indentation for markdown
+		// Replace newlines with 4 spaces + tab for markdown indentation
+		const formattedContent = commentData.commentContent.replace(
+			/\n/g,
+			"\n    \t",
+		);
 
-    // Build final content with reactions
-    let finalContent = formattedContent;
-    if (formattedReactions) {
-      finalContent = formattedContent + '\n\n' + formattedReactions;
-    }
+		// Build final content with reactions
+		let finalContent = formattedContent;
+		if (formattedReactions) {
+			finalContent = formattedContent + "\n\n" + formattedReactions;
+		}
 
-    // Create the card with formatted content
-    const card = await createCard({
-      columnId: data.column_id,
-      userId: user.userId,
-      content: finalContent
-    });
+		// Create the card with formatted content
+		const card = await createCard({
+			columnId: data.column_id,
+			userId: user.userId,
+			content: finalContent,
+		});
 
-    const enrichedCard = await enrichCardWithCounts(card);
+		const enrichedCard = await enrichCardWithCounts(card);
 
-    // Broadcast the new card to all clients
-    broadcastCardCreated(commentData.boardId, enrichedCard);
+		// Broadcast the new card to all clients
+		broadcastCardCreated(commentData.boardId, enrichedCard);
 
-    return json({
-      success: true,
-      card: enrichedCard
-    });
-  } catch (error) {
-    return handleApiError(error, 'Failed to copy agreement to card');
-  }
+		return json({
+			success: true,
+			card: enrichedCard,
+		});
+	} catch (error) {
+		return handleApiError(error, "Failed to copy agreement to card");
+	}
 };

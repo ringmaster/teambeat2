@@ -37,6 +37,8 @@ ngrok.yml
 specifications
 specifications/*
 .serena
+.zed
+.zed/*
 
 # Playwright
 /test-results/

@@ -1,16 +1,19 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { requireUserForApi } from '$lib/server/auth/index.js';
-import { groupCards } from '$lib/server/repositories/card.js';
-import { getBoardWithDetails } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastCardUpdated } from '$lib/server/sse/broadcast.js';
-import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability.js';
-import { z } from 'zod';
+import { json } from "@sveltejs/kit";
+import { z } from "zod";
+import { requireUserForApi } from "$lib/server/auth/index.js";
+import { getBoardWithDetails } from "$lib/server/repositories/board.js";
+import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
+import { groupCards } from "$lib/server/repositories/card.js";
+import { broadcastCardUpdated } from "$lib/server/sse/broadcast.js";
+import {
+	getCurrentScene,
+	getSceneCapability,
+} from "$lib/utils/scene-capability.js";
+import type { RequestHandler } from "./$types";
 
 const groupCardsSchema = z.object({
 	cardIds: z.array(z.string().uuid()).min(2),
-	groupId: z.string().uuid().optional()
+	groupId: z.string().uuid().optional(),
 });
 
 export const POST: RequestHandler = async (event) => {
@@ -19,58 +22,55 @@ export const POST: RequestHandler = async (event) => {
 		const boardId = event.params.id;
 		const body = await event.request.json();
 		const data = groupCardsSchema.parse(body);
-		
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
-				{ success: false, error: 'Board not found' },
-				{ status: 404 }
+				{ success: false, error: "Board not found" },
+				{ status: 404 },
 			);
 		}
-		
+
 		// Check if user has access to this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole) {
-			return json(
-				{ success: false, error: 'Access denied' },
-				{ status: 403 }
-			);
+			return json({ success: false, error: "Access denied" }, { status: 403 });
 		}
-		
+
 		// Check if current scene allows editing cards
 		const currentScene = getCurrentScene(board.scenes, board.currentSceneId);
-		if (!getSceneCapability(currentScene, board.status, 'allow_edit_cards')) {
+		if (!getSceneCapability(currentScene, board.status, "allow_edit_cards")) {
 			return json(
-				{ success: false, error: 'Editing cards not allowed in current scene' },
-				{ status: 403 }
+				{ success: false, error: "Editing cards not allowed in current scene" },
+				{ status: 403 },
 			);
 		}
-		
+
 		const groupId = await groupCards(data.cardIds, data.groupId);
-		
+
 		// Broadcast updates for all affected cards
 		// Note: This is a simplified approach. In a more sophisticated implementation,
 		// we might want to fetch and broadcast the actual updated cards
-		
+
 		return json({
 			success: true,
-			groupId
+			groupId,
 		});
 	} catch (error) {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		if (error instanceof z.ZodError) {
 			return json(
-				{ success: false, error: 'Invalid input', details: error.errors },
-				{ status: 400 }
+				{ success: false, error: "Invalid input", details: error.errors },
+				{ status: 400 },
 			);
 		}
-		
+
 		return json(
-			{ success: false, error: 'Failed to group cards' },
-			{ status: 500 }
+			{ success: false, error: "Failed to group cards" },
+			{ status: 500 },
 		);
 	}
 };

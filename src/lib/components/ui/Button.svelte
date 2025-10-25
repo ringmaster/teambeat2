@@ -1,62 +1,62 @@
 <script lang="ts">
-    interface Props {
-        variant?: "primary" | "secondary" | "danger" | "ghost";
-        size?: "sm" | "md" | "lg";
-        type?: "button" | "submit" | "reset";
-        disabled?: boolean;
-        onclick?: (event: MouseEvent) => void;
-        class?: string;
-        children?: () => any;
-    }
+interface Props {
+	variant?: "primary" | "secondary" | "danger" | "ghost";
+	size?: "sm" | "md" | "lg";
+	type?: "button" | "submit" | "reset";
+	disabled?: boolean;
+	onclick?: (event: MouseEvent) => void;
+	class?: string;
+	children?: () => any;
+}
 
-    let {
-        variant = "primary",
-        size = "md",
-        type = "button",
-        disabled = false,
-        onclick,
-        class: className = "",
-        children,
-    }: Props = $props();
+let {
+	variant = "primary",
+	size = "md",
+	type = "button",
+	disabled = false,
+	onclick,
+	class: className = "",
+	children,
+}: Props = $props();
 
-    let buttonClass = $derived.by(() => {
-        let classes = ["btn"];
+let buttonClass = $derived.by(() => {
+	let classes = ["btn"];
 
-        // Variant classes
-        switch (variant) {
-            case "primary":
-                classes.push("btn-primary");
-                break;
-            case "secondary":
-                classes.push("btn-secondary");
-                break;
-            case "danger":
-                classes.push("btn-danger");
-                break;
-            case "ghost":
-                classes.push("btn-ghost");
-                break;
-        }
+	// Variant classes
+	switch (variant) {
+		case "primary":
+			classes.push("btn-primary");
+			break;
+		case "secondary":
+			classes.push("btn-secondary");
+			break;
+		case "danger":
+			classes.push("btn-danger");
+			break;
+		case "ghost":
+			classes.push("btn-ghost");
+			break;
+	}
 
-        // Size classes
-        switch (size) {
-            case "sm":
-                classes.push("btn-sm");
-                break;
-            case "md":
-                classes.push("btn-md");
-                break;
-            case "lg":
-                classes.push("btn-lg");
-                break;
-        }
+	// Size classes
+	switch (size) {
+		case "sm":
+			classes.push("btn-sm");
+			break;
+		case "md":
+			classes.push("btn-md");
+			break;
+		case "lg":
+			classes.push("btn-lg");
+			break;
+	}
 
-        if (className) {
-            classes.push(className);
-        }
+	if (className) {
+		classes.push(className);
+	}
 
-        return classes.join(" ");
-    });
+	return classes.join(" ");
+});
 </script>
 
 <button {type} {disabled} class={buttonClass} {onclick}>

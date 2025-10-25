@@ -2,23 +2,27 @@
  * Server-side authentication check and header collection for admin headers page
  */
 
-import { redirect } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
-import { getSessionFromCookie } from '$lib/server/repositories/session';
-import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { redirect } from "@sveltejs/kit";
+import { eq } from "drizzle-orm";
+import { db } from "$lib/server/db";
+import { users } from "$lib/server/db/schema";
+import { getSessionFromCookie } from "$lib/server/repositories/session";
+import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ cookies, request, getClientAddress }) => {
+export const load: PageServerLoad = async ({
+	cookies,
+	request,
+	getClientAddress,
+}) => {
 	// Get session
-	const sessionCookie = cookies.get('session');
+	const sessionCookie = cookies.get("session");
 	if (!sessionCookie) {
-		throw redirect(302, '/login');
+		throw redirect(302, "/login");
 	}
 
 	const session = await getSessionFromCookie(sessionCookie);
 	if (!session) {
-		throw redirect(302, '/login');
+		throw redirect(302, "/login");
 	}
 
 	// Check if user is admin
@@ -29,7 +33,7 @@ export const load: PageServerLoad = async ({ cookies, request, getClientAddress 
 		.limit(1);
 
 	if (!user?.isAdmin) {
-		throw redirect(302, '/');
+		throw redirect(302, "/");
 	}
 
 	// Collect all headers
@@ -43,6 +47,6 @@ export const load: PageServerLoad = async ({ cookies, request, getClientAddress 
 
 	return {
 		headers,
-		clientAddress
+		clientAddress,
 	};
 };

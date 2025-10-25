@@ -1,20 +1,20 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import ScorecardManager from '$lib/components/ScorecardManager.svelte';
+import { page } from "$app/stores";
+import ScorecardManager from "$lib/components/ScorecardManager.svelte";
 
-  interface Props {
-    data: {
-      seriesId: string;
-      canEdit: boolean;
-    };
-  }
+interface Props {
+	data: {
+		seriesId: string;
+		canEdit: boolean;
+	};
+}
 
-  let { data }: Props = $props();
+let { data }: Props = $props();
 
-  // Get boardId from query string if present
-  let boardId = $derived($page.url.searchParams.get('boardId'));
-  let backLink = $derived(boardId ? `/board/${boardId}` : '/');
-  let backText = $derived(boardId ? '← Return to Board' : '← Back to Dashboard');
+// Get boardId from query string if present
+let boardId = $derived($page.url.searchParams.get("boardId"));
+let backLink = $derived(boardId ? `/board/${boardId}` : "/");
+let backText = $derived(boardId ? "← Return to Board" : "← Back to Dashboard");
 </script>
 
 <div class="scorecard-page">

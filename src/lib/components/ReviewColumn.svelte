@@ -1,24 +1,24 @@
 <script lang="ts">
-    import type { Column, Comment } from "$lib/types";
-    import ReviewCardGroup from "./ReviewCardGroup.svelte";
+import type { Column, Comment } from "$lib/types";
+import ReviewCardGroup from "./ReviewCardGroup.svelte";
 
-    interface CardGroup {
-        leadCard: any;
-        subordinateCards: any[];
-        columnId: string;
-        columnName: string;
-    }
+interface CardGroup {
+	leadCard: any;
+	subordinateCards: any[];
+	columnId: string;
+	columnName: string;
+}
 
-    interface Props {
-        column: Column;
-        groups: CardGroup[];
-        commentsByCard: (cardId: string) => Comment[];
-        blameFreeMode: boolean;
-        boardId: string;
-    }
+interface Props {
+	column: Column;
+	groups: CardGroup[];
+	commentsByCard: (cardId: string) => Comment[];
+	blameFreeMode: boolean;
+	boardId: string;
+}
 
-    const { column, groups, commentsByCard, blameFreeMode, boardId }: Props =
-        $props();
+const { column, groups, commentsByCard, blameFreeMode, boardId }: Props =
+	$props();
 </script>
 
 <div class="review-column">

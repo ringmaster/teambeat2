@@ -1,284 +1,274 @@
 <script lang="ts">
-    import { getUserDisplayName } from "$lib/utils/animalNames";
-    import { getSceneCapability } from "$lib/utils/scene-capability";
-    import Icon from "./ui/Icon.svelte";
-    import Vote from "./ui/Vote.svelte";
-    import { createAvatar } from "@dicebear/core";
-    import { adventurer } from "@dicebear/collection";
-    import { marked } from "marked";
+import { adventurer } from "@dicebear/collection";
+import { createAvatar } from "@dicebear/core";
+import { marked } from "marked";
+import { getUserDisplayName } from "$lib/utils/animalNames";
+import { getSceneCapability } from "$lib/utils/scene-capability";
+import Icon from "./ui/Icon.svelte";
+import Vote from "./ui/Vote.svelte";
 
-    // Configure marked for GitHub-flavored markdown
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
-    });
+// Configure marked for GitHub-flavored markdown
+marked.setOptions({
+	gfm: true,
+	breaks: true,
+});
 
-    interface Props {
-        card: any;
-        isGrouped?: boolean;
-        isGroupLead?: boolean;
-        isSubordinate?: boolean;
-        groupingMode: boolean;
-        isSelected: boolean;
-        currentScene: any;
-        board: any;
-        userRole: string;
-        currentUserId: string;
-        userVotesOnCard?: number; // Number of votes this user has on this card (0 or 1 for current system)
-        allUsersVotesOnCard?: number; // Total votes from all users on this card (when votes are visible)
-        hasVotes?: boolean; // Whether user has votes available (same for all cards on board)
-        onDragStart: (e: DragEvent, cardId: string) => void;
-        onToggleSelection: (cardId: string) => void;
-        onVote: (cardId: string, delta: 1 | -1) => void;
-        onComment: (cardId: string) => void;
-        onDelete: (cardId: string) => void;
-        onEdit: (cardId: string) => void;
-        onCardDrop?: (e: DragEvent, targetCardId: string) => void;
-        onCardDragOver?: (e: DragEvent) => void;
-        onCardDragLeave?: (e: DragEvent) => void;
-        onReaction?: (cardId: string, emoji: string) => void;
-    }
+interface Props {
+	card: any;
+	isGrouped?: boolean;
+	isGroupLead?: boolean;
+	isSubordinate?: boolean;
+	groupingMode: boolean;
+	isSelected: boolean;
+	currentScene: any;
+	board: any;
+	userRole: string;
+	currentUserId: string;
+	userVotesOnCard?: number; // Number of votes this user has on this card (0 or 1 for current system)
+	allUsersVotesOnCard?: number; // Total votes from all users on this card (when votes are visible)
+	hasVotes?: boolean; // Whether user has votes available (same for all cards on board)
+	onDragStart: (e: DragEvent, cardId: string) => void;
+	onToggleSelection: (cardId: string) => void;
+	onVote: (cardId: string, delta: 1 | -1) => void;
+	onComment: (cardId: string) => void;
+	onDelete: (cardId: string) => void;
+	onEdit: (cardId: string) => void;
+	onCardDrop?: (e: DragEvent, targetCardId: string) => void;
+	onCardDragOver?: (e: DragEvent) => void;
+	onCardDragLeave?: (e: DragEvent) => void;
+	onReaction?: (cardId: string, emoji: string) => void;
+}
 
-    let {
-        card,
-        isGrouped = false,
-        isGroupLead = false,
-        isSubordinate = false,
-        groupingMode,
-        isSelected,
-        currentScene,
-        board,
-        userRole,
-        currentUserId,
-        userVotesOnCard = 0,
-        allUsersVotesOnCard,
-        hasVotes = false,
-        onDragStart,
-        onToggleSelection,
-        onVote,
-        onComment,
-        onDelete,
-        onEdit,
-        onCardDrop,
-        onCardDragOver,
-        onCardDragLeave,
-        onReaction,
-    }: Props = $props();
+let {
+	card,
+	isGrouped = false,
+	isGroupLead = false,
+	isSubordinate = false,
+	groupingMode,
+	isSelected,
+	currentScene,
+	board,
+	userRole,
+	currentUserId,
+	userVotesOnCard = 0,
+	allUsersVotesOnCard,
+	hasVotes = false,
+	onDragStart,
+	onToggleSelection,
+	onVote,
+	onComment,
+	onDelete,
+	onEdit,
+	onCardDrop,
+	onCardDragOver,
+	onCardDragLeave,
+	onReaction,
+}: Props = $props();
 
-    // Helper function to determine vote view mode based on scene settings
-    function getVoteViewMode(
-        showVotes: boolean,
-        allowVoting: boolean,
-    ): "votes" | "total" | "both" {
-        if (showVotes && allowVoting) {
-            return "both";
-        } else if (showVotes) {
-            return "total";
-        } else {
-            return "votes";
-        }
-    }
+// Helper function to determine vote view mode based on scene settings
+function getVoteViewMode(
+	showVotes: boolean,
+	allowVoting: boolean,
+): "votes" | "total" | "both" {
+	if (showVotes && allowVoting) {
+		return "both";
+	} else if (showVotes) {
+		return "total";
+	} else {
+		return "votes";
+	}
+}
 
-    // Check if user can delete this card
-    let canDelete = $derived.by(() => {
-        // Author can always delete (if scene allows editing for members)
-        if (card.userId === currentUserId) {
-            return (
-                userRole !== "member" ||
-                getSceneCapability(
-                    currentScene,
-                    board?.status,
-                    "allow_edit_cards",
-                )
-            );
-        }
-        // Admin and facilitator can always delete
-        return ["admin", "facilitator"].includes(userRole);
-    });
+// Check if user can delete this card
+let canDelete = $derived.by(() => {
+	// Author can always delete (if scene allows editing for members)
+	if (card.userId === currentUserId) {
+		return (
+			userRole !== "member" ||
+			getSceneCapability(currentScene, board?.status, "allow_edit_cards")
+		);
+	}
+	// Admin and facilitator can always delete
+	return ["admin", "facilitator"].includes(userRole);
+});
 
-    // Check if user can edit this card
-    let canEdit = $derived.by(() => {
-        // Only allow editing if the current scene allows it
-        if (
-            !getSceneCapability(currentScene, board?.status, "allow_edit_cards")
-        )
-            return false;
+// Check if user can edit this card
+let canEdit = $derived.by(() => {
+	// Only allow editing if the current scene allows it
+	if (!getSceneCapability(currentScene, board?.status, "allow_edit_cards"))
+		return false;
 
-        // Author can always edit their own cards
-        if (card.userId === currentUserId) {
-            return true;
-        }
-        // Admin and facilitator can always edit
-        return ["admin", "facilitator"].includes(userRole);
-    });
+	// Author can always edit their own cards
+	if (card.userId === currentUserId) {
+		return true;
+	}
+	// Admin and facilitator can always edit
+	return ["admin", "facilitator"].includes(userRole);
+});
 
-    // Check if card should be obscured
-    let isObscured = $derived.by(() => {
-        return (
-            getSceneCapability(
-                currentScene,
-                board?.status,
-                "allow_obscure_cards",
-            ) && card.userId !== currentUserId
-        );
-    });
+// Check if card should be obscured
+let isObscured = $derived.by(() => {
+	return (
+		getSceneCapability(currentScene, board?.status, "allow_obscure_cards") &&
+		card.userId !== currentUserId
+	);
+});
 
-    // Render card content as markdown
-    let renderedContent = $derived(marked.parse(card.content) as string);
+// Render card content as markdown
+let renderedContent = $derived(marked.parse(card.content) as string);
 
-    // Check if card can be moved/dragged
-    let canMove = $derived(
-        getSceneCapability(currentScene, board?.status, "allow_move_cards") &&
-            !isObscured,
-    );
+// Check if card can be moved/dragged
+let canMove = $derived(
+	getSceneCapability(currentScene, board?.status, "allow_move_cards") &&
+		!isObscured,
+);
 
-    // Check if grouping is enabled
-    let canGroup = $derived(
-        getSceneCapability(currentScene, board?.status, "allow_group_cards"),
-    );
+// Check if grouping is enabled
+let canGroup = $derived(
+	getSceneCapability(currentScene, board?.status, "allow_group_cards"),
+);
 
-    // State for drag targeting
-    let isDragTarget = $state(false);
+// State for drag targeting
+let isDragTarget = $state(false);
 
-    // State for menu dropdown
-    let isMenuOpen = $state(false);
+// State for menu dropdown
+let isMenuOpen = $state(false);
 
-    // Handle menu toggle
-    function toggleMenu(e: Event) {
-        e.stopPropagation();
-        isMenuOpen = !isMenuOpen;
-    }
+// Handle menu toggle
+function toggleMenu(e: Event) {
+	e.stopPropagation();
+	isMenuOpen = !isMenuOpen;
+}
 
-    // Close menu when clicking outside
-    function handleClickOutside(e: MouseEvent) {
-        const target = e.target as HTMLElement;
-        if (!target.closest(".card-menu-container")) {
-            isMenuOpen = false;
-        }
-    }
+// Close menu when clicking outside
+function handleClickOutside(e: MouseEvent) {
+	const target = e.target as HTMLElement;
+	if (!target.closest(".card-menu-container")) {
+		isMenuOpen = false;
+	}
+}
 
-    // Handle emoji reaction
-    function handleReaction(emoji: string) {
-        if (onReaction) {
-            onReaction(card.id, emoji);
-            isMenuOpen = false;
-        }
-    }
+// Handle emoji reaction
+function handleReaction(emoji: string) {
+	if (onReaction) {
+		onReaction(card.id, emoji);
+		isMenuOpen = false;
+	}
+}
 
-    // Add/remove click listener for closing menu
-    $effect(() => {
-        if (isMenuOpen) {
-            document.addEventListener("click", handleClickOutside);
-            return () =>
-                document.removeEventListener("click", handleClickOutside);
-        }
-    });
+// Add/remove click listener for closing menu
+$effect(() => {
+	if (isMenuOpen) {
+		document.addEventListener("click", handleClickOutside);
+		return () => document.removeEventListener("click", handleClickOutside);
+	}
+});
 
-    // Drag and drop handlers for grouping and sequencing
-    function handleDragOver(e: DragEvent) {
-        // Handle sequencing drag over
-        if (onCardDragOver) {
-            onCardDragOver(e);
-        }
+// Drag and drop handlers for grouping and sequencing
+function handleDragOver(e: DragEvent) {
+	// Handle sequencing drag over
+	if (onCardDragOver) {
+		onCardDragOver(e);
+	}
 
-        // Handle grouping drag over
-        if (canGroup && onCardDrop && !isObscured) {
-            e.preventDefault();
-            e.dataTransfer!.dropEffect = "move";
-        }
-    }
+	// Handle grouping drag over
+	if (canGroup && onCardDrop && !isObscured) {
+		e.preventDefault();
+		e.dataTransfer!.dropEffect = "move";
+	}
+}
 
-    function handleDragEnter(e: DragEvent) {
-        if (canGroup && onCardDrop && !isObscured) {
-            e.preventDefault();
-            isDragTarget = true;
-        }
-    }
+function handleDragEnter(e: DragEvent) {
+	if (canGroup && onCardDrop && !isObscured) {
+		e.preventDefault();
+		isDragTarget = true;
+	}
+}
 
-    function handleDragLeave(e: DragEvent) {
-        // Handle sequencing drag leave
-        if (onCardDragLeave) {
-            onCardDragLeave(e);
-        }
+function handleDragLeave(e: DragEvent) {
+	// Handle sequencing drag leave
+	if (onCardDragLeave) {
+		onCardDragLeave(e);
+	}
 
-        // Handle grouping drag leave
-        if (canGroup && onCardDrop && !isObscured) {
-            // Only clear target if leaving the card element itself, not its children
-            const currentTarget = e.currentTarget as HTMLElement;
-            const relatedTarget = e.relatedTarget as Node;
-            if (
-                currentTarget &&
-                (!relatedTarget || !currentTarget.contains(relatedTarget))
-            ) {
-                isDragTarget = false;
-            }
-        }
-    }
+	// Handle grouping drag leave
+	if (canGroup && onCardDrop && !isObscured) {
+		// Only clear target if leaving the card element itself, not its children
+		const currentTarget = e.currentTarget as HTMLElement;
+		const relatedTarget = e.relatedTarget as Node;
+		if (
+			currentTarget &&
+			(!relatedTarget || !currentTarget.contains(relatedTarget))
+		) {
+			isDragTarget = false;
+		}
+	}
+}
 
-    function handleDrop(e: DragEvent) {
-        if (canGroup && onCardDrop && !isObscured) {
-            e.preventDefault();
-            e.stopPropagation();
-            isDragTarget = false;
-            onCardDrop(e, card.id);
-        }
-    }
+function handleDrop(e: DragEvent) {
+	if (canGroup && onCardDrop && !isObscured) {
+		e.preventDefault();
+		e.stopPropagation();
+		isDragTarget = false;
+		onCardDrop(e, card.id);
+	}
+}
 
-    function greekText(english: string): string {
-        // Generate a numeric hash from 1 to 26 from the input string so that the hash is the same for the same input
-        let hash = 0;
-        for (let i = 0; i < english.length; i++) {
-            hash += english.charCodeAt(i);
-        }
-        hash = (hash % 26) + 1; // 1 to 26
+function greekText(english: string): string {
+	// Generate a numeric hash from 1 to 26 from the input string so that the hash is the same for the same input
+	let hash = 0;
+	for (let i = 0; i < english.length; i++) {
+		hash += english.charCodeAt(i);
+	}
+	hash = (hash % 26) + 1; // 1 to 26
 
-        // Greek alphabet array
-        const greekAlphabet = [
-            "α",
-            "β",
-            "γ",
-            "δ",
-            "ε",
-            "ζ",
-            "η",
-            "θ",
-            "ι",
-            "κ",
-            "λ",
-            "μ",
-            "ν",
-            "ξ",
-            "ο",
-            "π",
-            "ρ",
-            "σ",
-            "τ",
-            "υ",
-            "φ",
-            "χ",
-            "ψ",
-            "ω",
-        ];
+	// Greek alphabet array
+	const greekAlphabet = [
+		"α",
+		"β",
+		"γ",
+		"δ",
+		"ε",
+		"ζ",
+		"η",
+		"θ",
+		"ι",
+		"κ",
+		"λ",
+		"μ",
+		"ν",
+		"ξ",
+		"ο",
+		"π",
+		"ρ",
+		"σ",
+		"τ",
+		"υ",
+		"φ",
+		"χ",
+		"ψ",
+		"ω",
+	];
 
-        // Map each english letter to a Greek letter, skipping {hash} letters for each step in the alphabet
-        const mapping: Record<string, string> = {};
-        const englishAlphabet = "abcdefghijklmnopqrstuvwxyz";
+	// Map each english letter to a Greek letter, skipping {hash} letters for each step in the alphabet
+	const mapping: Record<string, string> = {};
+	const englishAlphabet = "abcdefghijklmnopqrstuvwxyz";
 
-        for (let i = 0; i < englishAlphabet.length; i++) {
-            const englishChar = englishAlphabet[i];
-            const greekIndex = (i * (hash + 1)) % greekAlphabet.length;
-            mapping[englishChar] = greekAlphabet[greekIndex];
-        }
+	for (let i = 0; i < englishAlphabet.length; i++) {
+		const englishChar = englishAlphabet[i];
+		const greekIndex = (i * (hash + 1)) % greekAlphabet.length;
+		mapping[englishChar] = greekAlphabet[greekIndex];
+	}
 
-        // Transform the input string using the mapping
-        return english
-            .split("")
-            .map((char) => {
-                const lowerChar = char.toLowerCase();
-                return mapping[lowerChar] || char;
-            })
-            .join("");
-    }
+	// Transform the input string using the mapping
+	return english
+		.split("")
+		.map((char) => {
+			const lowerChar = char.toLowerCase();
+			return mapping[lowerChar] || char;
+		})
+		.join("");
+}
 </script>
 
 <div

@@ -1,41 +1,51 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { requireUserForApi } from '$lib/server/auth/index.js';
-import { verifyPasskeyRegistration } from '$lib/server/auth/webauthn.js';
-import type { RegistrationResponseJSON } from '@simplewebauthn/server';
+import type { RegistrationResponseJSON } from "@simplewebauthn/server";
+import { json } from "@sveltejs/kit";
+import { requireUserForApi } from "$lib/server/auth/index.js";
+import { verifyPasskeyRegistration } from "$lib/server/auth/webauthn.js";
+import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
-  try {
-    // Require authenticated user
-    const sessionUser = requireUserForApi({ cookies } as any);
+	try {
+		// Require authenticated user
+		const sessionUser = requireUserForApi({ cookies } as any);
 
-    if (!sessionUser) {
-      return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+		if (!sessionUser) {
+			return json({ error: "Unauthorized" }, { status: 401 });
+		}
 
-    const body = await request.json();
-    const registrationResponse: RegistrationResponseJSON = body;
+		const body = await request.json();
+		const registrationResponse: RegistrationResponseJSON = body;
 
-    if (!registrationResponse) {
-      return json({ error: 'Registration response is required' }, { status: 400 });
-    }
+		if (!registrationResponse) {
+			return json(
+				{ error: "Registration response is required" },
+				{ status: 400 },
+			);
+		}
 
-    // Verify the registration
-    const verification = await verifyPasskeyRegistration(sessionUser.userId, registrationResponse, request);
+		// Verify the registration
+		const verification = await verifyPasskeyRegistration(
+			sessionUser.userId,
+			registrationResponse,
+			request,
+		);
 
-    if (verification.verified) {
-      return json({
-        verified: true,
-        authenticatorId: verification.authenticatorId
-      });
-    } else {
-      return json({
-        verified: false,
-        error: verification.error || 'Registration failed'
-      }, { status: 400 });
-    }
-  } catch (error) {
-    console.error('WebAuthn registration complete error:', error);
-    return json({ error: 'Failed to complete registration' }, { status: 500 });
-  }
+		if (verification.verified) {
+			return json({
+				verified: true,
+				authenticatorId: verification.authenticatorId,
+			});
+		} else {
+			return json(
+				{
+					verified: false,
+					error: verification.error || "Registration failed",
+				},
+				{ status: 400 },
+			);
+		}
+	} catch (error) {
+		console.error("WebAuthn registration complete error:", error);
+		return json({ error: "Failed to complete registration" }, { status: 500 });
+	}
 };

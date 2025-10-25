@@ -1,24 +1,29 @@
 <script lang="ts">
-    interface Props {
-        question: any;
-        value?: number;
-        disabled?: boolean;
-        onchange?: (value: number) => void;
-    }
+interface Props {
+	question: any;
+	value?: number;
+	disabled?: boolean;
+	onchange?: (value: number) => void;
+}
 
-    const { question, value = undefined, disabled = false, onchange }: Props = $props();
+const {
+	question,
+	value = undefined,
+	disabled = false,
+	onchange,
+}: Props = $props();
 
-    const options = [
-        { value: 1, label: 'Red', color: '#ef4444' },
-        { value: 3, label: 'Yellow', color: '#eab308' },
-        { value: 5, label: 'Green', color: '#22c55e' }
-    ];
+const options = [
+	{ value: 1, label: "Red", color: "#ef4444" },
+	{ value: 3, label: "Yellow", color: "#eab308" },
+	{ value: 5, label: "Green", color: "#22c55e" },
+];
 
-    function handleSelection(selectedValue: number) {
-        if (!disabled && onchange) {
-            onchange(selectedValue);
-        }
-    }
+function handleSelection(selectedValue: number) {
+	if (!disabled && onchange) {
+		onchange(selectedValue);
+	}
+}
 </script>
 
 <div class="red-yellow-green-input">

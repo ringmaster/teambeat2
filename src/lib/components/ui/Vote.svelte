@@ -1,111 +1,111 @@
 <script lang="ts">
-    interface Props {
-        votes: number;
-        total: number;
-        enabled: boolean;
-        hasVotes: boolean;
-        view: "votes" | "total" | "both";
-        itemID: string;
-        onVote: (itemID: string, delta: 1 | -1) => void;
-    }
+interface Props {
+	votes: number;
+	total: number;
+	enabled: boolean;
+	hasVotes: boolean;
+	view: "votes" | "total" | "both";
+	itemID: string;
+	onVote: (itemID: string, delta: 1 | -1) => void;
+}
 
-    let {
-        votes = 0,
-        total = 0,
-        enabled = false,
-        hasVotes = false,
-        view = "votes",
-        itemID,
-        onVote,
-    }: Props = $props();
+let {
+	votes = 0,
+	total = 0,
+	enabled = false,
+	hasVotes = false,
+	view = "votes",
+	itemID,
+	onVote,
+}: Props = $props();
 
-    let isAnimating = $state(false);
-    let animationDirection = $state<"up" | "down" | null>(null);
-    let previousVotes = $state(votes);
-    let previousTotal = $state(total);
+let isAnimating = $state(false);
+let animationDirection = $state<"up" | "down" | null>(null);
+let previousVotes = $state(votes);
+let previousTotal = $state(total);
 
-    // Display logic based on view property
-    let displayText = $derived.by(() => {
-        switch (view) {
-            case "votes":
-                return votes.toString();
-            case "total":
-                return total.toString();
-            case "both":
-                return `${votes}/${total}`;
-            default:
-                return votes.toString();
-        }
-    });
+// Display logic based on view property
+let displayText = $derived.by(() => {
+	switch (view) {
+		case "votes":
+			return votes.toString();
+		case "total":
+			return total.toString();
+		case "both":
+			return `${votes}/${total}`;
+		default:
+			return votes.toString();
+	}
+});
 
-    // Show down arrow when enabled and user has votes
-    let showDownArrow = $derived(enabled && votes > 0);
+// Show down arrow when enabled and user has votes
+let showDownArrow = $derived(enabled && votes > 0);
 
-    // Show up arrow when enabled and user has votes to cast
-    let showUpArrow = $derived(enabled && hasVotes);
+// Show up arrow when enabled and user has votes to cast
+let showUpArrow = $derived(enabled && hasVotes);
 
-    // Add "voted" class when user has voted
-    let hasVoted = $derived(votes > 0);
+// Add "voted" class when user has voted
+let hasVoted = $derived(votes > 0);
 
-    // Reactive animation based on vote count changes from SSE
-    $effect(() => {
-        if (previousVotes !== votes || previousTotal !== total) {
-            // Determine animation direction based on what changed and view mode
-            let shouldAnimate = false;
-            let direction: "up" | "down" = "up";
+// Reactive animation based on vote count changes from SSE
+$effect(() => {
+	if (previousVotes !== votes || previousTotal !== total) {
+		// Determine animation direction based on what changed and view mode
+		let shouldAnimate = false;
+		let direction: "up" | "down" = "up";
 
-            if (view === "votes" && previousVotes !== votes) {
-                shouldAnimate = true;
-                direction = votes > previousVotes ? "up" : "down";
-            } else if (view === "total" && previousTotal !== total) {
-                shouldAnimate = true;
-                direction = total > previousTotal ? "up" : "down";
-            } else if (view === "both") {
-                // For 'both' view, prioritize user votes for animation direction
-                if (previousVotes !== votes) {
-                    shouldAnimate = true;
-                    direction = votes > previousVotes ? "up" : "down";
-                } else if (previousTotal !== total) {
-                    shouldAnimate = true;
-                    direction = total > previousTotal ? "up" : "down";
-                }
-            }
+		if (view === "votes" && previousVotes !== votes) {
+			shouldAnimate = true;
+			direction = votes > previousVotes ? "up" : "down";
+		} else if (view === "total" && previousTotal !== total) {
+			shouldAnimate = true;
+			direction = total > previousTotal ? "up" : "down";
+		} else if (view === "both") {
+			// For 'both' view, prioritize user votes for animation direction
+			if (previousVotes !== votes) {
+				shouldAnimate = true;
+				direction = votes > previousVotes ? "up" : "down";
+			} else if (previousTotal !== total) {
+				shouldAnimate = true;
+				direction = total > previousTotal ? "up" : "down";
+			}
+		}
 
-            if (shouldAnimate) {
-                animationDirection = direction;
-                isAnimating = true;
+		if (shouldAnimate) {
+			animationDirection = direction;
+			isAnimating = true;
 
-                setTimeout(() => {
-                    isAnimating = false;
-                    animationDirection = null;
-                }, 200);
-            }
+			setTimeout(() => {
+				isAnimating = false;
+				animationDirection = null;
+			}, 200);
+		}
 
-            // Update previous values
-            previousVotes = votes;
-            previousTotal = total;
-        }
-    });
+		// Update previous values
+		previousVotes = votes;
+		previousTotal = total;
+	}
+});
 
-    function handleUpVote() {
-        if (!enabled || !hasVotes) return;
-        onVote(itemID, 1);
-    }
+function handleUpVote() {
+	if (!enabled || !hasVotes) return;
+	onVote(itemID, 1);
+}
 
-    function handleDownVote() {
-        if (!enabled || votes <= 0) return;
-        onVote(itemID, -1);
-    }
+function handleDownVote() {
+	if (!enabled || votes <= 0) return;
+	onVote(itemID, -1);
+}
 
-    function handleVoteCountClick() {
-        if (!enabled) return;
+function handleVoteCountClick() {
+	if (!enabled) return;
 
-        if (votes > 0) {
-            handleDownVote();
-        } else if (hasVotes) {
-            handleUpVote();
-        }
-    }
+	if (votes > 0) {
+		handleDownVote();
+	} else if (hasVotes) {
+		handleUpVote();
+	}
+}
 </script>
 
 <div

@@ -1,40 +1,40 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { page } from "$app/stores";
-    import "$lib/styles/app.less";
-    import Avatar from "$lib/components/ui/Avatar.svelte";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import ToastContainer from "$lib/components/ui/ToastContainer.svelte";
-    import { resolve } from "$app/paths";
+import { onMount } from "svelte";
+import { page } from "$app/stores";
+import "$lib/styles/app.less";
+import { resolve } from "$app/paths";
+import Avatar from "$lib/components/ui/Avatar.svelte";
+import Icon from "$lib/components/ui/Icon.svelte";
+import ToastContainer from "$lib/components/ui/ToastContainer.svelte";
 
-    let { data, children } = $props();
-    let user: any = $state(null);
-    let loading = $state(true);
-    let showUserDropdown = $state(false);
+let { data, children } = $props();
+let user: any = $state(null);
+let loading = $state(true);
+let showUserDropdown = $state(false);
 
-    // Get redirect parameter from URL if present (with validation)
-    let redirectParam = $derived.by(() => {
-        const redirect = $page.url.searchParams.get("redirect");
-        // Validate to prevent open redirect attacks - only allow valid board IDs
-        if (redirect && /^[a-zA-Z0-9_-]+$/.test(redirect)) {
-            return `?redirect=${redirect}`;
-        }
-        return "";
-    });
+// Get redirect parameter from URL if present (with validation)
+let redirectParam = $derived.by(() => {
+	const redirect = $page.url.searchParams.get("redirect");
+	// Validate to prevent open redirect attacks - only allow valid board IDs
+	if (redirect && /^[a-zA-Z0-9_-]+$/.test(redirect)) {
+		return `?redirect=${redirect}`;
+	}
+	return "";
+});
 
-    onMount(async () => {
-        try {
-            const response = await fetch("/api/auth/me");
-            if (response.ok) {
-                const data = await response.json();
-                user = data.user;
-            }
-        } catch (error) {
-            console.error("Failed to check authentication:", error);
-        } finally {
-            loading = false;
-        }
-    });
+onMount(async () => {
+	try {
+		const response = await fetch("/api/auth/me");
+		if (response.ok) {
+			const data = await response.json();
+			user = data.user;
+		}
+	} catch (error) {
+		console.error("Failed to check authentication:", error);
+	} finally {
+		loading = false;
+	}
+});
 </script>
 
 <svelte:head>

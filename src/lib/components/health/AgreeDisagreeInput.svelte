@@ -1,26 +1,31 @@
 <script lang="ts">
-    interface Props {
-        question: any;
-        value?: number;
-        disabled?: boolean;
-        onchange?: (value: number) => void;
-    }
+interface Props {
+	question: any;
+	value?: number;
+	disabled?: boolean;
+	onchange?: (value: number) => void;
+}
 
-    const { question, value = undefined, disabled = false, onchange }: Props = $props();
+const {
+	question,
+	value = undefined,
+	disabled = false,
+	onchange,
+}: Props = $props();
 
-    const options = [
-        { value: 1, label: 'Strongly\nDisagree' },
-        { value: 2, label: 'Disagree' },
-        { value: 3, label: 'Neutral' },
-        { value: 4, label: 'Agree' },
-        { value: 5, label: 'Strongly\nAgree' }
-    ];
+const options = [
+	{ value: 1, label: "Strongly\nDisagree" },
+	{ value: 2, label: "Disagree" },
+	{ value: 3, label: "Neutral" },
+	{ value: 4, label: "Agree" },
+	{ value: 5, label: "Strongly\nAgree" },
+];
 
-    function handleSelection(selectedValue: number) {
-        if (!disabled && onchange) {
-            onchange(selectedValue);
-        }
-    }
+function handleSelection(selectedValue: number) {
+	if (!disabled && onchange) {
+		onchange(selectedValue);
+	}
+}
 </script>
 
 <div class="agree-disagree-input">

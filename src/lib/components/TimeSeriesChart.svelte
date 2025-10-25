@@ -1,124 +1,129 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
-    import uPlot from "uplot";
-    import "uplot/dist/uPlot.min.css";
+import { onDestroy, onMount } from "svelte";
+import { browser } from "$app/environment";
+import uPlot from "uplot";
+import "uplot/dist/uPlot.min.css";
 
-    interface Props {
-        metric: string;
-        range?: string;
-        title: string;
-        yAxisLabel: string;
-        color?: string;
-    }
+interface Props {
+	metric: string;
+	range?: string;
+	title: string;
+	yAxisLabel: string;
+	color?: string;
+}
 
-    let {
-        metric,
-        range = "1h",
-        title,
-        yAxisLabel,
-        color = "#2196F3",
-    }: Props = $props();
+let {
+	metric,
+	range = "1h",
+	title,
+	yAxisLabel,
+	color = "#2196F3",
+}: Props = $props();
 
-    let chartContainer: HTMLDivElement;
-    let chart: uPlot | null = null;
-    let refreshInterval: ReturnType<typeof setInterval> | null = null;
+let chartContainer: HTMLDivElement;
+let chart: uPlot | null = null;
+let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
-    async function fetchData() {
-        try {
-            const response = await fetch(
-                `/api/admin/performance/timeseries?metric=${metric}&range=${range}`,
-            );
-            if (!response.ok) throw new Error("Failed to fetch data");
+async function fetchData() {
+	try {
+		const response = await fetch(
+			`/api/admin/performance/timeseries?metric=${metric}&range=${range}`,
+		);
+		if (!response.ok) throw new Error("Failed to fetch data");
 
-            const data: Array<{ timestamp: number; value: number | null }> =
-                await response.json();
+		const data: Array<{ timestamp: number; value: number | null }> =
+			await response.json();
 
-            // Convert to uPlot format: [timestamps[], values[]]
-            // null values will create gaps in the chart
-            const timestamps = data.map((d) => d.timestamp / 1000); // uPlot uses seconds
-            const values = data.map((d) => d.value);
+		// Convert to uPlot format: [timestamps[], values[]]
+		// null values will create gaps in the chart
+		const timestamps = data.map((d) => d.timestamp / 1000); // uPlot uses seconds
+		const values = data.map((d) => d.value);
 
-            if (chart) {
-                chart.setData([timestamps, values]);
-            } else if (chartContainer && timestamps.length > 0) {
-                createChart(timestamps, values);
-            }
-        } catch (err) {
-            console.error("Error fetching chart data:", err);
-        }
-    }
+		if (chart) {
+			chart.setData([timestamps, values]);
+		} else if (chartContainer && timestamps.length > 0) {
+			createChart(timestamps, values);
+		}
+	} catch (err) {
+		console.error("Error fetching chart data:", err);
+	}
+}
 
-    function createChart(timestamps: number[], values: (number | null)[]) {
-        const opts: uPlot.Options = {
-            width: chartContainer.offsetWidth,
-            height: 200,
-            series: [
-                {
-                    label: "Time",
-                    value: (self, rawValue) => {
-                        return rawValue != null
-                            ? new Date(rawValue * 1000).toLocaleTimeString()
-                            : "";
-                    },
-                },
-                {
-                    label: yAxisLabel,
-                    stroke: color,
-                    width: 2,
-                    points: { show: false },
-                    value: (self, rawValue) => {
-                        return rawValue != null ? rawValue.toFixed(0) : "";
-                    },
-                },
-            ],
-            axes: [
-                {
-                    space: 60,
-                    values: (self, ticks) =>
-                        ticks.map((t) =>
-                            new Date(t * 1000).toLocaleTimeString(),
-                        ),
-                },
-                {
-                    label: yAxisLabel,
-                    space: 40,
-                },
-            ],
-            scales: {
-                x: {
-                    time: false,
-                },
-            },
-        };
+function createChart(timestamps: number[], values: (number | null)[]) {
+	const opts: uPlot.Options = {
+		width: chartContainer.offsetWidth,
+		height: 200,
+		series: [
+			{
+				label: "Time",
+				value: (self, rawValue) => {
+					return rawValue != null
+						? new Date(rawValue * 1000).toLocaleTimeString()
+						: "";
+				},
+			},
+			{
+				label: yAxisLabel,
+				stroke: color,
+				width: 2,
+				points: { show: false },
+				value: (self, rawValue) => {
+					return rawValue != null ? rawValue.toFixed(0) : "";
+				},
+			},
+		],
+		axes: [
+			{
+				space: 60,
+				values: (self, ticks) =>
+					ticks.map((t) => new Date(t * 1000).toLocaleTimeString()),
+			},
+			{
+				label: yAxisLabel,
+				space: 40,
+			},
+		],
+		scales: {
+			x: {
+				time: false,
+			},
+		},
+	};
 
-        chart = new uPlot(opts, [timestamps, values], chartContainer);
-    }
+	chart = new uPlot(opts, [timestamps, values], chartContainer);
+}
 
-    function handleResize() {
-        if (chart && chartContainer) {
-            chart.setSize({ width: chartContainer.offsetWidth, height: 200 });
-        }
-    }
+function handleResize() {
+	if (chart && chartContainer) {
+		chart.setSize({ width: chartContainer.offsetWidth, height: 200 });
+	}
+}
 
-    onMount(() => {
-        fetchData();
-        refreshInterval = setInterval(fetchData, 5000); // Refresh every 5 seconds
-        window.addEventListener("resize", handleResize);
-    });
+onMount(() => {
+	fetchData();
+	refreshInterval = setInterval(fetchData, 5000); // Refresh every 5 seconds
 
-    onDestroy(() => {
-        if (refreshInterval) clearInterval(refreshInterval);
-        if (chart) chart.destroy();
-        window.removeEventListener("resize", handleResize);
-    });
+	if (browser) {
+		window.addEventListener("resize", handleResize);
+	}
+});
 
-    // Watch for range changes
-    $effect(() => {
-        // Trigger refetch when range changes
-        if (range) {
-            fetchData();
-        }
-    });
+onDestroy(() => {
+	if (refreshInterval) clearInterval(refreshInterval);
+	if (chart) chart.destroy();
+
+	if (browser) {
+		window.removeEventListener("resize", handleResize);
+	}
+});
+
+// Watch for range changes
+$effect(() => {
+	// Trigger refetch when range changes
+	if (range) {
+		fetchData();
+	}
+});
 </script>
 
 <div class="chart-wrapper">

@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 export interface SessionData {
 	userId: string;
@@ -10,42 +10,48 @@ const sessions = new Map<string, SessionData>();
 
 // Clear existing sessions on startup since we changed the session structure
 sessions.clear();
-console.info('[Session] Server started - all sessions cleared (users will need to log in again)');
+console.info(
+	"[Session] Server started - all sessions cleared (users will need to log in again)",
+);
 
 export function createSession(userId: string, email: string): string {
 	const sessionId = uuidv4();
-	const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
+	const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
 
 	sessions.set(sessionId, {
 		userId,
 		email,
-		expiresAt
+		expiresAt,
 	});
 
-	console.info('[Session] Created session for user:', email, '(expires in 7 days)');
+	console.info(
+		"[Session] Created session for user:",
+		email,
+		"(expires in 7 days)",
+	);
 
 	return sessionId;
 }
 
 export function getSession(sessionId: string): SessionData | null {
 	const session = sessions.get(sessionId);
-	
+
 	if (!session) {
 		return null;
 	}
-	
+
 	if (session.expiresAt < Date.now()) {
 		sessions.delete(sessionId);
 		return null;
 	}
-	
+
 	return session;
 }
 
 export function deleteSession(sessionId: string): void {
 	const session = sessions.get(sessionId);
 	if (session) {
-		console.info('[Session] Deleted session for user:', session.email);
+		console.info("[Session] Deleted session for user:", session.email);
 	}
 	sessions.delete(sessionId);
 }

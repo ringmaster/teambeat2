@@ -1,56 +1,63 @@
 <script lang="ts">
-    import { fly, fade } from "svelte/transition";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import type { Snippet } from "svelte";
+import type { Snippet } from "svelte";
+import { fade, fly } from "svelte/transition";
+import Icon from "$lib/components/ui/Icon.svelte";
 
-    interface Props {
-        buttonLabel?: string;
-        buttonIcon?: string;
-        buttonClass?: string;
-        menuClass?: string;
-        children?: Snippet;
-        onOpenChange?: (isOpen: boolean) => void;
-    }
+interface Props {
+	buttonLabel?: string;
+	buttonIcon?: string;
+	buttonClass?: string;
+	menuClass?: string;
+	children?: Snippet;
+	onOpenChange?: (isOpen: boolean) => void;
+}
 
-    let { buttonLabel = "", buttonIcon = "ellipsis-vertical", buttonClass = "", menuClass = "", children, onOpenChange }: Props = $props();
+let {
+	buttonLabel = "",
+	buttonIcon = "ellipsis-vertical",
+	buttonClass = "",
+	menuClass = "",
+	children,
+	onOpenChange,
+}: Props = $props();
 
-    let isOpen = $state(false);
-    let menuButton: HTMLButtonElement | undefined = $state();
-    let menuContainer: HTMLDivElement | undefined = $state();
+let isOpen = $state(false);
+let menuButton: HTMLButtonElement | undefined = $state();
+let menuContainer: HTMLDivElement | undefined = $state();
 
-    function toggleMenu() {
-        isOpen = !isOpen;
-        onOpenChange?.(isOpen);
-    }
+function toggleMenu() {
+	isOpen = !isOpen;
+	onOpenChange?.(isOpen);
+}
 
-    function closeMenu() {
-        isOpen = false;
-        onOpenChange?.(false);
-    }
+function closeMenu() {
+	isOpen = false;
+	onOpenChange?.(false);
+}
 
-    function handleClickOutside(event: MouseEvent) {
-        if (menuContainer && !menuContainer.contains(event.target as Node)) {
-            closeMenu();
-        }
-    }
+function handleClickOutside(event: MouseEvent) {
+	if (menuContainer && !menuContainer.contains(event.target as Node)) {
+		closeMenu();
+	}
+}
 
-    function handleKeydown(event: KeyboardEvent) {
-        if (event.key === "Escape") {
-            closeMenu();
-            menuButton?.focus();
-        }
-    }
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape") {
+		closeMenu();
+		menuButton?.focus();
+	}
+}
 
-    $effect(() => {
-        if (isOpen) {
-            document.addEventListener("click", handleClickOutside);
-            document.addEventListener("keydown", handleKeydown);
-            return () => {
-                document.removeEventListener("click", handleClickOutside);
-                document.removeEventListener("keydown", handleKeydown);
-            };
-        }
-    });
+$effect(() => {
+	if (isOpen) {
+		document.addEventListener("click", handleClickOutside);
+		document.addEventListener("keydown", handleKeydown);
+		return () => {
+			document.removeEventListener("click", handleClickOutside);
+			document.removeEventListener("keydown", handleKeydown);
+		};
+	}
+});
 </script>
 
 <div class="dropdown-container" class:is-open={isOpen} bind:this={menuContainer}>

@@ -5,7 +5,7 @@
  * Used in scorecard title and value templates.
  */
 
-import type { EvaluationContext } from '$lib/types/scorecard.js';
+import type { EvaluationContext } from "$lib/types/scorecard.js";
 
 /**
  * Interpolate a template string with values from context
@@ -18,21 +18,24 @@ import type { EvaluationContext } from '$lib/types/scorecard.js';
  * - "Open Tickets: {result}" with context {result: 47}
  *   -> "Open Tickets: 47"
  */
-export function interpolateTemplate(template: string, context: EvaluationContext): string {
-  // Match {path.to.field} patterns
-  const pattern = /\{([^}]+)\}/g;
+export function interpolateTemplate(
+	template: string,
+	context: EvaluationContext,
+): string {
+	// Match {path.to.field} patterns
+	const pattern = /\{([^}]+)\}/g;
 
-  return template.replace(pattern, (match, path) => {
-    const value = getValueByPath(context, path.trim());
+	return template.replace(pattern, (match, path) => {
+		const value = getValueByPath(context, path.trim());
 
-    // Handle null/undefined
-    if (value === null || value === undefined) {
-      return '';
-    }
+		// Handle null/undefined
+		if (value === null || value === undefined) {
+			return "";
+		}
 
-    // Convert to string
-    return String(value);
-  });
+		// Convert to string
+		return String(value);
+	});
 }
 
 /**
@@ -40,37 +43,37 @@ export function interpolateTemplate(template: string, context: EvaluationContext
  * Supports array indexing with bracket syntax: result[0], result[1], etc.
  */
 function getValueByPath(obj: any, path: string): any {
-  // Handle array indexing: result[0] -> result, index 0
-  const arrayIndexMatch = path.match(/^([^[]+)\[(\d+)\]$/);
-  if (arrayIndexMatch) {
-    const [, basePath, indexStr] = arrayIndexMatch;
-    const index = parseInt(indexStr, 10);
+	// Handle array indexing: result[0] -> result, index 0
+	const arrayIndexMatch = path.match(/^([^[]+)\[(\d+)\]$/);
+	if (arrayIndexMatch) {
+		const [, basePath, indexStr] = arrayIndexMatch;
+		const index = parseInt(indexStr, 10);
 
-    // Get the base value
-    const baseValue = basePath === '' ? obj : getValueByPath(obj, basePath);
+		// Get the base value
+		const baseValue = basePath === "" ? obj : getValueByPath(obj, basePath);
 
-    // If it's an array, return the indexed value
-    if (Array.isArray(baseValue)) {
-      return baseValue[index];
-    }
+		// If it's an array, return the indexed value
+		if (Array.isArray(baseValue)) {
+			return baseValue[index];
+		}
 
-    // If base path is 'result' and value is not an array, treat result as result[0]
-    if (basePath === 'result' && index === 0) {
-      return baseValue;
-    }
+		// If base path is 'result' and value is not an array, treat result as result[0]
+		if (basePath === "result" && index === 0) {
+			return baseValue;
+		}
 
-    return null;
-  }
+		return null;
+	}
 
-  const parts = path.split('.');
-  let current = obj;
+	const parts = path.split(".");
+	let current = obj;
 
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return null;
-    }
-    current = current[part];
-  }
+	for (const part of parts) {
+		if (current === null || current === undefined) {
+			return null;
+		}
+		current = current[part];
+	}
 
-  return current;
+	return current;
 }

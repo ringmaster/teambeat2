@@ -1,29 +1,29 @@
 <script lang="ts">
-    interface Props {
-        placeholder?: string;
-        value?: string;
-        disabled?: boolean;
-        required?: boolean;
-        rows?: number;
-        resize?: 'none' | 'both' | 'horizontal' | 'vertical';
-        id?: string;
-        name?: string;
-        class?: string;
-        oninput?: (event: Event) => void;
-    }
+interface Props {
+	placeholder?: string;
+	value?: string;
+	disabled?: boolean;
+	required?: boolean;
+	rows?: number;
+	resize?: "none" | "both" | "horizontal" | "vertical";
+	id?: string;
+	name?: string;
+	class?: string;
+	oninput?: (event: Event) => void;
+}
 
-    let {
-        placeholder = '',
-        value = $bindable(''),
-        disabled = false,
-        required = false,
-        rows = 3,
-        resize = 'none',
-        id,
-        name,
-        class: className = '',
-        oninput
-    }: Props = $props();
+let {
+	placeholder = "",
+	value = $bindable(""),
+	disabled = false,
+	required = false,
+	rows = 3,
+	resize = "none",
+	id,
+	name,
+	class: className = "",
+	oninput,
+}: Props = $props();
 </script>
 
 <textarea

@@ -1,24 +1,28 @@
-import { json } from '@sveltejs/kit';
-import { z } from 'zod';
-import type { RequestHandler } from './$types';
-import { getUserByEmail } from '$lib/server/repositories/user.js';
-import { generatePasswordResetToken } from '$lib/server/auth/password-reset.js';
-import { emailService, isEmailConfigured } from '$lib/server/email/index.js';
-import { passwordResetTemplate } from '$lib/server/email/templates.js';
-import { checkRateLimit } from '$lib/server/rate-limit.js';
+import { json } from "@sveltejs/kit";
+import { z } from "zod";
+import { generatePasswordResetToken } from "$lib/server/auth/password-reset.js";
+import { emailService, isEmailConfigured } from "$lib/server/email/index.js";
+import { passwordResetTemplate } from "$lib/server/email/templates.js";
+import { checkRateLimit } from "$lib/server/rate-limit.js";
+import { getUserByEmail } from "$lib/server/repositories/user.js";
+import type { RequestHandler } from "./$types";
 
 const requestSchema = z.object({
-	email: z.string().email()
+	email: z.string().email(),
 });
 
-export const POST: RequestHandler = async ({ request, getClientAddress, url }) => {
+export const POST: RequestHandler = async ({
+	request,
+	getClientAddress,
+	url,
+}) => {
 	if (!isEmailConfigured) {
 		return json(
 			{
 				success: false,
-				error: 'Password reset not available on this server'
+				error: "Password reset not available on this server",
 			},
-			{ status: 400 }
+			{ status: 400 },
 		);
 	}
 
@@ -29,7 +33,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		// Always return success to prevent email enumeration
 		return json({
 			success: true,
-			message: 'If an account exists with that email, a password reset link has been sent.'
+			message:
+				"If an account exists with that email, a password reset link has been sent.",
 		});
 	}
 
@@ -38,15 +43,19 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 
 	// Primary rate limit: 3 requests per email per hour
 	const emailRateLimitKey = `password-reset:email:${email}`;
-	const emailRateLimit = await checkRateLimit(emailRateLimitKey, 3, 60 * 60 * 1000);
+	const emailRateLimit = await checkRateLimit(
+		emailRateLimitKey,
+		3,
+		60 * 60 * 1000,
+	);
 
 	if (!emailRateLimit.allowed) {
 		return json(
 			{
 				success: false,
-				error: 'Too many password reset requests. Please try again in an hour.'
+				error: "Too many password reset requests. Please try again in an hour.",
 			},
-			{ status: 429 }
+			{ status: 429 },
 		);
 	}
 
@@ -58,9 +67,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		return json(
 			{
 				success: false,
-				error: 'Too many password reset requests from your network. Please try again later.'
+				error:
+					"Too many password reset requests from your network. Please try again later.",
 			},
-			{ status: 429 }
+			{ status: 429 },
 		);
 	}
 
@@ -70,7 +80,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	if (!user || !user.passwordHash) {
 		return json({
 			success: true,
-			message: 'If an account exists with that email, a password reset link has been sent.'
+			message:
+				"If an account exists with that email, a password reset link has been sent.",
 		});
 	}
 
@@ -80,17 +91,18 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 
 	const emailResult = await emailService.send({
 		to: user.email,
-		subject: 'Reset your TeamBeat password',
+		subject: "Reset your TeamBeat password",
 		html,
 	});
 
 	if (!emailResult.success) {
-		console.error('Failed to send password reset email:', emailResult.error);
+		console.error("Failed to send password reset email:", emailResult.error);
 		// Still return success to prevent enumeration
 	}
 
 	return json({
 		success: true,
-		message: 'If an account exists with that email, a password reset link has been sent.'
+		message:
+			"If an account exists with that email, a password reset link has been sent.",
 	});
 };

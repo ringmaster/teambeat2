@@ -5,4 +5,4 @@
 
 // Re-export everything from the main schema
 // The main schema will use PostgreSQL types when DATABASE_URL is set
-export * from './schema.ts';
+export * from "./schema.ts";

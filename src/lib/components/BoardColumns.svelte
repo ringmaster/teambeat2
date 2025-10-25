@@ -1,90 +1,95 @@
 <script lang="ts">
-    import BoardColumn from "./BoardColumn.svelte";
+import BoardColumn from "./BoardColumn.svelte";
 
-    interface Props {
-        board: any;
-        cards: any[];
-        currentScene: any;
-        groupingMode: boolean;
-        selectedCards: Set<string>;
-        dragTargetColumnId: string;
-        dragOverCardId?: string;
-        cardDropPosition?: string;
-        draggedCardId?: string;
-        onDragOver: (e: DragEvent, columnId: string) => void;
-        onDragEnter: (e: DragEvent, columnId: string) => void;
-        onDragLeave: (e: DragEvent, columnId: string) => void;
-        onDrop: (e: DragEvent, columnId: string) => void;
-        onCardDrop: (e: DragEvent, targetCardId: string) => void;
-        onCardDragOver?: (e: DragEvent, cardId: string, cardSeq: number, columnId: string) => void;
-        onCardDragLeave?: (e: DragEvent) => void;
-        onDragStart: (e: DragEvent, cardId: string) => void;
-        onToggleCardSelection: (cardId: string) => void;
-        onVoteCard: (cardId: string, delta: 1 | -1) => void;
-        onCommentCard: (cardId: string) => void;
-        onAddCard: (columnId: string) => void;
-        onGroupCards: (cards: any[]) => void;
-        onGetColumnContent: (columnId: string) => string;
-        onSetColumnContent: (columnId: string, content: string) => void;
-        onDeleteCard: (cardId: string) => void;
-        onEditCard: (cardId: string) => void;
-        onReaction?: (cardId: string, emoji: string) => void;
-        userRole: string;
-        currentUserId: string;
-        hasVotes: boolean;
-        userVotesByCard: Map<string, number>;
-        allVotesByCard: Map<string, number>;
-    }
+interface Props {
+	board: any;
+	cards: any[];
+	currentScene: any;
+	groupingMode: boolean;
+	selectedCards: Set<string>;
+	dragTargetColumnId: string;
+	dragOverCardId?: string;
+	cardDropPosition?: string;
+	draggedCardId?: string;
+	onDragOver: (e: DragEvent, columnId: string) => void;
+	onDragEnter: (e: DragEvent, columnId: string) => void;
+	onDragLeave: (e: DragEvent, columnId: string) => void;
+	onDrop: (e: DragEvent, columnId: string) => void;
+	onCardDrop: (e: DragEvent, targetCardId: string) => void;
+	onCardDragOver?: (
+		e: DragEvent,
+		cardId: string,
+		cardSeq: number,
+		columnId: string,
+	) => void;
+	onCardDragLeave?: (e: DragEvent) => void;
+	onDragStart: (e: DragEvent, cardId: string) => void;
+	onToggleCardSelection: (cardId: string) => void;
+	onVoteCard: (cardId: string, delta: 1 | -1) => void;
+	onCommentCard: (cardId: string) => void;
+	onAddCard: (columnId: string) => void;
+	onGroupCards: (cards: any[]) => void;
+	onGetColumnContent: (columnId: string) => string;
+	onSetColumnContent: (columnId: string, content: string) => void;
+	onDeleteCard: (cardId: string) => void;
+	onEditCard: (cardId: string) => void;
+	onReaction?: (cardId: string, emoji: string) => void;
+	userRole: string;
+	currentUserId: string;
+	hasVotes: boolean;
+	userVotesByCard: Map<string, number>;
+	allVotesByCard: Map<string, number>;
+}
 
-    let {
-        board,
-        cards,
-        currentScene,
-        groupingMode,
-        selectedCards,
-        dragTargetColumnId,
-        dragOverCardId,
-        cardDropPosition,
-        draggedCardId,
-        onDragOver,
-        onDragEnter,
-        onDragLeave,
-        onDrop,
-        onCardDrop,
-        onCardDragOver,
-        onCardDragLeave,
-        onDragStart,
-        onToggleCardSelection,
-        onVoteCard,
-        onCommentCard,
-        onAddCard,
-        onGroupCards,
-        onGetColumnContent,
-        onSetColumnContent,
-        onDeleteCard,
-        onEditCard,
-        onReaction,
-        userRole,
-        currentUserId,
-        hasVotes,
-        userVotesByCard,
-        allVotesByCard,
-    }: Props = $props();
+let {
+	board,
+	cards,
+	currentScene,
+	groupingMode,
+	selectedCards,
+	dragTargetColumnId,
+	dragOverCardId,
+	cardDropPosition,
+	draggedCardId,
+	onDragOver,
+	onDragEnter,
+	onDragLeave,
+	onDrop,
+	onCardDrop,
+	onCardDragOver,
+	onCardDragLeave,
+	onDragStart,
+	onToggleCardSelection,
+	onVoteCard,
+	onCommentCard,
+	onAddCard,
+	onGroupCards,
+	onGetColumnContent,
+	onSetColumnContent,
+	onDeleteCard,
+	onEditCard,
+	onReaction,
+	userRole,
+	currentUserId,
+	hasVotes,
+	userVotesByCard,
+	allVotesByCard,
+}: Props = $props();
 
-    function columnCountClass(count: number) {
-        switch (count) {
-            case 0:
-                return "no-columns";
-            case 1:
-                return "single-column";
-            case 2:
-                return "two-columns";
-            case 3:
-                return "three-columns";
-            default:
-                return "multiple-columns";
-        }
-    }
+function columnCountClass(count: number) {
+	switch (count) {
+		case 0:
+			return "no-columns";
+		case 1:
+			return "single-column";
+		case 2:
+			return "two-columns";
+		case 3:
+			return "three-columns";
+		default:
+			return "multiple-columns";
+	}
+}
 </script>
 
 <!-- Board Columns for configured board (full-width with horizontal scroll) -->

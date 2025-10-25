@@ -3,7 +3,7 @@
  * Centralized state management for board data using Svelte 5 runes
  */
 
-import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 
 export interface VotingAllocation {
 	currentVotes: number;
@@ -47,7 +47,7 @@ export function createBoardStore() {
 	let board = $state<any | null>(null);
 	let cards = $state<any[]>([]);
 	let user = $state<any | null>(null);
-	let userRole = $state('');
+	let userRole = $state("");
 	let currentScene = $state<any | null>(null);
 
 	// Comments and agreements
@@ -61,12 +61,12 @@ export function createBoardStore() {
 	// Voting state
 	let votingAllocation = $state<VotingAllocation | null>(null);
 	let votingStats = $state<VotingStats | null>(null);
-	let userVotesByCard = new SvelteMap<string, number>();
-	let allVotesByCard = new SvelteMap<string, number>();
+	const userVotesByCard = new SvelteMap<string, number>();
+	const allVotesByCard = new SvelteMap<string, number>();
 
 	// Grouping state
 	let groupingMode = $state(false);
-	let selectedCards = new SvelteSet<string>();
+	const selectedCards = new SvelteSet<string>();
 
 	// Templates and metadata
 	let templates = $state<any[]>([]);
@@ -78,52 +78,105 @@ export function createBoardStore() {
 	let timerTotalVotes = $state(0);
 
 	// Computed values
-	let hasVotes = $derived(votingAllocation?.canVote ?? false);
-	let hasActiveTimer = $derived(
-		board?.timerStart && board?.timerDuration ? true : false
+	const hasVotes = $derived(votingAllocation?.canVote ?? false);
+	const hasActiveTimer = $derived(
+		board?.timerStart && board?.timerDuration ? true : false,
 	);
-	let blameFreeMode = $derived(board?.blameFree ?? false);
-	let displayBoard = $derived(board != null);
+	const blameFreeMode = $derived(board?.blameFree ?? false);
+	const displayBoard = $derived(board != null);
 
 	// Visible columns based on current scene
-	let visibleColumns = $derived.by(() => {
+	const visibleColumns = $derived.by(() => {
 		if (!currentScene || !board?.columns) return board?.columns || [];
 
 		if (!currentScene.columnVisibility) return board.columns;
 
-		const visibilityMap = currentScene.columnVisibility as Record<string, boolean>;
+		const visibilityMap = currentScene.columnVisibility as Record<
+			string,
+			boolean
+		>;
 		return board.columns.filter((col: any) => visibilityMap[col.id] !== false);
 	});
 
 	return {
 		// Getters for state
-		get board() { return board; },
-		get cards() { return cards; },
-		get user() { return user; },
-		get userRole() { return userRole; },
-		get currentScene() { return currentScene; },
-		get comments() { return comments; },
-		get agreements() { return agreements; },
-		get notesLockStatus() { return notesLockStatus; },
-		get connectedUsers() { return connectedUsers; },
-		get votingAllocation() { return votingAllocation; },
-		get votingStats() { return votingStats; },
-		get userVotesByCard() { return userVotesByCard; },
-		get allVotesByCard() { return allVotesByCard; },
-		get groupingMode() { return groupingMode; },
-		get selectedCards() { return selectedCards; },
-		get templates() { return templates; },
-		get lastHealthCheckDate() { return lastHealthCheckDate; },
-		get scorecardCountsByScene() { return scorecardCountsByScene; },
-		get pollVotes() { return pollVotes; },
-		get timerTotalVotes() { return timerTotalVotes; },
+		get board() {
+			return board;
+		},
+		get cards() {
+			return cards;
+		},
+		get user() {
+			return user;
+		},
+		get userRole() {
+			return userRole;
+		},
+		get currentScene() {
+			return currentScene;
+		},
+		get comments() {
+			return comments;
+		},
+		get agreements() {
+			return agreements;
+		},
+		get notesLockStatus() {
+			return notesLockStatus;
+		},
+		get connectedUsers() {
+			return connectedUsers;
+		},
+		get votingAllocation() {
+			return votingAllocation;
+		},
+		get votingStats() {
+			return votingStats;
+		},
+		get userVotesByCard() {
+			return userVotesByCard;
+		},
+		get allVotesByCard() {
+			return allVotesByCard;
+		},
+		get groupingMode() {
+			return groupingMode;
+		},
+		get selectedCards() {
+			return selectedCards;
+		},
+		get templates() {
+			return templates;
+		},
+		get lastHealthCheckDate() {
+			return lastHealthCheckDate;
+		},
+		get scorecardCountsByScene() {
+			return scorecardCountsByScene;
+		},
+		get pollVotes() {
+			return pollVotes;
+		},
+		get timerTotalVotes() {
+			return timerTotalVotes;
+		},
 
 		// Computed getters
-		get hasVotes() { return hasVotes; },
-		get hasActiveTimer() { return hasActiveTimer; },
-		get blameFreeMode() { return blameFreeMode; },
-		get displayBoard() { return displayBoard; },
-		get visibleColumns() { return visibleColumns; },
+		get hasVotes() {
+			return hasVotes;
+		},
+		get hasActiveTimer() {
+			return hasActiveTimer;
+		},
+		get blameFreeMode() {
+			return blameFreeMode;
+		},
+		get displayBoard() {
+			return displayBoard;
+		},
+		get visibleColumns() {
+			return visibleColumns;
+		},
 
 		// Setters for simple updates
 		setBoard(value: any) {
@@ -200,15 +253,15 @@ export function createBoardStore() {
 		},
 
 		updateCard(cardId: string, updates: Partial<any>) {
-			cards = cards.map(c => c.id === cardId ? { ...c, ...updates } : c);
+			cards = cards.map((c) => (c.id === cardId ? { ...c, ...updates } : c));
 		},
 
 		removeCard(cardId: string) {
-			cards = cards.filter(c => c.id !== cardId);
+			cards = cards.filter((c) => c.id !== cardId);
 		},
 
 		replaceCard(cardId: string, newCard: any) {
-			cards = cards.map(c => c.id === cardId ? newCard : c);
+			cards = cards.map((c) => (c.id === cardId ? newCard : c));
 		},
 
 		// Comment operations
@@ -217,11 +270,13 @@ export function createBoardStore() {
 		},
 
 		updateComment(commentId: string, updates: Partial<any>) {
-			comments = comments.map(c => c.id === commentId ? { ...c, ...updates } : c);
+			comments = comments.map((c) =>
+				c.id === commentId ? { ...c, ...updates } : c,
+			);
 		},
 
 		removeComment(commentId: string) {
-			comments = comments.filter(c => c.id !== commentId);
+			comments = comments.filter((c) => c.id !== commentId);
 		},
 
 		// Agreement operations
@@ -230,11 +285,13 @@ export function createBoardStore() {
 		},
 
 		updateAgreement(agreementId: string, updates: Partial<any>) {
-			agreements = agreements.map(a => a.id === agreementId ? { ...a, ...updates } : a);
+			agreements = agreements.map((a) =>
+				a.id === agreementId ? { ...a, ...updates } : a,
+			);
 		},
 
 		removeAgreement(agreementId: string) {
-			agreements = agreements.filter(a => a.id !== agreementId);
+			agreements = agreements.filter((a) => a.id !== agreementId);
 		},
 
 		// Board operations
@@ -282,9 +339,9 @@ export function createBoardStore() {
 				});
 
 				// Also update the cards array with the new vote counts
-				cards = cards.map(card => ({
+				cards = cards.map((card) => ({
 					...card,
-					voteCount: data.all_votes_by_card![card.id] || 0
+					voteCount: data.all_votes_by_card![card.id] || 0,
 				}));
 			}
 
@@ -313,8 +370,8 @@ export function createBoardStore() {
 				board = {
 					...board,
 					scenes: board.scenes.map((s: any) =>
-						s.id === sceneId ? { ...s, ...updates } : s
-					)
+						s.id === sceneId ? { ...s, ...updates } : s,
+					),
 				};
 			}
 		},
@@ -324,7 +381,7 @@ export function createBoardStore() {
 			if (board) {
 				board = {
 					...board,
-					columns: [...(board.columns || []), column]
+					columns: [...(board.columns || []), column],
 				};
 			}
 		},
@@ -334,8 +391,8 @@ export function createBoardStore() {
 				board = {
 					...board,
 					columns: board.columns.map((c: any) =>
-						c.id === columnId ? { ...c, ...updates } : c
-					)
+						c.id === columnId ? { ...c, ...updates } : c,
+					),
 				};
 			}
 		},
@@ -344,7 +401,7 @@ export function createBoardStore() {
 			if (board?.columns) {
 				board = {
 					...board,
-					columns: board.columns.filter((c: any) => c.id !== columnId)
+					columns: board.columns.filter((c: any) => c.id !== columnId),
 				};
 			}
 		},
@@ -353,7 +410,7 @@ export function createBoardStore() {
 			if (board) {
 				board = {
 					...board,
-					columns: newOrder
+					columns: newOrder,
 				};
 			}
 		},
@@ -363,7 +420,7 @@ export function createBoardStore() {
 			if (board) {
 				board = {
 					...board,
-					scenes: [...(board.scenes || []), scene]
+					scenes: [...(board.scenes || []), scene],
 				};
 			}
 		},
@@ -373,8 +430,8 @@ export function createBoardStore() {
 				board = {
 					...board,
 					scenes: board.scenes.map((s: any) =>
-						s.id === sceneId ? { ...s, ...updates } : s
-					)
+						s.id === sceneId ? { ...s, ...updates } : s,
+					),
 				};
 			}
 		},
@@ -383,7 +440,7 @@ export function createBoardStore() {
 			if (board?.scenes) {
 				board = {
 					...board,
-					scenes: board.scenes.filter((s: any) => s.id !== sceneId)
+					scenes: board.scenes.filter((s: any) => s.id !== sceneId),
 				};
 			}
 		},
@@ -392,10 +449,10 @@ export function createBoardStore() {
 			if (board) {
 				board = {
 					...board,
-					scenes: newOrder
+					scenes: newOrder,
 				};
 			}
-		}
+		},
 	};
 }
 

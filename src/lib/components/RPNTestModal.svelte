@@ -1,296 +1,290 @@
 <script lang="ts">
-    import { fade, fly } from "svelte/transition";
-    import { cubicOut } from "svelte/easing";
-    import Button from "$lib/components/ui/Button.svelte";
-    import Input from "$lib/components/ui/Input.svelte";
-    import Textarea from "$lib/components/ui/Textarea.svelte";
-    import {
-        parseData,
-        parseFile,
-        type ParseResult,
-    } from "$lib/utils/data-parser";
-    import { parseRPNString } from "$lib/utils/rpn-parser";
-    import { evaluateRPN } from "$lib/utils/rpn-evaluator";
-    import type { RPNEvaluationResult } from "$lib/types/scorecard";
+import { cubicOut } from "svelte/easing";
+import { fade, fly } from "svelte/transition";
+import Button from "$lib/components/ui/Button.svelte";
+import Input from "$lib/components/ui/Input.svelte";
+import Textarea from "$lib/components/ui/Textarea.svelte";
+import type { RPNEvaluationResult } from "$lib/types/scorecard";
+import { type ParseResult, parseData, parseFile } from "$lib/utils/data-parser";
+import { evaluateRPN } from "$lib/utils/rpn-evaluator";
+import { parseRPNString } from "$lib/utils/rpn-parser";
 
-    interface Props {
-        show: boolean;
-        initialRule?: string;
-        initialData?: string;
-        initialIterateOver?: string | null;
-        onClose: () => void;
-        onUpdateRule?: (rule: string) => void;
-    }
+interface Props {
+	show: boolean;
+	initialRule?: string;
+	initialData?: string;
+	initialIterateOver?: string | null;
+	onClose: () => void;
+	onUpdateRule?: (rule: string) => void;
+}
 
-    let {
-        show = false,
-        initialRule = "",
-        initialData = "",
-        initialIterateOver = null,
-        onClose,
-        onUpdateRule,
-    }: Props = $props();
+let {
+	show = false,
+	initialRule = "",
+	initialData = "",
+	initialIterateOver = null,
+	onClose,
+	onUpdateRule,
+}: Props = $props();
 
-    let dialogElement: HTMLDivElement = $state() as HTMLDivElement;
+let dialogElement: HTMLDivElement = $state() as HTMLDivElement;
 
-    // State
-    let dataInput = $state("");
-    let rpnRule = $state("");
-    let iterateOver = $state<string | null>(null);
-    let parsedData = $state<any>(null);
-    let parseError = $state<string | null>(null);
-    let executionResult = $state<RPNEvaluationResult | null>(null);
-    let isDragging = $state(false);
-    let hasRun = $state(false);
-    let lastInitializedRule = $state("");
+// State
+let dataInput = $state("");
+let rpnRule = $state("");
+let iterateOver = $state<string | null>(null);
+let parsedData = $state<any>(null);
+let parseError = $state<string | null>(null);
+let executionResult = $state<RPNEvaluationResult | null>(null);
+let isDragging = $state(false);
+let hasRun = $state(false);
+let lastInitializedRule = $state("");
 
-    // Initialize when modal opens (only once per opening)
-    $effect(() => {
-        if (show && initialRule !== lastInitializedRule) {
-            rpnRule = initialRule;
-            dataInput = initialData;
-            iterateOver = initialIterateOver;
-            lastInitializedRule = initialRule;
-            hasRun = false;
-            executionResult = null;
-        }
-    });
+// Initialize when modal opens (only once per opening)
+$effect(() => {
+	if (show && initialRule !== lastInitializedRule) {
+		rpnRule = initialRule;
+		dataInput = initialData;
+		iterateOver = initialIterateOver;
+		lastInitializedRule = initialRule;
+		hasRun = false;
+		executionResult = null;
+	}
+});
 
-    // Parse data whenever dataInput changes
-    $effect(() => {
-        if (dataInput.trim()) {
-            const result = parseData(dataInput);
-            if (result.success) {
-                parsedData = result.data;
-                parseError = null;
-            } else {
-                parsedData = null;
-                parseError = result.error || "Failed to parse data";
-            }
-        } else {
-            parsedData = null;
-            parseError = null;
-        }
-    });
+// Parse data whenever dataInput changes
+$effect(() => {
+	if (dataInput.trim()) {
+		const result = parseData(dataInput);
+		if (result.success) {
+			parsedData = result.data;
+			parseError = null;
+		} else {
+			parsedData = null;
+			parseError = result.error || "Failed to parse data";
+		}
+	} else {
+		parsedData = null;
+		parseError = null;
+	}
+});
 
-    function handleDragOver(e: DragEvent) {
-        e.preventDefault();
-        isDragging = true;
-    }
+function handleDragOver(e: DragEvent) {
+	e.preventDefault();
+	isDragging = true;
+}
 
-    function handleDragLeave(e: DragEvent) {
-        e.preventDefault();
-        isDragging = false;
-    }
+function handleDragLeave(e: DragEvent) {
+	e.preventDefault();
+	isDragging = false;
+}
 
-    async function handleDrop(e: DragEvent) {
-        e.preventDefault();
-        isDragging = false;
+async function handleDrop(e: DragEvent) {
+	e.preventDefault();
+	isDragging = false;
 
-        const files = e.dataTransfer?.files;
-        if (!files || files.length === 0) return;
+	const files = e.dataTransfer?.files;
+	if (!files || files.length === 0) return;
 
-        const file = files[0];
-        const result = await parseFile(file);
+	const file = files[0];
+	const result = await parseFile(file);
 
-        if (result.success && result.data) {
-            // Convert parsed data back to formatted string for display
-            dataInput = JSON.stringify(result.data, null, 2);
-            parsedData = result.data;
-            parseError = null;
-        } else {
-            parseError = result.error || "Failed to parse file";
-            parsedData = null;
-        }
-    }
+	if (result.success && result.data) {
+		// Convert parsed data back to formatted string for display
+		dataInput = JSON.stringify(result.data, null, 2);
+		parsedData = result.data;
+		parseError = null;
+	} else {
+		parseError = result.error || "Failed to parse file";
+		parsedData = null;
+	}
+}
 
-    function handleFileSelect(e: Event) {
-        const input = e.target as HTMLInputElement;
-        const file = input.files?.[0];
-        if (!file) return;
+function handleFileSelect(e: Event) {
+	const input = e.target as HTMLInputElement;
+	const file = input.files?.[0];
+	if (!file) return;
 
-        parseFile(file).then((result) => {
-            if (result.success && result.data) {
-                dataInput = JSON.stringify(result.data, null, 2);
-                parsedData = result.data;
-                parseError = null;
-            } else {
-                parseError = result.error || "Failed to parse file";
-                parsedData = null;
-            }
-        });
-    }
+	parseFile(file).then((result) => {
+		if (result.success && result.data) {
+			dataInput = JSON.stringify(result.data, null, 2);
+			parsedData = result.data;
+			parseError = null;
+		} else {
+			parseError = result.error || "Failed to parse file";
+			parsedData = null;
+		}
+	});
+}
 
-    function runTest() {
-        if (!rpnRule.trim()) {
-            executionResult = {
-                success: false,
-                error: "Please enter an RPN rule",
-                stackTrace: [],
-            };
-            hasRun = true;
-            return;
-        }
+function runTest() {
+	if (!rpnRule.trim()) {
+		executionResult = {
+			success: false,
+			error: "Please enter an RPN rule",
+			stackTrace: [],
+		};
+		hasRun = true;
+		return;
+	}
 
-        if (!parsedData) {
-            executionResult = {
-                success: false,
-                error: "Please provide test data",
-                stackTrace: [],
-            };
-            hasRun = true;
-            return;
-        }
+	if (!parsedData) {
+		executionResult = {
+			success: false,
+			error: "Please provide test data",
+			stackTrace: [],
+		};
+		hasRun = true;
+		return;
+	}
 
-        try {
-            // Parse the RPN string into an expression
-            const expression = parseRPNString(rpnRule);
+	try {
+		// Parse the RPN string into an expression
+		const expression = parseRPNString(rpnRule);
 
-            // Handle iterate_over setting (treat empty string as null)
-            const effectiveIterateOver = iterateOver?.trim() || null;
+		// Handle iterate_over setting (treat empty string as null)
+		const effectiveIterateOver = iterateOver?.trim() || null;
 
-            if (effectiveIterateOver === null) {
-                // Aggregate: evaluate once with full data
-                const result = evaluateRPN(expression, parsedData);
-                executionResult = result;
-            } else {
-                // Detail: iterate over array
-                const items = getValueByPath(parsedData, effectiveIterateOver);
+		if (effectiveIterateOver === null) {
+			// Aggregate: evaluate once with full data
+			const result = evaluateRPN(expression, parsedData);
+			executionResult = result;
+		} else {
+			// Detail: iterate over array
+			const items = getValueByPath(parsedData, effectiveIterateOver);
 
-                if (!Array.isArray(items)) {
-                    executionResult = {
-                        success: false,
-                        error: `Iterate Over path "${effectiveIterateOver}" did not resolve to an array`,
-                        stackTrace: [],
-                    };
-                    hasRun = true;
-                    return;
-                }
+			if (!Array.isArray(items)) {
+				executionResult = {
+					success: false,
+					error: `Iterate Over path "${effectiveIterateOver}" did not resolve to an array`,
+					stackTrace: [],
+				};
+				hasRun = true;
+				return;
+			}
 
-                // Get item name for context (e.g., "tickets" -> "ticket")
-                const itemName = getItemName(effectiveIterateOver);
+			// Get item name for context (e.g., "tickets" -> "ticket")
+			const itemName = getItemName(effectiveIterateOver);
 
-                // Evaluate for first matching item (for demonstration)
-                let foundMatch = false;
-                for (let i = 0; i < items.length; i++) {
-                    const context = {
-                        ...parsedData,
-                        [itemName]: items[i],
-                        _index: i,
-                    };
+			// Evaluate for first matching item (for demonstration)
+			let foundMatch = false;
+			for (let i = 0; i < items.length; i++) {
+				const context = {
+					...parsedData,
+					[itemName]: items[i],
+					_index: i,
+				};
 
-                    const result = evaluateRPN(expression, context);
-                    if (result.success) {
-                        executionResult = {
-                            ...result,
-                            message: `Evaluated with ${itemName} at index ${i}`,
-                        };
-                        foundMatch = true;
-                        break;
-                    }
-                }
+				const result = evaluateRPN(expression, context);
+				if (result.success) {
+					executionResult = {
+						...result,
+						message: `Evaluated with ${itemName} at index ${i}`,
+					};
+					foundMatch = true;
+					break;
+				}
+			}
 
-                if (!foundMatch) {
-                    executionResult = {
-                        success: false,
-                        error: "No matching items found in array",
-                        stackTrace: [],
-                    };
-                }
-            }
+			if (!foundMatch) {
+				executionResult = {
+					success: false,
+					error: "No matching items found in array",
+					stackTrace: [],
+				};
+			}
+		}
 
-            hasRun = true;
-        } catch (error) {
-            executionResult = {
-                success: false,
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to parse RPN rule",
-                stackTrace: [],
-            };
-            hasRun = true;
-        }
-    }
+		hasRun = true;
+	} catch (error) {
+		executionResult = {
+			success: false,
+			error:
+				error instanceof Error ? error.message : "Failed to parse RPN rule",
+			stackTrace: [],
+		};
+		hasRun = true;
+	}
+}
 
-    function getValueByPath(obj: any, path: string): any {
-        if (path === "$") return obj;
-        const parts = path.split(".");
-        let current = obj;
-        for (const part of parts) {
-            if (current === null || current === undefined) return null;
-            current = current[part];
-        }
-        return current;
-    }
+function getValueByPath(obj: any, path: string): any {
+	if (path === "$") return obj;
+	const parts = path.split(".");
+	let current = obj;
+	for (const part of parts) {
+		if (current === null || current === undefined) return null;
+		current = current[part];
+	}
+	return current;
+}
 
-    function getItemName(arrayPath: string): string {
-        if (arrayPath === "$") return "$";
-        const parts = arrayPath.split(".");
-        const arrayName = parts[parts.length - 1];
-        if (arrayName.endsWith("s") && !arrayName.endsWith("ss")) {
-            return arrayName.slice(0, -1);
-        }
-        return arrayName;
-    }
+function getItemName(arrayPath: string): string {
+	if (arrayPath === "$") return "$";
+	const parts = arrayPath.split(".");
+	const arrayName = parts[parts.length - 1];
+	if (arrayName.endsWith("s") && !arrayName.endsWith("ss")) {
+		return arrayName.slice(0, -1);
+	}
+	return arrayName;
+}
 
-    function handleUpdateRule() {
-        if (onUpdateRule) {
-            onUpdateRule(rpnRule);
-        }
-        handleClose();
-    }
+function handleUpdateRule() {
+	if (onUpdateRule) {
+		onUpdateRule(rpnRule);
+	}
+	handleClose();
+}
 
-    function handleClose() {
-        dataInput = "";
-        rpnRule = "";
-        parsedData = null;
-        parseError = null;
-        executionResult = null;
-        hasRun = false;
-        onClose();
-    }
+function handleClose() {
+	dataInput = "";
+	rpnRule = "";
+	parsedData = null;
+	parseError = null;
+	executionResult = null;
+	hasRun = false;
+	onClose();
+}
 
-    // Handle escape key
-    function handleKeydown(event: KeyboardEvent) {
-        if (event.key === "Escape" && show) {
-            handleClose();
-        }
-    }
+// Handle escape key
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape" && show) {
+		handleClose();
+	}
+}
 
-    // Handle overlay click
-    function handleOverlayClick(event: MouseEvent) {
-        if (event.target === event.currentTarget) {
-            handleClose();
-        }
-    }
+// Handle overlay click
+function handleOverlayClick(event: MouseEvent) {
+	if (event.target === event.currentTarget) {
+		handleClose();
+	}
+}
 
-    // Focus management
-    $effect(() => {
-        if (show && dialogElement) {
-            const focusableElements = dialogElement.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-            );
-            if (focusableElements.length > 0) {
-                (focusableElements[0] as HTMLElement).focus();
-            }
-        }
-    });
+// Focus management
+$effect(() => {
+	if (show && dialogElement) {
+		const focusableElements = dialogElement.querySelectorAll(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+		);
+		if (focusableElements.length > 0) {
+			(focusableElements[0] as HTMLElement).focus();
+		}
+	}
+});
 
-    function formatStackValue(value: any): string {
-        if (value === null) return "null";
-        if (value === undefined) return "undefined";
-        if (typeof value === "string") return `"${value}"`;
-        if (typeof value === "boolean") return value ? "true" : "false";
-        if (typeof value === "number") return String(value);
-        if (Array.isArray(value)) {
-            return `[${value.map(formatStackValue).join(", ")}]`;
-        }
-        if (typeof value === "object") {
-            return JSON.stringify(value);
-        }
-        return String(value);
-    }
+function formatStackValue(value: any): string {
+	if (value === null) return "null";
+	if (value === undefined) return "undefined";
+	if (typeof value === "string") return `"${value}"`;
+	if (typeof value === "boolean") return value ? "true" : "false";
+	if (typeof value === "number") return String(value);
+	if (Array.isArray(value)) {
+		return `[${value.map(formatStackValue).join(", ")}]`;
+	}
+	if (typeof value === "object") {
+		return JSON.stringify(value);
+	}
+	return String(value);
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

@@ -1,178 +1,178 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Icon from "./Icon.svelte";
+import { onMount } from "svelte";
+import Icon from "./Icon.svelte";
 
-    interface Option {
-        value: string;
-        used?: boolean;
-    }
+interface Option {
+	value: string;
+	used?: boolean;
+}
 
-    interface Props {
-        value: string;
-        options: Option[];
-        placeholder?: string;
-        onSelect: (value: string) => void;
-        onInput?: (value: string) => void;
-        disabled?: boolean;
-    }
+interface Props {
+	value: string;
+	options: Option[];
+	placeholder?: string;
+	onSelect: (value: string) => void;
+	onInput?: (value: string) => void;
+	disabled?: boolean;
+}
 
-    let {
-        value = $bindable(""),
-        options = [],
-        placeholder = "",
-        onSelect,
-        onInput,
-        disabled = false,
-    }: Props = $props();
+let {
+	value = $bindable(""),
+	options = [],
+	placeholder = "",
+	onSelect,
+	onInput,
+	disabled = false,
+}: Props = $props();
 
-    let isOpen = $state(false);
-    let highlightedIndex = $state(-1);
-    let inputElement: HTMLInputElement;
-    let dropdownElement: HTMLDivElement;
+let isOpen = $state(false);
+let highlightedIndex = $state(-1);
+let inputElement: HTMLInputElement;
+let dropdownElement: HTMLDivElement;
 
-    // Fuzzy search implementation
-    function fuzzyMatch(str: string, pattern: string): number {
-        if (!pattern) return 1;
+// Fuzzy search implementation
+function fuzzyMatch(str: string, pattern: string): number {
+	if (!pattern) return 1;
 
-        const strLower = str.toLowerCase();
-        const patternLower = pattern.toLowerCase();
+	const strLower = str.toLowerCase();
+	const patternLower = pattern.toLowerCase();
 
-        let patternIdx = 0;
-        let score = 0;
-        let consecutiveMatches = 0;
+	let patternIdx = 0;
+	let score = 0;
+	let consecutiveMatches = 0;
 
-        for (let i = 0; i < strLower.length; i++) {
-            if (strLower[i] === patternLower[patternIdx]) {
-                score += 1 + consecutiveMatches;
-                consecutiveMatches++;
-                patternIdx++;
+	for (let i = 0; i < strLower.length; i++) {
+		if (strLower[i] === patternLower[patternIdx]) {
+			score += 1 + consecutiveMatches;
+			consecutiveMatches++;
+			patternIdx++;
 
-                if (patternIdx === patternLower.length) {
-                    return score;
-                }
-            } else {
-                consecutiveMatches = 0;
-            }
-        }
+			if (patternIdx === patternLower.length) {
+				return score;
+			}
+		} else {
+			consecutiveMatches = 0;
+		}
+	}
 
-        return patternIdx === patternLower.length ? score : 0;
-    }
+	return patternIdx === patternLower.length ? score : 0;
+}
 
-    let filteredOptions = $derived.by(() => {
-        if (!value) return options;
+let filteredOptions = $derived.by(() => {
+	if (!value) return options;
 
-        return options
-            .map(opt => ({
-                ...opt,
-                score: fuzzyMatch(opt.value, value)
-            }))
-            .filter(opt => opt.score > 0)
-            .sort((a, b) => b.score - a.score);
-    });
+	return options
+		.map((opt) => ({
+			...opt,
+			score: fuzzyMatch(opt.value, value),
+		}))
+		.filter((opt) => opt.score > 0)
+		.sort((a, b) => b.score - a.score);
+});
 
-    function handleFocus() {
-        isOpen = true;
-        highlightedIndex = -1;
-    }
+function handleFocus() {
+	isOpen = true;
+	highlightedIndex = -1;
+}
 
-    function handleBlur(e: FocusEvent) {
-        // Delay to allow click events on dropdown items
-        setTimeout(() => {
-            if (!dropdownElement?.contains(e.relatedTarget as Node)) {
-                isOpen = false;
-            }
-        }, 200);
-    }
+function handleBlur(e: FocusEvent) {
+	// Delay to allow click events on dropdown items
+	setTimeout(() => {
+		if (!dropdownElement?.contains(e.relatedTarget as Node)) {
+			isOpen = false;
+		}
+	}, 200);
+}
 
-    function handleInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        value = target.value;
-        highlightedIndex = -1;
-        onInput?.(value);
-    }
+function handleInput(e: Event) {
+	const target = e.target as HTMLInputElement;
+	value = target.value;
+	highlightedIndex = -1;
+	onInput?.(value);
+}
 
-    function handleKeydown(e: KeyboardEvent) {
-        if (!isOpen) {
-            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                isOpen = true;
-                e.preventDefault();
-                return;
-            }
-            return;
-        }
+function handleKeydown(e: KeyboardEvent) {
+	if (!isOpen) {
+		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+			isOpen = true;
+			e.preventDefault();
+			return;
+		}
+		return;
+	}
 
-        switch (e.key) {
-            case "ArrowDown":
-                e.preventDefault();
-                highlightedIndex = Math.min(
-                    highlightedIndex + 1,
-                    filteredOptions.length - 1
-                );
-                scrollToHighlighted();
-                break;
+	switch (e.key) {
+		case "ArrowDown":
+			e.preventDefault();
+			highlightedIndex = Math.min(
+				highlightedIndex + 1,
+				filteredOptions.length - 1,
+			);
+			scrollToHighlighted();
+			break;
 
-            case "ArrowUp":
-                e.preventDefault();
-                highlightedIndex = Math.max(highlightedIndex - 1, 0);
-                scrollToHighlighted();
-                break;
+		case "ArrowUp":
+			e.preventDefault();
+			highlightedIndex = Math.max(highlightedIndex - 1, 0);
+			scrollToHighlighted();
+			break;
 
-            case "Enter":
-                e.preventDefault();
-                if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
-                    selectOption(filteredOptions[highlightedIndex].value);
-                }
-                break;
+		case "Enter":
+			e.preventDefault();
+			if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+				selectOption(filteredOptions[highlightedIndex].value);
+			}
+			break;
 
-            case "Escape":
-                e.preventDefault();
-                isOpen = false;
-                highlightedIndex = -1;
-                inputElement.blur();
-                break;
-        }
-    }
+		case "Escape":
+			e.preventDefault();
+			isOpen = false;
+			highlightedIndex = -1;
+			inputElement.blur();
+			break;
+	}
+}
 
-    function selectOption(optionValue: string) {
-        value = optionValue;
-        onSelect(optionValue);
-        isOpen = false;
-        highlightedIndex = -1;
-        inputElement.blur();
-    }
+function selectOption(optionValue: string) {
+	value = optionValue;
+	onSelect(optionValue);
+	isOpen = false;
+	highlightedIndex = -1;
+	inputElement.blur();
+}
 
-    function scrollToHighlighted() {
-        if (highlightedIndex < 0 || !dropdownElement) return;
+function scrollToHighlighted() {
+	if (highlightedIndex < 0 || !dropdownElement) return;
 
-        const highlightedElement = dropdownElement.querySelector(
-            `[data-index="${highlightedIndex}"]`
-        ) as HTMLElement;
+	const highlightedElement = dropdownElement.querySelector(
+		`[data-index="${highlightedIndex}"]`,
+	) as HTMLElement;
 
-        if (highlightedElement) {
-            highlightedElement.scrollIntoView({
-                block: "nearest",
-                behavior: "smooth"
-            });
-        }
-    }
+	if (highlightedElement) {
+		highlightedElement.scrollIntoView({
+			block: "nearest",
+			behavior: "smooth",
+		});
+	}
+}
 
-    function handleClickOutside(e: MouseEvent) {
-        if (
-            inputElement &&
-            !inputElement.contains(e.target as Node) &&
-            dropdownElement &&
-            !dropdownElement.contains(e.target as Node)
-        ) {
-            isOpen = false;
-        }
-    }
+function handleClickOutside(e: MouseEvent) {
+	if (
+		inputElement &&
+		!inputElement.contains(e.target as Node) &&
+		dropdownElement &&
+		!dropdownElement.contains(e.target as Node)
+	) {
+		isOpen = false;
+	}
+}
 
-    onMount(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    });
+onMount(() => {
+	document.addEventListener("mousedown", handleClickOutside);
+	return () => {
+		document.removeEventListener("mousedown", handleClickOutside);
+	};
+});
 </script>
 
 <div class="autocomplete-wrapper">

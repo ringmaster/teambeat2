@@ -1,597 +1,630 @@
 <script lang="ts">
-    import type { Board, Scene, Card, Column, Comment } from "$lib/types";
-    import ReviewColumn from "./ReviewColumn.svelte";
-    import ReviewCardGroup from "./ReviewCardGroup.svelte";
-    import AgreementsSection from "./AgreementsSection.svelte";
-    import Icon from "./ui/Icon.svelte";
-    import { toastStore } from "$lib/stores/toast";
-    import { onMount } from "svelte";
-    import { getUserDisplayName } from "$lib/utils/animalNames";
-    import moment from "moment";
-
-    interface Props {
-        board: Board;
-        scene: Scene;
-        cards: Card[];
-    }
-
-    const { board, scene, cards }: Props = $props();
-
-    type ViewMode = "by-column" | "by-votes";
-    let viewMode = $state<ViewMode>("by-column");
-    let copying = $state(false);
-    let allComments = $state<Comment[]>([]);
-    let allAgreements = $state<any[]>([]);
-    let loading = $state(true);
-
-    onMount(async () => {
-        await Promise.all([loadComments(), loadAgreements()]);
-    });
-
-    async function loadComments() {
-        try {
-            const response = await fetch(`/api/boards/${board.id}/comments`);
-            if (response.ok) {
-                const data = await response.json();
-                allComments = data.comments || [];
-            }
-        } catch (error) {
-            console.error("Failed to load comments:", error);
-            toastStore.error("Failed to load comments");
-        }
-    }
-
-    async function loadAgreements() {
-        try {
-            const response = await fetch(`/api/boards/${board.id}/agreements`);
-            if (response.ok) {
-                const data = await response.json();
-                allAgreements = data.agreements || [];
-            }
-        } catch (error) {
-            console.error("Failed to load agreements:", error);
-            toastStore.error("Failed to load agreements");
-        } finally {
-            loading = false;
-        }
-    }
-
-    // Get visible columns based on scene configuration
-    const visibleColumns = $derived(() => {
-        if (!board.columns) return [];
-
-        // Get column IDs that should be visible for this scene
-        const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
-
-        return board.columns
-            .filter((col) => !hiddenColumnIds.includes(col.id))
-            .sort((a, b) => a.seq - b.seq);
-    });
-
-    // Filter cards to only those in visible columns
-    const visibleCards = $derived(() => {
-        const visibleColumnIds = new Set(visibleColumns().map((c) => c.id));
-        return cards.filter((card) => visibleColumnIds.has(card.columnId));
-    });
-
-    // Group cards by their lead card
-    interface CardGroup {
-        leadCard: Card;
-        subordinateCards: Card[];
-        columnId: string;
-        columnName: string;
-    }
-
-    const cardGroups = $derived((): CardGroup[] => {
-        const cardsArray = visibleCards();
-        const groups: CardGroup[] = [];
-        const processedCardIds = new Set<string>();
-
-        // Find all lead cards (cards that are group leads or have no group)
-        const leadCards = cardsArray.filter((card) => {
-            return card.isGroupLead || !card.groupId;
-        });
-
-        // For each lead card, find its subordinates
-        for (const leadCard of leadCards) {
-            if (processedCardIds.has(leadCard.id)) continue;
-
-            const subordinateCards = cardsArray.filter(
-                (card) =>
-                    card.groupId === leadCard.id ||
-                    (card.groupId === leadCard.groupId &&
-                        leadCard.groupId &&
-                        !card.isGroupLead &&
-                        card.id !== leadCard.id),
-            );
-
-            // Get column info
-            const column = board.columns?.find(
-                (c) => c.id === leadCard.columnId,
-            );
-
-            groups.push({
-                leadCard,
-                subordinateCards,
-                columnId: leadCard.columnId,
-                columnName: column?.title || "Unknown Column",
-            });
-
-            processedCardIds.add(leadCard.id);
-            subordinateCards.forEach((card) => processedCardIds.add(card.id));
-        }
-
-        return groups;
-    });
-
-    // Sort groups by vote count (descending)
-    const sortedGroups = $derived(() => {
-        return [...cardGroups()].sort((a, b) => {
-            const aVotes = a.leadCard.voteCount || 0;
-            const bVotes = b.leadCard.voteCount || 0;
-            return bVotes - aVotes;
-        });
-    });
-
-    // Group by column for column view
-    const groupsByColumn = $derived(() => {
-        const columnMap = new Map<string, CardGroup[]>();
-
-        for (const column of visibleColumns()) {
-            const columnGroups = cardGroups()
-                .filter((group) => group.columnId === column.id)
-                .sort((a, b) => {
-                    const aVotes = a.leadCard.voteCount || 0;
-                    const bVotes = b.leadCard.voteCount || 0;
-                    return bVotes - aVotes;
-                });
-
-            if (columnGroups.length > 0) {
-                columnMap.set(column.id, columnGroups);
-            }
-        }
-
-        return columnMap;
-    });
-
-    // Get agreements (both board-level and comment-based)
-    const agreements = $derived(() => {
-        return allAgreements.map((agreement) => {
-            // For comment-based agreements, include card context
-            if (agreement.source === 'comment' && agreement.cardId) {
-                return {
-                    ...agreement,
-                    cardTitle: agreement.cardContent || "Unknown Card",
-                };
-            }
-            // For board-level agreements, no card context needed
-            return {
-                ...agreement,
-                cardTitle: null,
-            };
-        });
-    });
-
-    // Get regular comments (non-reactions, non-agreements) grouped by card
-    const commentsByCardMap = $derived(() => {
-        const map = new Map<string, Comment[]>();
-        allComments
-            .filter((comment) => !comment.isReaction && !comment.isAgreement)
-            .forEach((comment) => {
-                const existing = map.get(comment.cardId) || [];
-                map.set(comment.cardId, [...existing, comment]);
-            });
-        return map;
-    });
-
-    // Function to get comments for a specific card
-    const getCommentsForCard = (cardId: string): Comment[] => {
-        return commentsByCardMap().get(cardId) || [];
-    };
-
-    // Generate markdown content
-    function generateMarkdown(): string {
-        let md = "";
-        const isBlameFree = board.blameFreeMode || false;
-
-        if (viewMode === "by-column") {
-            // Group by column mode
-            for (const column of visibleColumns()) {
-                const groups = groupsByColumn().get(column.id);
-                if (!groups || groups.length === 0) continue;
-
-                md += `## ${column.title}\n\n`;
-
-                for (const group of groups) {
-                    const voteCount = group.leadCard.voteCount || 0;
-                    md += `### ${group.leadCard.content} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})\n\n`;
-
-                    if (group.leadCard.notes) {
-                        md += `${group.leadCard.notes}\n\n`;
-                    }
-
-                    // Add reactions if present
-                    if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
-                        const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                        md += `${reactionTexts.join(' ')}\n\n`;
-                    }
-
-                    // Add lead card comments
-                    const leadComments = getCommentsForCard(group.leadCard.id);
-                    if (leadComments.length > 0) {
-                        md += `**Comments:**\n\n`;
-                        for (const comment of leadComments) {
-                            const author = getUserDisplayName(
-                                comment.userName || "Anonymous",
-                                board.id,
-                                isBlameFree,
-                            );
-                            md += `- ${author}: ${comment.content}\n`;
-                        }
-                        md += `\n`;
-                    }
-
-                    // Add subordinate cards with their details
-                    for (const subCard of group.subordinateCards) {
-                        md += `#### ${subCard.content}\n\n`;
-
-                        if (subCard.notes) {
-                            md += `${subCard.notes}\n\n`;
-                        }
-
-                        // Add reactions if present
-                        if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
-                            const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                            md += `${reactionTexts.join(' ')}\n\n`;
-                        }
-
-                        const subComments = getCommentsForCard(subCard.id);
-                        if (subComments.length > 0) {
-                            md += `**Comments:**\n\n`;
-                            for (const comment of subComments) {
-                                const author = getUserDisplayName(
-                                    comment.userName || "Anonymous",
-                                    board.id,
-                                    isBlameFree,
-                                );
-                                md += `- ${author}: ${comment.content}\n`;
-                            }
-                            md += `\n`;
-                        }
-                    }
-                }
-            }
-        } else {
-            // Sort all by votes mode
-            md += `## All Cards\n\n`;
-
-            for (const group of sortedGroups()) {
-                const voteCount = group.leadCard.voteCount || 0;
-                md += `### ${group.leadCard.content} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})\n\n`;
-                md += `Originally in: ${group.columnName}\n\n`;
-
-                if (group.leadCard.notes) {
-                    md += `${group.leadCard.notes}\n\n`;
-                }
-
-                // Add reactions if present
-                if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
-                    const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                    md += `${reactionTexts.join(' ')}\n\n`;
-                }
-
-                // Add lead card comments
-                const leadComments = getCommentsForCard(group.leadCard.id);
-                if (leadComments.length > 0) {
-                    md += `**Comments:**\n\n`;
-                    for (const comment of leadComments) {
-                        const author = getUserDisplayName(
-                            comment.userName || "Anonymous",
-                            board.id,
-                            isBlameFree,
-                        );
-                        md += `- ${author}: ${comment.content}\n`;
-                    }
-                    md += `\n`;
-                }
-
-                // Add subordinate cards with their details
-                for (const subCard of group.subordinateCards) {
-                    md += `#### ${subCard.content}\n\n`;
-
-                    if (subCard.notes) {
-                        md += `${subCard.notes}\n\n`;
-                    }
-
-                    // Add reactions if present
-                    if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
-                        const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                        md += `${reactionTexts.join(' ')}\n\n`;
-                    }
-
-                    const subComments = getCommentsForCard(subCard.id);
-                    if (subComments.length > 0) {
-                        md += `**Comments:**\n\n`;
-                        for (const comment of subComments) {
-                            const author = getUserDisplayName(
-                                comment.userName || "Anonymous",
-                                board.id,
-                                isBlameFree,
-                            );
-                            md += `- ${author}: ${comment.content}\n`;
-                        }
-                        md += `\n`;
-                    }
-                }
-            }
-        }
-
-        // Add agreements section if there are any
-        const agreementList = agreements();
-        if (agreementList.length > 0) {
-            md += `## Agreements\n\n`;
-            for (const agreement of agreementList) {
-                const source = agreement.cardTitle
-                    ? `from: ${agreement.cardTitle}`
-                    : 'board-level agreement';
-                const checkbox = agreement.completed ? '[x]' : '[ ]';
-                const completionDate = agreement.completed && agreement.completedAt
-                    ? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
-                    : '';
-
-                // Handle multi-line content with proper indentation
-                const lines = agreement.content.split('\n');
-                const firstLine = lines[0];
-                const remainingLines = lines.slice(1);
-
-                // First line with checkbox
-                md += `- ${checkbox} **${firstLine}**\n`;
-
-                // Remaining content lines, indented
-                for (let i = 0; i < remainingLines.length; i++) {
-                    const line = remainingLines[i].trim();
-                    if (line) {
-                        // Add source info to the last non-empty line
-                        if (i === remainingLines.length - 1) {
-                            md += `    - ${line} (${source})${completionDate}\n`;
-                        } else {
-                            md += `    - ${line}\n`;
-                        }
-                    }
-                }
-
-                // If there were no remaining lines, add source on its own line
-                if (remainingLines.length === 0 || remainingLines.every(line => !line.trim())) {
-                    md += `    - (${source})${completionDate}\n`;
-                }
-            }
-        }
-
-        return md;
-    }
-
-    // Generate HTML content
-    function generateHTML(): string {
-        let html = "";
-        const isBlameFree = board.blameFreeMode || false;
-
-        if (viewMode === "by-column") {
-            // Group by column mode
-            for (const column of visibleColumns()) {
-                const groups = groupsByColumn().get(column.id);
-                if (!groups || groups.length === 0) continue;
-
-                html += `<h2>${escapeHtml(column.title)}</h2>\n`;
-
-                for (const group of groups) {
-                    const voteCount = group.leadCard.voteCount || 0;
-                    html += `<h3>${escapeHtml(group.leadCard.content)} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})</h3>\n`;
-
-                    if (group.leadCard.notes) {
-                        html += `<p>${escapeHtml(group.leadCard.notes)}</p>\n`;
-                    }
-
-                    // Add reactions if present
-                    if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
-                        const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                        html += `<p>${reactionTexts.join(' ')}</p>\n`;
-                    }
-
-                    // Add lead card comments
-                    const leadComments = getCommentsForCard(group.leadCard.id);
-                    if (leadComments.length > 0) {
-                        html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
-                        for (const comment of leadComments) {
-                            const author = getUserDisplayName(
-                                comment.userName || "Anonymous",
-                                board.id,
-                                isBlameFree,
-                            );
-                            html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
-                        }
-                        html += `</ul>\n`;
-                    }
-
-                    // Add subordinate cards with their details
-                    for (const subCard of group.subordinateCards) {
-                        html += `<h4>${escapeHtml(subCard.content)}</h4>\n`;
-
-                        if (subCard.notes) {
-                            html += `<p>${escapeHtml(subCard.notes)}</p>\n`;
-                        }
-
-                        // Add reactions if present
-                        if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
-                            const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                            html += `<p>${reactionTexts.join(' ')}</p>\n`;
-                        }
-
-                        const subComments = getCommentsForCard(subCard.id);
-                        if (subComments.length > 0) {
-                            html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
-                            for (const comment of subComments) {
-                                const author = getUserDisplayName(
-                                    comment.userName || "Anonymous",
-                                    board.id,
-                                    isBlameFree,
-                                );
-                                html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
-                            }
-                            html += `</ul>\n`;
-                        }
-                    }
-                }
-            }
-        } else {
-            // Sort all by votes mode
-            html += `<h2>All Cards</h2>\n`;
-
-            for (const group of sortedGroups()) {
-                const voteCount = group.leadCard.voteCount || 0;
-                html += `<h3>${escapeHtml(group.leadCard.content)} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})</h3>\n`;
-                html += `<p><em>Originally in: ${escapeHtml(group.columnName)}</em></p>\n`;
-
-                if (group.leadCard.notes) {
-                    html += `<p>${escapeHtml(group.leadCard.notes)}</p>\n`;
-                }
-
-                // Add reactions if present
-                if (group.leadCard.reactions && Object.keys(group.leadCard.reactions).length > 0) {
-                    const reactionTexts = Object.entries(group.leadCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                    html += `<p>${reactionTexts.join(' ')}</p>\n`;
-                }
-
-                // Add lead card comments
-                const leadComments = getCommentsForCard(group.leadCard.id);
-                if (leadComments.length > 0) {
-                    html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
-                    for (const comment of leadComments) {
-                        const author = getUserDisplayName(
-                            comment.userName || "Anonymous",
-                            board.id,
-                            isBlameFree,
-                        );
-                        html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
-                    }
-                    html += `</ul>\n`;
-                }
-
-                // Add subordinate cards with their details
-                for (const subCard of group.subordinateCards) {
-                    html += `<h4>${escapeHtml(subCard.content)}</h4>\n`;
-
-                    if (subCard.notes) {
-                        html += `<p>${escapeHtml(subCard.notes)}</p>\n`;
-                    }
-
-                    // Add reactions if present
-                    if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
-                        const reactionTexts = Object.entries(subCard.reactions).map(([emoji, count]) => `(${count}×${emoji})`);
-                        html += `<p>${reactionTexts.join(' ')}</p>\n`;
-                    }
-
-                    const subComments = getCommentsForCard(subCard.id);
-                    if (subComments.length > 0) {
-                        html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
-                        for (const comment of subComments) {
-                            const author = getUserDisplayName(
-                                comment.userName || "Anonymous",
-                                board.id,
-                                isBlameFree,
-                            );
-                            html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
-                        }
-                        html += `</ul>\n`;
-                    }
-                }
-            }
-        }
-
-        // Add agreements section if there are any
-        const agreementList = agreements();
-        if (agreementList.length > 0) {
-            html += `<h2>Agreements</h2>\n<ul style="list-style-type: none; padding-left: 0;">\n`;
-            for (const agreement of agreementList) {
-                const source = agreement.cardTitle
-                    ? `from: ${escapeHtml(agreement.cardTitle)}`
-                    : 'board-level agreement';
-                const checked = agreement.completed ? 'checked' : '';
-                const strikethrough = agreement.completed ? 'style="text-decoration: line-through;"' : '';
-                const completionDate = agreement.completed && agreement.completedAt
-                    ? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
-                    : '';
-
-                // Handle multi-line content with proper indentation
-                const lines = agreement.content.split('\n');
-                const firstLine = lines[0];
-                const remainingLines = lines.slice(1).filter(line => line.trim());
-
-                // First line with checkbox
-                html += `<li><input type="checkbox" ${checked} /> <span ${strikethrough}><strong>${escapeHtml(firstLine)}</strong></span>`;
-
-                // Remaining content lines, indented as nested list
-                if (remainingLines.length > 0) {
-                    html += `\n<ul style="list-style-type: none; padding-left: 20px; margin-top: 5px;">\n`;
-                    for (let i = 0; i < remainingLines.length; i++) {
-                        const line = remainingLines[i].trim();
-                        if (line) {
-                            // Add source info to the last line
-                            if (i === remainingLines.length - 1) {
-                                html += `<li>${escapeHtml(line)} <em>(${source})${completionDate}</em></li>\n`;
-                            } else {
-                                html += `<li>${escapeHtml(line)}</li>\n`;
-                            }
-                        }
-                    }
-                    html += `</ul>\n`;
-                } else {
-                    // If no remaining lines, add source on same line
-                    html += ` <em>(${source})${completionDate}</em>`;
-                }
-
-                html += `</li>\n`;
-            }
-            html += `</ul>\n`;
-        }
-
-        return html;
-    }
-
-    // Escape HTML special characters
-    function escapeHtml(text: string): string {
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // Format date as yyyy-mm-dd
-    function formatDateYYYYMMDD(dateString: string | null): string {
-        if (!dateString) return "";
-        return moment(dateString).format('YYYY-MM-DD');
-    }
-
-    // Copy to clipboard
-    async function copyToClipboard() {
-        copying = true;
-        try {
-            const markdown = generateMarkdown();
-            const html = generateHTML();
-
-            // Use Clipboard API with multipart data
-            const clipboardItem = new ClipboardItem({
-                "text/html": new Blob([html], { type: "text/html" }),
-                "text/plain": new Blob([markdown], { type: "text/plain" }),
-            });
-
-            await navigator.clipboard.write([clipboardItem]);
-            toastStore.success("Copied to clipboard");
-        } catch (error) {
-            console.error("Failed to copy to clipboard:", error);
-            toastStore.error("Failed to copy to clipboard");
-        } finally {
-            copying = false;
-        }
-    }
+import moment from "moment";
+import { onMount } from "svelte";
+import { toastStore } from "$lib/stores/toast";
+import type { Board, Card, Column, Comment, Scene } from "$lib/types";
+import { getUserDisplayName } from "$lib/utils/animalNames";
+import AgreementsSection from "./AgreementsSection.svelte";
+import ReviewCardGroup from "./ReviewCardGroup.svelte";
+import ReviewColumn from "./ReviewColumn.svelte";
+import Icon from "./ui/Icon.svelte";
+
+interface Props {
+	board: Board;
+	scene: Scene;
+	cards: Card[];
+}
+
+const { board, scene, cards }: Props = $props();
+
+type ViewMode = "by-column" | "by-votes";
+let viewMode = $state<ViewMode>("by-column");
+let copying = $state(false);
+let allComments = $state<Comment[]>([]);
+let allAgreements = $state<any[]>([]);
+let loading = $state(true);
+
+onMount(async () => {
+	await Promise.all([loadComments(), loadAgreements()]);
+});
+
+async function loadComments() {
+	try {
+		const response = await fetch(`/api/boards/${board.id}/comments`);
+		if (response.ok) {
+			const data = await response.json();
+			allComments = data.comments || [];
+		}
+	} catch (error) {
+		console.error("Failed to load comments:", error);
+		toastStore.error("Failed to load comments");
+	}
+}
+
+async function loadAgreements() {
+	try {
+		const response = await fetch(`/api/boards/${board.id}/agreements`);
+		if (response.ok) {
+			const data = await response.json();
+			allAgreements = data.agreements || [];
+		}
+	} catch (error) {
+		console.error("Failed to load agreements:", error);
+		toastStore.error("Failed to load agreements");
+	} finally {
+		loading = false;
+	}
+}
+
+// Get visible columns based on scene configuration
+const visibleColumns = $derived(() => {
+	if (!board.columns) return [];
+
+	// Get column IDs that should be visible for this scene
+	const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
+
+	return board.columns
+		.filter((col) => !hiddenColumnIds.includes(col.id))
+		.sort((a, b) => a.seq - b.seq);
+});
+
+// Filter cards to only those in visible columns
+const visibleCards = $derived(() => {
+	const visibleColumnIds = new Set(visibleColumns().map((c) => c.id));
+	return cards.filter((card) => visibleColumnIds.has(card.columnId));
+});
+
+// Group cards by their lead card
+interface CardGroup {
+	leadCard: Card;
+	subordinateCards: Card[];
+	columnId: string;
+	columnName: string;
+}
+
+const cardGroups = $derived((): CardGroup[] => {
+	const cardsArray = visibleCards();
+	const groups: CardGroup[] = [];
+	const processedCardIds = new Set<string>();
+
+	// Find all lead cards (cards that are group leads or have no group)
+	const leadCards = cardsArray.filter((card) => {
+		return card.isGroupLead || !card.groupId;
+	});
+
+	// For each lead card, find its subordinates
+	for (const leadCard of leadCards) {
+		if (processedCardIds.has(leadCard.id)) continue;
+
+		const subordinateCards = cardsArray.filter(
+			(card) =>
+				card.groupId === leadCard.id ||
+				(card.groupId === leadCard.groupId &&
+					leadCard.groupId &&
+					!card.isGroupLead &&
+					card.id !== leadCard.id),
+		);
+
+		// Get column info
+		const column = board.columns?.find((c) => c.id === leadCard.columnId);
+
+		groups.push({
+			leadCard,
+			subordinateCards,
+			columnId: leadCard.columnId,
+			columnName: column?.title || "Unknown Column",
+		});
+
+		processedCardIds.add(leadCard.id);
+		subordinateCards.forEach((card) => processedCardIds.add(card.id));
+	}
+
+	return groups;
+});
+
+// Sort groups by vote count (descending)
+const sortedGroups = $derived(() => {
+	return [...cardGroups()].sort((a, b) => {
+		const aVotes = a.leadCard.voteCount || 0;
+		const bVotes = b.leadCard.voteCount || 0;
+		return bVotes - aVotes;
+	});
+});
+
+// Group by column for column view
+const groupsByColumn = $derived(() => {
+	const columnMap = new Map<string, CardGroup[]>();
+
+	for (const column of visibleColumns()) {
+		const columnGroups = cardGroups()
+			.filter((group) => group.columnId === column.id)
+			.sort((a, b) => {
+				const aVotes = a.leadCard.voteCount || 0;
+				const bVotes = b.leadCard.voteCount || 0;
+				return bVotes - aVotes;
+			});
+
+		if (columnGroups.length > 0) {
+			columnMap.set(column.id, columnGroups);
+		}
+	}
+
+	return columnMap;
+});
+
+// Get agreements (both board-level and comment-based)
+const agreements = $derived(() => {
+	return allAgreements.map((agreement) => {
+		// For comment-based agreements, include card context
+		if (agreement.source === "comment" && agreement.cardId) {
+			return {
+				...agreement,
+				cardTitle: agreement.cardContent || "Unknown Card",
+			};
+		}
+		// For board-level agreements, no card context needed
+		return {
+			...agreement,
+			cardTitle: null,
+		};
+	});
+});
+
+// Get regular comments (non-reactions, non-agreements) grouped by card
+const commentsByCardMap = $derived(() => {
+	const map = new Map<string, Comment[]>();
+	allComments
+		.filter((comment) => !comment.isReaction && !comment.isAgreement)
+		.forEach((comment) => {
+			const existing = map.get(comment.cardId) || [];
+			map.set(comment.cardId, [...existing, comment]);
+		});
+	return map;
+});
+
+// Function to get comments for a specific card
+const getCommentsForCard = (cardId: string): Comment[] => {
+	return commentsByCardMap().get(cardId) || [];
+};
+
+// Generate markdown content
+function generateMarkdown(): string {
+	let md = "";
+	const isBlameFree = board.blameFreeMode || false;
+
+	if (viewMode === "by-column") {
+		// Group by column mode
+		for (const column of visibleColumns()) {
+			const groups = groupsByColumn().get(column.id);
+			if (!groups || groups.length === 0) continue;
+
+			md += `## ${column.title}\n\n`;
+
+			for (const group of groups) {
+				const voteCount = group.leadCard.voteCount || 0;
+				md += `### ${group.leadCard.content} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})\n\n`;
+
+				if (group.leadCard.notes) {
+					md += `${group.leadCard.notes}\n\n`;
+				}
+
+				// Add reactions if present
+				if (
+					group.leadCard.reactions &&
+					Object.keys(group.leadCard.reactions).length > 0
+				) {
+					const reactionTexts = Object.entries(group.leadCard.reactions).map(
+						([emoji, count]) => `(${count}×${emoji})`,
+					);
+					md += `${reactionTexts.join(" ")}\n\n`;
+				}
+
+				// Add lead card comments
+				const leadComments = getCommentsForCard(group.leadCard.id);
+				if (leadComments.length > 0) {
+					md += `**Comments:**\n\n`;
+					for (const comment of leadComments) {
+						const author = getUserDisplayName(
+							comment.userName || "Anonymous",
+							board.id,
+							isBlameFree,
+						);
+						md += `- ${author}: ${comment.content}\n`;
+					}
+					md += `\n`;
+				}
+
+				// Add subordinate cards with their details
+				for (const subCard of group.subordinateCards) {
+					md += `#### ${subCard.content}\n\n`;
+
+					if (subCard.notes) {
+						md += `${subCard.notes}\n\n`;
+					}
+
+					// Add reactions if present
+					if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+						const reactionTexts = Object.entries(subCard.reactions).map(
+							([emoji, count]) => `(${count}×${emoji})`,
+						);
+						md += `${reactionTexts.join(" ")}\n\n`;
+					}
+
+					const subComments = getCommentsForCard(subCard.id);
+					if (subComments.length > 0) {
+						md += `**Comments:**\n\n`;
+						for (const comment of subComments) {
+							const author = getUserDisplayName(
+								comment.userName || "Anonymous",
+								board.id,
+								isBlameFree,
+							);
+							md += `- ${author}: ${comment.content}\n`;
+						}
+						md += `\n`;
+					}
+				}
+			}
+		}
+	} else {
+		// Sort all by votes mode
+		md += `## All Cards\n\n`;
+
+		for (const group of sortedGroups()) {
+			const voteCount = group.leadCard.voteCount || 0;
+			md += `### ${group.leadCard.content} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})\n\n`;
+			md += `Originally in: ${group.columnName}\n\n`;
+
+			if (group.leadCard.notes) {
+				md += `${group.leadCard.notes}\n\n`;
+			}
+
+			// Add reactions if present
+			if (
+				group.leadCard.reactions &&
+				Object.keys(group.leadCard.reactions).length > 0
+			) {
+				const reactionTexts = Object.entries(group.leadCard.reactions).map(
+					([emoji, count]) => `(${count}×${emoji})`,
+				);
+				md += `${reactionTexts.join(" ")}\n\n`;
+			}
+
+			// Add lead card comments
+			const leadComments = getCommentsForCard(group.leadCard.id);
+			if (leadComments.length > 0) {
+				md += `**Comments:**\n\n`;
+				for (const comment of leadComments) {
+					const author = getUserDisplayName(
+						comment.userName || "Anonymous",
+						board.id,
+						isBlameFree,
+					);
+					md += `- ${author}: ${comment.content}\n`;
+				}
+				md += `\n`;
+			}
+
+			// Add subordinate cards with their details
+			for (const subCard of group.subordinateCards) {
+				md += `#### ${subCard.content}\n\n`;
+
+				if (subCard.notes) {
+					md += `${subCard.notes}\n\n`;
+				}
+
+				// Add reactions if present
+				if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+					const reactionTexts = Object.entries(subCard.reactions).map(
+						([emoji, count]) => `(${count}×${emoji})`,
+					);
+					md += `${reactionTexts.join(" ")}\n\n`;
+				}
+
+				const subComments = getCommentsForCard(subCard.id);
+				if (subComments.length > 0) {
+					md += `**Comments:**\n\n`;
+					for (const comment of subComments) {
+						const author = getUserDisplayName(
+							comment.userName || "Anonymous",
+							board.id,
+							isBlameFree,
+						);
+						md += `- ${author}: ${comment.content}\n`;
+					}
+					md += `\n`;
+				}
+			}
+		}
+	}
+
+	// Add agreements section if there are any
+	const agreementList = agreements();
+	if (agreementList.length > 0) {
+		md += `## Agreements\n\n`;
+		for (const agreement of agreementList) {
+			const source = agreement.cardTitle
+				? `from: ${agreement.cardTitle}`
+				: "board-level agreement";
+			const checkbox = agreement.completed ? "[x]" : "[ ]";
+			const completionDate =
+				agreement.completed && agreement.completedAt
+					? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
+					: "";
+
+			// Handle multi-line content with proper indentation
+			const lines = agreement.content.split("\n");
+			const firstLine = lines[0];
+			const remainingLines = lines.slice(1);
+
+			// First line with checkbox
+			md += `- ${checkbox} **${firstLine}**\n`;
+
+			// Remaining content lines, indented
+			for (let i = 0; i < remainingLines.length; i++) {
+				const line = remainingLines[i].trim();
+				if (line) {
+					// Add source info to the last non-empty line
+					if (i === remainingLines.length - 1) {
+						md += `    - ${line} (${source})${completionDate}\n`;
+					} else {
+						md += `    - ${line}\n`;
+					}
+				}
+			}
+
+			// If there were no remaining lines, add source on its own line
+			if (
+				remainingLines.length === 0 ||
+				remainingLines.every((line) => !line.trim())
+			) {
+				md += `    - (${source})${completionDate}\n`;
+			}
+		}
+	}
+
+	return md;
+}
+
+// Generate HTML content
+function generateHTML(): string {
+	let html = "";
+	const isBlameFree = board.blameFreeMode || false;
+
+	if (viewMode === "by-column") {
+		// Group by column mode
+		for (const column of visibleColumns()) {
+			const groups = groupsByColumn().get(column.id);
+			if (!groups || groups.length === 0) continue;
+
+			html += `<h2>${escapeHtml(column.title)}</h2>\n`;
+
+			for (const group of groups) {
+				const voteCount = group.leadCard.voteCount || 0;
+				html += `<h3>${escapeHtml(group.leadCard.content)} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})</h3>\n`;
+
+				if (group.leadCard.notes) {
+					html += `<p>${escapeHtml(group.leadCard.notes)}</p>\n`;
+				}
+
+				// Add reactions if present
+				if (
+					group.leadCard.reactions &&
+					Object.keys(group.leadCard.reactions).length > 0
+				) {
+					const reactionTexts = Object.entries(group.leadCard.reactions).map(
+						([emoji, count]) => `(${count}×${emoji})`,
+					);
+					html += `<p>${reactionTexts.join(" ")}</p>\n`;
+				}
+
+				// Add lead card comments
+				const leadComments = getCommentsForCard(group.leadCard.id);
+				if (leadComments.length > 0) {
+					html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
+					for (const comment of leadComments) {
+						const author = getUserDisplayName(
+							comment.userName || "Anonymous",
+							board.id,
+							isBlameFree,
+						);
+						html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
+					}
+					html += `</ul>\n`;
+				}
+
+				// Add subordinate cards with their details
+				for (const subCard of group.subordinateCards) {
+					html += `<h4>${escapeHtml(subCard.content)}</h4>\n`;
+
+					if (subCard.notes) {
+						html += `<p>${escapeHtml(subCard.notes)}</p>\n`;
+					}
+
+					// Add reactions if present
+					if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+						const reactionTexts = Object.entries(subCard.reactions).map(
+							([emoji, count]) => `(${count}×${emoji})`,
+						);
+						html += `<p>${reactionTexts.join(" ")}</p>\n`;
+					}
+
+					const subComments = getCommentsForCard(subCard.id);
+					if (subComments.length > 0) {
+						html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
+						for (const comment of subComments) {
+							const author = getUserDisplayName(
+								comment.userName || "Anonymous",
+								board.id,
+								isBlameFree,
+							);
+							html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
+						}
+						html += `</ul>\n`;
+					}
+				}
+			}
+		}
+	} else {
+		// Sort all by votes mode
+		html += `<h2>All Cards</h2>\n`;
+
+		for (const group of sortedGroups()) {
+			const voteCount = group.leadCard.voteCount || 0;
+			html += `<h3>${escapeHtml(group.leadCard.content)} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})</h3>\n`;
+			html += `<p><em>Originally in: ${escapeHtml(group.columnName)}</em></p>\n`;
+
+			if (group.leadCard.notes) {
+				html += `<p>${escapeHtml(group.leadCard.notes)}</p>\n`;
+			}
+
+			// Add reactions if present
+			if (
+				group.leadCard.reactions &&
+				Object.keys(group.leadCard.reactions).length > 0
+			) {
+				const reactionTexts = Object.entries(group.leadCard.reactions).map(
+					([emoji, count]) => `(${count}×${emoji})`,
+				);
+				html += `<p>${reactionTexts.join(" ")}</p>\n`;
+			}
+
+			// Add lead card comments
+			const leadComments = getCommentsForCard(group.leadCard.id);
+			if (leadComments.length > 0) {
+				html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
+				for (const comment of leadComments) {
+					const author = getUserDisplayName(
+						comment.userName || "Anonymous",
+						board.id,
+						isBlameFree,
+					);
+					html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
+				}
+				html += `</ul>\n`;
+			}
+
+			// Add subordinate cards with their details
+			for (const subCard of group.subordinateCards) {
+				html += `<h4>${escapeHtml(subCard.content)}</h4>\n`;
+
+				if (subCard.notes) {
+					html += `<p>${escapeHtml(subCard.notes)}</p>\n`;
+				}
+
+				// Add reactions if present
+				if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
+					const reactionTexts = Object.entries(subCard.reactions).map(
+						([emoji, count]) => `(${count}×${emoji})`,
+					);
+					html += `<p>${reactionTexts.join(" ")}</p>\n`;
+				}
+
+				const subComments = getCommentsForCard(subCard.id);
+				if (subComments.length > 0) {
+					html += `<p><strong>Comments:</strong></p>\n<ul>\n`;
+					for (const comment of subComments) {
+						const author = getUserDisplayName(
+							comment.userName || "Anonymous",
+							board.id,
+							isBlameFree,
+						);
+						html += `<li>${escapeHtml(author)}: ${escapeHtml(comment.content)}</li>\n`;
+					}
+					html += `</ul>\n`;
+				}
+			}
+		}
+	}
+
+	// Add agreements section if there are any
+	const agreementList = agreements();
+	if (agreementList.length > 0) {
+		html += `<h2>Agreements</h2>\n<ul style="list-style-type: none; padding-left: 0;">\n`;
+		for (const agreement of agreementList) {
+			const source = agreement.cardTitle
+				? `from: ${escapeHtml(agreement.cardTitle)}`
+				: "board-level agreement";
+			const checked = agreement.completed ? "checked" : "";
+			const strikethrough = agreement.completed
+				? 'style="text-decoration: line-through;"'
+				: "";
+			const completionDate =
+				agreement.completed && agreement.completedAt
+					? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
+					: "";
+
+			// Handle multi-line content with proper indentation
+			const lines = agreement.content.split("\n");
+			const firstLine = lines[0];
+			const remainingLines = lines.slice(1).filter((line) => line.trim());
+
+			// First line with checkbox
+			html += `<li><input type="checkbox" ${checked} /> <span ${strikethrough}><strong>${escapeHtml(firstLine)}</strong></span>`;
+
+			// Remaining content lines, indented as nested list
+			if (remainingLines.length > 0) {
+				html += `\n<ul style="list-style-type: none; padding-left: 20px; margin-top: 5px;">\n`;
+				for (let i = 0; i < remainingLines.length; i++) {
+					const line = remainingLines[i].trim();
+					if (line) {
+						// Add source info to the last line
+						if (i === remainingLines.length - 1) {
+							html += `<li>${escapeHtml(line)} <em>(${source})${completionDate}</em></li>\n`;
+						} else {
+							html += `<li>${escapeHtml(line)}</li>\n`;
+						}
+					}
+				}
+				html += `</ul>\n`;
+			} else {
+				// If no remaining lines, add source on same line
+				html += ` <em>(${source})${completionDate}</em>`;
+			}
+
+			html += `</li>\n`;
+		}
+		html += `</ul>\n`;
+	}
+
+	return html;
+}
+
+// Escape HTML special characters
+function escapeHtml(text: string): string {
+	const div = document.createElement("div");
+	div.textContent = text;
+	return div.innerHTML;
+}
+
+// Format date as yyyy-mm-dd
+function formatDateYYYYMMDD(dateString: string | null): string {
+	if (!dateString) return "";
+	return moment(dateString).format("YYYY-MM-DD");
+}
+
+// Copy to clipboard
+async function copyToClipboard() {
+	copying = true;
+	try {
+		const markdown = generateMarkdown();
+		const html = generateHTML();
+
+		// Use Clipboard API with multipart data
+		const clipboardItem = new ClipboardItem({
+			"text/html": new Blob([html], { type: "text/html" }),
+			"text/plain": new Blob([markdown], { type: "text/plain" }),
+		});
+
+		await navigator.clipboard.write([clipboardItem]);
+		toastStore.success("Copied to clipboard");
+	} catch (error) {
+		console.error("Failed to copy to clipboard:", error);
+		toastStore.error("Failed to copy to clipboard");
+	} finally {
+		copying = false;
+	}
+}
 </script>
 
 <div class="review-scene">

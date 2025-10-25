@@ -1,17 +1,26 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { requireUserForApi } from '$lib/server/auth/index.js';
-import { createBoard, findBoardsByUser } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
-import { findUserById, canCreateResources } from '$lib/server/repositories/user.js';
-import { z } from 'zod';
+import { json } from "@sveltejs/kit";
+import { z } from "zod";
+import { requireUserForApi } from "$lib/server/auth/index.js";
+import {
+	createBoard,
+	findBoardsByUser,
+} from "$lib/server/repositories/board.js";
+import {
+	addUserToSeries,
+	getUserRoleInSeries,
+} from "$lib/server/repositories/board-series.js";
+import {
+	canCreateResources,
+	findUserById,
+} from "$lib/server/repositories/user.js";
+import type { RequestHandler } from "./$types";
 
 const createBoardSchema = z.object({
 	name: z.string().min(1).max(100),
 	seriesId: z.string().uuid(),
 	meetingDate: z.string().optional(),
 	blameFreeMode: z.boolean().optional(),
-	votingAllocation: z.number().int().min(0).max(10).optional()
+	votingAllocation: z.number().int().min(0).max(10).optional(),
 });
 
 export const GET: RequestHandler = async (event) => {
@@ -21,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
 
 		return json({
 			success: true,
-			boards
+			boards,
 		});
 	} catch (error) {
 		if (error instanceof Response) {
@@ -29,8 +38,8 @@ export const GET: RequestHandler = async (event) => {
 		}
 
 		return json(
-			{ success: false, error: 'Failed to fetch boards' },
-			{ status: 500 }
+			{ success: false, error: "Failed to fetch boards" },
+			{ status: 500 },
 		);
 	}
 };
@@ -44,19 +53,17 @@ export const POST: RequestHandler = async (event) => {
 		// Check email verification status
 		const user = await findUserById(sessionUser.userId);
 		if (!user) {
-			return json(
-				{ success: false, error: 'User not found' },
-				{ status: 404 }
-			);
+			return json({ success: false, error: "User not found" }, { status: 404 });
 		}
 
 		if (!canCreateResources(user)) {
 			return json(
 				{
 					success: false,
-					error: 'Email verification required. Please check your email for a verification link.'
+					error:
+						"Email verification required. Please check your email for a verification link.",
 				},
-				{ status: 403 }
+				{ status: 403 },
 			);
 		}
 
@@ -64,15 +71,15 @@ export const POST: RequestHandler = async (event) => {
 		let userRole = await getUserRoleInSeries(sessionUser.userId, data.seriesId);
 		if (!userRole) {
 			// Auto-add user as member when they create a board in a series
-			await addUserToSeries(data.seriesId, sessionUser.userId, 'member');
-			userRole = 'member';
+			await addUserToSeries(data.seriesId, sessionUser.userId, "member");
+			userRole = "member";
 		}
 
 		const board = await createBoard(data);
 
 		return json({
 			success: true,
-			board
+			board,
 		});
 	} catch (error) {
 		if (error instanceof Response) {
@@ -81,14 +88,14 @@ export const POST: RequestHandler = async (event) => {
 
 		if (error instanceof z.ZodError) {
 			return json(
-				{ success: false, error: 'Invalid input', details: error.errors },
-				{ status: 400 }
+				{ success: false, error: "Invalid input", details: error.errors },
+				{ status: 400 },
 			);
 		}
 
 		return json(
-			{ success: false, error: 'Failed to create board' },
-			{ status: 500 }
+			{ success: false, error: "Failed to create board" },
+			{ status: 500 },
 		);
 	}
 };

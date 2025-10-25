@@ -1,107 +1,102 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
-    import type { PerformanceStats } from "$lib/server/performance/tracker";
-    import TimeSeriesChart from "$lib/components/TimeSeriesChart.svelte";
-    import { toastStore } from "$lib/stores/toast";
-    import AdminNav from "$lib/components/AdminNav.svelte";
+import { onDestroy, onMount } from "svelte";
+import AdminNav from "$lib/components/AdminNav.svelte";
+import TimeSeriesChart from "$lib/components/TimeSeriesChart.svelte";
+import type { PerformanceStats } from "$lib/server/performance/tracker";
+import { toastStore } from "$lib/stores/toast";
 
-    let stats: PerformanceStats | null = $state(null);
-    let loading = $state(true);
-    let error = $state("");
-    let autoRefresh = $state(true);
-    let timeRange = $state("1h");
-    let refreshInterval: ReturnType<typeof setInterval> | null = null;
+let stats: PerformanceStats | null = $state(null);
+let loading = $state(true);
+let error = $state("");
+let autoRefresh = $state(true);
+let timeRange = $state("1h");
+let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
-    async function loadStats() {
-        try {
-            const response = await fetch("/api/admin/performance");
-            if (!response.ok) {
-                throw new Error("Failed to load performance stats");
-            }
-            stats = await response.json();
-            error = "";
-        } catch (err) {
-            error = err instanceof Error ? err.message : "Unknown error";
-        }
-    }
+async function loadStats() {
+	try {
+		const response = await fetch("/api/admin/performance");
+		if (!response.ok) {
+			throw new Error("Failed to load performance stats");
+		}
+		stats = await response.json();
+		error = "";
+	} catch (err) {
+		error = err instanceof Error ? err.message : "Unknown error";
+	}
+}
 
-    async function resetMetrics() {
-        toastStore.warning("Reset all performance counters?", {
-            autoHide: false,
-            actions: [
-                {
-                    label: "Reset",
-                    onClick: async () => {
-                        try {
-                            const response = await fetch(
-                                "/api/admin/performance",
-                                {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ action: "reset" }),
-                                },
-                            );
-                            if (response.ok) {
-                                await loadStats();
-                                toastStore.success("Performance counters reset successfully");
-                            }
-                        } catch (err) {
-                            error =
-                                err instanceof Error
-                                    ? err.message
-                                    : "Failed to reset metrics";
-                            toastStore.error("Failed to reset metrics");
-                        }
-                    },
-                    variant: "primary",
-                },
-                {
-                    label: "Cancel",
-                    onClick: () => {},
-                    variant: "secondary",
-                },
-            ],
-        });
-    }
+async function resetMetrics() {
+	toastStore.warning("Reset all performance counters?", {
+		autoHide: false,
+		actions: [
+			{
+				label: "Reset",
+				onClick: async () => {
+					try {
+						const response = await fetch("/api/admin/performance", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ action: "reset" }),
+						});
+						if (response.ok) {
+							await loadStats();
+							toastStore.success("Performance counters reset successfully");
+						}
+					} catch (err) {
+						error =
+							err instanceof Error ? err.message : "Failed to reset metrics";
+						toastStore.error("Failed to reset metrics");
+					}
+				},
+				variant: "primary",
+			},
+			{
+				label: "Cancel",
+				onClick: () => {},
+				variant: "secondary",
+			},
+		],
+	});
+}
 
-    function formatBytes(bytes: number): string {
-        return (bytes / 1024 / 1024).toFixed(2) + " MB";
-    }
+function formatBytes(bytes: number): string {
+	return (bytes / 1024 / 1024).toFixed(2) + " MB";
+}
 
-    function formatDuration(ms: number): string {
-        if (ms < 1000) return ms.toFixed(2) + " ms";
-        return (ms / 1000).toFixed(2) + " s";
-    }
+function formatDuration(ms: number): string {
+	if (ms < 1000) return ms.toFixed(2) + " ms";
+	return (ms / 1000).toFixed(2) + " s";
+}
 
-    function formatUptime(ms: number): string {
-        const seconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
+function formatUptime(ms: number): string {
+	const seconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
 
-        if (days > 0) return `${days}d ${hours % 24}h`;
-        if (hours > 0) return `${hours}h ${minutes % 60}m`;
-        if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-        return `${seconds}s`;
-    }
+	if (days > 0) return `${days}d ${hours % 24}h`;
+	if (hours > 0) return `${hours}h ${minutes % 60}m`;
+	if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+	return `${seconds}s`;
+}
 
-    onMount(async () => {
-        loading = true;
-        await loadStats();
-        loading = false;
+onMount(async () => {
+	loading = true;
+	await loadStats();
+	loading = false;
 
-        refreshInterval = setInterval(async () => {
-            if (autoRefresh) {
-                await loadStats();
-            }
-        }, 5000);
-    });
+	refreshInterval = setInterval(async () => {
+		if (autoRefresh) {
+			await loadStats();
+		}
+	}, 5000);
+});
 
-    onDestroy(() => {
-        if (refreshInterval) {
-            clearInterval(refreshInterval);
-        }
-    });
+onDestroy(() => {
+	if (refreshInterval) {
+		clearInterval(refreshInterval);
+	}
+});
 </script>
 
 <AdminNav />

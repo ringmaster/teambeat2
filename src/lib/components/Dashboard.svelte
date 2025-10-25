@@ -1,316 +1,321 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { goto } from "$app/navigation";
-    import { fade, fly } from "svelte/transition";
-    import UserManagement from "$lib/components/UserManagement.svelte";
-    import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import Pill from "$lib/components/ui/Pill.svelte";
-    import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
-    import DropdownMenu from "$lib/components/ui/DropdownMenu.svelte";
-    import * as dashboardApi from "$lib/services/dashboard-api";
-    import { generateBoardName } from "$lib/utils/board-name-generator";
+import { onMount } from "svelte";
+import { fade, fly } from "svelte/transition";
+import { goto } from "$app/navigation";
+import UserManagement from "$lib/components/UserManagement.svelte";
+import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
+import DropdownMenu from "$lib/components/ui/DropdownMenu.svelte";
+import Icon from "$lib/components/ui/Icon.svelte";
+import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
+import Pill from "$lib/components/ui/Pill.svelte";
+import * as dashboardApi from "$lib/services/dashboard-api";
+import { generateBoardName } from "$lib/utils/board-name-generator";
 
-    interface Props {
-        user: any;
-    }
+interface Props {
+	user: any;
+}
 
-    let { user }: Props = $props();
+let { user }: Props = $props();
 
-    let series: any[] = $state([]);
-    let loading = $state(true);
-    let newSeriesName = $state("");
-    let seriesError = $state("");
-    let creatingNewSeries = $state(false);
-    let isEmailConfigured = $state(false);
+let series: any[] = $state([]);
+let loading = $state(true);
+let newSeriesName = $state("");
+let seriesError = $state("");
+let creatingNewSeries = $state(false);
+let isEmailConfigured = $state(false);
 
-    // Computed: Can user create resources (boards/series)?
-    let canCreateResources = $derived(() => {
-        // If email is not configured, everyone can create
-        if (!isEmailConfigured) return true;
-        // If email is configured, only verified users can create
-        return user?.emailVerified === true;
-    });
-    let boardNames = $state({} as Record<string, string>);
-    let boardErrors = $state({} as Record<string, string>);
-    let creatingBoards = $state({} as Record<string, boolean>);
-    let showDeleteModal = $state(false);
-    let seriesToDelete: any = $state(null);
-    let showUserManagementModal = $state(false);
-    let seriesToManage: any = $state(null);
-    let currentSeriesUsers = $state([]);
-    let cloningBoards = $state({} as Record<string, boolean>);
-    let collapsedSeries = $state({} as Record<string, boolean>);
-    let showRenameModal = $state(false);
-    let seriesToRename: any = $state(null);
-    let renameSeriesName = $state("");
-    let renameSeriesError = $state("");
-    let openDropdownSeriesId: string | null = $state(null);
+// Computed: Can user create resources (boards/series)?
+let canCreateResources = $derived(() => {
+	// If email is not configured, everyone can create
+	if (!isEmailConfigured) return true;
+	// If email is configured, only verified users can create
+	return user?.emailVerified === true;
+});
+let boardNames = $state({} as Record<string, string>);
+let boardErrors = $state({} as Record<string, string>);
+let creatingBoards = $state({} as Record<string, boolean>);
+let showDeleteModal = $state(false);
+let seriesToDelete: any = $state(null);
+let showUserManagementModal = $state(false);
+let seriesToManage: any = $state(null);
+let currentSeriesUsers = $state([]);
+let cloningBoards = $state({} as Record<string, boolean>);
+let collapsedSeries = $state({} as Record<string, boolean>);
+let showRenameModal = $state(false);
+let seriesToRename: any = $state(null);
+let renameSeriesName = $state("");
+let renameSeriesError = $state("");
+let openDropdownSeriesId: string | null = $state(null);
 
-    onMount(async () => {
-        try {
-            // Check if email is configured
-            const configData = await dashboardApi.checkEmailConfig();
-            isEmailConfigured = configData.isEmailConfigured;
+onMount(async () => {
+	try {
+		// Check if email is configured
+		const configData = await dashboardApi.checkEmailConfig();
+		isEmailConfigured = configData.isEmailConfigured;
 
-            // Load series
-            const seriesData = await dashboardApi.listSeries();
-            series = seriesData.series;
+		// Load series
+		const seriesData = await dashboardApi.listSeries();
+		series = seriesData.series;
 
-            series.forEach((s) => {
-                initializeBoardName(s.id, s.name);
-                // Set all series to collapsed by default
-                collapsedSeries[s.id] = true;
-            });
-        } catch (error) {
-            console.error("Failed to load dashboard data:", error);
-        } finally {
-            loading = false;
-        }
-    });
+		series.forEach((s) => {
+			initializeBoardName(s.id, s.name);
+			// Set all series to collapsed by default
+			collapsedSeries[s.id] = true;
+		});
+	} catch (error) {
+		console.error("Failed to load dashboard data:", error);
+	} finally {
+		loading = false;
+	}
+});
 
-    async function createSeries() {
-        if (!newSeriesName.trim()) {
-            seriesError = "Series name is required";
-            return;
-        }
+async function createSeries() {
+	if (!newSeriesName.trim()) {
+		seriesError = "Series name is required";
+		return;
+	}
 
-        if (newSeriesName.trim().length < 2) {
-            seriesError = "Series name must be at least 2 characters";
-            return;
-        }
+	if (newSeriesName.trim().length < 2) {
+		seriesError = "Series name must be at least 2 characters";
+		return;
+	}
 
-        creatingNewSeries = true;
-        seriesError = "";
+	creatingNewSeries = true;
+	seriesError = "";
 
-        try {
-            const data = await dashboardApi.createSeries(newSeriesName.trim());
-            series = [...series, data.series];
-            initializeBoardName(data.series.id, data.series.boards.length);
-            newSeriesName = "";
-        } catch (error) {
-            seriesError = error instanceof Error ? error.message : "Failed to create series";
-        } finally {
-            creatingNewSeries = false;
-        }
-    }
+	try {
+		const data = await dashboardApi.createSeries(newSeriesName.trim());
+		series = [...series, data.series];
+		initializeBoardName(data.series.id, data.series.boards.length);
+		newSeriesName = "";
+	} catch (error) {
+		seriesError =
+			error instanceof Error ? error.message : "Failed to create series";
+	} finally {
+		creatingNewSeries = false;
+	}
+}
 
-    function initializeBoardName(seriesId: string, boardCount: number) {
-        if (!boardNames[seriesId]) {
-            const currentDate = new Date().toISOString().split("T")[0];
-            boardNames = {
-                ...boardNames,
-                [seriesId]: generateBoardName(
-                    `${seriesId} ${boardCount} ${currentDate}`,
-                ),
-            };
-        }
-    }
+function initializeBoardName(seriesId: string, boardCount: number) {
+	if (!boardNames[seriesId]) {
+		const currentDate = new Date().toISOString().split("T")[0];
+		boardNames = {
+			...boardNames,
+			[seriesId]: generateBoardName(`${seriesId} ${boardCount} ${currentDate}`),
+		};
+	}
+}
 
-    async function createBoard(seriesId: string) {
-        const boardName = boardNames[seriesId]?.trim();
+async function createBoard(seriesId: string) {
+	const boardName = boardNames[seriesId]?.trim();
 
-        if (!boardName) {
-            boardErrors[seriesId] = "Board name is required";
-            return;
-        }
+	if (!boardName) {
+		boardErrors[seriesId] = "Board name is required";
+		return;
+	}
 
-        if (boardName.length < 2) {
-            boardErrors[seriesId] = "Board name must be at least 2 characters";
-            return;
-        }
+	if (boardName.length < 2) {
+		boardErrors[seriesId] = "Board name must be at least 2 characters";
+		return;
+	}
 
-        creatingBoards[seriesId] = true;
-        boardErrors[seriesId] = "";
+	creatingBoards[seriesId] = true;
+	boardErrors[seriesId] = "";
 
-        try {
-            const data = await dashboardApi.createBoard(boardName, seriesId);
-            goto(`/board/${data.board.id}`);
-        } catch (error) {
-            boardErrors[seriesId] = error instanceof Error ? error.message : "Failed to create board";
-        } finally {
-            creatingBoards[seriesId] = false;
-        }
-    }
+	try {
+		const data = await dashboardApi.createBoard(boardName, seriesId);
+		goto(`/board/${data.board.id}`);
+	} catch (error) {
+		boardErrors[seriesId] =
+			error instanceof Error ? error.message : "Failed to create board";
+	} finally {
+		creatingBoards[seriesId] = false;
+	}
+}
 
-    function confirmDeleteSeries(seriesItem: any) {
-        seriesToDelete = seriesItem;
-        showDeleteModal = true;
-    }
+function confirmDeleteSeries(seriesItem: any) {
+	seriesToDelete = seriesItem;
+	showDeleteModal = true;
+}
 
-    function cancelDelete() {
-        showDeleteModal = false;
-        seriesToDelete = null;
-    }
+function cancelDelete() {
+	showDeleteModal = false;
+	seriesToDelete = null;
+}
 
-    async function deleteSeries() {
-        if (!seriesToDelete) return;
+async function deleteSeries() {
+	if (!seriesToDelete) return;
 
-        try {
-            await dashboardApi.deleteSeries(seriesToDelete.id);
-            series = series.filter((s) => s.id !== seriesToDelete.id);
-            showDeleteModal = false;
-            seriesToDelete = null;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to delete series";
-            alert(errorMessage);
-            console.error("Series deletion error:", error);
-        }
-    }
+	try {
+		await dashboardApi.deleteSeries(seriesToDelete.id);
+		series = series.filter((s) => s.id !== seriesToDelete.id);
+		showDeleteModal = false;
+		seriesToDelete = null;
+	} catch (error) {
+		const errorMessage =
+			error instanceof Error ? error.message : "Failed to delete series";
+		alert(errorMessage);
+		console.error("Series deletion error:", error);
+	}
+}
 
-    async function openSeriesUserManagement(seriesItem: any) {
-        seriesToManage = seriesItem;
-        showUserManagementModal = true;
+async function openSeriesUserManagement(seriesItem: any) {
+	seriesToManage = seriesItem;
+	showUserManagementModal = true;
 
-        try {
-            const data = await dashboardApi.listSeriesUsers(seriesItem.id);
-            currentSeriesUsers = data.users;
-        } catch (error) {
-            console.error("Failed to load users:", error);
-        }
-    }
+	try {
+		const data = await dashboardApi.listSeriesUsers(seriesItem.id);
+		currentSeriesUsers = data.users;
+	} catch (error) {
+		console.error("Failed to load users:", error);
+	}
+}
 
-    function closeUserManagementModal() {
-        showUserManagementModal = false;
-        seriesToManage = null;
-        currentSeriesUsers = [];
-    }
+function closeUserManagementModal() {
+	showUserManagementModal = false;
+	seriesToManage = null;
+	currentSeriesUsers = [];
+}
 
-    async function handleUserAdded(email: string) {
-        await dashboardApi.addSeriesUser(seriesToManage.id, email, "member");
-        const data = await dashboardApi.listSeriesUsers(seriesToManage.id);
-        currentSeriesUsers = data.users;
-    }
+async function handleUserAdded(email: string) {
+	await dashboardApi.addSeriesUser(seriesToManage.id, email, "member");
+	const data = await dashboardApi.listSeriesUsers(seriesToManage.id);
+	currentSeriesUsers = data.users;
+}
 
-    async function handleUserRemoved(userId: string) {
-        try {
-            await dashboardApi.removeSeriesUser(seriesToManage.id, userId);
-            currentSeriesUsers = currentSeriesUsers.filter(
-                (u) => u.userId !== userId,
-            );
-        } catch (error) {
-            console.error("Failed to remove user:", error);
-        }
-    }
+async function handleUserRemoved(userId: string) {
+	try {
+		await dashboardApi.removeSeriesUser(seriesToManage.id, userId);
+		currentSeriesUsers = currentSeriesUsers.filter((u) => u.userId !== userId);
+	} catch (error) {
+		console.error("Failed to remove user:", error);
+	}
+}
 
-    async function handleUserRoleChanged(userId: string, newRole: string) {
-        try {
-            await dashboardApi.updateSeriesUserRole(seriesToManage.id, userId, newRole);
-            currentSeriesUsers = currentSeriesUsers.map((u) =>
-                u.userId === userId ? { ...u, role: newRole } : u,
-            );
-        } catch (error) {
-            console.error("Failed to update user role:", error);
-        }
-    }
+async function handleUserRoleChanged(userId: string, newRole: string) {
+	try {
+		await dashboardApi.updateSeriesUserRole(seriesToManage.id, userId, newRole);
+		currentSeriesUsers = currentSeriesUsers.map((u) =>
+			u.userId === userId ? { ...u, role: newRole } : u,
+		);
+	} catch (error) {
+		console.error("Failed to update user role:", error);
+	}
+}
 
-    async function cloneBoard(sourceBoard: any, seriesId: string) {
-        const boardName = boardNames[seriesId]?.trim();
+async function cloneBoard(sourceBoard: any, seriesId: string) {
+	const boardName = boardNames[seriesId]?.trim();
 
-        if (!boardName) {
-            boardErrors[seriesId] = "Board name is required";
-            return;
-        }
+	if (!boardName) {
+		boardErrors[seriesId] = "Board name is required";
+		return;
+	}
 
-        if (boardName.length < 2) {
-            boardErrors[seriesId] = "Board name must be at least 2 characters";
-            return;
-        }
+	if (boardName.length < 2) {
+		boardErrors[seriesId] = "Board name must be at least 2 characters";
+		return;
+	}
 
-        cloningBoards[sourceBoard.id] = true;
-        boardErrors[seriesId] = "";
+	cloningBoards[sourceBoard.id] = true;
+	boardErrors[seriesId] = "";
 
-        try {
-            const newBoardId = await dashboardApi.createAndCloneBoard(
-                boardName,
-                seriesId,
-                sourceBoard.id
-            );
-            goto(`/board/${newBoardId}`);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to clone board";
-            alert(errorMessage);
-        } finally {
-            cloningBoards[sourceBoard.id] = false;
-        }
-    }
+	try {
+		const newBoardId = await dashboardApi.createAndCloneBoard(
+			boardName,
+			seriesId,
+			sourceBoard.id,
+		);
+		goto(`/board/${newBoardId}`);
+	} catch (error) {
+		const errorMessage =
+			error instanceof Error ? error.message : "Failed to clone board";
+		alert(errorMessage);
+	} finally {
+		cloningBoards[sourceBoard.id] = false;
+	}
+}
 
-    function toggleSeriesCollapse(seriesId: string) {
-        collapsedSeries[seriesId] = !collapsedSeries[seriesId];
-    }
+function toggleSeriesCollapse(seriesId: string) {
+	collapsedSeries[seriesId] = !collapsedSeries[seriesId];
+}
 
-    function getLatestBoardForCollapsed(seriesItem: any) {
-        if (!seriesItem.boards || seriesItem.boards.length === 0) {
-            return null;
-        }
+function getLatestBoardForCollapsed(seriesItem: any) {
+	if (!seriesItem.boards || seriesItem.boards.length === 0) {
+		return null;
+	}
 
-        // For admin/facilitator, show latest active or draft board
-        // For members, show only latest active board
-        let eligibleBoards = seriesItem.boards.filter((b: any) => {
-            if (seriesItem.role === 'admin' || seriesItem.role === 'facilitator') {
-                return b.status === 'active' || b.status === 'draft';
-            }
-            return b.status === 'active';
-        });
+	// For admin/facilitator, show latest active or draft board
+	// For members, show only latest active board
+	let eligibleBoards = seriesItem.boards.filter((b: any) => {
+		if (seriesItem.role === "admin" || seriesItem.role === "facilitator") {
+			return b.status === "active" || b.status === "draft";
+		}
+		return b.status === "active";
+	});
 
-        // If no active/draft boards, fall back to completed boards
-        if (eligibleBoards.length === 0) {
-            eligibleBoards = seriesItem.boards.filter((b: any) => b.status === 'completed');
-        }
+	// If no active/draft boards, fall back to completed boards
+	if (eligibleBoards.length === 0) {
+		eligibleBoards = seriesItem.boards.filter(
+			(b: any) => b.status === "completed",
+		);
+	}
 
-        if (eligibleBoards.length === 0) {
-            return null;
-        }
+	if (eligibleBoards.length === 0) {
+		return null;
+	}
 
-        // Sort by meeting date (descending), then by created date (descending)
-        const sorted = [...eligibleBoards].sort((a: any, b: any) => {
-            const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
-            const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
-            return bDate.getTime() - aDate.getTime();
-        });
+	// Sort by meeting date (descending), then by created date (descending)
+	const sorted = [...eligibleBoards].sort((a: any, b: any) => {
+		const aDate = a.meetingDate
+			? new Date(a.meetingDate)
+			: new Date(a.createdAt);
+		const bDate = b.meetingDate
+			? new Date(b.meetingDate)
+			: new Date(b.createdAt);
+		return bDate.getTime() - aDate.getTime();
+	});
 
-        return sorted[0];
-    }
+	return sorted[0];
+}
 
-    function openRenameSeries(seriesItem: any) {
-        seriesToRename = seriesItem;
-        renameSeriesName = seriesItem.name;
-        renameSeriesError = "";
-        showRenameModal = true;
-    }
+function openRenameSeries(seriesItem: any) {
+	seriesToRename = seriesItem;
+	renameSeriesName = seriesItem.name;
+	renameSeriesError = "";
+	showRenameModal = true;
+}
 
-    function closeRenameModal() {
-        showRenameModal = false;
-        seriesToRename = null;
-        renameSeriesName = "";
-        renameSeriesError = "";
-    }
+function closeRenameModal() {
+	showRenameModal = false;
+	seriesToRename = null;
+	renameSeriesName = "";
+	renameSeriesError = "";
+}
 
-    async function renameSeries() {
-        if (!seriesToRename) return;
+async function renameSeries() {
+	if (!seriesToRename) return;
 
-        if (!renameSeriesName.trim()) {
-            renameSeriesError = "Series name is required";
-            return;
-        }
+	if (!renameSeriesName.trim()) {
+		renameSeriesError = "Series name is required";
+		return;
+	}
 
-        if (renameSeriesName.trim().length < 2) {
-            renameSeriesError = "Series name must be at least 2 characters";
-            return;
-        }
+	if (renameSeriesName.trim().length < 2) {
+		renameSeriesError = "Series name must be at least 2 characters";
+		return;
+	}
 
-        try {
-            await dashboardApi.renameSeries(seriesToRename.id, renameSeriesName.trim());
-            series = series.map((s) =>
-                s.id === seriesToRename.id
-                    ? { ...s, name: renameSeriesName.trim() }
-                    : s,
-            );
-            closeRenameModal();
-        } catch (error) {
-            renameSeriesError = error instanceof Error ? error.message : "Failed to rename series";
-        }
-    }
+	try {
+		await dashboardApi.renameSeries(seriesToRename.id, renameSeriesName.trim());
+		series = series.map((s) =>
+			s.id === seriesToRename.id ? { ...s, name: renameSeriesName.trim() } : s,
+		);
+		closeRenameModal();
+	} catch (error) {
+		renameSeriesError =
+			error instanceof Error ? error.message : "Failed to rename series";
+	}
+}
 </script>
 
 {#if loading}

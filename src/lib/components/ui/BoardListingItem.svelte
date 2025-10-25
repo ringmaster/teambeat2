@@ -1,48 +1,48 @@
 <script lang="ts">
-    import Pill from './Pill.svelte';
-    import type { Snippet } from 'svelte';
+import type { Snippet } from "svelte";
+import Pill from "./Pill.svelte";
 
-    interface Props {
-        name: string;
-        meetingDate?: string | null;
-        createdAt?: string;
-        status?: 'draft' | 'active' | 'complete' | 'archived';
-        onclick?: () => void;
-        class?: string;
-        actions?: Snippet;
-    }
+interface Props {
+	name: string;
+	meetingDate?: string | null;
+	createdAt?: string;
+	status?: "draft" | "active" | "complete" | "archived";
+	onclick?: () => void;
+	class?: string;
+	actions?: Snippet;
+}
 
-    let {
-        name,
-        meetingDate,
-        createdAt,
-        status = 'draft',
-        onclick,
-        class: className = '',
-        actions
-    }: Props = $props();
-    
-    function formatDate(dateString: string | null | undefined) {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const options: Intl.DateTimeFormatOptions = { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-        };
-        return date.toLocaleDateString('en-US', options);
-    }
-    
-    let displayDate = $derived(formatDate(meetingDate || createdAt));
-    
-    let itemClass = $derived.by(() => {
-        let classes = ['board-listing-item'];
-        if (className) {
-            classes.push(className);
-        }
-        return classes.join(' ');
-    });
+let {
+	name,
+	meetingDate,
+	createdAt,
+	status = "draft",
+	onclick,
+	class: className = "",
+	actions,
+}: Props = $props();
+
+function formatDate(dateString: string | null | undefined) {
+	if (!dateString) return "";
+	const date = new Date(dateString);
+	const options: Intl.DateTimeFormatOptions = {
+		weekday: "short",
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	};
+	return date.toLocaleDateString("en-US", options);
+}
+
+let displayDate = $derived(formatDate(meetingDate || createdAt));
+
+let itemClass = $derived.by(() => {
+	let classes = ["board-listing-item"];
+	if (className) {
+		classes.push(className);
+	}
+	return classes.join(" ");
+});
 </script>
 
 <button

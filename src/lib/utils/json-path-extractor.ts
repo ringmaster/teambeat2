@@ -11,42 +11,42 @@
  * If the root is an array, returns "$" to represent the root.
  */
 export function extractIterablePaths(data: any): string[] {
-  if (!data || typeof data !== 'object') {
-    return [];
-  }
+	if (!data || typeof data !== "object") {
+		return [];
+	}
 
-  const paths: string[] = [];
+	const paths: string[] = [];
 
-  function traverse(obj: any, currentPath: string = '') {
-    if (obj === null || obj === undefined) {
-      return;
-    }
+	function traverse(obj: any, currentPath: string = "") {
+		if (obj === null || obj === undefined) {
+			return;
+		}
 
-    if (Array.isArray(obj)) {
-      // This path points to an array - it's iterable
-      if (currentPath) {
-        paths.push(currentPath);
-      } else {
-        // Root level array - use "$" to represent it
-        paths.push('$');
-      }
-      // Don't traverse into array elements for path extraction
-      return;
-    }
+		if (Array.isArray(obj)) {
+			// This path points to an array - it's iterable
+			if (currentPath) {
+				paths.push(currentPath);
+			} else {
+				// Root level array - use "$" to represent it
+				paths.push("$");
+			}
+			// Don't traverse into array elements for path extraction
+			return;
+		}
 
-    if (typeof obj === 'object') {
-      // Traverse object properties
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          const newPath = currentPath ? `${currentPath}.${key}` : key;
-          traverse(obj[key], newPath);
-        }
-      }
-    }
-  }
+		if (typeof obj === "object") {
+			// Traverse object properties
+			for (const key in obj) {
+				if (Object.hasOwn(obj, key)) {
+					const newPath = currentPath ? `${currentPath}.${key}` : key;
+					traverse(obj[key], newPath);
+				}
+			}
+		}
+	}
 
-  traverse(data);
-  return paths.sort();
+	traverse(data);
+	return paths.sort();
 }
 
 /**
@@ -54,15 +54,15 @@ export function extractIterablePaths(data: any): string[] {
  * Returns empty array if JSON is invalid
  */
 export function extractPathsFromJSON(jsonString: string): string[] {
-  if (!jsonString || !jsonString.trim()) {
-    return [];
-  }
+	if (!jsonString || !jsonString.trim()) {
+		return [];
+	}
 
-  try {
-    const data = JSON.parse(jsonString);
-    return extractIterablePaths(data);
-  } catch (e) {
-    // Invalid JSON - return empty array
-    return [];
-  }
+	try {
+		const data = JSON.parse(jsonString);
+		return extractIterablePaths(data);
+	} catch (e) {
+		// Invalid JSON - return empty array
+		return [];
+	}
 }

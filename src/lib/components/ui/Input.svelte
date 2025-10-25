@@ -1,31 +1,31 @@
 <script lang="ts">
-    import type { FullAutoFill } from "svelte/elements";
+import type { FullAutoFill } from "svelte/elements";
 
-    interface Props {
-        type?: "text" | "email" | "password" | "number";
-        placeholder?: string;
-        value?: string;
-        disabled?: boolean;
-        required?: boolean;
-        autocomplete?: FullAutoFill | undefined;
-        id?: string;
-        name?: string;
-        class?: string;
-        oninput?: (event: Event) => void;
-    }
+interface Props {
+	type?: "text" | "email" | "password" | "number";
+	placeholder?: string;
+	value?: string;
+	disabled?: boolean;
+	required?: boolean;
+	autocomplete?: FullAutoFill | undefined;
+	id?: string;
+	name?: string;
+	class?: string;
+	oninput?: (event: Event) => void;
+}
 
-    let {
-        type = "text",
-        placeholder = "",
-        value = $bindable(""),
-        disabled = false,
-        required = false,
-        autocomplete = "off",
-        id,
-        name,
-        class: className = "",
-        oninput,
-    }: Props = $props();
+let {
+	type = "text",
+	placeholder = "",
+	value = $bindable(""),
+	disabled = false,
+	required = false,
+	autocomplete = "off",
+	id,
+	name,
+	class: className = "",
+	oninput,
+}: Props = $props();
 </script>
 
 <input

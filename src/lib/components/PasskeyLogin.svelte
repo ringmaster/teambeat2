@@ -1,60 +1,58 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import {
-        checkPasskeySupport,
-        authenticateWithPasskey,
-        hasAvailablePasskeys,
-    } from "$lib/utils/webauthn.js";
+import { onMount } from "svelte";
+import Icon from "$lib/components/ui/Icon.svelte";
+import {
+	authenticateWithPasskey,
+	checkPasskeySupport,
+	hasAvailablePasskeys,
+} from "$lib/utils/webauthn.js";
 
-    let passkeySupport = $state({ supported: false, available: false });
-    let hasPasskeys = $state(false);
-    let loading = $state(true);
-    let authenticating = $state(false);
-    let error = $state("");
+let passkeySupport = $state({ supported: false, available: false });
+let hasPasskeys = $state(false);
+let loading = $state(true);
+let authenticating = $state(false);
+let error = $state("");
 
-    onMount(async () => {
-        try {
-            // Check passkey support
-            passkeySupport = await checkPasskeySupport();
+onMount(async () => {
+	try {
+		// Check passkey support
+		passkeySupport = await checkPasskeySupport();
 
-            // Check if there are available passkeys for authentication
-            if (passkeySupport.supported) {
-                hasPasskeys = await hasAvailablePasskeys();
-            }
-        } catch (err) {
-            console.error("Failed to initialize passkey login:", err);
-        } finally {
-            loading = false;
-        }
-    });
+		// Check if there are available passkeys for authentication
+		if (passkeySupport.supported) {
+			hasPasskeys = await hasAvailablePasskeys();
+		}
+	} catch (err) {
+		console.error("Failed to initialize passkey login:", err);
+	} finally {
+		loading = false;
+	}
+});
 
-    async function handlePasskeyLogin() {
-        authenticating = true;
-        error = "";
+async function handlePasskeyLogin() {
+	authenticating = true;
+	error = "";
 
-        try {
-            const result = await authenticateWithPasskey();
+	try {
+		const result = await authenticateWithPasskey();
 
-            if (result.success) {
-                // Redirect to dashboard after successful authentication
-                window.location.href = "/";
-            } else {
-                error = result.error || "Authentication failed";
-            }
-        } catch {
-            error = "Authentication failed. Please try again.";
-        } finally {
-            authenticating = false;
-        }
-    }
+		if (result.success) {
+			// Redirect to dashboard after successful authentication
+			window.location.href = "/";
+		} else {
+			error = result.error || "Authentication failed";
+		}
+	} catch {
+		error = "Authentication failed. Please try again.";
+	} finally {
+		authenticating = false;
+	}
+}
 
-    // Show the component if passkeys are supported and available
-    let showPasskeyLogin = $derived(
-        !loading && passkeySupport.supported && hasPasskeys,
-    );
-
-
+// Show the component if passkeys are supported and available
+let showPasskeyLogin = $derived(
+	!loading && passkeySupport.supported && hasPasskeys,
+);
 </script>
 
 {#if showPasskeyLogin}

@@ -1,117 +1,107 @@
 <script lang="ts">
-    import { getUserDisplayName } from "$lib/utils/animalNames";
+import { getUserDisplayName } from "$lib/utils/animalNames";
 
-    interface UserStatus {
-        userId: string;
-        userName: string;
-        userRole: string;
-        isActive: boolean;
-        lastSeen: number | null;
-        currentActivity: string | null;
-        votesRemaining: number;
-        totalVotes: number;
-        votesUsed: number;
-    }
+interface UserStatus {
+	userId: string;
+	userName: string;
+	userRole: string;
+	isActive: boolean;
+	lastSeen: number | null;
+	currentActivity: string | null;
+	votesRemaining: number;
+	totalVotes: number;
+	votesUsed: number;
+}
 
-    interface Props {
-        open: boolean;
-        boardId: string;
-        blameFreeMode: boolean;
-        onClose: () => void;
-    }
+interface Props {
+	open: boolean;
+	boardId: string;
+	blameFreeMode: boolean;
+	onClose: () => void;
+}
 
-    let {
-        open = false,
-        boardId,
-        blameFreeMode = false,
-        onClose,
-    }: Props = $props();
+let { open = false, boardId, blameFreeMode = false, onClose }: Props = $props();
 
-    let loading = $state(true);
-    let error = $state("");
-    let users = $state<UserStatus[]>([]);
-    let summary = $state({
-        totalUsers: 0,
-        activeUsers: 0,
-        totalVotesRemaining: 0,
-        totalVotesUsed: 0,
-    });
+let loading = $state(true);
+let error = $state("");
+let users = $state<UserStatus[]>([]);
+let summary = $state({
+	totalUsers: 0,
+	activeUsers: 0,
+	totalVotesRemaining: 0,
+	totalVotesUsed: 0,
+});
 
-    // Load user status data when modal opens
-    $effect(() => {
-        if (open && boardId) {
-            loadUserStatus();
-        }
-    });
+// Load user status data when modal opens
+$effect(() => {
+	if (open && boardId) {
+		loadUserStatus();
+	}
+});
 
-    async function loadUserStatus() {
-        loading = true;
-        error = "";
+async function loadUserStatus() {
+	loading = true;
+	error = "";
 
-        try {
-            const response = await fetch(`/api/boards/${boardId}/user-status`);
+	try {
+		const response = await fetch(`/api/boards/${boardId}/user-status`);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(
-                    errorData.error || "Failed to load user status",
-                );
-            }
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || "Failed to load user status");
+		}
 
-            const data = await response.json();
-            users = data.users || [];
-            summary = data.summary || {};
-        } catch (err) {
-            console.error("Failed to load user status:", err);
-            error =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to load user status";
-        } finally {
-            loading = false;
-        }
-    }
+		const data = await response.json();
+		users = data.users || [];
+		summary = data.summary || {};
+	} catch (err) {
+		console.error("Failed to load user status:", err);
+		error = err instanceof Error ? err.message : "Failed to load user status";
+	} finally {
+		loading = false;
+	}
+}
 
-    function handleBackdropClick(event: MouseEvent) {
-        if (event.target === event.currentTarget) {
-            onClose();
-        }
-    }
+function handleBackdropClick(event: MouseEvent) {
+	if (event.target === event.currentTarget) {
+		onClose();
+	}
+}
 
-    function handleKeydown(event: KeyboardEvent) {
-        if (event.key === "Escape") {
-            onClose();
-        }
-    }
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape") {
+		onClose();
+	}
+}
 
-    function formatLastSeen(lastSeen: number | null): string {
-        if (!lastSeen) return "";
+function formatLastSeen(lastSeen: number | null): string {
+	if (!lastSeen) return "";
 
-        const now = Date.now();
-        const diff = now - lastSeen;
+	const now = Date.now();
+	const diff = now - lastSeen;
 
-        if (diff < 60000) return "Just now";
-        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-        return `${Math.floor(diff / 86400000)}d ago`;
-    }
+	if (diff < 60000) return "Just now";
+	if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+	if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+	return `${Math.floor(diff / 86400000)}d ago`;
+}
 
-    function getDisplayName(user: UserStatus): string {
-        return getUserDisplayName(user.userName, boardId, blameFreeMode);
-    }
+function getDisplayName(user: UserStatus): string {
+	return getUserDisplayName(user.userName, boardId, blameFreeMode);
+}
 
-    function getRoleBadgeClass(role: string): string {
-        switch (role) {
-            case "admin":
-                return "role-admin";
-            case "facilitator":
-                return "role-facilitator";
-            case "member":
-                return "role-member";
-            default:
-                return "";
-        }
-    }
+function getRoleBadgeClass(role: string): string {
+	switch (role) {
+		case "admin":
+			return "role-admin";
+		case "facilitator":
+			return "role-facilitator";
+		case "member":
+			return "role-member";
+		default:
+			return "";
+	}
+}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />

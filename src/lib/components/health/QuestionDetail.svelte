@@ -1,141 +1,138 @@
 <script lang="ts">
-    import { toastStore } from "$lib/stores/toast";
-    import { getSceneCapability } from "$lib/utils/scene-capability";
-    import type { BoardStatus } from "$lib/types";
-    import { SCENE_FLAGS } from "$lib/scene-flags";
+import { SCENE_FLAGS } from "$lib/scene-flags";
+import { toastStore } from "$lib/stores/toast";
+import type { BoardStatus } from "$lib/types";
+import { getSceneCapability } from "$lib/utils/scene-capability";
 
-    interface Props {
-        result: any;
-        sceneId: string;
-        boardId: string;
-        boardStatus: string;
-        isFacilitator: boolean;
-        sceneFlags: string[];
-        onBack: () => void;
-    }
+interface Props {
+	result: any;
+	sceneId: string;
+	boardId: string;
+	boardStatus: string;
+	isFacilitator: boolean;
+	sceneFlags: string[];
+	onBack: () => void;
+}
 
-    const {
-        result,
-        sceneId,
-        boardId,
-        boardStatus,
-        isFacilitator,
-        sceneFlags,
-        onBack,
-    }: Props = $props();
+const {
+	result,
+	sceneId,
+	boardId,
+	boardStatus,
+	isFacilitator,
+	sceneFlags,
+	onBack,
+}: Props = $props();
 
-    // Create a minimal scene object for capability checking
-    const scene = $derived({ id: sceneId, flags: sceneFlags });
+// Create a minimal scene object for capability checking
+const scene = $derived({ id: sceneId, flags: sceneFlags });
 
-    const canAddCards = $derived(
-        getSceneCapability(
-            scene,
-            boardStatus as BoardStatus,
-            SCENE_FLAGS.ALLOW_ADD_CARDS,
-        ),
-    );
+const canAddCards = $derived(
+	getSceneCapability(
+		scene,
+		boardStatus as BoardStatus,
+		SCENE_FLAGS.ALLOW_ADD_CARDS,
+	),
+);
 
-    let columns = $state<any[]>([]);
-    let loadingColumns = $state(false);
-    let dropdownOpen = $state(false);
-    let copyingToCard = $state(false);
+let columns = $state<any[]>([]);
+let loadingColumns = $state(false);
+let dropdownOpen = $state(false);
+let copyingToCard = $state(false);
 
-    async function loadColumns() {
-        try {
-            loadingColumns = true;
-            const res = await fetch(`/api/boards/${boardId}`);
-            const data = await res.json();
+async function loadColumns() {
+	try {
+		loadingColumns = true;
+		const res = await fetch(`/api/boards/${boardId}`);
+		const data = await res.json();
 
-            if (data.success && data.board.columns) {
-                columns = data.board.columns;
-            }
-        } catch (err) {
-            console.error("Failed to load columns:", err);
-        } finally {
-            loadingColumns = false;
-        }
-    }
+		if (data.success && data.board.columns) {
+			columns = data.board.columns;
+		}
+	} catch (err) {
+		console.error("Failed to load columns:", err);
+	} finally {
+		loadingColumns = false;
+	}
+}
 
-    async function handleCopyToCard(columnId: string) {
-        try {
-            copyingToCard = true;
-            const res = await fetch(
-                `/api/health-questions/${result.question.id}/copy-to-card`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ column_id: columnId }),
-                },
-            );
+async function handleCopyToCard(columnId: string) {
+	try {
+		copyingToCard = true;
+		const res = await fetch(
+			`/api/health-questions/${result.question.id}/copy-to-card`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ column_id: columnId }),
+			},
+		);
 
-            const data = await res.json();
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || "Failed to copy to card");
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to copy to card");
+		}
 
-            toastStore.success("Question results copied to column");
-            dropdownOpen = false;
-        } catch (err) {
-            console.error("Failed to copy to card:", err);
-            toastStore.error(
-                err instanceof Error ? err.message : "Failed to copy to card",
-            );
-        } finally {
-            copyingToCard = false;
-        }
-    }
+		toastStore.success("Question results copied to column");
+		dropdownOpen = false;
+	} catch (err) {
+		console.error("Failed to copy to card:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to copy to card",
+		);
+	} finally {
+		copyingToCard = false;
+	}
+}
 
-    function closeDropdown() {
-        dropdownOpen = false;
-    }
+function closeDropdown() {
+	dropdownOpen = false;
+}
 
-    function clickOutside(node: HTMLElement, handler: () => void) {
-        const handleClick = (event: MouseEvent) => {
-            if (node && !node.contains(event.target as Node)) {
-                handler();
-            }
-        };
+function clickOutside(node: HTMLElement, handler: () => void) {
+	const handleClick = (event: MouseEvent) => {
+		if (node && !node.contains(event.target as Node)) {
+			handler();
+		}
+	};
 
-        document.addEventListener("click", handleClick, true);
+	document.addEventListener("click", handleClick, true);
 
-        return {
-            destroy() {
-                document.removeEventListener("click", handleClick, true);
-            },
-        };
-    }
+	return {
+		destroy() {
+			document.removeEventListener("click", handleClick, true);
+		},
+	};
+}
 
-    function getDistributionLabel(
-        questionType: string,
-        rating: number,
-    ): string {
-        if (questionType === "redyellowgreen") {
-            if (rating === 1) return "🔴 Red";
-            if (rating === 3) return "🟡 Yellow";
-            if (rating === 5) return "🟢 Green";
-        } else if (questionType === "boolean") {
-            return rating === 0 ? "No" : "Yes";
-        } else if (questionType === "agreetodisagree") {
-            const labels = [
-                "",
-                "Strongly Disagree",
-                "Disagree",
-                "Neutral",
-                "Agree",
-                "Strongly Agree",
-            ];
-            return labels[rating] || String(rating);
-        }
-        return String(rating);
-    }
+function getDistributionLabel(questionType: string, rating: number): string {
+	if (questionType === "redyellowgreen") {
+		if (rating === 1) return "🔴 Red";
+		if (rating === 3) return "🟡 Yellow";
+		if (rating === 5) return "🟢 Green";
+	} else if (questionType === "boolean") {
+		return rating === 0 ? "No" : "Yes";
+	} else if (questionType === "agreetodisagree") {
+		const labels = [
+			"",
+			"Strongly Disagree",
+			"Disagree",
+			"Neutral",
+			"Agree",
+			"Strongly Agree",
+		];
+		return labels[rating] || String(rating);
+	}
+	return String(rating);
+}
 
-    // Load columns when component mounts if user is facilitator and can edit cards
-    $effect(() => {
-        if (isFacilitator && canAddCards && columns.length === 0) {
-            loadColumns();
-        }
-    });
+// Load columns when component mounts if user is facilitator and can edit cards
+$effect(() => {
+	if (isFacilitator && canAddCards && columns.length === 0) {
+		loadColumns();
+	}
+});
 </script>
 
 <div class="question-detail">

@@ -1,23 +1,23 @@
 <script lang="ts">
-    import { toastStore } from "$lib/stores/toast";
-    import Toast from "./Toast.svelte";
+import { toastStore } from "$lib/stores/toast";
+import Toast from "./Toast.svelte";
 
-    function handleToastClose(toastId: string) {
-        toastStore.removeToast(toastId);
-    }
+function handleToastClose(toastId: string) {
+	toastStore.removeToast(toastId);
+}
 
-    function handleAction(
-        toastId: string,
-        action: {
-            label: string;
-            onClick: () => void;
-            variant?: "primary" | "secondary";
-        },
-    ) {
-        action.onClick();
-        // Remove the toast after action is taken
-        toastStore.removeToast(toastId);
-    }
+function handleAction(
+	toastId: string,
+	action: {
+		label: string;
+		onClick: () => void;
+		variant?: "primary" | "secondary";
+	},
+) {
+	action.onClick();
+	// Remove the toast after action is taken
+	toastStore.removeToast(toastId);
+}
 </script>
 
 <div class="toast-container">

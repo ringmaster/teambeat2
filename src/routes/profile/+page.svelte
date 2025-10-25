@@ -1,165 +1,165 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import PasskeyManager from "$lib/components/PasskeyManager.svelte";
+import { onMount } from "svelte";
+import PasskeyManager from "$lib/components/PasskeyManager.svelte";
+import Icon from "$lib/components/ui/Icon.svelte";
 
-    let user: any = $state(null);
-    let loading = $state(true);
-    let saving = $state(false);
-    let message = $state("");
-    let error = $state("");
+let user: any = $state(null);
+let loading = $state(true);
+let saving = $state(false);
+let message = $state("");
+let error = $state("");
 
-    // Form fields
-    let name = $state("");
-    let currentPassword = $state("");
-    let newPassword = $state("");
-    let confirmPassword = $state("");
+// Form fields
+let name = $state("");
+let currentPassword = $state("");
+let newPassword = $state("");
+let confirmPassword = $state("");
 
-    // Delete account
-    let showDeleteConfirm = $state(false);
-    let deleteConfirmText = $state("");
+// Delete account
+let showDeleteConfirm = $state(false);
+let deleteConfirmText = $state("");
 
-    // Email verification
-    let sendingVerification = $state(false);
-    let verificationMessage = $state("");
+// Email verification
+let sendingVerification = $state(false);
+let verificationMessage = $state("");
 
-    onMount(async () => {
-        try {
-            const response = await fetch("/api/auth/me");
-            if (response.ok) {
-                const data = await response.json();
-                user = data.user;
-                name = user.name || "";
-            } else {
-                window.location.href = "/login";
-            }
-        } catch (error) {
-            console.error("Failed to load profile:", error);
-        } finally {
-            loading = false;
-        }
-    });
+onMount(async () => {
+	try {
+		const response = await fetch("/api/auth/me");
+		if (response.ok) {
+			const data = await response.json();
+			user = data.user;
+			name = user.name || "";
+		} else {
+			window.location.href = "/login";
+		}
+	} catch (error) {
+		console.error("Failed to load profile:", error);
+	} finally {
+		loading = false;
+	}
+});
 
-    async function updateProfile() {
-        saving = true;
-        error = "";
-        message = "";
+async function updateProfile() {
+	saving = true;
+	error = "";
+	message = "";
 
-        try {
-            const response = await fetch("/api/auth/profile", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name }),
-            });
+	try {
+		const response = await fetch("/api/auth/profile", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name }),
+		});
 
-            if (response.ok) {
-                const data = await response.json();
-                user = data.user;
-                message = "Profile updated successfully!";
-            } else {
-                const data = await response.json();
-                error = data.error || "Failed to update profile";
-            }
-        } catch (err) {
-            error = "Failed to update profile";
-        } finally {
-            saving = false;
-        }
-    }
+		if (response.ok) {
+			const data = await response.json();
+			user = data.user;
+			message = "Profile updated successfully!";
+		} else {
+			const data = await response.json();
+			error = data.error || "Failed to update profile";
+		}
+	} catch (err) {
+		error = "Failed to update profile";
+	} finally {
+		saving = false;
+	}
+}
 
-    async function changePassword() {
-        saving = true;
-        error = "";
-        message = "";
+async function changePassword() {
+	saving = true;
+	error = "";
+	message = "";
 
-        if (newPassword !== confirmPassword) {
-            error = "Passwords do not match";
-            saving = false;
-            return;
-        }
+	if (newPassword !== confirmPassword) {
+		error = "Passwords do not match";
+		saving = false;
+		return;
+	}
 
-        if (newPassword.length < 8) {
-            error = "Password must be at least 8 characters";
-            saving = false;
-            return;
-        }
+	if (newPassword.length < 8) {
+		error = "Password must be at least 8 characters";
+		saving = false;
+		return;
+	}
 
-        try {
-            const response = await fetch("/api/auth/change-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    currentPassword,
-                    newPassword,
-                }),
-            });
+	try {
+		const response = await fetch("/api/auth/change-password", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				currentPassword,
+				newPassword,
+			}),
+		});
 
-            if (response.ok) {
-                message = "Password changed successfully!";
-                currentPassword = "";
-                newPassword = "";
-                confirmPassword = "";
-            } else {
-                const data = await response.json();
-                error = data.error || "Failed to change password";
-            }
-        } catch (err) {
-            error = "Failed to change password";
-        } finally {
-            saving = false;
-        }
-    }
+		if (response.ok) {
+			message = "Password changed successfully!";
+			currentPassword = "";
+			newPassword = "";
+			confirmPassword = "";
+		} else {
+			const data = await response.json();
+			error = data.error || "Failed to change password";
+		}
+	} catch (err) {
+		error = "Failed to change password";
+	} finally {
+		saving = false;
+	}
+}
 
-    async function deleteAccount() {
-        if (deleteConfirmText !== "DELETE MY ACCOUNT") {
-            error = "Please type 'DELETE MY ACCOUNT' to confirm";
-            return;
-        }
+async function deleteAccount() {
+	if (deleteConfirmText !== "DELETE MY ACCOUNT") {
+		error = "Please type 'DELETE MY ACCOUNT' to confirm";
+		return;
+	}
 
-        saving = true;
-        error = "";
+	saving = true;
+	error = "";
 
-        try {
-            const response = await fetch("/api/auth/delete-account", {
-                method: "DELETE",
-            });
+	try {
+		const response = await fetch("/api/auth/delete-account", {
+			method: "DELETE",
+		});
 
-            if (response.ok) {
-                window.location.href = "/";
-            } else {
-                const data = await response.json();
-                error = data.error || "Failed to delete account";
-            }
-        } catch (err) {
-            error = "Failed to delete account";
-        } finally {
-            saving = false;
-        }
-    }
+		if (response.ok) {
+			window.location.href = "/";
+		} else {
+			const data = await response.json();
+			error = data.error || "Failed to delete account";
+		}
+	} catch (err) {
+		error = "Failed to delete account";
+	} finally {
+		saving = false;
+	}
+}
 
-    async function resendVerificationEmail() {
-        sendingVerification = true;
-        verificationMessage = "";
-        error = "";
+async function resendVerificationEmail() {
+	sendingVerification = true;
+	verificationMessage = "";
+	error = "";
 
-        try {
-            const response = await fetch("/api/auth/send-verification-email", {
-                method: "POST",
-            });
+	try {
+		const response = await fetch("/api/auth/send-verification-email", {
+			method: "POST",
+		});
 
-            const data = await response.json();
+		const data = await response.json();
 
-            if (response.ok) {
-                verificationMessage = "Verification email sent! Please check your inbox.";
-            } else {
-                error = data.error || "Failed to send verification email";
-            }
-        } catch (err) {
-            error = "Failed to send verification email";
-        } finally {
-            sendingVerification = false;
-        }
-    }
+		if (response.ok) {
+			verificationMessage = "Verification email sent! Please check your inbox.";
+		} else {
+			error = data.error || "Failed to send verification email";
+		}
+	} catch (err) {
+		error = "Failed to send verification email";
+	} finally {
+		sendingVerification = false;
+	}
+}
 </script>
 
 <div class="profile-container">

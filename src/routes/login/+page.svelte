@@ -1,84 +1,84 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
-    import Input from "$lib/components/ui/Input.svelte";
-    import Button from "$lib/components/ui/Button.svelte";
-    import PasskeyLogin from "$lib/components/PasskeyLogin.svelte";
-    import { resolve } from "$app/paths";
+import { onMount } from "svelte";
+import { goto } from "$app/navigation";
+import { resolve } from "$app/paths";
+import { page } from "$app/stores";
+import PasskeyLogin from "$lib/components/PasskeyLogin.svelte";
+import Button from "$lib/components/ui/Button.svelte";
+import Input from "$lib/components/ui/Input.svelte";
 
-    let email: string = $state("");
-    let password: string = $state("");
-    let error: string = $state("");
-    let loading: boolean = $state(false);
-    let redirectUrl: string = $state("");
+let email: string = $state("");
+let password: string = $state("");
+let error: string = $state("");
+let loading: boolean = $state(false);
+let redirectUrl: string = $state("");
 
-    // Validate redirect parameter to prevent open redirect attacks
-    function validateRedirect(redirect: string | null): string {
-        if (!redirect) return "";
-        // Allow internal paths only (must start with /)
-        // This prevents external URLs and XSS attempts
-        if (redirect.startsWith('/') && !redirect.startsWith('//')) {
-            return redirect;
-        }
-        return "";
-    }
+// Validate redirect parameter to prevent open redirect attacks
+function validateRedirect(redirect: string | null): string {
+	if (!redirect) return "";
+	// Allow internal paths only (must start with /)
+	// This prevents external URLs and XSS attempts
+	if (redirect.startsWith("/") && !redirect.startsWith("//")) {
+		return redirect;
+	}
+	return "";
+}
 
-    // Check if user is already logged in and redirect to dashboard
-    onMount(async () => {
-        // Get and validate redirect URL from query string
-        redirectUrl = validateRedirect($page.url.searchParams.get("redirect"));
+// Check if user is already logged in and redirect to dashboard
+onMount(async () => {
+	// Get and validate redirect URL from query string
+	redirectUrl = validateRedirect($page.url.searchParams.get("redirect"));
 
-        try {
-            const response = await fetch("/api/auth/me");
-            if (response.ok) {
-                // User is already authenticated, redirect appropriately
-                if (redirectUrl) {
-                    goto(redirectUrl);
-                } else {
-                    goto(resolve("/"));
-                }
-            }
-        } catch {
-            // User not authenticated, show login form
-            console.log("User not authenticated, showing login form");
-        }
-    });
+	try {
+		const response = await fetch("/api/auth/me");
+		if (response.ok) {
+			// User is already authenticated, redirect appropriately
+			if (redirectUrl) {
+				goto(redirectUrl);
+			} else {
+				goto(resolve("/"));
+			}
+		}
+	} catch {
+		// User not authenticated, show login form
+		console.log("User not authenticated, showing login form");
+	}
+});
 
-    async function handleLogin() {
-        if (!email || !password) {
-            error = "Please fill in all fields";
-            return;
-        }
+async function handleLogin() {
+	if (!email || !password) {
+		error = "Please fill in all fields";
+		return;
+	}
 
-        loading = true;
-        error = "";
+	loading = true;
+	error = "";
 
-        try {
-            const response = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+	try {
+		const response = await fetch("/api/auth/login", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email, password }),
+		});
 
-            const data = await response.json();
+		const data = await response.json();
 
-            if (response.ok) {
-                // Redirect to requested page or dashboard
-                if (redirectUrl) {
-                    window.location.href = redirectUrl;
-                } else {
-                    window.location.href = "/";
-                }
-            } else {
-                error = data.error || "Login failed";
-            }
-        } catch {
-            error = "Network error. Please try again.";
-        } finally {
-            loading = false;
-        }
-    }
+		if (response.ok) {
+			// Redirect to requested page or dashboard
+			if (redirectUrl) {
+				window.location.href = redirectUrl;
+			} else {
+				window.location.href = "/";
+			}
+		} else {
+			error = data.error || "Login failed";
+		}
+	} catch {
+		error = "Network error. Please try again.";
+	} finally {
+		loading = false;
+	}
+}
 </script>
 
 <div class="login-page">

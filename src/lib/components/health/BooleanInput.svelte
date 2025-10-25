@@ -1,18 +1,23 @@
 <script lang="ts">
-    interface Props {
-        question: any;
-        value?: number;
-        disabled?: boolean;
-        onchange?: (value: number) => void;
-    }
+interface Props {
+	question: any;
+	value?: number;
+	disabled?: boolean;
+	onchange?: (value: number) => void;
+}
 
-    const { question, value = undefined, disabled = false, onchange }: Props = $props();
+const {
+	question,
+	value = undefined,
+	disabled = false,
+	onchange,
+}: Props = $props();
 
-    function handleSelection(selectedValue: number) {
-        if (!disabled && onchange) {
-            onchange(selectedValue);
-        }
-    }
+function handleSelection(selectedValue: number) {
+	if (!disabled && onchange) {
+		onchange(selectedValue);
+	}
+}
 </script>
 
 <div class="boolean-input">

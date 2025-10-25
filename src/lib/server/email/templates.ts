@@ -1,5 +1,8 @@
-export function emailVerificationTemplate(verifyUrl: string, userName: string): string {
-  return `
+export function emailVerificationTemplate(
+	verifyUrl: string,
+	userName: string,
+): string {
+	return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -27,8 +30,11 @@ export function emailVerificationTemplate(verifyUrl: string, userName: string): 
   `;
 }
 
-export function passwordResetTemplate(resetUrl: string, userName: string): string {
-  return `
+export function passwordResetTemplate(
+	resetUrl: string,
+	userName: string,
+): string {
+	return `
     <!DOCTYPE html>
     <html>
     <head>

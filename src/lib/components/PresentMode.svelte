@@ -1,458 +1,431 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { fade, scale } from "svelte/transition";
-    import Card from "$lib/components/Card.svelte";
-    import { getUserDisplayName } from "$lib/utils/animalNames";
-    import { getSceneCapability } from "$lib/utils/scene-capability";
-    import { marked } from 'marked';
-    import { toastStore } from "$lib/stores/toast";
-    import type {
-        Board,
-        Scene,
-        Card as CardType,
-        Comment,
-        User,
-    } from "$lib/types";
+import { marked } from "marked";
+import { onMount } from "svelte";
+import { fade, scale } from "svelte/transition";
+import Card from "$lib/components/Card.svelte";
+import { toastStore } from "$lib/stores/toast";
+import type { Board, Card as CardType, Comment, Scene, User } from "$lib/types";
+import { getUserDisplayName } from "$lib/utils/animalNames";
+import { getSceneCapability } from "$lib/utils/scene-capability";
 
-    // Configure marked for GitHub-flavored markdown
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
-    });
+// Configure marked for GitHub-flavored markdown
+marked.setOptions({
+	gfm: true,
+	breaks: true,
+});
 
-    // Extended Card type with enriched data
-    interface EnrichedCard extends CardType {
-        reactions?: Record<string, number>;
-        userName?: string;
-    }
+// Extended Card type with enriched data
+interface EnrichedCard extends CardType {
+	reactions?: Record<string, number>;
+	userName?: string;
+}
 
-    // Extended Comment type
-    interface EnrichedComment extends Comment {
-        isReaction?: boolean;
-    }
+// Extended Comment type
+interface EnrichedComment extends Comment {
+	isReaction?: boolean;
+}
 
-    interface Props {
-        board: Board;
-        scene: Scene;
-        currentUser: User;
-        cards?: EnrichedCard[];
-        selectedCard?: EnrichedCard | null;
-        comments?: EnrichedComment[];
-        agreements?: EnrichedComment[];
-        isAdmin?: boolean;
-        isFacilitator?: boolean;
-        notesLockStatus?: {
-            locked: boolean;
-            locked_by: string | null;
-        } | null;
-        onVoteCard?: (cardId: string, delta: 1 | -1) => void;
-        onCommentCard?: (cardId: string) => void;
-        onDeleteCard?: (cardId: string) => void;
-        onEditCard?: (cardId: string) => void;
-        onReaction?: (cardId: string, emoji: string) => void;
-    }
+interface Props {
+	board: Board;
+	scene: Scene;
+	currentUser: User;
+	cards?: EnrichedCard[];
+	selectedCard?: EnrichedCard | null;
+	comments?: EnrichedComment[];
+	agreements?: EnrichedComment[];
+	isAdmin?: boolean;
+	isFacilitator?: boolean;
+	notesLockStatus?: {
+		locked: boolean;
+		locked_by: string | null;
+	} | null;
+	onVoteCard?: (cardId: string, delta: 1 | -1) => void;
+	onCommentCard?: (cardId: string) => void;
+	onDeleteCard?: (cardId: string) => void;
+	onEditCard?: (cardId: string) => void;
+	onReaction?: (cardId: string, emoji: string) => void;
+}
 
-    let {
-        board,
-        scene,
-        currentUser,
-        cards = [],
-        selectedCard = null,
-        comments = [],
-        agreements = [],
-        isAdmin = false,
-        isFacilitator = false,
-        notesLockStatus = null,
-        onVoteCard,
-        onCommentCard,
-        onDeleteCard,
-        onEditCard,
-        onReaction,
-    }: Props = $props();
+let {
+	board,
+	scene,
+	currentUser,
+	cards = [],
+	selectedCard = null,
+	comments = [],
+	agreements = [],
+	isAdmin = false,
+	isFacilitator = false,
+	notesLockStatus = null,
+	onVoteCard,
+	onCommentCard,
+	onDeleteCard,
+	onEditCard,
+	onReaction,
+}: Props = $props();
 
-    let notesContent = $state("");
-    let notesLocked = $state(false);
-    let notesLockedBy = $state<string | null>(null);
-    let hasTyped = $state(false);
-    let acquiringLock = $state(false);
-    let textareaHasFocus = $state(false);
-    let newCommentContent = $state("");
-    let cardsListElement = $state<HTMLElement>();
-    let notesTextarea = $state<HTMLTextAreaElement>();
-    let autoSaveTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+let notesContent = $state("");
+let notesLocked = $state(false);
+let notesLockedBy = $state<string | null>(null);
+let hasTyped = $state(false);
+let acquiringLock = $state(false);
+let textareaHasFocus = $state(false);
+let newCommentContent = $state("");
+let cardsListElement = $state<HTMLElement>();
+let notesTextarea = $state<HTMLTextAreaElement>();
+let autoSaveTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
-    const canSelectCards = isAdmin || isFacilitator;
+const canSelectCards = isAdmin || isFacilitator;
 
-    // Render selected card content as markdown
-    const renderedCardContent = $derived(selectedCard ? marked.parse(selectedCard.content) as string : '');
+// Render selected card content as markdown
+const renderedCardContent = $derived(
+	selectedCard ? (marked.parse(selectedCard.content) as string) : "",
+);
 
-    // Check if comments/notes are allowed based on scene capabilities and board status
-    const canComment = $derived(
-        getSceneCapability(scene, board.status, 'allow_comments')
-    );
+// Check if comments/notes are allowed based on scene capabilities and board status
+const canComment = $derived(
+	getSceneCapability(scene, board.status, "allow_comments"),
+);
 
-    const showComments = $derived(
-        getSceneCapability(scene, board.status, 'show_comments')
-    );
+const showComments = $derived(
+	getSceneCapability(scene, board.status, "show_comments"),
+);
 
-    const showVotes = $derived(
-        getSceneCapability(scene, board.status, 'show_votes')
-    );
+const showVotes = $derived(
+	getSceneCapability(scene, board.status, "show_votes"),
+);
 
-    // Filter reactions from regular comments
-    const regularComments = $derived(
-        comments.filter((comment) => !comment.isReaction),
-    );
+// Filter reactions from regular comments
+const regularComments = $derived(
+	comments.filter((comment) => !comment.isReaction),
+);
 
-    // Get reactions for the selected card
-    const cardReactions = $derived(selectedCard?.reactions || {});
+// Get reactions for the selected card
+const cardReactions = $derived(selectedCard?.reactions || {});
 
-    // Initialize notes content when selected card changes (only if user isn't actively editing)
-    $effect(() => {
-        if (selectedCard && !hasTyped && !acquiringLock && !textareaHasFocus) {
-            notesContent = selectedCard.notes || "";
-            notesLocked = false;
-            notesLockedBy = null;
-        }
-    });
+// Initialize notes content when selected card changes (only if user isn't actively editing)
+$effect(() => {
+	if (selectedCard && !hasTyped && !acquiringLock && !textareaHasFocus) {
+		notesContent = selectedCard.notes || "";
+		notesLocked = false;
+		notesLockedBy = null;
+	}
+});
 
-    // Auto-resize textarea when content changes
-    $effect(() => {
-        if (notesTextarea && notesContent !== undefined) {
-            setTimeout(() => {
-                if (notesTextarea) {
-                    autoResizeTextarea(notesTextarea);
-                }
-            }, 0);
-        }
-    });
+// Auto-resize textarea when content changes
+$effect(() => {
+	if (notesTextarea && notesContent !== undefined) {
+		setTimeout(() => {
+			if (notesTextarea) {
+				autoResizeTextarea(notesTextarea);
+			}
+		}, 0);
+	}
+});
 
-    // Update lock state from SSE messages - NEVER update notesContent if user is typing
-    $effect(() => {
-        if (notesLockStatus !== null && selectedCard) {
-            const lockOwner = notesLockStatus.locked_by;
-            const isCurrentUserLock =
-                lockOwner === (currentUser.name || currentUser.email);
+// Update lock state from SSE messages - NEVER update notesContent if user is typing
+$effect(() => {
+	if (notesLockStatus !== null && selectedCard) {
+		const lockOwner = notesLockStatus.locked_by;
+		const isCurrentUserLock =
+			lockOwner === (currentUser.name || currentUser.email);
 
-            if (notesLockStatus.locked) {
-                if (isCurrentUserLock) {
-                    // Current user has the lock - they can edit freely
-                    notesLocked = false;
-                    notesLockedBy = null;
-                    if (!hasTyped && !acquiringLock) {
-                        hasTyped = true;
-                    }
-                    // ABSOLUTELY NEVER update notesContent when current user has the lock
-                } else {
-                    // Someone else has the lock - force readonly
-                    notesLocked = true;
-                    notesLockedBy = lockOwner;
-                    hasTyped = false;
-                    // Only update content if we're switching from no lock to locked by other
-                    // and user wasn't in the middle of typing
-                    if (!acquiringLock) {
-                        notesContent = selectedCard.notes || "";
-                    }
-                }
-            } else {
-                // No lock active
-                notesLocked = false;
-                notesLockedBy = null;
-                // NEVER update content if user is typing, acquiring lock, or has focus
-                // Only update if user has completely finished their session
-                if (
-                    !hasTyped &&
-                    !acquiringLock &&
-                    !notesLocked &&
-                    !textareaHasFocus
-                ) {
-                    notesContent = selectedCard.notes || "";
-                }
-                // Only reset hasTyped if user has completely stopped editing
-                if (
-                    hasTyped &&
-                    !acquiringLock &&
-                    !notesLocked &&
-                    !textareaHasFocus
-                ) {
-                    hasTyped = false;
-                }
-            }
-        }
-    });
+		if (notesLockStatus.locked) {
+			if (isCurrentUserLock) {
+				// Current user has the lock - they can edit freely
+				notesLocked = false;
+				notesLockedBy = null;
+				if (!hasTyped && !acquiringLock) {
+					hasTyped = true;
+				}
+				// ABSOLUTELY NEVER update notesContent when current user has the lock
+			} else {
+				// Someone else has the lock - force readonly
+				notesLocked = true;
+				notesLockedBy = lockOwner;
+				hasTyped = false;
+				// Only update content if we're switching from no lock to locked by other
+				// and user wasn't in the middle of typing
+				if (!acquiringLock) {
+					notesContent = selectedCard.notes || "";
+				}
+			}
+		} else {
+			// No lock active
+			notesLocked = false;
+			notesLockedBy = null;
+			// NEVER update content if user is typing, acquiring lock, or has focus
+			// Only update if user has completely finished their session
+			if (!hasTyped && !acquiringLock && !notesLocked && !textareaHasFocus) {
+				notesContent = selectedCard.notes || "";
+			}
+			// Only reset hasTyped if user has completely stopped editing
+			if (hasTyped && !acquiringLock && !notesLocked && !textareaHasFocus) {
+				hasTyped = false;
+			}
+		}
+	}
+});
 
-    async function selectCard(cardId: string) {
-        if (!canSelectCards) return;
+async function selectCard(cardId: string) {
+	if (!canSelectCards) return;
 
-        // Check if someone else is editing the current card's notes
-        if (notesLocked && notesLockedBy && selectedCard) {
-            toastStore.warning(
-                `${notesLockedBy} is currently editing notes for this card. Switch anyway?`,
-                {
-                    autoHide: false,
-                    actions: [
-                        {
-                            label: 'Switch',
-                            onClick: async () => {
-                                // Save any unsaved notes before switching
-                                if (hasTyped && selectedCard) {
-                                    if (autoSaveTimer) {
-                                        clearTimeout(autoSaveTimer);
-                                        autoSaveTimer = null;
-                                    }
-                                    await saveNotesToCard(selectedCard.id, notesContent);
-                                }
-                                await performCardSwitch(cardId);
-                            },
-                            variant: 'primary'
-                        },
-                        {
-                            label: 'Cancel',
-                            onClick: () => {},
-                            variant: 'secondary'
-                        }
-                    ]
-                }
-            );
-            return;
-        }
+	// Check if someone else is editing the current card's notes
+	if (notesLocked && notesLockedBy && selectedCard) {
+		toastStore.warning(
+			`${notesLockedBy} is currently editing notes for this card. Switch anyway?`,
+			{
+				autoHide: false,
+				actions: [
+					{
+						label: "Switch",
+						onClick: async () => {
+							// Save any unsaved notes before switching
+							if (hasTyped && selectedCard) {
+								if (autoSaveTimer) {
+									clearTimeout(autoSaveTimer);
+									autoSaveTimer = null;
+								}
+								await saveNotesToCard(selectedCard.id, notesContent);
+							}
+							await performCardSwitch(cardId);
+						},
+						variant: "primary",
+					},
+					{
+						label: "Cancel",
+						onClick: () => {},
+						variant: "secondary",
+					},
+				],
+			},
+		);
+		return;
+	}
 
-        // If user has unsaved changes, save them before switching cards
-        if (hasTyped && selectedCard) {
-            // Clear any pending auto-save timer
-            if (autoSaveTimer) {
-                clearTimeout(autoSaveTimer);
-                autoSaveTimer = null;
-            }
-            // Save the notes to the current card before switching
-            await saveNotesToCard(selectedCard.id, notesContent);
-        }
+	// If user has unsaved changes, save them before switching cards
+	if (hasTyped && selectedCard) {
+		// Clear any pending auto-save timer
+		if (autoSaveTimer) {
+			clearTimeout(autoSaveTimer);
+			autoSaveTimer = null;
+		}
+		// Save the notes to the current card before switching
+		await saveNotesToCard(selectedCard.id, notesContent);
+	}
 
-        await performCardSwitch(cardId);
-    }
+	await performCardSwitch(cardId);
+}
 
-    async function performCardSwitch(cardId: string) {
-        try {
-            const response = await fetch(
-                `/api/scenes/${scene.id}/select-card`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ card_id: cardId }),
-                },
-            );
+async function performCardSwitch(cardId: string) {
+	try {
+		const response = await fetch(`/api/scenes/${scene.id}/select-card`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ card_id: cardId }),
+		});
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.error("Failed to select card:", error.error);
-            }
-        } catch (error) {
-            console.error("Error selecting card:", error);
-        }
-    }
+		if (!response.ok) {
+			const error = await response.json();
+			console.error("Failed to select card:", error.error);
+		}
+	} catch (error) {
+		console.error("Error selecting card:", error);
+	}
+}
 
-    async function acquireNotesLock() {
-        if (!selectedCard || notesLocked || hasTyped || acquiringLock || !canComment) return;
+async function acquireNotesLock() {
+	if (!selectedCard || notesLocked || hasTyped || acquiringLock || !canComment)
+		return;
 
-        try {
-            acquiringLock = true;
-            const response = await fetch(
-                `/api/cards/${selectedCard.id}/notes/lock`,
-                {
-                    method: "POST",
-                },
-            );
+	try {
+		acquiringLock = true;
+		const response = await fetch(`/api/cards/${selectedCard.id}/notes/lock`, {
+			method: "POST",
+		});
 
-            const result = await response.json();
-            if (result.success) {
-                // Current user now has the lock - they can edit freely
-                notesLocked = false;
-                notesLockedBy = null;
-                hasTyped = true;
-                // DO NOT update notesContent - preserve user's input
-            } else {
-                // Someone else has the lock (403 response)
-                if (
-                    result.present_mode_data &&
-                    result.present_mode_data.notes_lock
-                ) {
-                    notesLocked = result.present_mode_data.notes_lock.locked;
-                    notesLockedBy =
-                        result.present_mode_data.notes_lock.locked_by;
-                } else {
-                    notesLocked = true;
-                    notesLockedBy = result.locked_by;
-                }
-                hasTyped = false;
-                // Force overwrite content when lock acquisition fails - show server state
-                notesContent = selectedCard?.notes || "";
-            }
-        } catch (error) {
-            console.error("Error acquiring notes lock:", error);
-        } finally {
-            acquiringLock = false;
-        }
-    }
+		const result = await response.json();
+		if (result.success) {
+			// Current user now has the lock - they can edit freely
+			notesLocked = false;
+			notesLockedBy = null;
+			hasTyped = true;
+			// DO NOT update notesContent - preserve user's input
+		} else {
+			// Someone else has the lock (403 response)
+			if (result.present_mode_data && result.present_mode_data.notes_lock) {
+				notesLocked = result.present_mode_data.notes_lock.locked;
+				notesLockedBy = result.present_mode_data.notes_lock.locked_by;
+			} else {
+				notesLocked = true;
+				notesLockedBy = result.locked_by;
+			}
+			hasTyped = false;
+			// Force overwrite content when lock acquisition fails - show server state
+			notesContent = selectedCard?.notes || "";
+		}
+	} catch (error) {
+		console.error("Error acquiring notes lock:", error);
+	} finally {
+		acquiringLock = false;
+	}
+}
 
-    function autoResizeTextarea(textarea: HTMLTextAreaElement) {
-        textarea.style.height = "auto";
-        textarea.style.height = Math.max(textarea.scrollHeight, 150) + "px";
-    }
+function autoResizeTextarea(textarea: HTMLTextAreaElement) {
+	textarea.style.height = "auto";
+	textarea.style.height = Math.max(textarea.scrollHeight, 150) + "px";
+}
 
-    async function onNotesInput(event: Event) {
-        // Auto-resize textarea
-        const textarea = event.target as HTMLTextAreaElement;
-        autoResizeTextarea(textarea);
+async function onNotesInput(event: Event) {
+	// Auto-resize textarea
+	const textarea = event.target as HTMLTextAreaElement;
+	autoResizeTextarea(textarea);
 
-        // Acquire lock on first keystroke
-        if (!hasTyped && !notesLocked && !acquiringLock) {
-            await acquireNotesLock();
-        }
+	// Acquire lock on first keystroke
+	if (!hasTyped && !notesLocked && !acquiringLock) {
+		await acquireNotesLock();
+	}
 
-        // Clear existing auto-save timer
-        if (autoSaveTimer) {
-            clearTimeout(autoSaveTimer);
-        }
+	// Clear existing auto-save timer
+	if (autoSaveTimer) {
+		clearTimeout(autoSaveTimer);
+	}
 
-        // Set new auto-save timer for 3 seconds
-        autoSaveTimer = setTimeout(() => {
-            saveNotes();
-        }, 3000);
-    }
+	// Set new auto-save timer for 3 seconds
+	autoSaveTimer = setTimeout(() => {
+		saveNotes();
+	}, 3000);
+}
 
-    onMount(() => {
-        if (notesTextarea && notesContent) {
-            autoResizeTextarea(notesTextarea);
-        }
+onMount(() => {
+	if (notesTextarea && notesContent) {
+		autoResizeTextarea(notesTextarea);
+	}
 
-        // Cleanup: clear auto-save timer when component is unmounted
-        return () => {
-            if (autoSaveTimer) {
-                clearTimeout(autoSaveTimer);
-            }
-        };
-    });
+	// Cleanup: clear auto-save timer when component is unmounted
+	return () => {
+		if (autoSaveTimer) {
+			clearTimeout(autoSaveTimer);
+		}
+	};
+});
 
-    async function saveNotesToCard(cardId: string, content: string) {
-        try {
-            const response = await fetch(
-                `/api/cards/${cardId}/notes`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ content }),
-                },
-            );
+async function saveNotesToCard(cardId: string, content: string) {
+	try {
+		const response = await fetch(`/api/cards/${cardId}/notes`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content }),
+		});
 
-            if (response.ok) {
-                // Reset editing state - user must type again to edit
-                hasTyped = false;
-                notesLocked = false;
-                notesLockedBy = null;
+		if (response.ok) {
+			// Reset editing state - user must type again to edit
+			hasTyped = false;
+			notesLocked = false;
+			notesLockedBy = null;
 
-                // Update the card's notes if it's still the selected card
-                if (selectedCard && selectedCard.id === cardId) {
-                    selectedCard.notes = content;
-                }
-                // Content and lock status will be updated via SSE broadcast
-            }
-        } catch (error) {
-            console.error("Error saving notes:", error);
-        }
-    }
+			// Update the card's notes if it's still the selected card
+			if (selectedCard && selectedCard.id === cardId) {
+				selectedCard.notes = content;
+			}
+			// Content and lock status will be updated via SSE broadcast
+		}
+	} catch (error) {
+		console.error("Error saving notes:", error);
+	}
+}
 
-    async function saveNotes() {
-        if (!selectedCard || !hasTyped) return;
+async function saveNotes() {
+	if (!selectedCard || !hasTyped) return;
 
-        // Clear any pending auto-save timer
-        if (autoSaveTimer) {
-            clearTimeout(autoSaveTimer);
-            autoSaveTimer = null;
-        }
+	// Clear any pending auto-save timer
+	if (autoSaveTimer) {
+		clearTimeout(autoSaveTimer);
+		autoSaveTimer = null;
+	}
 
-        await saveNotesToCard(selectedCard.id, notesContent);
-    }
+	await saveNotesToCard(selectedCard.id, notesContent);
+}
 
-    async function toggleAgreement(commentId: string, isAgreement: boolean) {
-        try {
-            const response = await fetch(
-                `/api/comments/${commentId}/toggle-agreement`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ is_agreement: !isAgreement }),
-                },
-            );
+async function toggleAgreement(commentId: string, isAgreement: boolean) {
+	try {
+		const response = await fetch(
+			`/api/comments/${commentId}/toggle-agreement`,
+			{
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ is_agreement: !isAgreement }),
+			},
+		);
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.error("Failed to toggle agreement:", error.error);
-            }
-        } catch (error) {
-            console.error("Error toggling agreement:", error);
-        }
-    }
+		if (!response.ok) {
+			const error = await response.json();
+			console.error("Failed to toggle agreement:", error.error);
+		}
+	} catch (error) {
+		console.error("Error toggling agreement:", error);
+	}
+}
 
-    async function addComment() {
-        if (!selectedCard || !newCommentContent.trim() || !canComment)
-            return;
+async function addComment() {
+	if (!selectedCard || !newCommentContent.trim() || !canComment) return;
 
-        try {
-            const response = await fetch("/api/comments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    card_id: selectedCard.id,
-                    content: newCommentContent,
-                    is_agreement: false,
-                }),
-            });
+	try {
+		const response = await fetch("/api/comments", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				card_id: selectedCard.id,
+				content: newCommentContent,
+				is_agreement: false,
+			}),
+		});
 
-            if (response.ok) {
-                newCommentContent = "";
-            }
-        } catch (error) {
-            console.error("Error adding comment:", error);
-        }
-    }
+		if (response.ok) {
+			newCommentContent = "";
+		}
+	} catch (error) {
+		console.error("Error adding comment:", error);
+	}
+}
 
-    async function addReaction(emoji: string) {
-        if (!selectedCard || !canComment) return;
+async function addReaction(emoji: string) {
+	if (!selectedCard || !canComment) return;
 
-        try {
-            const response = await fetch("/api/comments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    card_id: selectedCard.id,
-                    content: emoji,
-                    is_reaction: true,
-                }),
-            });
+	try {
+		const response = await fetch("/api/comments", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				card_id: selectedCard.id,
+				content: emoji,
+				is_reaction: true,
+			}),
+		});
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.error("Failed to add reaction:", error.error);
-            }
-        } catch (error) {
-            console.error("Error adding reaction:", error);
-        }
-    }
+		if (!response.ok) {
+			const error = await response.json();
+			console.error("Failed to add reaction:", error.error);
+		}
+	} catch (error) {
+		console.error("Error adding reaction:", error);
+	}
+}
 
-    async function deleteComment(commentId: string) {
-        try {
-            const response = await fetch(`/api/comments/${commentId}`, {
-                method: "DELETE",
-            });
+async function deleteComment(commentId: string) {
+	try {
+		const response = await fetch(`/api/comments/${commentId}`, {
+			method: "DELETE",
+		});
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.error("Failed to delete comment:", error.error);
-            }
-        } catch (error) {
-            console.error("Error deleting comment:", error);
-        }
-    }
+		if (!response.ok) {
+			const error = await response.json();
+			console.error("Failed to delete comment:", error.error);
+		}
+	} catch (error) {
+		console.error("Error deleting comment:", error);
+	}
+}
 </script>
 
 <div class="present-mode">

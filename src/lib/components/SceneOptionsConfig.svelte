@@ -1,28 +1,32 @@
 <script lang="ts">
-  import { SCENE_MODE_FLAGS, FLAG_LABELS, type SceneFlag } from '$lib/scene-flags';
+import {
+	FLAG_LABELS,
+	SCENE_MODE_FLAGS,
+	type SceneFlag,
+} from "$lib/scene-flags";
 
-  interface Props {
-    sceneMode: string;
-    selectedFlags: string[];
-    onchange?: () => void;
-  }
+interface Props {
+	sceneMode: string;
+	selectedFlags: string[];
+	onchange?: () => void;
+}
 
-  let { sceneMode, selectedFlags = $bindable(), onchange }: Props = $props();
+let { sceneMode, selectedFlags = $bindable(), onchange }: Props = $props();
 
-  let availableFlags = $derived(SCENE_MODE_FLAGS[sceneMode] || []);
+let availableFlags = $derived(SCENE_MODE_FLAGS[sceneMode] || []);
 
-  function toggleFlag(flag: string) {
-    if (selectedFlags.includes(flag)) {
-      selectedFlags = selectedFlags.filter(f => f !== flag);
-    } else {
-      selectedFlags = [...selectedFlags, flag];
-    }
+function toggleFlag(flag: string) {
+	if (selectedFlags.includes(flag)) {
+		selectedFlags = selectedFlags.filter((f) => f !== flag);
+	} else {
+		selectedFlags = [...selectedFlags, flag];
+	}
 
-    // Call the onchange callback if provided
-    if (onchange) {
-      onchange();
-    }
-  }
+	// Call the onchange callback if provided
+	if (onchange) {
+		onchange();
+	}
+}
 </script>
 
 {#if availableFlags.length > 0}

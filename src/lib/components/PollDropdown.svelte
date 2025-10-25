@@ -1,115 +1,115 @@
 <script lang="ts">
-	interface Props {
-		visible?: boolean;
-		onStartPoll: (config: PollConfig) => void;
-		onClose: () => void;
-	}
+interface Props {
+	visible?: boolean;
+	onStartPoll: (config: PollConfig) => void;
+	onClose: () => void;
+}
 
-	export interface PollConfig {
-		type: 'timer' | 'roman' | 'fist-of-five' | 'multiple-choice';
-		question?: string;
-		choices?: string[];
-		durationSeconds: number;
-	}
+export interface PollConfig {
+	type: "timer" | "roman" | "fist-of-five" | "multiple-choice";
+	question?: string;
+	choices?: string[];
+	durationSeconds: number;
+}
 
-	let { visible = false, onStartPoll, onClose }: Props = $props();
+let { visible = false, onStartPoll, onClose }: Props = $props();
 
-	let selectedType = $state<PollConfig['type']>('timer');
-	let question = $state('');
-	let choices = $state<string[]>(['', '']);
-	let questionError = $state(false);
-	let choicesError = $state(false);
+let selectedType = $state<PollConfig["type"]>("timer");
+let question = $state("");
+let choices = $state<string[]>(["", ""]);
+let questionError = $state(false);
+let choicesError = $state(false);
 
-	// Add a new choice field when the last fields are filled
-	$effect(() => {
-		if (selectedType === 'multiple-choice') {
-			const filledChoices = choices.filter(c => c.trim() !== '');
-			const hasEmptyChoices = choices.some(c => c.trim() === '');
+// Add a new choice field when the last fields are filled
+$effect(() => {
+	if (selectedType === "multiple-choice") {
+		const filledChoices = choices.filter((c) => c.trim() !== "");
+		const hasEmptyChoices = choices.some((c) => c.trim() === "");
 
-			if (filledChoices.length >= 2 && !hasEmptyChoices && choices.length < 5) {
-				choices = [...choices, ''];
-			}
+		if (filledChoices.length >= 2 && !hasEmptyChoices && choices.length < 5) {
+			choices = [...choices, ""];
 		}
-	});
-
-	function selectPollType(type: PollConfig['type']) {
-		selectedType = type;
-		// Reset errors when changing type
-		questionError = false;
-		choicesError = false;
 	}
+});
 
-	function handleDurationClick(seconds: number) {
-		// Validate based on poll type
-		if (selectedType !== 'timer') {
-			if (!question.trim()) {
-				questionError = true;
+function selectPollType(type: PollConfig["type"]) {
+	selectedType = type;
+	// Reset errors when changing type
+	questionError = false;
+	choicesError = false;
+}
+
+function handleDurationClick(seconds: number) {
+	// Validate based on poll type
+	if (selectedType !== "timer") {
+		if (!question.trim()) {
+			questionError = true;
+			return;
+		}
+
+		if (selectedType === "multiple-choice") {
+			const validChoices = choices.filter((c) => c.trim() !== "");
+			if (validChoices.length < 2) {
+				choicesError = true;
 				return;
 			}
-
-			if (selectedType === 'multiple-choice') {
-				const validChoices = choices.filter(c => c.trim() !== '');
-				if (validChoices.length < 2) {
-					choicesError = true;
-					return;
-				}
-			}
 		}
+	}
 
-		// Build poll config
-		const config: PollConfig = {
-			type: selectedType,
-			durationSeconds: seconds
-		};
+	// Build poll config
+	const config: PollConfig = {
+		type: selectedType,
+		durationSeconds: seconds,
+	};
 
-		if (selectedType !== 'timer') {
-			config.question = question.trim();
+	if (selectedType !== "timer") {
+		config.question = question.trim();
 
-			if (selectedType === 'multiple-choice') {
-				config.choices = choices.filter(c => c.trim() !== '');
-			}
+		if (selectedType === "multiple-choice") {
+			config.choices = choices.filter((c) => c.trim() !== "");
 		}
+	}
 
-		onStartPoll(config);
+	onStartPoll(config);
+	resetForm();
+}
+
+function handleQuestionInput() {
+	if (questionError && question.trim()) {
+		questionError = false;
+	}
+}
+
+function handleChoiceInput(index: number) {
+	if (choicesError) {
+		const validChoices = choices.filter((c) => c.trim() !== "");
+		if (validChoices.length >= 2) {
+			choicesError = false;
+		}
+	}
+}
+
+function resetForm() {
+	selectedType = "timer";
+	question = "";
+	choices = ["", ""];
+	questionError = false;
+	choicesError = false;
+}
+
+function handleBackdropClick(event: MouseEvent) {
+	if (event.target === event.currentTarget) {
+		onClose();
 		resetForm();
 	}
+}
 
-	function handleQuestionInput() {
-		if (questionError && question.trim()) {
-			questionError = false;
-		}
+function handleBackdropKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape") {
+		onClose();
+		resetForm();
 	}
-
-	function handleChoiceInput(index: number) {
-		if (choicesError) {
-			const validChoices = choices.filter(c => c.trim() !== '');
-			if (validChoices.length >= 2) {
-				choicesError = false;
-			}
-		}
-	}
-
-	function resetForm() {
-		selectedType = 'timer';
-		question = '';
-		choices = ['', ''];
-		questionError = false;
-		choicesError = false;
-	}
-
-	function handleBackdropClick(event: MouseEvent) {
-		if (event.target === event.currentTarget) {
-			onClose();
-			resetForm();
-		}
-	}
-
-	function handleBackdropKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
-			onClose();
-			resetForm();
-		}
-	}
+}
 </script>
 
 {#if visible}

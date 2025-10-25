@@ -1,247 +1,262 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Icon from "./ui/Icon.svelte";
-    import { toastStore } from "$lib/stores/toast";
+import { onMount } from "svelte";
+import { toastStore } from "$lib/stores/toast";
+import Icon from "./ui/Icon.svelte";
 
-    interface Props {
-        sceneId: string;
-    }
+interface Props {
+	sceneId: string;
+}
 
-    const { sceneId }: Props = $props();
+const { sceneId }: Props = $props();
 
-    let questions = $state<any[]>([]);
-    let presets = $state<any[]>([]);
-    let loading = $state(true);
-    let error = $state<string | null>(null);
-    let draggedQuestionId = $state<string | null>(null);
-    let dragOverQuestionId = $state<string | null>(null);
-    let showPresetDropdown = $state(false);
-    let applyingPreset = $state(false);
+let questions = $state<any[]>([]);
+let presets = $state<any[]>([]);
+let loading = $state(true);
+let error = $state<string | null>(null);
+let draggedQuestionId = $state<string | null>(null);
+let dragOverQuestionId = $state<string | null>(null);
+let showPresetDropdown = $state(false);
+let applyingPreset = $state(false);
 
-    const UNWRITTEN_QUESTION = "UNWRITTEN QUESTION";
+const UNWRITTEN_QUESTION = "UNWRITTEN QUESTION";
 
-    async function loadQuestions() {
-        try {
-            loading = true;
-            error = null;
+async function loadQuestions() {
+	try {
+		loading = true;
+		error = null;
 
-            const res = await fetch(`/api/scenes/${sceneId}/health-questions`);
-            const data = await res.json();
+		const res = await fetch(`/api/scenes/${sceneId}/health-questions`);
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to load questions');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to load questions");
+		}
 
-            questions = data.questions;
-        } catch (err) {
-            console.error('Failed to load health questions:', err);
-            error = err instanceof Error ? err.message : 'Failed to load questions';
-            toastStore.error('Failed to load questions');
-        } finally {
-            loading = false;
-        }
-    }
+		questions = data.questions;
+	} catch (err) {
+		console.error("Failed to load health questions:", err);
+		error = err instanceof Error ? err.message : "Failed to load questions";
+		toastStore.error("Failed to load questions");
+	} finally {
+		loading = false;
+	}
+}
 
-    async function loadPresets() {
-        try {
-            const res = await fetch('/api/health-question-presets');
-            const data = await res.json();
+async function loadPresets() {
+	try {
+		const res = await fetch("/api/health-question-presets");
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to load presets');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to load presets");
+		}
 
-            presets = data.presets;
-        } catch (err) {
-            console.error('Failed to load presets:', err);
-        }
-    }
+		presets = data.presets;
+	} catch (err) {
+		console.error("Failed to load presets:", err);
+	}
+}
 
-    async function addQuestion() {
-        try {
-            const res = await fetch(`/api/scenes/${sceneId}/health-questions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: UNWRITTEN_QUESTION,
-                    questionType: 'range1to5'
-                })
-            });
+async function addQuestion() {
+	try {
+		const res = await fetch(`/api/scenes/${sceneId}/health-questions`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				question: UNWRITTEN_QUESTION,
+				questionType: "range1to5",
+			}),
+		});
 
-            const data = await res.json();
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to create question');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to create question");
+		}
 
-            await loadQuestions();
-            toastStore.success('Question added');
-        } catch (err) {
-            console.error('Failed to create question:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to create question');
-        }
-    }
+		await loadQuestions();
+		toastStore.success("Question added");
+	} catch (err) {
+		console.error("Failed to create question:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to create question",
+		);
+	}
+}
 
-    async function updateQuestion(questionId: string, updates: any) {
-        try {
-            const res = await fetch(`/api/health-questions/${questionId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
+async function updateQuestion(questionId: string, updates: any) {
+	try {
+		const res = await fetch(`/api/health-questions/${questionId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(updates),
+		});
 
-            const data = await res.json();
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to update question');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to update question");
+		}
 
-            await loadQuestions();
-        } catch (err) {
-            console.error('Failed to update question:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to update question');
-        }
-    }
+		await loadQuestions();
+	} catch (err) {
+		console.error("Failed to update question:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to update question",
+		);
+	}
+}
 
-    async function deleteQuestion(questionId: string) {
-        try {
-            const res = await fetch(`/api/health-questions/${questionId}`, {
-                method: 'DELETE'
-            });
+async function deleteQuestion(questionId: string) {
+	try {
+		const res = await fetch(`/api/health-questions/${questionId}`, {
+			method: "DELETE",
+		});
 
-            const data = await res.json();
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to delete question');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to delete question");
+		}
 
-            await loadQuestions();
-            toastStore.success('Question deleted');
-        } catch (err) {
-            console.error('Failed to delete question:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to delete question');
-        }
-    }
+		await loadQuestions();
+		toastStore.success("Question deleted");
+	} catch (err) {
+		console.error("Failed to delete question:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to delete question",
+		);
+	}
+}
 
-    async function reorderQuestions() {
-        if (!draggedQuestionId || !dragOverQuestionId || draggedQuestionId === dragOverQuestionId) return;
+async function reorderQuestions() {
+	if (
+		!draggedQuestionId ||
+		!dragOverQuestionId ||
+		draggedQuestionId === dragOverQuestionId
+	)
+		return;
 
-        const draggedIndex = questions.findIndex(q => q.id === draggedQuestionId);
-        const dragOverIndex = questions.findIndex(q => q.id === dragOverQuestionId);
+	const draggedIndex = questions.findIndex((q) => q.id === draggedQuestionId);
+	const dragOverIndex = questions.findIndex((q) => q.id === dragOverQuestionId);
 
-        if (draggedIndex === -1 || dragOverIndex === -1) return;
+	if (draggedIndex === -1 || dragOverIndex === -1) return;
 
-        // Reorder locally
-        const newQuestions = [...questions];
-        const [draggedQuestion] = newQuestions.splice(draggedIndex, 1);
-        newQuestions.splice(dragOverIndex, 0, draggedQuestion);
-        questions = newQuestions;
+	// Reorder locally
+	const newQuestions = [...questions];
+	const [draggedQuestion] = newQuestions.splice(draggedIndex, 1);
+	newQuestions.splice(dragOverIndex, 0, draggedQuestion);
+	questions = newQuestions;
 
-        // Send update to server
-        try {
-            const questionIds = newQuestions.map(q => q.id);
-            const res = await fetch(`/api/scenes/${sceneId}/health-questions/reorder`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ questionIds })
-            });
+	// Send update to server
+	try {
+		const questionIds = newQuestions.map((q) => q.id);
+		const res = await fetch(`/api/scenes/${sceneId}/health-questions/reorder`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ questionIds }),
+		});
 
-            const data = await res.json();
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to reorder questions');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to reorder questions");
+		}
 
-            await loadQuestions();
-        } catch (err) {
-            console.error('Failed to reorder questions:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to reorder questions');
-            await loadQuestions();
-        }
-    }
+		await loadQuestions();
+	} catch (err) {
+		console.error("Failed to reorder questions:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to reorder questions",
+		);
+		await loadQuestions();
+	}
+}
 
-    function handleDragStart(e: DragEvent, questionId: string) {
-        draggedQuestionId = questionId;
-        if (e.dataTransfer) {
-            e.dataTransfer.effectAllowed = 'move';
-        }
-    }
+function handleDragStart(e: DragEvent, questionId: string) {
+	draggedQuestionId = questionId;
+	if (e.dataTransfer) {
+		e.dataTransfer.effectAllowed = "move";
+	}
+}
 
-    function handleDragOver(e: DragEvent, questionId: string) {
-        e.preventDefault();
-        dragOverQuestionId = questionId;
-        if (e.dataTransfer) {
-            e.dataTransfer.dropEffect = 'move';
-        }
-    }
+function handleDragOver(e: DragEvent, questionId: string) {
+	e.preventDefault();
+	dragOverQuestionId = questionId;
+	if (e.dataTransfer) {
+		e.dataTransfer.dropEffect = "move";
+	}
+}
 
-    function handleDragLeave() {
-        dragOverQuestionId = null;
-    }
+function handleDragLeave() {
+	dragOverQuestionId = null;
+}
 
-    function handleDrop(e: DragEvent, questionId: string) {
-        e.preventDefault();
-        reorderQuestions();
-        draggedQuestionId = null;
-        dragOverQuestionId = null;
-    }
+function handleDrop(e: DragEvent, questionId: string) {
+	e.preventDefault();
+	reorderQuestions();
+	draggedQuestionId = null;
+	dragOverQuestionId = null;
+}
 
-    function handleDragEnd() {
-        draggedQuestionId = null;
-        dragOverQuestionId = null;
-    }
+function handleDragEnd() {
+	draggedQuestionId = null;
+	dragOverQuestionId = null;
+}
 
-    function handleQuestionBlur(questionId: string, value: string) {
-        const trimmedValue = value.trim();
-        if (!trimmedValue) {
-            updateQuestion(questionId, { question: UNWRITTEN_QUESTION });
-        } else if (trimmedValue !== UNWRITTEN_QUESTION) {
-            updateQuestion(questionId, { question: trimmedValue });
-        }
-    }
+function handleQuestionBlur(questionId: string, value: string) {
+	const trimmedValue = value.trim();
+	if (!trimmedValue) {
+		updateQuestion(questionId, { question: UNWRITTEN_QUESTION });
+	} else if (trimmedValue !== UNWRITTEN_QUESTION) {
+		updateQuestion(questionId, { question: trimmedValue });
+	}
+}
 
-    function getDisplayValue(question: string): string {
-        return question === UNWRITTEN_QUESTION ? '' : question;
-    }
+function getDisplayValue(question: string): string {
+	return question === UNWRITTEN_QUESTION ? "" : question;
+}
 
-    async function applyPreset(presetId: string) {
-        try {
-            applyingPreset = true;
-            showPresetDropdown = false;
+async function applyPreset(presetId: string) {
+	try {
+		applyingPreset = true;
+		showPresetDropdown = false;
 
-            const res = await fetch(`/api/scenes/${sceneId}/apply-health-preset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ presetId })
-            });
+		const res = await fetch(`/api/scenes/${sceneId}/apply-health-preset`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ presetId }),
+		});
 
-            const data = await res.json();
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to apply preset');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to apply preset");
+		}
 
-            await loadQuestions();
-            toastStore.success('Preset questions added');
-        } catch (err) {
-            console.error('Failed to apply preset:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to apply preset');
-        } finally {
-            applyingPreset = false;
-        }
-    }
+		await loadQuestions();
+		toastStore.success("Preset questions added");
+	} catch (err) {
+		console.error("Failed to apply preset:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to apply preset",
+		);
+	} finally {
+		applyingPreset = false;
+	}
+}
 
-    onMount(() => {
-        loadQuestions();
-        loadPresets();
-    });
+onMount(() => {
+	loadQuestions();
+	loadPresets();
+});
 
-    // Reload when scene changes
-    $effect(() => {
-        if (sceneId) {
-            loadQuestions();
-        }
-    });
+// Reload when scene changes
+$effect(() => {
+	if (sceneId) {
+		loadQuestions();
+	}
+});
 </script>
 
 <div class="health-questions-manager">

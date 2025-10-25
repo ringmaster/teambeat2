@@ -1,68 +1,68 @@
 <script lang="ts">
-    interface Props {
-        type?: "text" | "email" | "password" | "number";
-        placeholder?: string;
-        value?: string;
-        disabled?: boolean;
-        required?: boolean;
-        id?: string;
-        name?: string;
-        class?: string;
-        buttonVariant?: "primary" | "secondary" | "danger" | "ghost";
-        buttonDisabled?: boolean;
-        buttonAriaLabel?: string;
-        buttonClass?: string;
-        oninput?: (event: Event) => void;
-        onkeydown?: (event: KeyboardEvent) => void;
-        onButtonClick?: (event: MouseEvent) => void;
-        buttonContent: any;
-    }
+interface Props {
+	type?: "text" | "email" | "password" | "number";
+	placeholder?: string;
+	value?: string;
+	disabled?: boolean;
+	required?: boolean;
+	id?: string;
+	name?: string;
+	class?: string;
+	buttonVariant?: "primary" | "secondary" | "danger" | "ghost";
+	buttonDisabled?: boolean;
+	buttonAriaLabel?: string;
+	buttonClass?: string;
+	oninput?: (event: Event) => void;
+	onkeydown?: (event: KeyboardEvent) => void;
+	onButtonClick?: (event: MouseEvent) => void;
+	buttonContent: any;
+}
 
-    let {
-        type = "text",
-        placeholder = "",
-        value = $bindable(""),
-        disabled = false,
-        required = false,
-        id,
-        name,
-        class: className = "",
-        buttonVariant = "primary",
-        buttonDisabled = false,
-        buttonAriaLabel,
-        buttonClass: additionalButtonClass = "",
-        oninput,
-        onkeydown,
-        onButtonClick,
-        buttonContent,
-    }: Props = $props();
+let {
+	type = "text",
+	placeholder = "",
+	value = $bindable(""),
+	disabled = false,
+	required = false,
+	id,
+	name,
+	class: className = "",
+	buttonVariant = "primary",
+	buttonDisabled = false,
+	buttonAriaLabel,
+	buttonClass: additionalButtonClass = "",
+	oninput,
+	onkeydown,
+	onButtonClick,
+	buttonContent,
+}: Props = $props();
 
-    let buttonClass = $derived.by(() => {
-        let classes = ["input-button"];
+let buttonClass = $derived.by(() => {
+	let classes = ["input-button"];
 
-        // Variant classes
-        switch (buttonVariant) {
-            case "primary":
-                classes.push("button-primary");
-                break;
-            case "secondary":
-                classes.push("button-secondary");
-                break;
-            case "danger":
-                classes.push("button-danger");
-                break;
-            case "ghost":
-                classes.push("button-ghost");
-                break;
-        }
+	// Variant classes
+	switch (buttonVariant) {
+		case "primary":
+			classes.push("button-primary");
+			break;
+		case "secondary":
+			classes.push("button-secondary");
+			break;
+		case "danger":
+			classes.push("button-danger");
+			break;
+		case "ghost":
+			classes.push("button-ghost");
+			break;
+	}
 
-        // Additional classes
-        if (additionalButtonClass) {
-            classes.push(additionalButtonClass);
-        }
+	// Additional classes
+	if (additionalButtonClass) {
+		classes.push(additionalButtonClass);
+	}
 
-        return classes.join(" ");
-    });
+	return classes.join(" ");
+});
 </script>
 
 <div class="input-with-button {className}">

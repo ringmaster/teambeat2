@@ -1,5 +1,5 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { json } from "@sveltejs/kit";
+import type { RequestHandler } from "./$types";
 
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER;
 
@@ -10,6 +10,6 @@ export const GET: RequestHandler = async () => {
 
 	return json({
 		success: true,
-		isEmailConfigured
+		isEmailConfigured,
 	});
 };

@@ -1,119 +1,112 @@
 <script lang="ts">
-    import Modal from "$lib/components/ui/Modal.svelte";
-    import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
-    import { getUserDisplayName } from "$lib/utils/animalNames";
-    import { marked } from 'marked';
+import { marked } from "marked";
+import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
+import Modal from "$lib/components/ui/Modal.svelte";
+import { getUserDisplayName } from "$lib/utils/animalNames";
 
-    // Configure marked for GitHub-flavored markdown
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
-    });
+// Configure marked for GitHub-flavored markdown
+marked.setOptions({
+	gfm: true,
+	breaks: true,
+});
 
-    interface Props {
-        show: boolean;
-        card: any;
-        boardId: string;
-        blameFreeMode?: boolean;
-        onClose: () => void;
-    }
+interface Props {
+	show: boolean;
+	card: any;
+	boardId: string;
+	blameFreeMode?: boolean;
+	onClose: () => void;
+}
 
-    let {
-        show,
-        card,
-        boardId,
-        blameFreeMode = false,
-        onClose,
-    }: Props = $props();
+let { show, card, boardId, blameFreeMode = false, onClose }: Props = $props();
 
-    let comments = $state<any[]>([]);
-    let newCommentContent = $state("");
-    let loadingComments = $state(false);
-    let savingComment = $state(false);
+let comments = $state<any[]>([]);
+let newCommentContent = $state("");
+let loadingComments = $state(false);
+let savingComment = $state(false);
 
-    // Render card content as markdown
-    let renderedCardContent = $derived(card ? marked.parse(card.content) as string : '');
+// Render card content as markdown
+let renderedCardContent = $derived(
+	card ? (marked.parse(card.content) as string) : "",
+);
 
-    // Load comments when modal opens or card changes
-    $effect(() => {
-        if (show && card) {
-            loadComments();
-        }
-    });
+// Load comments when modal opens or card changes
+$effect(() => {
+	if (show && card) {
+		loadComments();
+	}
+});
 
-    async function loadComments() {
-        if (!card) return;
+async function loadComments() {
+	if (!card) return;
 
-        loadingComments = true;
-        try {
-            const response = await fetch(`/api/cards/${card.id}/comments`);
-            if (response.ok) {
-                const data = await response.json();
-                // Filter out reactions, only show actual comments
-                comments = data.comments.filter((c: any) => !c.isReaction);
-            }
-        } catch (error) {
-            console.error("Failed to load comments:", error);
-        } finally {
-            loadingComments = false;
-        }
-    }
+	loadingComments = true;
+	try {
+		const response = await fetch(`/api/cards/${card.id}/comments`);
+		if (response.ok) {
+			const data = await response.json();
+			// Filter out reactions, only show actual comments
+			comments = data.comments.filter((c: any) => !c.isReaction);
+		}
+	} catch (error) {
+		console.error("Failed to load comments:", error);
+	} finally {
+		loadingComments = false;
+	}
+}
 
-    async function saveComment() {
-        if (!card || !newCommentContent.trim() || savingComment) return;
+async function saveComment() {
+	if (!card || !newCommentContent.trim() || savingComment) return;
 
-        savingComment = true;
-        try {
-            const response = await fetch("/api/comments", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    card_id: card.id,
-                    content: newCommentContent.trim(),
-                    is_reaction: false,
-                }),
-            });
+	savingComment = true;
+	try {
+		const response = await fetch("/api/comments", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				card_id: card.id,
+				content: newCommentContent.trim(),
+				is_reaction: false,
+			}),
+		});
 
-            if (response.ok) {
-                // Clear input and reload comments
-                newCommentContent = "";
-                await loadComments();
-            }
-        } catch (error) {
-            console.error("Failed to save comment:", error);
-        } finally {
-            savingComment = false;
-        }
-    }
+		if (response.ok) {
+			// Clear input and reload comments
+			newCommentContent = "";
+			await loadComments();
+		}
+	} catch (error) {
+		console.error("Failed to save comment:", error);
+	} finally {
+		savingComment = false;
+	}
+}
 
-    function handleClose() {
-        newCommentContent = "";
-        comments = [];
-        onClose();
-    }
+function handleClose() {
+	newCommentContent = "";
+	comments = [];
+	onClose();
+}
 
-    function formatDate(dateString: string) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
+function formatDate(dateString: string) {
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffMs = now.getTime() - date.getTime();
+	const diffMins = Math.floor(diffMs / 60000);
 
-        if (diffMins < 1) return "just now";
-        if (diffMins < 60)
-            return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+	if (diffMins < 1) return "just now";
+	if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
 
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffHours < 24)
-            return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+	const diffHours = Math.floor(diffMins / 60);
+	if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
 
-        const diffDays = Math.floor(diffHours / 24);
-        if (diffDays < 7)
-            return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+	const diffDays = Math.floor(diffHours / 24);
+	if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 
-        return date.toLocaleDateString();
-    }
+	return date.toLocaleDateString();
+}
 </script>
 
 <Modal {show} title="Comments" onClose={handleClose} size="md">

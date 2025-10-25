@@ -1,22 +1,22 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { z } from 'zod';
-import { generatePasswordResetToken } from '$lib/server/auth/password-reset.js';
-import { findUserById } from '$lib/server/repositories/user.js';
-import { getSessionFromCookie } from '$lib/server/repositories/session.js';
-import { db } from '$lib/server/db/index.js';
-import { users } from '$lib/server/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { error, json } from "@sveltejs/kit";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { generatePasswordResetToken } from "$lib/server/auth/password-reset.js";
+import { db } from "$lib/server/db/index.js";
+import { users } from "$lib/server/db/schema.js";
+import { getSessionFromCookie } from "$lib/server/repositories/session.js";
+import { findUserById } from "$lib/server/repositories/user.js";
+import type { RequestHandler } from "./$types";
 
 async function requireAdmin(cookies: any) {
-	const sessionCookie = cookies.get('session');
+	const sessionCookie = cookies.get("session");
 	if (!sessionCookie) {
-		throw error(401, 'Unauthorized');
+		throw error(401, "Unauthorized");
 	}
 
 	const session = await getSessionFromCookie(sessionCookie);
 	if (!session) {
-		throw error(401, 'Unauthorized');
+		throw error(401, "Unauthorized");
 	}
 
 	const [user] = await db
@@ -26,14 +26,14 @@ async function requireAdmin(cookies: any) {
 		.limit(1);
 
 	if (!user?.isAdmin) {
-		throw error(403, 'Admin access required');
+		throw error(403, "Admin access required");
 	}
 
 	return { session, userId: user.id };
 }
 
 const generateResetTokenSchema = z.object({
-	userId: z.string().min(1)
+	userId: z.string().min(1),
 });
 
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 		// Fetch the user
 		const user = await findUserById(userId);
 		if (!user) {
-			throw error(404, 'User not found');
+			throw error(404, "User not found");
 		}
 
 		// Generate the reset token
@@ -59,7 +59,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 		return json({ success: true, resetUrl });
 	} catch (err) {
 		if (err instanceof z.ZodError) {
-			throw error(400, 'Invalid input');
+			throw error(400, "Invalid input");
 		}
 		throw err;
 	}

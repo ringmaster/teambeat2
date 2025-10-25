@@ -1,47 +1,50 @@
 <script lang="ts">
-    import type { Comment } from "$lib/types";
-    import Icon from "./ui/Icon.svelte";
-    import { getUserDisplayName } from "$lib/utils/animalNames";
-    import { marked } from 'marked';
+import { marked } from "marked";
+import type { Comment } from "$lib/types";
+import { getUserDisplayName } from "$lib/utils/animalNames";
+import Icon from "./ui/Icon.svelte";
 
-    // Configure marked for GitHub-flavored markdown
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
-    });
+// Configure marked for GitHub-flavored markdown
+marked.setOptions({
+	gfm: true,
+	breaks: true,
+});
 
-    interface CardGroup {
-        leadCard: any;
-        subordinateCards: any[];
-        columnId: string;
-        columnName: string;
-    }
+interface CardGroup {
+	leadCard: any;
+	subordinateCards: any[];
+	columnId: string;
+	columnName: string;
+}
 
-    interface Props {
-        group: CardGroup;
-        showColumnContext: boolean;
-        commentsByCard: (cardId: string) => Comment[];
-        blameFreeMode: boolean;
-        boardId: string;
-    }
+interface Props {
+	group: CardGroup;
+	showColumnContext: boolean;
+	commentsByCard: (cardId: string) => Comment[];
+	blameFreeMode: boolean;
+	boardId: string;
+}
 
-    const {
-        group,
-        showColumnContext,
-        commentsByCard,
-        blameFreeMode,
-        boardId,
-    }: Props = $props();
+const {
+	group,
+	showColumnContext,
+	commentsByCard,
+	blameFreeMode,
+	boardId,
+}: Props = $props();
 
-    const voteCount = $derived(group.leadCard.voteCount || 0);
-    const cardComments = $derived(commentsByCard(group.leadCard.id));
-    const renderedLeadContent = $derived(marked.parse(group.leadCard.content) as string);
-    const renderedSubordinateContent = (content: string) => marked.parse(content) as string;
+const voteCount = $derived(group.leadCard.voteCount || 0);
+const cardComments = $derived(commentsByCard(group.leadCard.id));
+const renderedLeadContent = $derived(
+	marked.parse(group.leadCard.content) as string,
+);
+const renderedSubordinateContent = (content: string) =>
+	marked.parse(content) as string;
 
-    function getDisplayName(comment: Comment): string {
-        const userName = comment.userName || "Anonymous";
-        return getUserDisplayName(userName, boardId, blameFreeMode);
-    }
+function getDisplayName(comment: Comment): string {
+	const userName = comment.userName || "Anonymous";
+	return getUserDisplayName(userName, boardId, blameFreeMode);
+}
 </script>
 
 <div class="card-group">

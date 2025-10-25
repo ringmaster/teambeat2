@@ -1,64 +1,74 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte';
+import { onDestroy, onMount } from "svelte";
+import { browser } from "$app/environment";
 
-    interface Props {
-        sceneId: string;
-        boardId: string;
-        displayMode: 'collecting' | 'results';
-        isFacilitator: boolean;
-        onModeChange: (mode: 'collecting' | 'results') => void;
-    }
+interface Props {
+	sceneId: string;
+	boardId: string;
+	displayMode: "collecting" | "results";
+	isFacilitator: boolean;
+	onModeChange: (mode: "collecting" | "results") => void;
+}
 
-    const { sceneId, boardId, displayMode, isFacilitator, onModeChange }: Props = $props();
+const { sceneId, boardId, displayMode, isFacilitator, onModeChange }: Props =
+	$props();
 
-    let stats = $state<{
-        active_users_count: number;
-        active_users_completed: number;
-        total_expected_responses: number;
-    } | null>(null);
-    let loading = $state(true);
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
+let stats = $state<{
+	active_users_count: number;
+	active_users_completed: number;
+	total_expected_responses: number;
+} | null>(null);
+let loading = $state(true);
+let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-    async function loadStats() {
-        if (!isFacilitator) {
-            return;
-        }
+async function loadStats() {
+	if (!isFacilitator) {
+		return;
+	}
 
-        try {
-            const res = await fetch(`/api/boards/${boardId}/scenes/${sceneId}/facilitator-stats`);
-            const data = await res.json();
+	try {
+		const res = await fetch(
+			`/api/boards/${boardId}/scenes/${sceneId}/facilitator-stats`,
+		);
+		const data = await res.json();
 
-            if (data.success) {
-                stats = data.stats;
-            }
-        } catch (err) {
-            console.error('Failed to load facilitator stats:', err);
-        } finally {
-            loading = false;
-        }
-    }
+		if (data.success) {
+			stats = data.stats;
+		}
+	} catch (err) {
+		console.error("Failed to load facilitator stats:", err);
+	} finally {
+		loading = false;
+	}
+}
 
-    function handlePresenceUpdate() {
-        // Reload stats when presence changes
-        loadStats();
-    }
+function handlePresenceUpdate() {
+	// Reload stats when presence changes
+	loadStats();
+}
 
-    onMount(() => {
-        loadStats();
+onMount(() => {
+	loadStats();
 
-        // Poll every 5 seconds
-        pollInterval = setInterval(loadStats, 5000);
+	// Poll every 5 seconds
+	pollInterval = setInterval(loadStats, 5000);
 
-        // Listen for presence updates
-        window.addEventListener('presence_updated', handlePresenceUpdate);
-    });
+	// Listen for presence updates (only in browser)
+	if (browser) {
+		window.addEventListener("presence_updated", handlePresenceUpdate);
+	}
+});
 
-    onDestroy(() => {
-        if (pollInterval) {
-            clearInterval(pollInterval);
-        }
-        window.removeEventListener('presence_updated', handlePresenceUpdate);
-    });
+onDestroy(() => {
+	if (pollInterval) {
+		clearInterval(pollInterval);
+	}
+
+	// Remove event listener (only in browser)
+	if (browser) {
+		window.removeEventListener("presence_updated", handlePresenceUpdate);
+	}
+});
 </script>
 
 {#if isFacilitator && stats}

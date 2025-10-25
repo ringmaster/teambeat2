@@ -1,202 +1,202 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import type { SeriesStats } from "$lib/server/repositories/board-series";
-    import AdminNav from "$lib/components/AdminNav.svelte";
-    import UserManagement from "$lib/components/UserManagement.svelte";
-    import { toastStore } from "$lib/stores/toast";
+import { onMount } from "svelte";
+import AdminNav from "$lib/components/AdminNav.svelte";
+import UserManagement from "$lib/components/UserManagement.svelte";
+import type { SeriesStats } from "$lib/server/repositories/board-series";
+import { toastStore } from "$lib/stores/toast";
 
-    interface SeriesStatsResponse {
-        series: SeriesStats[];
-        total: number;
-        page: number;
-        pageSize: number;
-        totalPages: number;
-    }
+interface SeriesStatsResponse {
+	series: SeriesStats[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
 
-    let data: SeriesStatsResponse | null = $state(null);
-    let loading = $state(true);
-    let error = $state("");
-    let currentPage = $state(1);
-    let showUserModal = $state(false);
-    let selectedSeriesId = $state<string | null>(null);
-    let selectedSeriesName = $state<string>("");
-    let seriesUsers = $state<any[]>([]);
-    let loadingUsers = $state(false);
+let data: SeriesStatsResponse | null = $state(null);
+let loading = $state(true);
+let error = $state("");
+let currentPage = $state(1);
+let showUserModal = $state(false);
+let selectedSeriesId = $state<string | null>(null);
+let selectedSeriesName = $state<string>("");
+let seriesUsers = $state<any[]>([]);
+let loadingUsers = $state(false);
 
-    async function loadSeriesStats(page: number = 1) {
-        loading = true;
-        try {
-            const response = await fetch(
-                `/api/admin/series?page=${page}&pageSize=50`,
-            );
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-            }
-            data = await response.json();
-            currentPage = page;
-            error = "";
-        } catch (err) {
-            error = err instanceof Error ? err.message : String(err);
-            console.error("Failed to load series stats:", err);
-        } finally {
-            loading = false;
-        }
-    }
+async function loadSeriesStats(page: number = 1) {
+	loading = true;
+	try {
+		const response = await fetch(`/api/admin/series?page=${page}&pageSize=50`);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ message: response.statusText }));
+			throw new Error(
+				errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+			);
+		}
+		data = await response.json();
+		currentPage = page;
+		error = "";
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
+		console.error("Failed to load series stats:", err);
+	} finally {
+		loading = false;
+	}
+}
 
-    async function deleteSeries(seriesId: string, seriesName: string) {
-        toastStore.warning(`Delete series "${seriesName}" and all associated data?`, {
-            autoHide: false,
-            actions: [
-                {
-                    label: "Delete",
-                    onClick: async () => {
-                        try {
-                            const response = await fetch("/api/admin/series", {
-                                method: "DELETE",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ seriesId }),
-                            });
+async function deleteSeries(seriesId: string, seriesName: string) {
+	toastStore.warning(`Delete series "${seriesName}" and all associated data?`, {
+		autoHide: false,
+		actions: [
+			{
+				label: "Delete",
+				onClick: async () => {
+					try {
+						const response = await fetch("/api/admin/series", {
+							method: "DELETE",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ seriesId }),
+						});
 
-                            if (response.ok) {
-                                toastStore.success("Series deleted successfully");
-                                await loadSeriesStats(currentPage);
-                            } else {
-                                throw new Error("Failed to delete series");
-                            }
-                        } catch (err) {
-                            toastStore.error("Failed to delete series");
-                        }
-                    },
-                    variant: "primary",
-                },
-                {
-                    label: "Cancel",
-                    onClick: () => {},
-                    variant: "secondary",
-                },
-            ],
-        });
-    }
+						if (response.ok) {
+							toastStore.success("Series deleted successfully");
+							await loadSeriesStats(currentPage);
+						} else {
+							throw new Error("Failed to delete series");
+						}
+					} catch (err) {
+						toastStore.error("Failed to delete series");
+					}
+				},
+				variant: "primary",
+			},
+			{
+				label: "Cancel",
+				onClick: () => {},
+				variant: "secondary",
+			},
+		],
+	});
+}
 
-    async function toggleMembership(seriesId: string) {
-        try {
-            const response = await fetch("/api/admin/series", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action: "toggle_membership",
-                    seriesId,
-                }),
-            });
+async function toggleMembership(seriesId: string) {
+	try {
+		const response = await fetch("/api/admin/series", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				action: "toggle_membership",
+				seriesId,
+			}),
+		});
 
-            if (response.ok) {
-                const result = await response.json();
-                toastStore.success(
-                    result.isMember
-                        ? "Membership added"
-                        : "Membership removed",
-                );
-                await loadSeriesStats(currentPage);
-            } else {
-                throw new Error("Failed to toggle membership");
-            }
-        } catch (err) {
-            toastStore.error("Failed to toggle membership");
-        }
-    }
+		if (response.ok) {
+			const result = await response.json();
+			toastStore.success(
+				result.isMember ? "Membership added" : "Membership removed",
+			);
+			await loadSeriesStats(currentPage);
+		} else {
+			throw new Error("Failed to toggle membership");
+		}
+	} catch (err) {
+		toastStore.error("Failed to toggle membership");
+	}
+}
 
-    async function openUserManagement(seriesId: string, seriesName: string) {
-        selectedSeriesId = seriesId;
-        selectedSeriesName = seriesName;
-        showUserModal = true;
-        await loadSeriesUsers(seriesId);
-    }
+async function openUserManagement(seriesId: string, seriesName: string) {
+	selectedSeriesId = seriesId;
+	selectedSeriesName = seriesName;
+	showUserModal = true;
+	await loadSeriesUsers(seriesId);
+}
 
-    async function loadSeriesUsers(seriesId: string) {
-        loadingUsers = true;
-        try {
-            const response = await fetch(`/api/series/${seriesId}/users`);
-            if (!response.ok) {
-                throw new Error("Failed to load users");
-            }
-            const data = await response.json();
-            seriesUsers = data.users || [];
-        } catch (err) {
-            toastStore.error("Failed to load series users");
-            seriesUsers = [];
-        } finally {
-            loadingUsers = false;
-        }
-    }
+async function loadSeriesUsers(seriesId: string) {
+	loadingUsers = true;
+	try {
+		const response = await fetch(`/api/series/${seriesId}/users`);
+		if (!response.ok) {
+			throw new Error("Failed to load users");
+		}
+		const data = await response.json();
+		seriesUsers = data.users || [];
+	} catch (err) {
+		toastStore.error("Failed to load series users");
+		seriesUsers = [];
+	} finally {
+		loadingUsers = false;
+	}
+}
 
-    function closeUserModal() {
-        showUserModal = false;
-        selectedSeriesId = null;
-        selectedSeriesName = "";
-        seriesUsers = [];
-    }
+function closeUserModal() {
+	showUserModal = false;
+	selectedSeriesId = null;
+	selectedSeriesName = "";
+	seriesUsers = [];
+}
 
-    async function handleUserAdded(email: string) {
-        if (!selectedSeriesId) return;
+async function handleUserAdded(email: string) {
+	if (!selectedSeriesId) return;
 
-        const response = await fetch(`/api/series/${selectedSeriesId}/users`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, role: "member" }),
-        });
+	const response = await fetch(`/api/series/${selectedSeriesId}/users`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, role: "member" }),
+	});
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to add user");
-        }
+	if (!response.ok) {
+		const errorData = await response.json();
+		throw new Error(errorData.message || "Failed to add user");
+	}
 
-        await loadSeriesUsers(selectedSeriesId);
-        toastStore.success("User added successfully");
-    }
+	await loadSeriesUsers(selectedSeriesId);
+	toastStore.success("User added successfully");
+}
 
-    async function handleUserRemoved(userId: string) {
-        if (!selectedSeriesId) return;
+async function handleUserRemoved(userId: string) {
+	if (!selectedSeriesId) return;
 
-        const response = await fetch(`/api/series/${selectedSeriesId}/users`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId }),
-        });
+	const response = await fetch(`/api/series/${selectedSeriesId}/users`, {
+		method: "DELETE",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ userId }),
+	});
 
-        if (!response.ok) {
-            throw new Error("Failed to remove user");
-        }
+	if (!response.ok) {
+		throw new Error("Failed to remove user");
+	}
 
-        await loadSeriesUsers(selectedSeriesId);
-        toastStore.success("User removed successfully");
-    }
+	await loadSeriesUsers(selectedSeriesId);
+	toastStore.success("User removed successfully");
+}
 
-    async function handleUserRoleChanged(userId: string, newRole: string) {
-        if (!selectedSeriesId) return;
+async function handleUserRoleChanged(userId: string, newRole: string) {
+	if (!selectedSeriesId) return;
 
-        const response = await fetch(`/api/series/${selectedSeriesId}/users`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, role: newRole }),
-        });
+	const response = await fetch(`/api/series/${selectedSeriesId}/users`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ userId, role: newRole }),
+	});
 
-        if (!response.ok) {
-            throw new Error("Failed to update user role");
-        }
+	if (!response.ok) {
+		throw new Error("Failed to update user role");
+	}
 
-        await loadSeriesUsers(selectedSeriesId);
-        toastStore.success("User role updated successfully");
-    }
+	await loadSeriesUsers(selectedSeriesId);
+	toastStore.success("User role updated successfully");
+}
 
-    function formatDate(dateString: string | null): string {
-        if (!dateString) return "Never";
-        return new Date(dateString).toLocaleString();
-    }
+function formatDate(dateString: string | null): string {
+	if (!dateString) return "Never";
+	return new Date(dateString).toLocaleString();
+}
 
-    onMount(() => {
-        loadSeriesStats();
-    });
+onMount(() => {
+	loadSeriesStats();
+});
 </script>
 
 <AdminNav />

@@ -1,50 +1,50 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { page } from "$app/stores";
-    import { goto } from "$app/navigation";
-    import Button from "$lib/components/ui/Button.svelte";
+import { onMount } from "svelte";
+import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import Button from "$lib/components/ui/Button.svelte";
 
-    let status: "loading" | "success" | "error" = $state("loading");
-    let errorMessage: string = $state("");
-    let token: string = $state("");
+let status: "loading" | "success" | "error" = $state("loading");
+let errorMessage: string = $state("");
+let token: string = $state("");
 
-    onMount(async () => {
-        token = $page.url.searchParams.get("token") || "";
+onMount(async () => {
+	token = $page.url.searchParams.get("token") || "";
 
-        if (!token) {
-            status = "error";
-            errorMessage = "No verification token provided.";
-            return;
-        }
+	if (!token) {
+		status = "error";
+		errorMessage = "No verification token provided.";
+		return;
+	}
 
-        try {
-            const response = await fetch("/api/auth/verify-email", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token }),
-            });
+	try {
+		const response = await fetch("/api/auth/verify-email", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token }),
+		});
 
-            const data = await response.json();
+		const data = await response.json();
 
-            if (response.ok) {
-                status = "success";
-            } else {
-                status = "error";
-                errorMessage = data.error || "Verification failed.";
-            }
-        } catch (error) {
-            status = "error";
-            errorMessage = "Network error. Please try again.";
-        }
-    });
+		if (response.ok) {
+			status = "success";
+		} else {
+			status = "error";
+			errorMessage = data.error || "Verification failed.";
+		}
+	} catch (error) {
+		status = "error";
+		errorMessage = "Network error. Please try again.";
+	}
+});
 
-    function handleContinue() {
-        goto("/");
-    }
+function handleContinue() {
+	goto("/");
+}
 
-    function handleResend() {
-        goto("/profile");
-    }
+function handleResend() {
+	goto("/profile");
+}
 </script>
 
 <div class="verify-page">

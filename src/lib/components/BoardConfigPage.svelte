@@ -1,384 +1,372 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Icon from "./ui/Icon.svelte";
-    import Modal from "./ui/Modal.svelte";
-    import RPNTestModal from "./RPNTestModal.svelte";
-    import UserManagement from "./UserManagement.svelte";
-    import HealthQuestionsManager from "./HealthQuestionsManager.svelte";
-    import SceneOptionsConfig from "./SceneOptionsConfig.svelte";
-    import flatpickr from "flatpickr";
-    import "flatpickr/dist/flatpickr.min.css";
-    import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
-    import { COLUMN_PRESETS } from "$lib/data/column-presets";
-    import Autocomplete from "./ui/Autocomplete.svelte";
-    import * as dashboardApi from "$lib/services/dashboard-api";
-    import * as scorecardApi from "$lib/services/scorecard-api";
-    import * as boardApi from "$lib/services/board-api";
+import flatpickr from "flatpickr";
+import { onMount } from "svelte";
+import HealthQuestionsManager from "./HealthQuestionsManager.svelte";
+import RPNTestModal from "./RPNTestModal.svelte";
+import SceneOptionsConfig from "./SceneOptionsConfig.svelte";
+import UserManagement from "./UserManagement.svelte";
+import Icon from "./ui/Icon.svelte";
+import Modal from "./ui/Modal.svelte";
+import "flatpickr/dist/flatpickr.min.css";
+import { COLUMN_PRESETS } from "$lib/data/column-presets";
+import * as boardApi from "$lib/services/board-api";
+import * as dashboardApi from "$lib/services/dashboard-api";
+import * as scorecardApi from "$lib/services/scorecard-api";
+import { buildDisplayRuleContext } from "$lib/utils/display-rule-context";
+import Autocomplete from "./ui/Autocomplete.svelte";
 
-    interface Props {
-        board: any;
-        userRole: string;
-        agreements?: any[];
-        lastHealthCheckDate?: string | null;
-        onClose: () => void;
-        onUpdateBoardConfig: (config: any) => void;
-        onAddNewColumn: () => void;
-        onAddNewScene: () => void;
-        onUpdateColumn: (columnId: string, data: any) => void;
-        onDeleteColumn: (columnId: string) => void;
-        onUpdateScene: (sceneId: string, data: any) => void;
-        onDeleteScene: (sceneId: string) => void;
-        onDragStart: (
-            type: "column" | "scene",
-            e: DragEvent,
-            id: string,
-        ) => void;
-        onDragOver: (
-            type: "column" | "scene",
-            e: DragEvent,
-            id: string,
-        ) => void;
-        onDragLeave: (type: "column" | "scene", e: DragEvent) => void;
-        onDrop: (type: "column" | "scene", e: DragEvent, id: string) => void;
-        onEndDrop: (type: "column" | "scene", e: DragEvent) => void;
-        onDeleteBoard?: () => void;
-        dragState: {
-            draggedColumnId: string;
-            draggedSceneId: string;
-            dragOverColumnId: string;
-            dragOverSceneId: string;
-            columnDropPosition: string;
-            sceneDropPosition: string;
-            dragOverColumnEnd: boolean;
-            dragOverSceneEnd: boolean;
-        };
-    }
+interface Props {
+	board: any;
+	userRole: string;
+	agreements?: any[];
+	lastHealthCheckDate?: string | null;
+	onClose: () => void;
+	onUpdateBoardConfig: (config: any) => void;
+	onAddNewColumn: () => void;
+	onAddNewScene: () => void;
+	onUpdateColumn: (columnId: string, data: any) => void;
+	onDeleteColumn: (columnId: string) => void;
+	onUpdateScene: (sceneId: string, data: any) => void;
+	onDeleteScene: (sceneId: string) => void;
+	onDragStart: (type: "column" | "scene", e: DragEvent, id: string) => void;
+	onDragOver: (type: "column" | "scene", e: DragEvent, id: string) => void;
+	onDragLeave: (type: "column" | "scene", e: DragEvent) => void;
+	onDrop: (type: "column" | "scene", e: DragEvent, id: string) => void;
+	onEndDrop: (type: "column" | "scene", e: DragEvent) => void;
+	onDeleteBoard?: () => void;
+	dragState: {
+		draggedColumnId: string;
+		draggedSceneId: string;
+		dragOverColumnId: string;
+		dragOverSceneId: string;
+		columnDropPosition: string;
+		sceneDropPosition: string;
+		dragOverColumnEnd: boolean;
+		dragOverSceneEnd: boolean;
+	};
+}
 
-    let {
-        board,
-        userRole,
-        agreements = [],
-        lastHealthCheckDate = null,
-        onClose,
-        onUpdateBoardConfig,
-        onAddNewColumn,
-        onAddNewScene,
-        onUpdateColumn,
-        onDeleteColumn,
-        onUpdateScene,
-        onDeleteScene,
-        onDragStart,
-        onDragOver,
-        onDragLeave,
-        onDrop,
-        onEndDrop,
-        onDeleteBoard,
-        dragState,
-    }: Props = $props();
+let {
+	board,
+	userRole,
+	agreements = [],
+	lastHealthCheckDate = null,
+	onClose,
+	onUpdateBoardConfig,
+	onAddNewColumn,
+	onAddNewScene,
+	onUpdateColumn,
+	onDeleteColumn,
+	onUpdateScene,
+	onDeleteScene,
+	onDragStart,
+	onDragOver,
+	onDragLeave,
+	onDrop,
+	onEndDrop,
+	onDeleteBoard,
+	dragState,
+}: Props = $props();
 
-    // State
-    let activeTab = $state("general");
-    let selectedColumnId = $state("");
-    let selectedSceneId = $state("");
-    let configForm = $state({
-        name: board?.name || "",
-        status: board?.status || "draft",
-        blameFreeMode: board?.blameFreeMode || false,
-        meetingDate: board?.meetingDate || "",
-    });
+// State
+let activeTab = $state("general");
+let selectedColumnId = $state("");
+let selectedSceneId = $state("");
+let configForm = $state({
+	name: board?.name || "",
+	status: board?.status || "draft",
+	blameFreeMode: board?.blameFreeMode || false,
+	meetingDate: board?.meetingDate || "",
+});
 
-    // User management state
-    let seriesUsers = $state([]);
+// User management state
+let seriesUsers = $state([]);
 
-    // Date picker
-    let datePickerInstance: any = null;
-    let datePickerElement = $state<HTMLInputElement>();
+// Date picker
+let datePickerInstance: any = null;
+let datePickerElement = $state<HTMLInputElement>();
 
-    // Column states for scene visibility
-    let columnStates = $state<Record<string, Record<string, string>>>({});
+// Column states for scene visibility
+let columnStates = $state<Record<string, Record<string, string>>>({});
 
-    // Scorecard state
-    let availableScorecards = $state<any[]>([]);
-    let attachedScorecards = $state<any[]>([]);
-    let loadingScorecards = $state(false);
+// Scorecard state
+let availableScorecards = $state<any[]>([]);
+let attachedScorecards = $state<any[]>([]);
+let loadingScorecards = $state(false);
 
-    // Display rule context modal
-    let showDisplayRuleContext = $state(false);
-    let showRPNTestModal = $state(false);
+// Display rule context modal
+let showDisplayRuleContext = $state(false);
+let showRPNTestModal = $state(false);
 
-    // Column presets for autocomplete
-    let columnPresets = $state<Array<{ value: string; used?: boolean }>>([]);
+// Column presets for autocomplete
+let columnPresets = $state<Array<{ value: string; used?: boolean }>>([]);
 
-    // Debounce timer for static scene content
-    let contentDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+// Debounce timer for static scene content
+let contentDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    // Update form when board changes
-    $effect(() => {
-        if (board) {
-            configForm.name = board.name || "";
-            configForm.status = board.status || "draft";
-            configForm.blameFreeMode = board.blameFreeMode || false;
-            configForm.meetingDate = board.meetingDate || "";
-        }
-    });
+// Update form when board changes
+$effect(() => {
+	if (board) {
+		configForm.name = board.name || "";
+		configForm.status = board.status || "draft";
+		configForm.blameFreeMode = board.blameFreeMode || false;
+		configForm.meetingDate = board.meetingDate || "";
+	}
+});
 
-    // Load users when the users tab is opened
-    $effect(async () => {
-        if (activeTab === "users" && board?.seriesId) {
-            try {
-                const data = await dashboardApi.listSeriesUsers(board.seriesId);
-                seriesUsers = data.users;
-            } catch (error) {
-                console.error("Failed to load users:", error);
-            }
-        }
-    });
+// Load users when the users tab is opened
+$effect(async () => {
+	if (activeTab === "users" && board?.seriesId) {
+		try {
+			const data = await dashboardApi.listSeriesUsers(board.seriesId);
+			seriesUsers = data.users;
+		} catch (error) {
+			console.error("Failed to load users:", error);
+		}
+	}
+});
 
-    // Load column presets when columns tab is active and user can edit
-    $effect(async () => {
-        if (activeTab === "columns" && board?.id && ['admin', 'facilitator'].includes(userRole)) {
-            try {
-                const data = await boardApi.fetchColumnPresets(board.id);
-                columnPresets = data.presets || [];
-            } catch (error) {
-                console.error("Failed to load column presets:", error);
-                // Fallback to presets without usage tracking
-                columnPresets = (COLUMN_PRESETS['Icebreaker'] || []).map(value => ({ value }));
-            }
-        }
-    });
+// Load column presets when columns tab is active and user can edit
+$effect(async () => {
+	if (
+		activeTab === "columns" &&
+		board?.id &&
+		["admin", "facilitator"].includes(userRole)
+	) {
+		try {
+			const data = await boardApi.fetchColumnPresets(board.id);
+			columnPresets = data.presets || [];
+		} catch (error) {
+			console.error("Failed to load column presets:", error);
+			// Fallback to presets without usage tracking
+			columnPresets = (COLUMN_PRESETS["Icebreaker"] || []).map((value) => ({
+				value,
+			}));
+		}
+	}
+});
 
-    // Initialize date picker for general tab
-    $effect(() => {
-        if (
-            activeTab === "general" &&
-            datePickerElement &&
-            !datePickerInstance
-        ) {
-            const boardCreatedAt = board?.createdAt
-                ? new Date(board.createdAt)
-                : new Date();
+// Initialize date picker for general tab
+$effect(() => {
+	if (activeTab === "general" && datePickerElement && !datePickerInstance) {
+		const boardCreatedAt = board?.createdAt
+			? new Date(board.createdAt)
+			: new Date();
 
-            datePickerInstance = flatpickr(datePickerElement, {
-                dateFormat: "Y-m-d",
-                defaultDate: boardCreatedAt,
-                enableTime: false,
-                onChange: (selectedDates) => {
-                    if (selectedDates.length > 0) {
-                        const newDate = selectedDates[0];
-                        onUpdateBoardConfig({
-                            createdAt: newDate.toISOString(),
-                        });
-                    }
-                },
-            });
-        }
+		datePickerInstance = flatpickr(datePickerElement, {
+			dateFormat: "Y-m-d",
+			defaultDate: boardCreatedAt,
+			enableTime: false,
+			onChange: (selectedDates) => {
+				if (selectedDates.length > 0) {
+					const newDate = selectedDates[0];
+					onUpdateBoardConfig({
+						createdAt: newDate.toISOString(),
+					});
+				}
+			},
+		});
+	}
 
-        return () => {
-            if (datePickerInstance) {
-                datePickerInstance.destroy();
-                datePickerInstance = null;
-            }
-        };
-    });
+	return () => {
+		if (datePickerInstance) {
+			datePickerInstance.destroy();
+			datePickerInstance = null;
+		}
+	};
+});
 
-    // Load column states for scenes
-    async function initializeColumnStates(sceneId: string) {
-        if (!columnStates[sceneId]) {
-            columnStates[sceneId] = {};
-        }
-        const columnsToUse = board.allColumns || board.columns;
-        columnsToUse?.forEach((col: any) => {
-            columnStates[sceneId][col.id] = "visible";
-        });
-        if (board.hiddenColumnsByScene && board.hiddenColumnsByScene[sceneId]) {
-            board.hiddenColumnsByScene[sceneId].forEach((colId: string) => {
-                columnStates[sceneId][colId] = "hidden";
-            });
-        }
-    }
+// Load column states for scenes
+async function initializeColumnStates(sceneId: string) {
+	if (!columnStates[sceneId]) {
+		columnStates[sceneId] = {};
+	}
+	const columnsToUse = board.allColumns || board.columns;
+	columnsToUse?.forEach((col: any) => {
+		columnStates[sceneId][col.id] = "visible";
+	});
+	if (board.hiddenColumnsByScene && board.hiddenColumnsByScene[sceneId]) {
+		board.hiddenColumnsByScene[sceneId].forEach((colId: string) => {
+			columnStates[sceneId][colId] = "hidden";
+		});
+	}
+}
 
-    // Load scorecards for scene
-    async function loadScorecardsForScene(sceneId: string) {
-        loadingScorecards = true;
-        try {
-            const [scorecardsData, attachedData] = await Promise.all([
-                scorecardApi.listScorecards(board.seriesId),
-                scorecardApi.getSceneScorecards(sceneId)
-            ]);
+// Load scorecards for scene
+async function loadScorecardsForScene(sceneId: string) {
+	loadingScorecards = true;
+	try {
+		const [scorecardsData, attachedData] = await Promise.all([
+			scorecardApi.listScorecards(board.seriesId),
+			scorecardApi.getSceneScorecards(sceneId),
+		]);
 
-            availableScorecards = scorecardsData.scorecards || [];
-            attachedScorecards = attachedData.sceneScorecards || [];
-        } catch (error) {
-            console.error("Failed to load scorecards:", error);
-        } finally {
-            loadingScorecards = false;
-        }
-    }
+		availableScorecards = scorecardsData.scorecards || [];
+		attachedScorecards = attachedData.sceneScorecards || [];
+	} catch (error) {
+		console.error("Failed to load scorecards:", error);
+	} finally {
+		loadingScorecards = false;
+	}
+}
 
-    // Handle tab change
-    function handleTabChange(tab: string) {
-        activeTab = tab;
+// Handle tab change
+function handleTabChange(tab: string) {
+	activeTab = tab;
 
-        // Auto-select first item when switching to columns or scenes
-        if (
-            tab === "columns" &&
-            board.allColumns &&
-            board.allColumns.length > 0
-        ) {
-            selectedColumnId = board.allColumns[0].id;
-            selectedSceneId = "";
-        } else if (
-            tab === "scenes" &&
-            board.scenes &&
-            board.scenes.length > 0
-        ) {
-            // Default to current scene if available, otherwise first scene
-            selectedSceneId = board.currentSceneId || board.scenes[0].id;
-            selectedColumnId = "";
-        } else {
-            selectedColumnId = "";
-            selectedSceneId = "";
-        }
-    }
+	// Auto-select first item when switching to columns or scenes
+	if (tab === "columns" && board.allColumns && board.allColumns.length > 0) {
+		selectedColumnId = board.allColumns[0].id;
+		selectedSceneId = "";
+	} else if (tab === "scenes" && board.scenes && board.scenes.length > 0) {
+		// Default to current scene if available, otherwise first scene
+		selectedSceneId = board.currentSceneId || board.scenes[0].id;
+		selectedColumnId = "";
+	} else {
+		selectedColumnId = "";
+		selectedSceneId = "";
+	}
+}
 
-    // Handle column selection
-    function handleColumnSelect(columnId: string) {
-        selectedColumnId = columnId;
-        selectedSceneId = "";
-    }
+// Handle column selection
+function handleColumnSelect(columnId: string) {
+	selectedColumnId = columnId;
+	selectedSceneId = "";
+}
 
-    // Handle scene selection
-    async function handleSceneSelect(sceneId: string) {
-        selectedSceneId = sceneId;
-        selectedColumnId = "";
-        await initializeColumnStates(sceneId);
+// Handle scene selection
+async function handleSceneSelect(sceneId: string) {
+	selectedSceneId = sceneId;
+	selectedColumnId = "";
+	await initializeColumnStates(sceneId);
 
-        const scene = board.scenes?.find((s: any) => s.id === sceneId);
-        if (scene?.mode === "scorecard") {
-            await loadScorecardsForScene(sceneId);
-        }
-    }
+	const scene = board.scenes?.find((s: any) => s.id === sceneId);
+	if (scene?.mode === "scorecard") {
+		await loadScorecardsForScene(sceneId);
+	}
+}
 
-    // Column handlers
-    function updateColumnTitle(columnId: string, title: string) {
-        onUpdateColumn(columnId, { title: title.trim() });
-    }
+// Column handlers
+function updateColumnTitle(columnId: string, title: string) {
+	onUpdateColumn(columnId, { title: title.trim() });
+}
 
-    function updateColumnDescription(columnId: string, description: string) {
-        onUpdateColumn(columnId, { description: description || null });
-    }
+function updateColumnDescription(columnId: string, description: string) {
+	onUpdateColumn(columnId, { description: description || null });
+}
 
-    function updateColumnAppearance(columnId: string, appearance: string) {
-        onUpdateColumn(columnId, { defaultAppearance: appearance });
-    }
+function updateColumnAppearance(columnId: string, appearance: string) {
+	onUpdateColumn(columnId, { defaultAppearance: appearance });
+}
 
-    // Scene handlers
-    function updateSceneTitle(sceneId: string, title: string) {
-        onUpdateScene(sceneId, { title });
-    }
+// Scene handlers
+function updateSceneTitle(sceneId: string, title: string) {
+	onUpdateScene(sceneId, { title });
+}
 
-    function updateSceneMode(sceneId: string, mode: string) {
-        onUpdateScene(sceneId, { mode });
-    }
+function updateSceneMode(sceneId: string, mode: string) {
+	onUpdateScene(sceneId, { mode });
+}
 
-    function updateSceneFlags(sceneId: string, flags: string[]) {
-        onUpdateScene(sceneId, { flags });
-    }
+function updateSceneFlags(sceneId: string, flags: string[]) {
+	onUpdateScene(sceneId, { flags });
+}
 
-    function debouncedUpdateSceneDescription(
-        sceneId: string,
-        description: string,
-    ) {
-        if (contentDebounceTimer) {
-            clearTimeout(contentDebounceTimer);
-        }
-        contentDebounceTimer = setTimeout(() => {
-            onUpdateScene(sceneId, { description });
-        }, 500);
-    }
+function debouncedUpdateSceneDescription(sceneId: string, description: string) {
+	if (contentDebounceTimer) {
+		clearTimeout(contentDebounceTimer);
+	}
+	contentDebounceTimer = setTimeout(() => {
+		onUpdateScene(sceneId, { description });
+	}, 500);
+}
 
-    async function updateColumnDisplay(
-        sceneId: string,
-        columnId: string,
-        state: string,
-    ) {
-        try {
-            await boardApi.updateColumnDisplay(board.id, sceneId, columnId, state as 'visible' | 'hidden');
+async function updateColumnDisplay(
+	sceneId: string,
+	columnId: string,
+	state: string,
+) {
+	try {
+		await boardApi.updateColumnDisplay(
+			board.id,
+			sceneId,
+			columnId,
+			state as "visible" | "hidden",
+		);
 
-            if (!columnStates[sceneId]) {
-                columnStates[sceneId] = {};
-            }
-            columnStates[sceneId][columnId] = state;
-        } catch (error) {
-            console.error("Failed to update column display:", error);
-        }
-    }
+		if (!columnStates[sceneId]) {
+			columnStates[sceneId] = {};
+		}
+		columnStates[sceneId][columnId] = state;
+	} catch (error) {
+		console.error("Failed to update column display:", error);
+	}
+}
 
-    // Scorecard handlers
-    async function attachScorecard(scorecardId: string) {
-        try {
-            await scorecardApi.attachScorecard(selectedSceneId, scorecardId);
+// Scorecard handlers
+async function attachScorecard(scorecardId: string) {
+	try {
+		await scorecardApi.attachScorecard(selectedSceneId, scorecardId);
 
-            const attachedData = await scorecardApi.getSceneScorecards(selectedSceneId);
-            attachedScorecards = attachedData.sceneScorecards || [];
-        } catch (error) {
-            console.error("Failed to attach scorecard:", error);
-        }
-    }
+		const attachedData = await scorecardApi.getSceneScorecards(selectedSceneId);
+		attachedScorecards = attachedData.sceneScorecards || [];
+	} catch (error) {
+		console.error("Failed to attach scorecard:", error);
+	}
+}
 
-    async function detachScorecard(sceneScorecardId: string) {
-        try {
-            await scorecardApi.detachScorecard(sceneScorecardId);
+async function detachScorecard(sceneScorecardId: string) {
+	try {
+		await scorecardApi.detachScorecard(sceneScorecardId);
 
-            attachedScorecards = attachedScorecards.filter(
-                (ss) => ss.id !== sceneScorecardId,
-            );
-        } catch (error) {
-            console.error("Failed to detach scorecard:", error);
-        }
-    }
+		attachedScorecards = attachedScorecards.filter(
+			(ss) => ss.id !== sceneScorecardId,
+		);
+	} catch (error) {
+		console.error("Failed to detach scorecard:", error);
+	}
+}
 
-    // User management handlers
-    async function handleUserAdded(email: string) {
-        await dashboardApi.addSeriesUser(board.seriesId, email, "member");
+// User management handlers
+async function handleUserAdded(email: string) {
+	await dashboardApi.addSeriesUser(board.seriesId, email, "member");
 
-        const data = await dashboardApi.listSeriesUsers(board.seriesId);
-        seriesUsers = data.users;
-    }
+	const data = await dashboardApi.listSeriesUsers(board.seriesId);
+	seriesUsers = data.users;
+}
 
-    async function handleUserRemoved(userId: string) {
-        try {
-            await dashboardApi.removeSeriesUser(board.seriesId, userId);
+async function handleUserRemoved(userId: string) {
+	try {
+		await dashboardApi.removeSeriesUser(board.seriesId, userId);
 
-            seriesUsers = seriesUsers.filter((u) => u.userId !== userId);
-        } catch (error) {
-            console.error("Failed to remove user:", error);
-        }
-    }
+		seriesUsers = seriesUsers.filter((u) => u.userId !== userId);
+	} catch (error) {
+		console.error("Failed to remove user:", error);
+	}
+}
 
-    async function handleUserRoleChanged(userId: string, newRole: string) {
-        try {
-            await dashboardApi.updateSeriesUserRole(board.seriesId, userId, newRole);
+async function handleUserRoleChanged(userId: string, newRole: string) {
+	try {
+		await dashboardApi.updateSeriesUserRole(board.seriesId, userId, newRole);
 
-            seriesUsers = seriesUsers.map((u) =>
-                u.userId === userId ? { ...u, role: newRole } : u,
-            );
-        } catch (error) {
-            console.error("Failed to update user role:", error);
-        }
-    }
+		seriesUsers = seriesUsers.map((u) =>
+			u.userId === userId ? { ...u, role: newRole } : u,
+		);
+	} catch (error) {
+		console.error("Failed to update user role:", error);
+	}
+}
 
-    // Computed values
-    let selectedColumn = $derived(
-        board.allColumns?.find((col: any) => col.id === selectedColumnId),
-    );
-    let selectedScene = $derived(
-        board.scenes?.find((scene: any) => scene.id === selectedSceneId),
-    );
-    let isThreeColumnMode = $derived(
-        activeTab === "columns" || activeTab === "scenes",
-    );
+// Computed values
+let selectedColumn = $derived(
+	board.allColumns?.find((col: any) => col.id === selectedColumnId),
+);
+let selectedScene = $derived(
+	board.scenes?.find((scene: any) => scene.id === selectedSceneId),
+);
+let isThreeColumnMode = $derived(
+	activeTab === "columns" || activeTab === "scenes",
+);
 </script>
 
 <div class="config-page">

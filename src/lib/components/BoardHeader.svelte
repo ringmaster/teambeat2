@@ -1,109 +1,107 @@
 <script lang="ts">
-    import SceneDropdown from "./SceneDropdown.svelte";
-    import VotingToolbar from "./VotingToolbar.svelte";
-    import Pill from "./ui/Pill.svelte";
-    import Icon from "./ui/Icon.svelte";
-    import { getSceneCapability } from "$lib/utils/scene-capability";
+import { getSceneCapability } from "$lib/utils/scene-capability";
+import SceneDropdown from "./SceneDropdown.svelte";
+import Icon from "./ui/Icon.svelte";
+import Pill from "./ui/Pill.svelte";
+import VotingToolbar from "./VotingToolbar.svelte";
 
-    interface Props {
-        board: {
-            id: string;
-            name: string;
-            series?: string;
-            status?: string;
-            blameFreeMode?: boolean;
-            votingEnabled?: boolean;
-            votingAllocation: number;
-            scenes?: Array<{
-                id: string;
-                name: string;
-                allowVoting?: boolean;
-            }>;
-            cloneSource?: {
-                name: string;
-                meetingDate?: string | null;
-                createdAt: string;
-            } | null;
-        };
-        userRole: string;
-        currentScene: {
-            id: string;
-            name: string;
-            allowVoting?: boolean;
-        } | null;
-        cards?: any[];
-        agreements?: any[];
-        lastHealthCheckDate?: string | null;
-        scorecardCountsByScene?: Record<string, number>;
-        showSceneDropdown: boolean;
-        showBoardConfig?: boolean;
-        connectedUsers?: number;
-        userVoteAllocation?: {
-            currentVotes: number;
-            maxVotes: number;
-            remainingVotes: number;
-            canVote: boolean;
-        };
-        votingStats?: {
-            totalUsers: number;
-            activeUsers: number;
-            usersWhoVoted: number;
-            usersWhoHaventVoted: number;
-            totalVotesCast: number;
-            maxPossibleVotes: number;
-            remainingVotes: number;
-            maxVotesPerUser: number;
-        };
-        onConfigureClick: () => void;
-        onShareClick: () => void;
-        onSceneChange: (sceneId: string) => void;
-        onNextScene?: () => void;
-        onShowSceneDropdown: (show: boolean) => void;
-        onIncreaseAllocation?: () => Promise<void>;
-        onResetVotes?: () => Promise<void>;
-        onStartTimer?: () => void;
-    }
+interface Props {
+	board: {
+		id: string;
+		name: string;
+		series?: string;
+		status?: string;
+		blameFreeMode?: boolean;
+		votingEnabled?: boolean;
+		votingAllocation: number;
+		scenes?: Array<{
+			id: string;
+			name: string;
+			allowVoting?: boolean;
+		}>;
+		cloneSource?: {
+			name: string;
+			meetingDate?: string | null;
+			createdAt: string;
+		} | null;
+	};
+	userRole: string;
+	currentScene: {
+		id: string;
+		name: string;
+		allowVoting?: boolean;
+	} | null;
+	cards?: any[];
+	agreements?: any[];
+	lastHealthCheckDate?: string | null;
+	scorecardCountsByScene?: Record<string, number>;
+	showSceneDropdown: boolean;
+	showBoardConfig?: boolean;
+	connectedUsers?: number;
+	userVoteAllocation?: {
+		currentVotes: number;
+		maxVotes: number;
+		remainingVotes: number;
+		canVote: boolean;
+	};
+	votingStats?: {
+		totalUsers: number;
+		activeUsers: number;
+		usersWhoVoted: number;
+		usersWhoHaventVoted: number;
+		totalVotesCast: number;
+		maxPossibleVotes: number;
+		remainingVotes: number;
+		maxVotesPerUser: number;
+	};
+	onConfigureClick: () => void;
+	onShareClick: () => void;
+	onSceneChange: (sceneId: string) => void;
+	onNextScene?: () => void;
+	onShowSceneDropdown: (show: boolean) => void;
+	onIncreaseAllocation?: () => Promise<void>;
+	onResetVotes?: () => Promise<void>;
+	onStartTimer?: () => void;
+}
 
-    let {
-        board,
-        userRole,
-        currentScene,
-        cards = [],
-        agreements = [],
-        lastHealthCheckDate = null,
-        scorecardCountsByScene = {},
-        showSceneDropdown,
-        showBoardConfig = false,
-        connectedUsers = 0,
-        userVoteAllocation,
-        votingStats,
-        onConfigureClick,
-        onShareClick,
-        onSceneChange,
-        onNextScene,
-        onShowSceneDropdown,
-        onIncreaseAllocation,
-        onResetVotes,
-        onStartTimer,
-    }: Props = $props();
+let {
+	board,
+	userRole,
+	currentScene,
+	cards = [],
+	agreements = [],
+	lastHealthCheckDate = null,
+	scorecardCountsByScene = {},
+	showSceneDropdown,
+	showBoardConfig = false,
+	connectedUsers = 0,
+	userVoteAllocation,
+	votingStats,
+	onConfigureClick,
+	onShareClick,
+	onSceneChange,
+	onNextScene,
+	onShowSceneDropdown,
+	onIncreaseAllocation,
+	onResetVotes,
+	onStartTimer,
+}: Props = $props();
 
-    function formatDate(dateString: string | null | undefined) {
-        if (!dateString) return null;
-        return new Date(dateString).toLocaleDateString("en-US", {
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
-    }
+function formatDate(dateString: string | null | undefined) {
+	if (!dateString) return null;
+	return new Date(dateString).toLocaleDateString("en-US", {
+		weekday: "short",
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+}
 
-    let cloneSourceDate = $derived(
-        board.cloneSource
-            ? formatDate(
-                  board.cloneSource.meetingDate || board.cloneSource.createdAt,
-              )
-            : null,
-    );
+let cloneSourceDate = $derived(
+	board.cloneSource
+		? formatDate(board.cloneSource.meetingDate || board.cloneSource.createdAt)
+		: null,
+);
 </script>
 
 <div id="board-header" class="surface-primary content-divider">

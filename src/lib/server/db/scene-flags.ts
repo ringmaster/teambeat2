@@ -1,2 +1,7 @@
 // Re-export scene flag constants from shared location
-export { SCENE_FLAGS, SCENE_MODE_FLAGS, FLAG_LABELS, type SceneFlag } from '$lib/scene-flags.js';
+export {
+	FLAG_LABELS,
+	SCENE_FLAGS,
+	SCENE_MODE_FLAGS,
+	type SceneFlag,
+} from "$lib/scene-flags.js";

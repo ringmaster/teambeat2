@@ -1,70 +1,77 @@
 <script lang="ts">
-    import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
-    import { onMount, onDestroy } from "svelte";
-    import { browser } from "$app/environment";
+import { onDestroy, onMount } from "svelte";
+import { browser } from "$app/environment";
+import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
 
-    interface Props {
-        board: any;
-        currentScene: any;
-        cards?: any[];
-        agreements?: any[];
-        lastHealthCheckDate?: string | null;
-        scorecardCountsByScene?: Record<string, number>;
-        showSceneDropdown: boolean;
-        onSceneChange: (sceneId: string) => void;
-        onShowSceneDropdown: (show: boolean) => void;
-        onNextScene?: () => void;
-    }
+interface Props {
+	board: any;
+	currentScene: any;
+	cards?: any[];
+	agreements?: any[];
+	lastHealthCheckDate?: string | null;
+	scorecardCountsByScene?: Record<string, number>;
+	showSceneDropdown: boolean;
+	onSceneChange: (sceneId: string) => void;
+	onShowSceneDropdown: (show: boolean) => void;
+	onNextScene?: () => void;
+}
 
-    let {
-        board,
-        currentScene,
-        cards = [],
-        agreements = [],
-        lastHealthCheckDate = null,
-        scorecardCountsByScene = {},
-        showSceneDropdown = $bindable(),
-        onSceneChange,
-        onShowSceneDropdown,
-        onNextScene,
-    }: Props = $props();
+let {
+	board,
+	currentScene,
+	cards = [],
+	agreements = [],
+	lastHealthCheckDate = null,
+	scorecardCountsByScene = {},
+	showSceneDropdown = $bindable(),
+	onSceneChange,
+	onShowSceneDropdown,
+	onNextScene,
+}: Props = $props();
 
-    // Button should only be disabled if board is completed or archived
-    const isButtonDisabled = $derived(false); // board.status === "completed" || board.status === "archived"
+// Button should only be disabled if board is completed or archived
+const isButtonDisabled = $derived(false); // board.status === "completed" || board.status === "archived"
 
-    // Check if a scene would be skipped based on its display rule
-    function wouldSceneBeSkipped(scene: any): boolean {
-        // Only evaluate display rules in the browser to avoid SSR issues
-        if (!browser) return false;
-        return !evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene);
-    }
+// Check if a scene would be skipped based on its display rule
+function wouldSceneBeSkipped(scene: any): boolean {
+	// Only evaluate display rules in the browser to avoid SSR issues
+	if (!browser) return false;
+	return !evaluateDisplayRule(
+		scene,
+		board,
+		cards,
+		agreements,
+		lastHealthCheckDate,
+		scorecardCountsByScene,
+	);
+}
 
-    function handleNextScene() {
-        if (!isButtonDisabled && onNextScene) {
-            onNextScene();
-        }
-    }
+function handleNextScene() {
+	if (!isButtonDisabled && onNextScene) {
+		onNextScene();
+	}
+}
 
-    // Keyboard shortcut handler
-    function handleKeydown(e: KeyboardEvent) {
-        // Control+G or Cmd+G for Next Scene
-        if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
-            e.preventDefault();
-            handleNextScene();
-        }
-    }
+// Keyboard shortcut handler
+function handleKeydown(e: KeyboardEvent) {
+	// Control+G or Cmd+G for Next Scene
+	if ((e.ctrlKey || e.metaKey) && e.key === "g") {
+		e.preventDefault();
+		handleNextScene();
+	}
+}
 
-    onMount(() => {
-        if (browser) {
-            window.addEventListener('keydown', handleKeydown);
-        }
-    });
+onMount(() => {
+	if (browser) {
+		window.addEventListener("keydown", handleKeydown);
+	}
+});
 
-    onDestroy(() => {
-        if (browser) {
-            window.removeEventListener('keydown', handleKeydown);
-        }
-    });
+onDestroy(() => {
+	if (browser) {
+		window.removeEventListener("keydown", handleKeydown);
+	}
+});
 </script>
 
 <div class="scene-button-group">

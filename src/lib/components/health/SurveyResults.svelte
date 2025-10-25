@@ -1,64 +1,74 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import RadarChart from './RadarChart.svelte';
-    import QuestionDetail from './QuestionDetail.svelte';
+import { onMount } from "svelte";
+import QuestionDetail from "./QuestionDetail.svelte";
+import RadarChart from "./RadarChart.svelte";
 
-    interface Props {
-        sceneId: string;
-        boardId: string;
-        boardStatus: string;
-        focusedQuestionId: string | null;
-        isFacilitator: boolean;
-        sceneFlags: string[];
-        onFocusChange: (questionId: string | null) => void;
-    }
+interface Props {
+	sceneId: string;
+	boardId: string;
+	boardStatus: string;
+	focusedQuestionId: string | null;
+	isFacilitator: boolean;
+	sceneFlags: string[];
+	onFocusChange: (questionId: string | null) => void;
+}
 
-    const { sceneId, boardId, boardStatus, focusedQuestionId, isFacilitator, sceneFlags, onFocusChange }: Props = $props();
+const {
+	sceneId,
+	boardId,
+	boardStatus,
+	focusedQuestionId,
+	isFacilitator,
+	sceneFlags,
+	onFocusChange,
+}: Props = $props();
 
-    let results = $state<any[]>([]);
-    let loading = $state(true);
-    let error = $state<string | null>(null);
+let results = $state<any[]>([]);
+let loading = $state(true);
+let error = $state<string | null>(null);
 
-    async function loadResults() {
-        try {
-            loading = true;
-            error = null;
+async function loadResults() {
+	try {
+		loading = true;
+		error = null;
 
-            const res = await fetch(`/api/scenes/${sceneId}/health-results`);
-            const data = await res.json();
+		const res = await fetch(`/api/scenes/${sceneId}/health-results`);
+		const data = await res.json();
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to load results');
-            }
+		if (!data.success) {
+			throw new Error(data.error || "Failed to load results");
+		}
 
-            results = data.results;
-        } catch (err) {
-            console.error('Failed to load results:', err);
-            error = err instanceof Error ? err.message : 'Failed to load results';
-        } finally {
-            loading = false;
-        }
-    }
+		results = data.results;
+	} catch (err) {
+		console.error("Failed to load results:", err);
+		error = err instanceof Error ? err.message : "Failed to load results";
+	} finally {
+		loading = false;
+	}
+}
 
-    function handleQuestionClick(questionId: string) {
-        if (isFacilitator) {
-            onFocusChange(questionId);
-        }
-    }
+function handleQuestionClick(questionId: string) {
+	if (isFacilitator) {
+		onFocusChange(questionId);
+	}
+}
 
-    function handleBackToOverview() {
-        if (isFacilitator) {
-            onFocusChange(null);
-        }
-    }
+function handleBackToOverview() {
+	if (isFacilitator) {
+		onFocusChange(null);
+	}
+}
 
-    onMount(() => {
-        loadResults();
-    });
+onMount(() => {
+	loadResults();
+});
 
-    const focusedQuestion = $derived(
-        focusedQuestionId ? results.find(r => r.question.id === focusedQuestionId) : null
-    );
+const focusedQuestion = $derived(
+	focusedQuestionId
+		? results.find((r) => r.question.id === focusedQuestionId)
+		: null,
+);
 </script>
 
 <div class="survey-results">

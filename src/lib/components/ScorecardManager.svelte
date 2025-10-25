@@ -1,724 +1,712 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import type {
-        Scorecard,
-        ScorecardDatasource,
-        ScorecardRule,
-    } from "$lib/types/scorecard";
-    import {
-        parseRPNString,
-        serializeRPNExpression,
-    } from "$lib/utils/rpn-parser";
-    import { extractPathsFromJSON } from "$lib/utils/json-path-extractor";
-    import {
-        validateRPNCondition,
-        type ValidationResult,
-    } from "$lib/utils/rpn-validator";
-    import Modal from "$lib/components/ui/Modal.svelte";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import RPNTestModal from "$lib/components/RPNTestModal.svelte";
-    import { toastStore } from "$lib/stores/toast";
-    import { parseFile } from "$lib/utils/data-parser";
-    import * as scorecardApi from "$lib/services/scorecard-api";
-
-    interface Props {
-        seriesId: string;
-        canEdit: boolean;
-    }
-
-    let { seriesId, canEdit }: Props = $props();
-
-    // Editable rule with condition as string for UI
-    interface EditableRule extends Omit<ScorecardRule, "condition"> {
-        condition: string;
-    }
-
-    // State
-    let scorecards = $state<Scorecard[]>([]);
-    let selectedScorecardId = $state<string | null>(null);
-    let selectedDatasourceId = $state<string | null>(null);
-    let selectedScorecard = $state<Scorecard | null>(null);
-    let datasources = $state<ScorecardDatasource[]>([]);
-    let selectedDatasource = $state<ScorecardDatasource | null>(null);
-    let rules = $state<EditableRule[]>([]);
-    let editingRuleIndex = $state<number | null>(null);
-
-    // Loading and error states
-    let loadingScorecards = $state(true);
-    let loadingScorecardDetail = $state(false);
-    let loadingDatasourceDetail = $state(false);
-    let error = $state<string | null>(null);
-    let saving = $state(false);
-
-    // Edit state for scorecard
-    let editedScorecardName = $state("");
-    let editedScorecardDescription = $state("");
-
-    // Edit state for datasource
-    let editedDatasourceName = $state("");
-    let editedDatasourceSourceType = $state<"paste" | "api">("paste");
-    let editedDatasourceSampleData = $state("");
-
-    // Derived state for available paths from sample data
-    let availablePaths = $derived(
-        extractPathsFromJSON(editedDatasourceSampleData),
-    );
-
-    // Validation state - map of rule index to validation result
-    let ruleValidations = $state<Map<number, ValidationResult>>(new Map());
-
-    // RPN help modal state
-    let showRPNHelpModal = $state(false);
-    // RPN Test Modal state
-    let showTestModal = $state(false);
-    let testingRuleIndex = $state<number | null>(null);
-    let testingThresholdIndex = $state<number | null>(null);
-    // Validation state for threshold rules - map of "ruleIndex-thresholdIndex" to validation result
-    let thresholdRuleValidations = $state<Map<string, ValidationResult>>(
-        new Map(),
-    );
-    // Sample data drag state
-    let isDraggingSampleData = $state(false);
-
-    // Derived validation for each rule
-    function validateRule(rule: EditableRule, index: number): ValidationResult {
-        const result = validateRPNCondition(
-            rule.condition,
-            editedDatasourceSampleData,
-            rule.iterate_over,
-        );
-        return result;
-    }
-
-    // Update validations when rules or sample data changes
-    $effect(() => {
-        const newValidations = new Map<number, ValidationResult>();
-        const newThresholdValidations = new Map<string, ValidationResult>();
-
-        rules.forEach((rule, index) => {
-            newValidations.set(index, validateRule(rule, index));
-
-            // Validate threshold rules
-            if (rule.threshold_rules) {
-                rule.threshold_rules.forEach(
-                    (thresholdRule, thresholdIndex) => {
-                        const key = `${index}-${thresholdIndex}`;
-                        const result = validateRPNCondition(
-                            typeof thresholdRule.condition === "string"
-                                ? thresholdRule.condition
-                                : serializeRPNExpression(
-                                      thresholdRule.condition,
-                                  ),
-                            editedDatasourceSampleData,
-                            rule.iterate_over,
-                        );
-                        newThresholdValidations.set(key, result);
-                    },
-                );
-            }
-        });
-
-        ruleValidations = newValidations;
-        thresholdRuleValidations = newThresholdValidations;
-    });
-
-    // Drag and drop state
-    let draggedDatasourceIndex = $state<number | null>(null);
-
-    // Derived state
-    let selectedScorecardData = $derived(
-        scorecards.find((s) => s.id === selectedScorecardId) || null,
-    );
-
-    // ============================================================================
-    // API Functions - Scorecards
-    // ============================================================================
-
-    async function loadScorecards() {
-        try {
-            loadingScorecards = true;
-            error = null;
-            const data = await scorecardApi.listScorecards(seriesId);
-
-            if (data.success) {
-                scorecards = data.scorecards;
-            } else {
-                error = data.error || "Failed to load scorecards";
-            }
-        } catch (e) {
-            error = "Failed to load scorecards";
-            console.error("Error loading scorecards:", e);
-        } finally {
-            loadingScorecards = false;
-        }
-    }
-
-    async function createScorecard() {
-        if (!canEdit) return;
-
-        try {
-            const timestamp = new Date()
-                .toISOString()
-                .replace(/[:.]/g, "-")
-                .slice(0, 19);
-            const data = await scorecardApi.createScorecard(
-                seriesId,
-                `New Scorecard ${timestamp}`,
-                null
-            );
-
-            if (data.success) {
-                scorecards = [...scorecards, data.scorecard];
-                // Auto-select the new scorecard
-                await selectScorecard(data.scorecard.id);
-            } else {
-                error = data.error || "Failed to create scorecard";
-            }
-        } catch (e) {
-            error = "Failed to create scorecard";
-            console.error("Error creating scorecard:", e);
-        }
-    }
-
-    async function saveScorecard() {
-        if (!selectedScorecardId || !editedScorecardName.trim()) return;
-
-        try {
-            saving = true;
-            error = null;
-            const data = await scorecardApi.updateScorecard(
-                seriesId,
-                selectedScorecardId,
-                editedScorecardName,
-                editedScorecardDescription || null
-            );
-
-            if (data.success) {
-                selectedScorecard = data.scorecard;
-                // Update in list
-                scorecards = scorecards.map((s) =>
-                    s.id === data.scorecard.id ? data.scorecard : s,
-                );
-            } else {
-                error = data.error || "Failed to save scorecard";
-            }
-        } catch (e) {
-            error = "Failed to save scorecard";
-            console.error("Error saving scorecard:", e);
-        } finally {
-            saving = false;
-        }
-    }
-
-    async function deleteScorecard(scorecardId: string, event: Event) {
-        event.stopPropagation();
-
-        if (!canEdit) return;
-
-        toastStore.warning(
-            "Are you sure you want to delete this scorecard? This will remove it from all scenes.",
-            {
-                autoHide: false,
-                actions: [
-                    {
-                        label: "Delete",
-                        onClick: async () => {
-                            try {
-                                const data = await scorecardApi.deleteScorecard(seriesId, scorecardId);
-
-                                if (data.success) {
-                                    scorecards = scorecards.filter(
-                                        (s) => s.id !== scorecardId,
-                                    );
-                                    if (selectedScorecardId === scorecardId) {
-                                        selectedScorecardId = null;
-                                        selectedScorecard = null;
-                                        datasources = [];
-                                    }
-                                    toastStore.success("Scorecard deleted successfully");
-                                } else {
-                                    error = data.error || "Failed to delete scorecard";
-                                    toastStore.error("Failed to delete scorecard");
-                                }
-                            } catch (e) {
-                                error = "Failed to delete scorecard";
-                                toastStore.error("Failed to delete scorecard");
-                                console.error("Error deleting scorecard:", e);
-                            }
-                        },
-                        variant: "primary",
-                    },
-                    {
-                        label: "Cancel",
-                        onClick: () => {},
-                        variant: "secondary",
-                    },
-                ],
-            },
-        );
-    }
-
-    async function selectScorecard(scorecardId: string) {
-        if (selectedScorecardId === scorecardId) return;
-
-        selectedScorecardId = scorecardId;
-        selectedDatasourceId = null;
-        selectedDatasource = null;
-        rules = [];
-
-        await loadScorecardDetail(scorecardId);
-    }
-
-    async function loadScorecardDetail(scorecardId: string) {
-        try {
-            loadingScorecardDetail = true;
-            error = null;
-            const data = await scorecardApi.getScorecardDetail(seriesId, scorecardId);
-
-            if (data.success) {
-                selectedScorecard = data.scorecard;
-                datasources = data.scorecard.datasources || [];
-                editedScorecardName = data.scorecard.name;
-                editedScorecardDescription = data.scorecard.description || "";
-            } else {
-                error = data.error || "Failed to load scorecard";
-            }
-        } catch (e) {
-            error = "Failed to load scorecard";
-            console.error("Error loading scorecard:", e);
-        } finally {
-            loadingScorecardDetail = false;
-        }
-    }
-
-    // ============================================================================
-    // API Functions - Datasources
-    // ============================================================================
-
-    async function createDatasource() {
-        if (!canEdit || !selectedScorecardId) return;
-
-        try {
-            const timestamp = new Date()
-                .toISOString()
-                .replace(/[:.]/g, "-")
-                .slice(0, 19);
-            const data = await scorecardApi.createDatasource(
-                selectedScorecardId,
-                `New Datasource ${timestamp}`,
-                "paste"
-            );
-
-            if (data.success) {
-                datasources = [...datasources, data.datasource];
-                // Auto-select the new datasource
-                await selectDatasource(data.datasource.id);
-            } else {
-                error = data.error || "Failed to create datasource";
-            }
-        } catch (e) {
-            error = "Failed to create datasource";
-            console.error("Error creating datasource:", e);
-        }
-    }
-
-    async function selectDatasource(datasourceId: string) {
-        if (selectedDatasourceId === datasourceId) return;
-
-        selectedDatasourceId = datasourceId;
-        await loadDatasourceDetail(datasourceId);
-    }
-
-    async function loadDatasourceDetail(datasourceId: string) {
-        if (!selectedScorecardId) return;
-
-        try {
-            loadingDatasourceDetail = true;
-            error = null;
-            const data = await scorecardApi.getDatasourceDetail(selectedScorecardId, datasourceId);
-
-            if (data.success) {
-                selectedDatasource = data.datasource;
-                editedDatasourceName = data.datasource.name;
-                editedDatasourceSourceType = data.datasource.sourceType;
-                editedDatasourceSampleData = data.datasource.dataSchema || "";
-
-                // Convert ScorecardRule[] to EditableRule[] by serializing conditions
-                const loadedRules: ScorecardRule[] = JSON.parse(
-                    data.datasource.rules,
-                );
-                rules = loadedRules.map((rule) => ({
-                    ...rule,
-                    condition: serializeRPNExpression(rule.condition),
-                    threshold_rules: rule.threshold_rules?.map((tr) => ({
-                        condition: serializeRPNExpression(tr.condition),
-                        severity: tr.severity,
-                    })),
-                }));
-            } else {
-                error = data.error || "Failed to load datasource";
-            }
-        } catch (e) {
-            error = "Failed to load datasource";
-            console.error("Error loading datasource:", e);
-        } finally {
-            loadingDatasourceDetail = false;
-        }
-    }
-
-    async function saveDatasource() {
-        if (
-            !selectedDatasourceId ||
-            !selectedScorecardId ||
-            !editedDatasourceName.trim()
-        )
-            return;
-
-        if (rules.length === 0) {
-            error = "At least one rule is required";
-            return;
-        }
-
-        try {
-            saving = true;
-            error = null;
-
-            // Convert EditableRule[] to ScorecardRule[] by parsing conditions
-            const parsedRules: ScorecardRule[] = rules.map((rule) => {
-                try {
-                    return {
-                        ...rule,
-                        condition: parseRPNString(rule.condition),
-                        threshold_rules: rule.threshold_rules?.map((tr) => ({
-                            condition: parseRPNString(
-                                typeof tr.condition === "string"
-                                    ? tr.condition
-                                    : serializeRPNExpression(tr.condition),
-                            ),
-                            severity: tr.severity,
-                        })),
-                    };
-                } catch (parseError) {
-                    throw new Error(
-                        `Invalid RPN expression in rule "${rule.title_template}": ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-                    );
-                }
-            });
-
-            const data = await scorecardApi.updateDatasource(
-                selectedScorecardId,
-                selectedDatasourceId,
-                {
-                    name: editedDatasourceName,
-                    data_schema: editedDatasourceSampleData || null,
-                    rules: parsedRules,
-                    api_config: null,
-                }
-            );
-
-            if (data.success) {
-                selectedDatasource = data.datasource;
-                // Update in list
-                datasources = datasources.map((d) =>
-                    d.id === data.datasource.id ? data.datasource : d,
-                );
-            } else {
-                error = data.error || "Failed to save datasource";
-            }
-        } catch (e) {
-            error =
-                e instanceof Error ? e.message : "Failed to save datasource";
-            console.error("Error saving datasource:", e);
-        } finally {
-            saving = false;
-        }
-    }
-
-    async function deleteDatasource(datasourceId: string, event: Event) {
-        event.stopPropagation();
-
-        if (!canEdit || !selectedScorecardId) return;
-
-        toastStore.warning("Are you sure you want to delete this datasource?", {
-            autoHide: false,
-            actions: [
-                {
-                    label: "Delete",
-                    onClick: async () => {
-                        try {
-                            const data = await scorecardApi.deleteDatasource(selectedScorecardId!, datasourceId);
-
-                            if (data.success) {
-                                datasources = datasources.filter(
-                                    (d) => d.id !== datasourceId,
-                                );
-                                if (selectedDatasourceId === datasourceId) {
-                                    selectedDatasourceId = null;
-                                    selectedDatasource = null;
-                                    rules = [];
-                                }
-                                toastStore.success("Datasource deleted successfully");
-                            } else {
-                                error = data.error || "Failed to delete datasource";
-                                toastStore.error("Failed to delete datasource");
-                            }
-                        } catch (e) {
-                            error = "Failed to delete datasource";
-                            toastStore.error("Failed to delete datasource");
-                            console.error("Error deleting datasource:", e);
-                        }
-                    },
-                    variant: "primary",
-                },
-                {
-                    label: "Cancel",
-                    onClick: () => {},
-                    variant: "secondary",
-                },
-            ],
-        });
-    }
-
-    // Drag and drop for datasource reordering
-    function handleDatasourceDragStart(index: number) {
-        draggedDatasourceIndex = index;
-    }
-
-    function handleDatasourceDragOver(e: DragEvent) {
-        e.preventDefault();
-    }
-
-    async function handleDatasourceDrop(e: DragEvent, dropIndex: number) {
-        e.preventDefault();
-        if (
-            !selectedScorecardId ||
-            draggedDatasourceIndex === null ||
-            draggedDatasourceIndex === dropIndex
-        ) {
-            draggedDatasourceIndex = null;
-            return;
-        }
-
-        // Reorder datasources array
-        const reordered = [...datasources];
-        const [movedItem] = reordered.splice(draggedDatasourceIndex, 1);
-        reordered.splice(dropIndex, 0, movedItem);
-        datasources = reordered;
-
-        // Save new order to server
-        try {
-            const data = await scorecardApi.reorderDatasources(
-                selectedScorecardId!,
-                reordered.map((d) => d.id)
-            );
-
-            if (data.success) {
-                datasources = data.datasources;
-            } else {
-                error = data.error || "Failed to reorder datasources";
-                // Reload to get correct order
-                if (selectedScorecardId) {
-                    await loadScorecardDetail(selectedScorecardId);
-                }
-            }
-        } catch (e) {
-            error = "Failed to reorder datasources";
-            console.error("Error reordering datasources:", e);
-            // Reload to get correct order
-            if (selectedScorecardId) {
-                await loadScorecardDetail(selectedScorecardId);
-            }
-        } finally {
-            draggedDatasourceIndex = null;
-        }
-    }
-
-    // ============================================================================
-    // Rule Management
-    // ============================================================================
-
-    function addRule() {
-        const newRule: EditableRule = {
-            id: `rule-${Date.now()}`,
-            section: "Default Section",
-            iterate_over: null,
-            condition: "true",
-            title_template: "New Rule",
-            value_template: "",
-            severity: "info",
-        };
-        rules = [...rules, newRule];
-        editingRuleIndex = rules.length - 1;
-    }
-
-    function deleteRule(index: number) {
-        rules = rules.filter((_, i) => i !== index);
-        if (editingRuleIndex === index) {
-            editingRuleIndex = null;
-        }
-    }
-
-    function moveRuleUp(index: number) {
-        if (index === 0) return;
-        const newRules = [...rules];
-        [newRules[index - 1], newRules[index]] = [
-            newRules[index],
-            newRules[index - 1],
-        ];
-        rules = newRules;
-        if (editingRuleIndex === index) {
-            editingRuleIndex = index - 1;
-        } else if (editingRuleIndex === index - 1) {
-            editingRuleIndex = index;
-        }
-    }
-
-    function moveRuleDown(index: number) {
-        if (index === rules.length - 1) return;
-        const newRules = [...rules];
-        [newRules[index], newRules[index + 1]] = [
-            newRules[index + 1],
-            newRules[index],
-        ];
-        rules = newRules;
-        if (editingRuleIndex === index) {
-            editingRuleIndex = index + 1;
-        } else if (editingRuleIndex === index + 1) {
-            editingRuleIndex = index;
-        }
-    }
-
-    function addThresholdRule(ruleIndex: number) {
-        const rule = rules[ruleIndex];
-        if (!rule.threshold_rules) {
-            rule.threshold_rules = [];
-        }
-        rule.threshold_rules = [
-            ...rule.threshold_rules,
-            {
-                condition: "true",
-                severity: "warning",
-            },
-        ];
-        rules = [...rules]; // Trigger reactivity
-    }
-
-    function removeThresholdRule(ruleIndex: number, thresholdIndex: number) {
-        const rule = rules[ruleIndex];
-        if (!rule.threshold_rules) return;
-        rule.threshold_rules = rule.threshold_rules.filter(
-            (_, i) => i !== thresholdIndex,
-        );
-        rules = [...rules]; // Trigger reactivity
-        saveDatasource(); // Save changes to database
-    }
-
-    function moveThresholdRuleUp(ruleIndex: number, thresholdIndex: number) {
-        if (thresholdIndex === 0) return;
-        const rule = rules[ruleIndex];
-        if (!rule.threshold_rules) return;
-
-        const newThresholdRules = [...rule.threshold_rules];
-        [
-            newThresholdRules[thresholdIndex - 1],
-            newThresholdRules[thresholdIndex],
-        ] = [
-            newThresholdRules[thresholdIndex],
-            newThresholdRules[thresholdIndex - 1],
-        ];
-
-        rule.threshold_rules = newThresholdRules;
-        rules = [...rules]; // Trigger reactivity
-        saveDatasource(); // Save changes to database
-    }
-
-    function moveThresholdRuleDown(ruleIndex: number, thresholdIndex: number) {
-        const rule = rules[ruleIndex];
-        if (
-            !rule.threshold_rules ||
-            thresholdIndex === rule.threshold_rules.length - 1
-        )
-            return;
-
-        const newThresholdRules = [...rule.threshold_rules];
-        [
-            newThresholdRules[thresholdIndex],
-            newThresholdRules[thresholdIndex + 1],
-        ] = [
-            newThresholdRules[thresholdIndex + 1],
-            newThresholdRules[thresholdIndex],
-        ];
-
-        rule.threshold_rules = newThresholdRules;
-        rules = [...rules]; // Trigger reactivity
-        saveDatasource(); // Save changes to database
-    }
-
-    function openTestModal(ruleIndex: number, thresholdIndex: number | null = null) {
-        testingRuleIndex = ruleIndex;
-        testingThresholdIndex = thresholdIndex;
-        showTestModal = true;
-    }
-
-    function handleSampleDataDragOver(e: DragEvent) {
-        e.preventDefault();
-        if (!canEdit) return;
-        isDraggingSampleData = true;
-    }
-
-    function handleSampleDataDragLeave(e: DragEvent) {
-        e.preventDefault();
-        isDraggingSampleData = false;
-    }
-
-    async function handleSampleDataDrop(e: DragEvent) {
-        e.preventDefault();
-        isDraggingSampleData = false;
-
-        if (!canEdit) return;
-
-        const files = e.dataTransfer?.files;
-        if (!files || files.length === 0) return;
-
-        const file = files[0];
-        const result = await parseFile(file);
-
-        if (result.success && result.data) {
-            // Convert parsed data back to formatted string for display
-            editedDatasourceSampleData = JSON.stringify(result.data, null, 2);
-            // Trigger save
-            await saveDatasource();
-        } else {
-            toastStore.error(result.error || "Failed to parse file");
-        }
-    }
-
-    function handleUpdateRuleFromTest(updatedRule: string) {
-        if (testingRuleIndex !== null) {
-            if (testingThresholdIndex !== null) {
-                // Updating a threshold rule
-                const rule = rules[testingRuleIndex];
-                if (rule.threshold_rules && rule.threshold_rules[testingThresholdIndex]) {
-                    rule.threshold_rules[testingThresholdIndex].condition = updatedRule;
-                    rules = [...rules]; // Trigger reactivity
-                    saveDatasource();
-                }
-            } else {
-                // Updating a main rule
-                rules[testingRuleIndex].condition = updatedRule;
-                rules = [...rules]; // Trigger reactivity
-                saveDatasource();
-            }
-        }
-    }
-
-    // ============================================================================
-    // Lifecycle
-    // ============================================================================
-
-    onMount(() => {
-        loadScorecards();
-    });
+import { onMount } from "svelte";
+import RPNTestModal from "$lib/components/RPNTestModal.svelte";
+import Icon from "$lib/components/ui/Icon.svelte";
+import Modal from "$lib/components/ui/Modal.svelte";
+import * as scorecardApi from "$lib/services/scorecard-api";
+import { toastStore } from "$lib/stores/toast";
+import type {
+	Scorecard,
+	ScorecardDatasource,
+	ScorecardRule,
+} from "$lib/types/scorecard";
+import { parseFile } from "$lib/utils/data-parser";
+import { extractPathsFromJSON } from "$lib/utils/json-path-extractor";
+import { parseRPNString, serializeRPNExpression } from "$lib/utils/rpn-parser";
+import {
+	type ValidationResult,
+	validateRPNCondition,
+} from "$lib/utils/rpn-validator";
+
+interface Props {
+	seriesId: string;
+	canEdit: boolean;
+}
+
+let { seriesId, canEdit }: Props = $props();
+
+// Editable rule with condition as string for UI
+interface EditableRule extends Omit<ScorecardRule, "condition"> {
+	condition: string;
+}
+
+// State
+let scorecards = $state<Scorecard[]>([]);
+let selectedScorecardId = $state<string | null>(null);
+let selectedDatasourceId = $state<string | null>(null);
+let selectedScorecard = $state<Scorecard | null>(null);
+let datasources = $state<ScorecardDatasource[]>([]);
+let selectedDatasource = $state<ScorecardDatasource | null>(null);
+let rules = $state<EditableRule[]>([]);
+let editingRuleIndex = $state<number | null>(null);
+
+// Loading and error states
+let loadingScorecards = $state(true);
+let loadingScorecardDetail = $state(false);
+let loadingDatasourceDetail = $state(false);
+let error = $state<string | null>(null);
+let saving = $state(false);
+
+// Edit state for scorecard
+let editedScorecardName = $state("");
+let editedScorecardDescription = $state("");
+
+// Edit state for datasource
+let editedDatasourceName = $state("");
+let editedDatasourceSourceType = $state<"paste" | "api">("paste");
+let editedDatasourceSampleData = $state("");
+
+// Derived state for available paths from sample data
+let availablePaths = $derived(extractPathsFromJSON(editedDatasourceSampleData));
+
+// Validation state - map of rule index to validation result
+let ruleValidations = $state<Map<number, ValidationResult>>(new Map());
+
+// RPN help modal state
+let showRPNHelpModal = $state(false);
+// RPN Test Modal state
+let showTestModal = $state(false);
+let testingRuleIndex = $state<number | null>(null);
+let testingThresholdIndex = $state<number | null>(null);
+// Validation state for threshold rules - map of "ruleIndex-thresholdIndex" to validation result
+let thresholdRuleValidations = $state<Map<string, ValidationResult>>(new Map());
+// Sample data drag state
+let isDraggingSampleData = $state(false);
+
+// Derived validation for each rule
+function validateRule(rule: EditableRule, index: number): ValidationResult {
+	const result = validateRPNCondition(
+		rule.condition,
+		editedDatasourceSampleData,
+		rule.iterate_over,
+	);
+	return result;
+}
+
+// Update validations when rules or sample data changes
+$effect(() => {
+	const newValidations = new Map<number, ValidationResult>();
+	const newThresholdValidations = new Map<string, ValidationResult>();
+
+	rules.forEach((rule, index) => {
+		newValidations.set(index, validateRule(rule, index));
+
+		// Validate threshold rules
+		if (rule.threshold_rules) {
+			rule.threshold_rules.forEach((thresholdRule, thresholdIndex) => {
+				const key = `${index}-${thresholdIndex}`;
+				const result = validateRPNCondition(
+					typeof thresholdRule.condition === "string"
+						? thresholdRule.condition
+						: serializeRPNExpression(thresholdRule.condition),
+					editedDatasourceSampleData,
+					rule.iterate_over,
+				);
+				newThresholdValidations.set(key, result);
+			});
+		}
+	});
+
+	ruleValidations = newValidations;
+	thresholdRuleValidations = newThresholdValidations;
+});
+
+// Drag and drop state
+let draggedDatasourceIndex = $state<number | null>(null);
+
+// Derived state
+let selectedScorecardData = $derived(
+	scorecards.find((s) => s.id === selectedScorecardId) || null,
+);
+
+// ============================================================================
+// API Functions - Scorecards
+// ============================================================================
+
+async function loadScorecards() {
+	try {
+		loadingScorecards = true;
+		error = null;
+		const data = await scorecardApi.listScorecards(seriesId);
+
+		if (data.success) {
+			scorecards = data.scorecards;
+		} else {
+			error = data.error || "Failed to load scorecards";
+		}
+	} catch (e) {
+		error = "Failed to load scorecards";
+		console.error("Error loading scorecards:", e);
+	} finally {
+		loadingScorecards = false;
+	}
+}
+
+async function createScorecard() {
+	if (!canEdit) return;
+
+	try {
+		const timestamp = new Date()
+			.toISOString()
+			.replace(/[:.]/g, "-")
+			.slice(0, 19);
+		const data = await scorecardApi.createScorecard(
+			seriesId,
+			`New Scorecard ${timestamp}`,
+			null,
+		);
+
+		if (data.success) {
+			scorecards = [...scorecards, data.scorecard];
+			// Auto-select the new scorecard
+			await selectScorecard(data.scorecard.id);
+		} else {
+			error = data.error || "Failed to create scorecard";
+		}
+	} catch (e) {
+		error = "Failed to create scorecard";
+		console.error("Error creating scorecard:", e);
+	}
+}
+
+async function saveScorecard() {
+	if (!selectedScorecardId || !editedScorecardName.trim()) return;
+
+	try {
+		saving = true;
+		error = null;
+		const data = await scorecardApi.updateScorecard(
+			seriesId,
+			selectedScorecardId,
+			editedScorecardName,
+			editedScorecardDescription || null,
+		);
+
+		if (data.success) {
+			selectedScorecard = data.scorecard;
+			// Update in list
+			scorecards = scorecards.map((s) =>
+				s.id === data.scorecard.id ? data.scorecard : s,
+			);
+		} else {
+			error = data.error || "Failed to save scorecard";
+		}
+	} catch (e) {
+		error = "Failed to save scorecard";
+		console.error("Error saving scorecard:", e);
+	} finally {
+		saving = false;
+	}
+}
+
+async function deleteScorecard(scorecardId: string, event: Event) {
+	event.stopPropagation();
+
+	if (!canEdit) return;
+
+	toastStore.warning(
+		"Are you sure you want to delete this scorecard? This will remove it from all scenes.",
+		{
+			autoHide: false,
+			actions: [
+				{
+					label: "Delete",
+					onClick: async () => {
+						try {
+							const data = await scorecardApi.deleteScorecard(
+								seriesId,
+								scorecardId,
+							);
+
+							if (data.success) {
+								scorecards = scorecards.filter((s) => s.id !== scorecardId);
+								if (selectedScorecardId === scorecardId) {
+									selectedScorecardId = null;
+									selectedScorecard = null;
+									datasources = [];
+								}
+								toastStore.success("Scorecard deleted successfully");
+							} else {
+								error = data.error || "Failed to delete scorecard";
+								toastStore.error("Failed to delete scorecard");
+							}
+						} catch (e) {
+							error = "Failed to delete scorecard";
+							toastStore.error("Failed to delete scorecard");
+							console.error("Error deleting scorecard:", e);
+						}
+					},
+					variant: "primary",
+				},
+				{
+					label: "Cancel",
+					onClick: () => {},
+					variant: "secondary",
+				},
+			],
+		},
+	);
+}
+
+async function selectScorecard(scorecardId: string) {
+	if (selectedScorecardId === scorecardId) return;
+
+	selectedScorecardId = scorecardId;
+	selectedDatasourceId = null;
+	selectedDatasource = null;
+	rules = [];
+
+	await loadScorecardDetail(scorecardId);
+}
+
+async function loadScorecardDetail(scorecardId: string) {
+	try {
+		loadingScorecardDetail = true;
+		error = null;
+		const data = await scorecardApi.getScorecardDetail(seriesId, scorecardId);
+
+		if (data.success) {
+			selectedScorecard = data.scorecard;
+			datasources = data.scorecard.datasources || [];
+			editedScorecardName = data.scorecard.name;
+			editedScorecardDescription = data.scorecard.description || "";
+		} else {
+			error = data.error || "Failed to load scorecard";
+		}
+	} catch (e) {
+		error = "Failed to load scorecard";
+		console.error("Error loading scorecard:", e);
+	} finally {
+		loadingScorecardDetail = false;
+	}
+}
+
+// ============================================================================
+// API Functions - Datasources
+// ============================================================================
+
+async function createDatasource() {
+	if (!canEdit || !selectedScorecardId) return;
+
+	try {
+		const timestamp = new Date()
+			.toISOString()
+			.replace(/[:.]/g, "-")
+			.slice(0, 19);
+		const data = await scorecardApi.createDatasource(
+			selectedScorecardId,
+			`New Datasource ${timestamp}`,
+			"paste",
+		);
+
+		if (data.success) {
+			datasources = [...datasources, data.datasource];
+			// Auto-select the new datasource
+			await selectDatasource(data.datasource.id);
+		} else {
+			error = data.error || "Failed to create datasource";
+		}
+	} catch (e) {
+		error = "Failed to create datasource";
+		console.error("Error creating datasource:", e);
+	}
+}
+
+async function selectDatasource(datasourceId: string) {
+	if (selectedDatasourceId === datasourceId) return;
+
+	selectedDatasourceId = datasourceId;
+	await loadDatasourceDetail(datasourceId);
+}
+
+async function loadDatasourceDetail(datasourceId: string) {
+	if (!selectedScorecardId) return;
+
+	try {
+		loadingDatasourceDetail = true;
+		error = null;
+		const data = await scorecardApi.getDatasourceDetail(
+			selectedScorecardId,
+			datasourceId,
+		);
+
+		if (data.success) {
+			selectedDatasource = data.datasource;
+			editedDatasourceName = data.datasource.name;
+			editedDatasourceSourceType = data.datasource.sourceType;
+			editedDatasourceSampleData = data.datasource.dataSchema || "";
+
+			// Convert ScorecardRule[] to EditableRule[] by serializing conditions
+			const loadedRules: ScorecardRule[] = JSON.parse(data.datasource.rules);
+			rules = loadedRules.map((rule) => ({
+				...rule,
+				condition: serializeRPNExpression(rule.condition),
+				threshold_rules: rule.threshold_rules?.map((tr) => ({
+					condition: serializeRPNExpression(tr.condition),
+					severity: tr.severity,
+				})),
+			}));
+		} else {
+			error = data.error || "Failed to load datasource";
+		}
+	} catch (e) {
+		error = "Failed to load datasource";
+		console.error("Error loading datasource:", e);
+	} finally {
+		loadingDatasourceDetail = false;
+	}
+}
+
+async function saveDatasource() {
+	if (
+		!selectedDatasourceId ||
+		!selectedScorecardId ||
+		!editedDatasourceName.trim()
+	)
+		return;
+
+	if (rules.length === 0) {
+		error = "At least one rule is required";
+		return;
+	}
+
+	try {
+		saving = true;
+		error = null;
+
+		// Convert EditableRule[] to ScorecardRule[] by parsing conditions
+		const parsedRules: ScorecardRule[] = rules.map((rule) => {
+			try {
+				return {
+					...rule,
+					condition: parseRPNString(rule.condition),
+					threshold_rules: rule.threshold_rules?.map((tr) => ({
+						condition: parseRPNString(
+							typeof tr.condition === "string"
+								? tr.condition
+								: serializeRPNExpression(tr.condition),
+						),
+						severity: tr.severity,
+					})),
+				};
+			} catch (parseError) {
+				throw new Error(
+					`Invalid RPN expression in rule "${rule.title_template}": ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+				);
+			}
+		});
+
+		const data = await scorecardApi.updateDatasource(
+			selectedScorecardId,
+			selectedDatasourceId,
+			{
+				name: editedDatasourceName,
+				data_schema: editedDatasourceSampleData || null,
+				rules: parsedRules,
+				api_config: null,
+			},
+		);
+
+		if (data.success) {
+			selectedDatasource = data.datasource;
+			// Update in list
+			datasources = datasources.map((d) =>
+				d.id === data.datasource.id ? data.datasource : d,
+			);
+		} else {
+			error = data.error || "Failed to save datasource";
+		}
+	} catch (e) {
+		error = e instanceof Error ? e.message : "Failed to save datasource";
+		console.error("Error saving datasource:", e);
+	} finally {
+		saving = false;
+	}
+}
+
+async function deleteDatasource(datasourceId: string, event: Event) {
+	event.stopPropagation();
+
+	if (!canEdit || !selectedScorecardId) return;
+
+	toastStore.warning("Are you sure you want to delete this datasource?", {
+		autoHide: false,
+		actions: [
+			{
+				label: "Delete",
+				onClick: async () => {
+					try {
+						const data = await scorecardApi.deleteDatasource(
+							selectedScorecardId!,
+							datasourceId,
+						);
+
+						if (data.success) {
+							datasources = datasources.filter((d) => d.id !== datasourceId);
+							if (selectedDatasourceId === datasourceId) {
+								selectedDatasourceId = null;
+								selectedDatasource = null;
+								rules = [];
+							}
+							toastStore.success("Datasource deleted successfully");
+						} else {
+							error = data.error || "Failed to delete datasource";
+							toastStore.error("Failed to delete datasource");
+						}
+					} catch (e) {
+						error = "Failed to delete datasource";
+						toastStore.error("Failed to delete datasource");
+						console.error("Error deleting datasource:", e);
+					}
+				},
+				variant: "primary",
+			},
+			{
+				label: "Cancel",
+				onClick: () => {},
+				variant: "secondary",
+			},
+		],
+	});
+}
+
+// Drag and drop for datasource reordering
+function handleDatasourceDragStart(index: number) {
+	draggedDatasourceIndex = index;
+}
+
+function handleDatasourceDragOver(e: DragEvent) {
+	e.preventDefault();
+}
+
+async function handleDatasourceDrop(e: DragEvent, dropIndex: number) {
+	e.preventDefault();
+	if (
+		!selectedScorecardId ||
+		draggedDatasourceIndex === null ||
+		draggedDatasourceIndex === dropIndex
+	) {
+		draggedDatasourceIndex = null;
+		return;
+	}
+
+	// Reorder datasources array
+	const reordered = [...datasources];
+	const [movedItem] = reordered.splice(draggedDatasourceIndex, 1);
+	reordered.splice(dropIndex, 0, movedItem);
+	datasources = reordered;
+
+	// Save new order to server
+	try {
+		const data = await scorecardApi.reorderDatasources(
+			selectedScorecardId!,
+			reordered.map((d) => d.id),
+		);
+
+		if (data.success) {
+			datasources = data.datasources;
+		} else {
+			error = data.error || "Failed to reorder datasources";
+			// Reload to get correct order
+			if (selectedScorecardId) {
+				await loadScorecardDetail(selectedScorecardId);
+			}
+		}
+	} catch (e) {
+		error = "Failed to reorder datasources";
+		console.error("Error reordering datasources:", e);
+		// Reload to get correct order
+		if (selectedScorecardId) {
+			await loadScorecardDetail(selectedScorecardId);
+		}
+	} finally {
+		draggedDatasourceIndex = null;
+	}
+}
+
+// ============================================================================
+// Rule Management
+// ============================================================================
+
+function addRule() {
+	const newRule: EditableRule = {
+		id: `rule-${Date.now()}`,
+		section: "Default Section",
+		iterate_over: null,
+		condition: "true",
+		title_template: "New Rule",
+		value_template: "",
+		severity: "info",
+	};
+	rules = [...rules, newRule];
+	editingRuleIndex = rules.length - 1;
+}
+
+function deleteRule(index: number) {
+	rules = rules.filter((_, i) => i !== index);
+	if (editingRuleIndex === index) {
+		editingRuleIndex = null;
+	}
+}
+
+function moveRuleUp(index: number) {
+	if (index === 0) return;
+	const newRules = [...rules];
+	[newRules[index - 1], newRules[index]] = [
+		newRules[index],
+		newRules[index - 1],
+	];
+	rules = newRules;
+	if (editingRuleIndex === index) {
+		editingRuleIndex = index - 1;
+	} else if (editingRuleIndex === index - 1) {
+		editingRuleIndex = index;
+	}
+}
+
+function moveRuleDown(index: number) {
+	if (index === rules.length - 1) return;
+	const newRules = [...rules];
+	[newRules[index], newRules[index + 1]] = [
+		newRules[index + 1],
+		newRules[index],
+	];
+	rules = newRules;
+	if (editingRuleIndex === index) {
+		editingRuleIndex = index + 1;
+	} else if (editingRuleIndex === index + 1) {
+		editingRuleIndex = index;
+	}
+}
+
+function addThresholdRule(ruleIndex: number) {
+	const rule = rules[ruleIndex];
+	if (!rule.threshold_rules) {
+		rule.threshold_rules = [];
+	}
+	rule.threshold_rules = [
+		...rule.threshold_rules,
+		{
+			condition: "true",
+			severity: "warning",
+		},
+	];
+	rules = [...rules]; // Trigger reactivity
+}
+
+function removeThresholdRule(ruleIndex: number, thresholdIndex: number) {
+	const rule = rules[ruleIndex];
+	if (!rule.threshold_rules) return;
+	rule.threshold_rules = rule.threshold_rules.filter(
+		(_, i) => i !== thresholdIndex,
+	);
+	rules = [...rules]; // Trigger reactivity
+	saveDatasource(); // Save changes to database
+}
+
+function moveThresholdRuleUp(ruleIndex: number, thresholdIndex: number) {
+	if (thresholdIndex === 0) return;
+	const rule = rules[ruleIndex];
+	if (!rule.threshold_rules) return;
+
+	const newThresholdRules = [...rule.threshold_rules];
+	[newThresholdRules[thresholdIndex - 1], newThresholdRules[thresholdIndex]] = [
+		newThresholdRules[thresholdIndex],
+		newThresholdRules[thresholdIndex - 1],
+	];
+
+	rule.threshold_rules = newThresholdRules;
+	rules = [...rules]; // Trigger reactivity
+	saveDatasource(); // Save changes to database
+}
+
+function moveThresholdRuleDown(ruleIndex: number, thresholdIndex: number) {
+	const rule = rules[ruleIndex];
+	if (
+		!rule.threshold_rules ||
+		thresholdIndex === rule.threshold_rules.length - 1
+	)
+		return;
+
+	const newThresholdRules = [...rule.threshold_rules];
+	[newThresholdRules[thresholdIndex], newThresholdRules[thresholdIndex + 1]] = [
+		newThresholdRules[thresholdIndex + 1],
+		newThresholdRules[thresholdIndex],
+	];
+
+	rule.threshold_rules = newThresholdRules;
+	rules = [...rules]; // Trigger reactivity
+	saveDatasource(); // Save changes to database
+}
+
+function openTestModal(
+	ruleIndex: number,
+	thresholdIndex: number | null = null,
+) {
+	testingRuleIndex = ruleIndex;
+	testingThresholdIndex = thresholdIndex;
+	showTestModal = true;
+}
+
+function handleSampleDataDragOver(e: DragEvent) {
+	e.preventDefault();
+	if (!canEdit) return;
+	isDraggingSampleData = true;
+}
+
+function handleSampleDataDragLeave(e: DragEvent) {
+	e.preventDefault();
+	isDraggingSampleData = false;
+}
+
+async function handleSampleDataDrop(e: DragEvent) {
+	e.preventDefault();
+	isDraggingSampleData = false;
+
+	if (!canEdit) return;
+
+	const files = e.dataTransfer?.files;
+	if (!files || files.length === 0) return;
+
+	const file = files[0];
+	const result = await parseFile(file);
+
+	if (result.success && result.data) {
+		// Convert parsed data back to formatted string for display
+		editedDatasourceSampleData = JSON.stringify(result.data, null, 2);
+		// Trigger save
+		await saveDatasource();
+	} else {
+		toastStore.error(result.error || "Failed to parse file");
+	}
+}
+
+function handleUpdateRuleFromTest(updatedRule: string) {
+	if (testingRuleIndex !== null) {
+		if (testingThresholdIndex !== null) {
+			// Updating a threshold rule
+			const rule = rules[testingRuleIndex];
+			if (rule.threshold_rules && rule.threshold_rules[testingThresholdIndex]) {
+				rule.threshold_rules[testingThresholdIndex].condition = updatedRule;
+				rules = [...rules]; // Trigger reactivity
+				saveDatasource();
+			}
+		} else {
+			// Updating a main rule
+			rules[testingRuleIndex].condition = updatedRule;
+			rules = [...rules]; // Trigger reactivity
+			saveDatasource();
+		}
+	}
+}
+
+// ============================================================================
+// Lifecycle
+// ============================================================================
+
+onMount(() => {
+	loadScorecards();
+});
 </script>
 
 <div class="scorecard-manager">

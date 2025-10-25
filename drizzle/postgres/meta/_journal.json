@@ -1,97 +1,97 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1759378743986,
-      "tag": "0000_clammy_toro",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1759451453296,
-      "tag": "0001_add_agreements",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1759545678000,
-      "tag": "0002_add_scorecards",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1759645678000,
-      "tag": "0003_add_completed_to_comments",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1759745678000,
-      "tag": "0004_add_clone_of_to_boards",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1759845678000,
-      "tag": "0005_add_static_scenes_and_health_updates",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1759945678000,
-      "tag": "0006_add_health_responses_unique_constraint",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1760045678000,
-      "tag": "0007_add_survey_results_mode",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1760145678000,
-      "tag": "0008_add_scene_flags",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1760245678000,
-      "tag": "0009_remove_scene_boolean_columns",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1760345678000,
-      "tag": "0010_add_health_questions_thread_id",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1760445678000,
-      "tag": "0011_add_email_verification",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1761173497059,
-      "tag": "0012_add_card_seq",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1759378743986,
+			"tag": "0000_clammy_toro",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1759451453296,
+			"tag": "0001_add_agreements",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1759545678000,
+			"tag": "0002_add_scorecards",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1759645678000,
+			"tag": "0003_add_completed_to_comments",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1759745678000,
+			"tag": "0004_add_clone_of_to_boards",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1759845678000,
+			"tag": "0005_add_static_scenes_and_health_updates",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1759945678000,
+			"tag": "0006_add_health_responses_unique_constraint",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1760045678000,
+			"tag": "0007_add_survey_results_mode",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1760145678000,
+			"tag": "0008_add_scene_flags",
+			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1760245678000,
+			"tag": "0009_remove_scene_boolean_columns",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1760345678000,
+			"tag": "0010_add_health_questions_thread_id",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1760445678000,
+			"tag": "0011_add_email_verification",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1761173497059,
+			"tag": "0012_add_card_seq",
+			"breakpoints": true
+		}
+	]
 }

@@ -1,114 +1,112 @@
 <script lang="ts">
-    import Icon from "./ui/Icon.svelte";
-    import UserStatusModal from "./UserStatusModal.svelte";
-    import { toastStore } from "$lib/stores/toast";
-    import { slide } from "svelte/transition";
+import { slide } from "svelte/transition";
+import { toastStore } from "$lib/stores/toast";
+import UserStatusModal from "./UserStatusModal.svelte";
+import Icon from "./ui/Icon.svelte";
 
-    interface Props {
-        board: {
-            id: string;
-            name: string;
-            votingEnabled: boolean;
-            votingAllocation: number;
-            blameFreeMode?: boolean;
-        };
-        userRole: string;
-        connectedUsers: number;
-        userVoteAllocation: {
-            currentVotes: number;
-            maxVotes: number;
-            remainingVotes: number;
-            canVote: boolean;
-        };
-        votingStats: {
-            totalUsers: number;
-            activeUsers: number;
-            usersWhoVoted: number;
-            usersWhoHaventVoted: number;
-            totalVotesCast: number;
-            maxPossibleVotes: number;
-            remainingVotes: number;
-            maxVotesPerUser: number;
-        };
-        onIncreaseAllocation?: () => Promise<void>;
-        onResetVotes?: () => Promise<void>;
-    }
+interface Props {
+	board: {
+		id: string;
+		name: string;
+		votingEnabled: boolean;
+		votingAllocation: number;
+		blameFreeMode?: boolean;
+	};
+	userRole: string;
+	connectedUsers: number;
+	userVoteAllocation: {
+		currentVotes: number;
+		maxVotes: number;
+		remainingVotes: number;
+		canVote: boolean;
+	};
+	votingStats: {
+		totalUsers: number;
+		activeUsers: number;
+		usersWhoVoted: number;
+		usersWhoHaventVoted: number;
+		totalVotesCast: number;
+		maxPossibleVotes: number;
+		remainingVotes: number;
+		maxVotesPerUser: number;
+	};
+	onIncreaseAllocation?: () => Promise<void>;
+	onResetVotes?: () => Promise<void>;
+}
 
-    let {
-        board,
-        userRole,
-        connectedUsers,
-        userVoteAllocation,
-        votingStats,
-        onIncreaseAllocation,
-        onResetVotes,
-    }: Props = $props();
+let {
+	board,
+	userRole,
+	connectedUsers,
+	userVoteAllocation,
+	votingStats,
+	onIncreaseAllocation,
+	onResetVotes,
+}: Props = $props();
 
-    let isIncreasing = $state(false);
-    let isResetting = $state(false);
-    let showUserStatusModal = $state(false);
+let isIncreasing = $state(false);
+let isResetting = $state(false);
+let showUserStatusModal = $state(false);
 
-    async function handleIncreaseAllocation() {
-        if (isIncreasing || !onIncreaseAllocation) return;
+async function handleIncreaseAllocation() {
+	if (isIncreasing || !onIncreaseAllocation) return;
 
-        try {
-            isIncreasing = true;
-            await onIncreaseAllocation();
-            toastStore.success("Voting allocation increased by 1");
-        } catch (error) {
-            console.error("Failed to increase allocation:", error);
-            toastStore.error("Failed to increase voting allocation");
-        } finally {
-            isIncreasing = false;
-        }
-    }
+	try {
+		isIncreasing = true;
+		await onIncreaseAllocation();
+		toastStore.success("Voting allocation increased by 1");
+	} catch (error) {
+		console.error("Failed to increase allocation:", error);
+		toastStore.error("Failed to increase voting allocation");
+	} finally {
+		isIncreasing = false;
+	}
+}
 
-    async function handleResetVotes() {
-        if (isResetting || !onResetVotes) return;
+async function handleResetVotes() {
+	if (isResetting || !onResetVotes) return;
 
-        toastStore.warning(
-            "Delete all votes and set allocation to 0? You will need to manually increase vote allocations.",
-            {
-                autoHide: false,
-                actions: [
-                    {
-                        label: "Reset Votes",
-                        onClick: async () => {
-                            try {
-                                isResetting = true;
-                                await onResetVotes();
-                                toastStore.success("All votes have been reset");
-                            } catch (error) {
-                                console.error("Failed to reset votes:", error);
-                                toastStore.error("Failed to reset votes");
-                            } finally {
-                                isResetting = false;
-                            }
-                        },
-                        variant: "primary",
-                    },
-                    {
-                        label: "Cancel",
-                        onClick: () => {},
-                        variant: "secondary",
-                    },
-                ],
-            },
-        );
-    }
+	toastStore.warning(
+		"Delete all votes and set allocation to 0? You will need to manually increase vote allocations.",
+		{
+			autoHide: false,
+			actions: [
+				{
+					label: "Reset Votes",
+					onClick: async () => {
+						try {
+							isResetting = true;
+							await onResetVotes();
+							toastStore.success("All votes have been reset");
+						} catch (error) {
+							console.error("Failed to reset votes:", error);
+							toastStore.error("Failed to reset votes");
+						} finally {
+							isResetting = false;
+						}
+					},
+					variant: "primary",
+				},
+				{
+					label: "Cancel",
+					onClick: () => {},
+					variant: "secondary",
+				},
+			],
+		},
+	);
+}
 
-    let showAdminControls = $derived(
-        ["admin", "facilitator"].includes(userRole),
-    );
+let showAdminControls = $derived(["admin", "facilitator"].includes(userRole));
 
-    // Use activeUsers from votingStats
-    let displayedConnectedUsers = $derived(votingStats?.activeUsers || 0);
+// Use activeUsers from votingStats
+let displayedConnectedUsers = $derived(votingStats?.activeUsers || 0);
 
-    function openUserStatusModal() {
-        if (showAdminControls) {
-            showUserStatusModal = true;
-        }
-    }
+function openUserStatusModal() {
+	if (showAdminControls) {
+		showUserStatusModal = true;
+	}
+}
 </script>
 
 <div class="voting-toolbar" transition:slide={{ duration: 300 }}>

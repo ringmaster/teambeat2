@@ -1,18 +1,22 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { requireUserForApi } from '$lib/server/auth/index.js';
-import { getBoardWithDetails, updateColumn, deleteColumn } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { broadcastColumnsUpdated } from '$lib/server/sse/broadcast.js';
-import { db } from '$lib/server/db/index.js';
-import { columns } from '$lib/server/db/schema.js';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
+import { json } from "@sveltejs/kit";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { requireUserForApi } from "$lib/server/auth/index.js";
+import { db } from "$lib/server/db/index.js";
+import { columns } from "$lib/server/db/schema.js";
+import {
+	deleteColumn,
+	getBoardWithDetails,
+	updateColumn,
+} from "$lib/server/repositories/board.js";
+import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
+import { broadcastColumnsUpdated } from "$lib/server/sse/broadcast.js";
+import type { RequestHandler } from "./$types";
 
 const updateColumnSchema = z.object({
 	title: z.string().min(1).max(100).optional(),
 	description: z.string().max(500).optional().nullable(),
-	defaultAppearance: z.string().optional()
+	defaultAppearance: z.string().optional(),
 });
 
 export const PATCH: RequestHandler = async (event) => {
@@ -26,18 +30,15 @@ export const PATCH: RequestHandler = async (event) => {
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
-				{ success: false, error: 'Board not found' },
-				{ status: 404 }
+				{ success: false, error: "Board not found" },
+				{ status: 404 },
 			);
 		}
 
 		// Check if user has permission to update this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
-		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
-			return json(
-				{ success: false, error: 'Access denied' },
-				{ status: 403 }
-			);
+		if (!userRole || !["admin", "facilitator"].includes(userRole)) {
+			return json({ success: false, error: "Access denied" }, { status: 403 });
 		}
 
 		const updatedColumn = await updateColumn(columnId, data);
@@ -54,7 +55,7 @@ export const PATCH: RequestHandler = async (event) => {
 
 		return json({
 			success: true,
-			column: updatedColumn
+			column: updatedColumn,
 		});
 	} catch (error) {
 		if (error instanceof Response) {
@@ -63,19 +64,19 @@ export const PATCH: RequestHandler = async (event) => {
 
 		if (error instanceof z.ZodError) {
 			return json(
-				{ success: false, error: 'Invalid input', details: error.errors },
-				{ status: 400 }
+				{ success: false, error: "Invalid input", details: error.errors },
+				{ status: 400 },
 			);
 		}
 
-		console.error('Error updating column:', error);
+		console.error("Error updating column:", error);
 		return json(
 			{
 				success: false,
-				error: 'Failed to update column',
-				details: error instanceof Error ? error.message : String(error)
+				error: "Failed to update column",
+				details: error instanceof Error ? error.message : String(error),
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 };
@@ -89,18 +90,15 @@ export const DELETE: RequestHandler = async (event) => {
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
-				{ success: false, error: 'Board not found' },
-				{ status: 404 }
+				{ success: false, error: "Board not found" },
+				{ status: 404 },
 			);
 		}
 
 		// Check if user has permission to delete from this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
-		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
-			return json(
-				{ success: false, error: 'Access denied' },
-				{ status: 403 }
-			);
+		if (!userRole || !["admin", "facilitator"].includes(userRole)) {
+			return json({ success: false, error: "Access denied" }, { status: 403 });
 		}
 
 		await deleteColumn(columnId);
@@ -116,21 +114,21 @@ export const DELETE: RequestHandler = async (event) => {
 		broadcastColumnsUpdated(boardId, allColumns);
 
 		return json({
-			success: true
+			success: true,
 		});
 	} catch (error) {
 		if (error instanceof Response) {
 			throw error;
 		}
 
-		console.error('Error deleting column:', error);
+		console.error("Error deleting column:", error);
 		return json(
 			{
 				success: false,
-				error: 'Failed to delete column',
-				details: error instanceof Error ? error.message : String(error)
+				error: "Failed to delete column",
+				details: error instanceof Error ? error.message : String(error),
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 };

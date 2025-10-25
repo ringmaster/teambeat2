@@ -1,92 +1,86 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Icon from "$lib/components/ui/Icon.svelte";
-    import {
-        checkPasskeySupport,
-        registerPasskey,
-    } from "$lib/utils/webauthn.js";
+import { onMount } from "svelte";
+import Icon from "$lib/components/ui/Icon.svelte";
+import { checkPasskeySupport, registerPasskey } from "$lib/utils/webauthn.js";
 
-    let passkeySupport = $state({ supported: false, available: false });
-    let loading = $state(true);
-    let registering = $state(false);
-    let userPasskeys: any[] = $state([]);
-    let message = $state("");
-    let error = $state("");
+let passkeySupport = $state({ supported: false, available: false });
+let loading = $state(true);
+let registering = $state(false);
+let userPasskeys: any[] = $state([]);
+let message = $state("");
+let error = $state("");
 
-    onMount(async () => {
-        try {
-            // Check passkey support
-            passkeySupport = await checkPasskeySupport();
+onMount(async () => {
+	try {
+		// Check passkey support
+		passkeySupport = await checkPasskeySupport();
 
-            // Load user's existing passkeys
-            if (passkeySupport.supported) {
-                await loadUserPasskeys();
-            }
-        } catch (err) {
-            console.error("Failed to initialize passkey manager:", err);
-            error = "Failed to load passkey information";
-        } finally {
-            loading = false;
-        }
-    });
+		// Load user's existing passkeys
+		if (passkeySupport.supported) {
+			await loadUserPasskeys();
+		}
+	} catch (err) {
+		console.error("Failed to initialize passkey manager:", err);
+		error = "Failed to load passkey information";
+	} finally {
+		loading = false;
+	}
+});
 
-    async function loadUserPasskeys() {
-        try {
-            const response = await fetch("/api/auth/webauthn/passkeys");
-            if (response.ok) {
-                const data = await response.json();
-                userPasskeys = data.passkeys || [];
-            }
-        } catch (err) {
-            console.error("Failed to load passkeys:", err);
-        }
-    }
+async function loadUserPasskeys() {
+	try {
+		const response = await fetch("/api/auth/webauthn/passkeys");
+		if (response.ok) {
+			const data = await response.json();
+			userPasskeys = data.passkeys || [];
+		}
+	} catch (err) {
+		console.error("Failed to load passkeys:", err);
+	}
+}
 
-    async function handleRegisterPasskey() {
-        registering = true;
-        error = "";
-        message = "";
+async function handleRegisterPasskey() {
+	registering = true;
+	error = "";
+	message = "";
 
-        try {
-            const result = await registerPasskey();
+	try {
+		const result = await registerPasskey();
 
-            if (result.success) {
-                message = "Passkey registered successfully!";
-                await loadUserPasskeys();
-            } else {
-                error = result.error || "Failed to register passkey";
-            }
-        } catch {
-            error = "Failed to register passkey";
-        } finally {
-            registering = false;
-        }
-    }
+		if (result.success) {
+			message = "Passkey registered successfully!";
+			await loadUserPasskeys();
+		} else {
+			error = result.error || "Failed to register passkey";
+		}
+	} catch {
+		error = "Failed to register passkey";
+	} finally {
+		registering = false;
+	}
+}
 
-    async function deletePasskey(passkeyId: string) {
-        try {
-            const response = await fetch(
-                `/api/auth/webauthn/passkeys/${passkeyId}`,
-                {
-                    method: "DELETE",
-                },
-            );
+async function deletePasskey(passkeyId: string) {
+	try {
+		const response = await fetch(`/api/auth/webauthn/passkeys/${passkeyId}`, {
+			method: "DELETE",
+		});
 
-            if (response.ok) {
-                message = "Passkey deleted successfully";
-                await loadUserPasskeys();
-            } else {
-                const data = await response.json();
-                error = data.error || "Failed to delete passkey";
-            }
-        } catch {
-            error = "Failed to delete passkey";
-        }
-    }
+		if (response.ok) {
+			message = "Passkey deleted successfully";
+			await loadUserPasskeys();
+		} else {
+			const data = await response.json();
+			error = data.error || "Failed to delete passkey";
+		}
+	} catch {
+		error = "Failed to delete passkey";
+	}
+}
 
-    function formatDate(dateString: string) {
-        return new Date(dateString).toLocaleDateString();
-    }
+function formatDate(dateString: string) {
+	return new Date(dateString).toLocaleDateString();
+}
 </script>
 
 <div class="passkey-manager">

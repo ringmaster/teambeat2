@@ -1,291 +1,285 @@
 <script lang="ts">
-    import type { Board, Scene } from "$lib/types";
-    import Icon from "./ui/Icon.svelte";
-    import { toastStore } from "$lib/stores/toast";
-    import { getSceneCapability } from "$lib/utils/scene-capability";
+import { toastStore } from "$lib/stores/toast";
+import type { Board, Scene } from "$lib/types";
+import { getSceneCapability } from "$lib/utils/scene-capability";
+import { browser } from "$app/environment";
+import Icon from "./ui/Icon.svelte";
 
-    interface Props {
-        board: Board;
-        scene: Scene;
-        userRole: string;
-    }
+interface Props {
+	board: Board;
+	scene: Scene;
+	userRole: string;
+}
 
-    const { board, scene, userRole }: Props = $props();
+const { board, scene, userRole }: Props = $props();
 
-    const canAddCards = $derived(getSceneCapability(scene, board.status, 'allow_add_cards'));
+const canAddCards = $derived(
+	getSceneCapability(scene, board.status, "allow_add_cards"),
+);
 
-    interface UnifiedAgreement {
-        id: string;
-        source: "agreement" | "comment";
-        userId: string | null;
-        userName: string | null;
-        displayName: string | null;
-        content: string;
-        completed: boolean;
-        completedByUserId: string | null;
-        completedByUserName: string | null;
-        completedByDisplayName: string | null;
-        completedAt: string | null;
-        createdAt: string;
-        updatedAt: string;
-        reactions?: Record<string, number>;
-        // Agreement-specific fields
-        boardId?: string;
-        sourceAgreementId?: string | null;
-        // Comment-specific fields
-        cardId?: string;
-        cardContent?: string;
-        columnId?: string;
-        columnTitle?: string;
-    }
+interface UnifiedAgreement {
+	id: string;
+	source: "agreement" | "comment";
+	userId: string | null;
+	userName: string | null;
+	displayName: string | null;
+	content: string;
+	completed: boolean;
+	completedByUserId: string | null;
+	completedByUserName: string | null;
+	completedByDisplayName: string | null;
+	completedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	reactions?: Record<string, number>;
+	// Agreement-specific fields
+	boardId?: string;
+	sourceAgreementId?: string | null;
+	// Comment-specific fields
+	cardId?: string;
+	cardContent?: string;
+	columnId?: string;
+	columnTitle?: string;
+}
 
-    let agreements = $state<UnifiedAgreement[]>([]);
-    let loading = $state(true);
-    let newAgreementContent = $state("");
-    let editingAgreementId = $state<string | null>(null);
-    let editingContent = $state("");
-    let dropdownOpen = $state<string | null>(null);
+let agreements = $state<UnifiedAgreement[]>([]);
+let loading = $state(true);
+let newAgreementContent = $state("");
+let editingAgreementId = $state<string | null>(null);
+let editingContent = $state("");
+let dropdownOpen = $state<string | null>(null);
 
-    const isFacilitator = $derived(
-        userRole === "admin" || userRole === "facilitator",
-    );
+const isFacilitator = $derived(
+	userRole === "admin" || userRole === "facilitator",
+);
 
-    loadAgreements();
+loadAgreements();
 
-    $effect(() => {
-        const listener = handleAgreementsUpdate as EventListener;
-        window.addEventListener("agreements_updated", listener);
+$effect(() => {
+	if (browser) {
+		const listener = handleAgreementsUpdate as EventListener;
+		window.addEventListener("agreements_updated", listener);
 
-        const reloadListener = () => loadAgreements();
-        window.addEventListener("reload_agreements", reloadListener);
+		const reloadListener = () => loadAgreements();
+		window.addEventListener("reload_agreements", reloadListener);
 
-        return () => {
-            window.removeEventListener("agreements_updated", listener);
-            window.removeEventListener("reload_agreements", reloadListener);
-        };
-    });
+		return () => {
+			window.removeEventListener("agreements_updated", listener);
+			window.removeEventListener("reload_agreements", reloadListener);
+		};
+	}
+});
 
-    async function loadAgreements() {
-        try {
-            const response = await fetch(`/api/boards/${board.id}/agreements`);
-            if (response.ok) {
-                const data = await response.json();
-                agreements = data.agreements || [];
-            }
-        } catch (error) {
-            console.error("Failed to load agreements:", error);
-            toastStore.error("Failed to load agreements");
-        } finally {
-            loading = false;
-        }
-    }
+async function loadAgreements() {
+	try {
+		const response = await fetch(`/api/boards/${board.id}/agreements`);
+		if (response.ok) {
+			const data = await response.json();
+			agreements = data.agreements || [];
+		}
+	} catch (error) {
+		console.error("Failed to load agreements:", error);
+		toastStore.error("Failed to load agreements");
+	} finally {
+		loading = false;
+	}
+}
 
-    async function createAgreement() {
-        if (!newAgreementContent.trim()) return;
+async function createAgreement() {
+	if (!newAgreementContent.trim()) return;
 
-        try {
-            const response = await fetch(`/api/boards/${board.id}/agreements`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: newAgreementContent.trim() }),
-            });
+	try {
+		const response = await fetch(`/api/boards/${board.id}/agreements`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content: newAgreementContent.trim() }),
+		});
 
-            if (response.ok) {
-                newAgreementContent = "";
-                toastStore.success("Agreement created");
-            } else {
-                const data = await response.json();
-                toastStore.error(data.error || "Failed to create agreement");
-            }
-        } catch (error) {
-            console.error("Failed to create agreement:", error);
-            toastStore.error("Failed to create agreement");
-        }
-    }
+		if (response.ok) {
+			newAgreementContent = "";
+			toastStore.success("Agreement created");
+		} else {
+			const data = await response.json();
+			toastStore.error(data.error || "Failed to create agreement");
+		}
+	} catch (error) {
+		console.error("Failed to create agreement:", error);
+		toastStore.error("Failed to create agreement");
+	}
+}
 
-    async function updateAgreement(agreementId: string, content: string) {
-        try {
-            const response = await fetch(`/api/agreements/${agreementId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content }),
-            });
+async function updateAgreement(agreementId: string, content: string) {
+	try {
+		const response = await fetch(`/api/agreements/${agreementId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content }),
+		});
 
-            if (response.ok) {
-                editingAgreementId = null;
-                editingContent = "";
-                toastStore.success("Agreement updated");
-            } else {
-                const data = await response.json();
-                toastStore.error(data.error || "Failed to update agreement");
-            }
-        } catch (error) {
-            console.error("Failed to update agreement:", error);
-            toastStore.error("Failed to update agreement");
-        }
-    }
+		if (response.ok) {
+			editingAgreementId = null;
+			editingContent = "";
+			toastStore.success("Agreement updated");
+		} else {
+			const data = await response.json();
+			toastStore.error(data.error || "Failed to update agreement");
+		}
+	} catch (error) {
+		console.error("Failed to update agreement:", error);
+		toastStore.error("Failed to update agreement");
+	}
+}
 
-    async function toggleAgreementCompletion(agreement: UnifiedAgreement) {
-        try {
-            let response;
-            if (agreement.source === "agreement") {
-                response = await fetch(
-                    `/api/agreements/${agreement.id}/complete`,
-                    {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            completed: !agreement.completed,
-                        }),
-                    },
-                );
-            } else {
-                // Comment-based agreement
-                response = await fetch(
-                    `/api/comments/${agreement.id}/complete`,
-                    {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            completed: !agreement.completed,
-                        }),
-                    },
-                );
-            }
+async function toggleAgreementCompletion(agreement: UnifiedAgreement) {
+	try {
+		let response;
+		if (agreement.source === "agreement") {
+			response = await fetch(`/api/agreements/${agreement.id}/complete`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					completed: !agreement.completed,
+				}),
+			});
+		} else {
+			// Comment-based agreement
+			response = await fetch(`/api/comments/${agreement.id}/complete`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					completed: !agreement.completed,
+				}),
+			});
+		}
 
-            if (response.ok) {
-                const data = await response.json();
-                const updatedAgreement = data.agreement || data.comment;
-                if (updatedAgreement) {
-                    agreements = agreements.map((a) =>
-                        a.id === updatedAgreement.id ? updatedAgreement : a,
-                    );
-                }
-            } else {
-                const data = await response.json();
-                toastStore.error(data.error || "Failed to update agreement");
-            }
-        } catch (error) {
-            console.error("Failed to update agreement:", error);
-            toastStore.error("Failed to update agreement");
-        }
-    }
+		if (response.ok) {
+			const data = await response.json();
+			const updatedAgreement = data.agreement || data.comment;
+			if (updatedAgreement) {
+				agreements = agreements.map((a) =>
+					a.id === updatedAgreement.id ? updatedAgreement : a,
+				);
+			}
+		} else {
+			const data = await response.json();
+			toastStore.error(data.error || "Failed to update agreement");
+		}
+	} catch (error) {
+		console.error("Failed to update agreement:", error);
+		toastStore.error("Failed to update agreement");
+	}
+}
 
-    async function deleteAgreement(agreementId: string) {
-        toastStore.warning("Are you sure you want to delete this agreement?", {
-            autoHide: false,
-            actions: [
-                {
-                    label: "Delete",
-                    onClick: async () => {
-                        try {
-                            const response = await fetch(
-                                `/api/agreements/${agreementId}`,
-                                {
-                                    method: "DELETE",
-                                },
-                            );
+async function deleteAgreement(agreementId: string) {
+	toastStore.warning("Are you sure you want to delete this agreement?", {
+		autoHide: false,
+		actions: [
+			{
+				label: "Delete",
+				onClick: async () => {
+					try {
+						const response = await fetch(`/api/agreements/${agreementId}`, {
+							method: "DELETE",
+						});
 
-                            if (response.ok) {
-                                toastStore.success("Agreement deleted");
-                            } else {
-                                const data = await response.json();
-                                toastStore.error(
-                                    data.error || "Failed to delete agreement",
-                                );
-                            }
-                        } catch (error) {
-                            console.error("Failed to delete agreement:", error);
-                            toastStore.error("Failed to delete agreement");
-                        }
-                    },
-                    variant: "primary",
-                },
-                {
-                    label: "Cancel",
-                    onClick: () => {},
-                    variant: "secondary",
-                },
-            ],
-        });
-    }
+						if (response.ok) {
+							toastStore.success("Agreement deleted");
+						} else {
+							const data = await response.json();
+							toastStore.error(data.error || "Failed to delete agreement");
+						}
+					} catch (error) {
+						console.error("Failed to delete agreement:", error);
+						toastStore.error("Failed to delete agreement");
+					}
+				},
+				variant: "primary",
+			},
+			{
+				label: "Cancel",
+				onClick: () => {},
+				variant: "secondary",
+			},
+		],
+	});
+}
 
-    async function copyToCard(agreement: UnifiedAgreement, columnId: string) {
-        try {
-            const endpoint =
-                agreement.source === "comment"
-                    ? `/api/comments/${agreement.id}/copy-to-card`
-                    : `/api/agreements/${agreement.id}/copy-to-card`;
+async function copyToCard(agreement: UnifiedAgreement, columnId: string) {
+	try {
+		const endpoint =
+			agreement.source === "comment"
+				? `/api/comments/${agreement.id}/copy-to-card`
+				: `/api/agreements/${agreement.id}/copy-to-card`;
 
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ column_id: columnId }),
-            });
+		const response = await fetch(endpoint, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ column_id: columnId }),
+		});
 
-            if (response.ok) {
-                toastStore.success("Agreement copied to card");
-                dropdownOpen = null;
-            } else {
-                const data = await response.json();
-                toastStore.error(data.error || "Failed to copy to card");
-            }
-        } catch (error) {
-            console.error("Failed to copy to card:", error);
-            toastStore.error("Failed to copy to card");
-        }
-    }
+		if (response.ok) {
+			toastStore.success("Agreement copied to card");
+			dropdownOpen = null;
+		} else {
+			const data = await response.json();
+			toastStore.error(data.error || "Failed to copy to card");
+		}
+	} catch (error) {
+		console.error("Failed to copy to card:", error);
+		toastStore.error("Failed to copy to card");
+	}
+}
 
-    function startEdit(agreement: UnifiedAgreement) {
-        editingAgreementId = agreement.id;
-        editingContent = agreement.content;
-    }
+function startEdit(agreement: UnifiedAgreement) {
+	editingAgreementId = agreement.id;
+	editingContent = agreement.content;
+}
 
-    function cancelEdit() {
-        editingAgreementId = null;
-        editingContent = "";
-    }
+function cancelEdit() {
+	editingAgreementId = null;
+	editingContent = "";
+}
 
-    function formatDate(dateString: string | null): string {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
-    }
+function formatDate(dateString: string | null): string {
+	if (!dateString) return "";
+	const date = new Date(dateString);
+	return date.toLocaleDateString();
+}
 
-    function closeDropdown() {
-        dropdownOpen = null;
-    }
+function closeDropdown() {
+	dropdownOpen = null;
+}
 
-    function clickOutside(node: HTMLElement, handler: () => void) {
-        const handleClick = (event: MouseEvent) => {
-            if (node && !node.contains(event.target as Node)) {
-                handler();
-            }
-        };
+function clickOutside(node: HTMLElement, handler: () => void) {
+	const handleClick = (event: MouseEvent) => {
+		if (node && !node.contains(event.target as Node)) {
+			handler();
+		}
+	};
 
-        document.addEventListener("click", handleClick, true);
+	document.addEventListener("click", handleClick, true);
 
-        return {
-            destroy() {
-                document.removeEventListener("click", handleClick, true);
-            },
-        };
-    }
+	return {
+		destroy() {
+			document.removeEventListener("click", handleClick, true);
+		},
+	};
+}
 
-    // Get visible columns for dropdown
-    const visibleColumns = $derived(() => {
-        if (!board.columns || !scene.id) return [];
-        const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
-        return board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
-    });
+// Get visible columns for dropdown
+const visibleColumns = $derived(() => {
+	if (!board.columns || !scene.id) return [];
+	const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
+	return board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
+});
 
-    // Handle SSE updates
-    function handleAgreementsUpdate(event: CustomEvent) {
-        const updatedAgreements = event.detail;
-        if (updatedAgreements) {
-            agreements = updatedAgreements;
-        }
-    }
+// Handle SSE updates
+function handleAgreementsUpdate(event: CustomEvent) {
+	const updatedAgreements = event.detail;
+	if (updatedAgreements) {
+		agreements = updatedAgreements;
+	}
+}
 </script>
 
 <div class="agreements-scene">

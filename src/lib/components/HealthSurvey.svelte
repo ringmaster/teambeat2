@@ -1,157 +1,171 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import BooleanInput from "./health/BooleanInput.svelte";
-    import Range1to5Input from "./health/Range1to5Input.svelte";
-    import AgreeDisagreeInput from "./health/AgreeDisagreeInput.svelte";
-    import RedYellowGreenInput from "./health/RedYellowGreenInput.svelte";
-    import FacilitatorToolbar from "./health/FacilitatorToolbar.svelte";
-    import SurveyResults from "./health/SurveyResults.svelte";
-    import { toastStore } from "$lib/stores/toast";
+import { onMount } from "svelte";
+import { browser } from "$app/environment";
+import { toastStore } from "$lib/stores/toast";
+import AgreeDisagreeInput from "./health/AgreeDisagreeInput.svelte";
+import BooleanInput from "./health/BooleanInput.svelte";
+import FacilitatorToolbar from "./health/FacilitatorToolbar.svelte";
+import Range1to5Input from "./health/Range1to5Input.svelte";
+import RedYellowGreenInput from "./health/RedYellowGreenInput.svelte";
+import SurveyResults from "./health/SurveyResults.svelte";
 
-    interface Props {
-        scene: any;
-        boardId: string;
-        boardStatus: string;
-        userRole: string;
-    }
+interface Props {
+	scene: any;
+	boardId: string;
+	boardStatus: string;
+	userRole: string;
+}
 
-    const { scene, boardId, boardStatus, userRole }: Props = $props();
+const { scene, boardId, boardStatus, userRole }: Props = $props();
 
-    const isFacilitator = $derived(['admin', 'facilitator'].includes(userRole));
+const isFacilitator = $derived(["admin", "facilitator"].includes(userRole));
 
-    let questions = $state<any[]>([]);
-    let responses = $state<Map<string, number>>(new Map());
-    let loading = $state(true);
-    let error = $state<string | null>(null);
+let questions = $state<any[]>([]);
+let responses = $state<Map<string, number>>(new Map());
+let loading = $state(true);
+let error = $state<string | null>(null);
 
-    const isDisabled = $derived(!['draft', 'active'].includes(boardStatus));
+const isDisabled = $derived(!["draft", "active"].includes(boardStatus));
 
-    async function loadQuestions() {
-        try {
-            loading = true;
-            error = null;
+async function loadQuestions() {
+	try {
+		loading = true;
+		error = null;
 
-            // Load questions
-            const questionsRes = await fetch(`/api/scenes/${scene.id}/health-questions`);
-            const questionsData = await questionsRes.json();
+		// Load questions
+		const questionsRes = await fetch(
+			`/api/scenes/${scene.id}/health-questions`,
+		);
+		const questionsData = await questionsRes.json();
 
-            if (!questionsData.success) {
-                throw new Error(questionsData.error || 'Failed to load questions');
-            }
+		if (!questionsData.success) {
+			throw new Error(questionsData.error || "Failed to load questions");
+		}
 
-            questions = questionsData.questions;
+		questions = questionsData.questions;
 
-            // Load user's existing responses
-            const responsesRes = await fetch(`/api/scenes/${scene.id}/health-responses`);
-            const responsesData = await responsesRes.json();
+		// Load user's existing responses
+		const responsesRes = await fetch(
+			`/api/scenes/${scene.id}/health-responses`,
+		);
+		const responsesData = await responsesRes.json();
 
-            if (!responsesData.success) {
-                throw new Error(responsesData.error || 'Failed to load responses');
-            }
+		if (!responsesData.success) {
+			throw new Error(responsesData.error || "Failed to load responses");
+		}
 
-            // Build responses map
-            const newResponses = new Map();
-            responsesData.responses.forEach((r: any) => {
-                newResponses.set(r.questionId, r.rating);
-            });
-            responses = newResponses;
+		// Build responses map
+		const newResponses = new Map();
+		responsesData.responses.forEach((r: any) => {
+			newResponses.set(r.questionId, r.rating);
+		});
+		responses = newResponses;
+	} catch (err) {
+		console.error("Failed to load health survey:", err);
+		error = err instanceof Error ? err.message : "Failed to load health survey";
+	} finally {
+		loading = false;
+	}
+}
 
-        } catch (err) {
-            console.error('Failed to load health survey:', err);
-            error = err instanceof Error ? err.message : 'Failed to load health survey';
-        } finally {
-            loading = false;
-        }
-    }
+async function handleResponse(questionId: string, rating: number) {
+	try {
+		const res = await fetch("/api/health-responses", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ questionId, rating }),
+		});
 
-    async function handleResponse(questionId: string, rating: number) {
-        try {
-            const res = await fetch('/api/health-responses', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ questionId, rating })
-            });
+		const data = await res.json();
 
-            const data = await res.json();
+		if (!data.success) {
+			throw new Error(data.error || "Failed to save response");
+		}
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to save response');
-            }
+		// Update local state
+		responses = new Map(responses).set(questionId, rating);
+	} catch (err) {
+		console.error("Failed to save response:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to save response",
+		);
+	}
+}
 
-            // Update local state
-            responses = new Map(responses).set(questionId, rating);
+async function handleModeChange(mode: "collecting" | "results") {
+	try {
+		const res = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ displayMode: mode }),
+		});
 
-        } catch (err) {
-            console.error('Failed to save response:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to save response');
-        }
-    }
+		const data = await res.json();
 
-    async function handleModeChange(mode: 'collecting' | 'results') {
-        try {
-            const res = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ displayMode: mode })
-            });
+		if (!data.success) {
+			throw new Error(data.error || "Failed to change mode");
+		}
 
-            const data = await res.json();
+		// Scene will be updated via SSE event
+	} catch (err) {
+		console.error("Failed to change mode:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to change mode",
+		);
+	}
+}
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to change mode');
-            }
+async function handleFocusChange(questionId: string | null) {
+	try {
+		const res = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ focusedQuestionId: questionId }),
+		});
 
-            // Scene will be updated via SSE event
-        } catch (err) {
-            console.error('Failed to change mode:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to change mode');
-        }
-    }
+		const data = await res.json();
 
-    async function handleFocusChange(questionId: string | null) {
-        try {
-            const res = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ focusedQuestionId: questionId })
-            });
+		if (!data.success) {
+			throw new Error(data.error || "Failed to change focus");
+		}
 
-            const data = await res.json();
+		// Scene will be updated via SSE event
+	} catch (err) {
+		console.error("Failed to change focus:", err);
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to change focus",
+		);
+	}
+}
 
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to change focus');
-            }
+onMount(() => {
+	loadQuestions();
 
-            // Scene will be updated via SSE event
-        } catch (err) {
-            console.error('Failed to change focus:', err);
-            toastStore.error(err instanceof Error ? err.message : 'Failed to change focus');
-        }
-    }
+	// Listen for scene updates (only in browser)
+	if (browser) {
+		const handleSceneUpdate = (event: CustomEvent) => {
+			if (event.detail.sceneId === scene.id) {
+				loadQuestions();
+			}
+		};
 
-    onMount(() => {
-        loadQuestions();
+		window.addEventListener("scene_updated", handleSceneUpdate as EventListener);
 
-        // Listen for scene updates
-        const handleSceneUpdate = (event: CustomEvent) => {
-            if (event.detail.sceneId === scene.id) {
-                loadQuestions();
-            }
-        };
+		return () => {
+			window.removeEventListener(
+				"scene_updated",
+				handleSceneUpdate as EventListener,
+			);
+		};
+	}
+});
 
-        window.addEventListener('scene_updated', handleSceneUpdate as EventListener);
-
-        return () => {
-            window.removeEventListener('scene_updated', handleSceneUpdate as EventListener);
-        };
-    });
-
-    // Reload when scene changes
-    $effect(() => {
-        if (scene.id) {
-            loadQuestions();
-        }
-    });
+// Reload when scene changes
+$effect(() => {
+	if (scene.id) {
+		loadQuestions();
+	}
+});
 </script>
 
 <div class="health-survey">

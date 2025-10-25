@@ -6,7 +6,7 @@
  * unified interface that works with all supported databases.
  */
 
-import { db, dbSupportsAsyncTransactions } from './index.js';
+import { db, dbSupportsAsyncTransactions } from "./index.js";
 
 /**
  * Execute a function within a transaction (if database supports async transactions)
@@ -25,19 +25,19 @@ import { db, dbSupportsAsyncTransactions } from './index.js';
  * ```
  */
 export async function withTransaction<T>(
-  fn: (tx: typeof db) => Promise<T>
+	fn: (tx: typeof db) => Promise<T>,
 ): Promise<T> {
-  if (dbSupportsAsyncTransactions) {
-    // Database supports async transactions - use them for ACID guarantees
-    return await db.transaction(async (tx) => {
-      return await fn(tx);
-    });
-  } else {
-    // Database doesn't support async transactions
-    // Execute directly without transaction wrapper
-    // Foreign key constraints still provide data integrity
-    return await fn(db);
-  }
+	if (dbSupportsAsyncTransactions) {
+		// Database supports async transactions - use them for ACID guarantees
+		return await db.transaction(async (tx) => {
+			return await fn(tx);
+		});
+	} else {
+		// Database doesn't support async transactions
+		// Execute directly without transaction wrapper
+		// Foreign key constraints still provide data integrity
+		return await fn(db);
+	}
 }
 
 /**
@@ -59,11 +59,11 @@ export async function withTransaction<T>(
  * ```
  */
 export async function withBatchOperations(
-  operations: Array<(tx: typeof db) => Promise<any>>
+	operations: Array<(tx: typeof db) => Promise<any>>,
 ): Promise<void> {
-  await withTransaction(async (tx) => {
-    for (const operation of operations) {
-      await operation(tx);
-    }
-  });
+	await withTransaction(async (tx) => {
+		for (const operation of operations) {
+			await operation(tx);
+		}
+	});
 }

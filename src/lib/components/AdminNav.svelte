@@ -1,20 +1,24 @@
 <script lang="ts">
-    import { page } from "$app/stores";
+import { page } from "$app/stores";
 
-    interface NavItem {
-        label: string;
-        href: string;
-        path: string;
-    }
+interface NavItem {
+	label: string;
+	href: string;
+	path: string;
+}
 
-    const navItems: NavItem[] = [
-        { label: "Performance", href: "/admin/performance", path: "/admin/performance" },
-        { label: "Schema", href: "/admin/schema", path: "/admin/schema" },
-        { label: "Series", href: "/admin/series", path: "/admin/series" },
-        { label: "Users", href: "/admin/users", path: "/admin/users" },
-    ];
+const navItems: NavItem[] = [
+	{
+		label: "Performance",
+		href: "/admin/performance",
+		path: "/admin/performance",
+	},
+	{ label: "Schema", href: "/admin/schema", path: "/admin/schema" },
+	{ label: "Series", href: "/admin/series", path: "/admin/series" },
+	{ label: "Users", href: "/admin/users", path: "/admin/users" },
+];
 
-    let currentPath = $derived($page.url.pathname);
+let currentPath = $derived($page.url.pathname);
 </script>
 
 <nav class="admin-nav">

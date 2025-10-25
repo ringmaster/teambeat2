@@ -1,308 +1,307 @@
 <script lang="ts">
-    import { onDestroy } from "svelte";
-    import { fly } from "svelte/transition";
+import { onDestroy } from "svelte";
+import { fly } from "svelte/transition";
 
-    interface Props {
-        visible?: boolean;
-        enableMenu?: boolean;
-        pollType?: "timer" | "roman" | "fist-of-five" | "multiple-choice";
-        question?: string;
-        choices?: string[];
-        votes?: Record<string, number>;
-        totalVotes?: number;
-        onvote?: (choice: string) => void;
-        onaddtime?: (seconds: number) => void;
-        onstopTimer?: () => void;
-        onrecordagreement?: (pollData: {
-            pollType: string;
-            question: string;
-            choices: string[];
-            votes: Record<string, number>;
-            votingOptions: Array<{ key: string; label: string; icon: string }>;
-        }) => void;
-    }
+interface Props {
+	visible?: boolean;
+	enableMenu?: boolean;
+	pollType?: "timer" | "roman" | "fist-of-five" | "multiple-choice";
+	question?: string;
+	choices?: string[];
+	votes?: Record<string, number>;
+	totalVotes?: number;
+	onvote?: (choice: string) => void;
+	onaddtime?: (seconds: number) => void;
+	onstopTimer?: () => void;
+	onrecordagreement?: (pollData: {
+		pollType: string;
+		question: string;
+		choices: string[];
+		votes: Record<string, number>;
+		votingOptions: Array<{ key: string; label: string; icon: string }>;
+	}) => void;
+}
 
-    let {
-        visible = false,
-        enableMenu = false,
-        pollType = "timer",
-        question = "",
-        choices = [],
-        votes = {},
-        totalVotes = 0,
-        onvote,
-        onaddtime,
-        onstopTimer,
-        onrecordagreement,
-    }: Props = $props();
+let {
+	visible = false,
+	enableMenu = false,
+	pollType = "timer",
+	question = "",
+	choices = [],
+	votes = {},
+	totalVotes = 0,
+	onvote,
+	onaddtime,
+	onstopTimer,
+	onrecordagreement,
+}: Props = $props();
 
-    let remaining = $state(0);
-    let passed = $state(0);
-    let total = $state(1);
-    let running = $state(false);
-    let showVotes = $state(false);
-    let hoverMenuOpen = $state(false);
-    let animKey = $state(0);
-    let menuCloseTimeout: number | ReturnType<typeof setTimeout> | null = null;
+let remaining = $state(0);
+let passed = $state(0);
+let total = $state(1);
+let running = $state(false);
+let showVotes = $state(false);
+let hoverMenuOpen = $state(false);
+let animKey = $state(0);
+let menuCloseTimeout: number | ReturnType<typeof setTimeout> | null = null;
 
-    let _tickId: number | null = null;
-    let _lastAt = performance.now();
+let _tickId: number | null = null;
+let _lastAt = performance.now();
 
-    function handleDialMouseEnter() {
-        if (!enableMenu) return;
-        if (menuCloseTimeout) {
-            clearTimeout(menuCloseTimeout);
-            menuCloseTimeout = null;
-        }
-        hoverMenuOpen = true;
-    }
+function handleDialMouseEnter() {
+	if (!enableMenu) return;
+	if (menuCloseTimeout) {
+		clearTimeout(menuCloseTimeout);
+		menuCloseTimeout = null;
+	}
+	hoverMenuOpen = true;
+}
 
-    function handleDialMouseLeave() {
-        if (!enableMenu) return;
-        menuCloseTimeout = setTimeout(() => {
-            hoverMenuOpen = false;
-            menuCloseTimeout = null;
-        }, 300);
-    }
+function handleDialMouseLeave() {
+	if (!enableMenu) return;
+	menuCloseTimeout = setTimeout(() => {
+		hoverMenuOpen = false;
+		menuCloseTimeout = null;
+	}, 300);
+}
 
-    function handleMenuMouseEnter() {
-        if (menuCloseTimeout) {
-            clearTimeout(menuCloseTimeout);
-            menuCloseTimeout = null;
-        }
-    }
+function handleMenuMouseEnter() {
+	if (menuCloseTimeout) {
+		clearTimeout(menuCloseTimeout);
+		menuCloseTimeout = null;
+	}
+}
 
-    function handleMenuMouseLeave() {
-        menuCloseTimeout = setTimeout(() => {
-            hoverMenuOpen = false;
-            menuCloseTimeout = null;
-        }, 300);
-    }
+function handleMenuMouseLeave() {
+	menuCloseTimeout = setTimeout(() => {
+		hoverMenuOpen = false;
+		menuCloseTimeout = null;
+	}, 300);
+}
 
-    export function setTimer(rem: number, pas: number = 0) {
-        if (rem < 0) rem = 0;
-        if (pas < 0) pas = 0;
-        if (rem == 0 && pas == 0) {
-            showVotes = false;
-            running = false;
-            _stopTick();
-            return;
-        }
-        remaining = rem;
-        passed = pas;
-        total = Math.max(1, remaining + passed);
-        running = remaining > 0;
-        _ensureTicking();
-        _updateVotingState(true);
-    }
+export function setTimer(rem: number, pas: number = 0) {
+	if (rem < 0) rem = 0;
+	if (pas < 0) pas = 0;
+	if (rem == 0 && pas == 0) {
+		showVotes = false;
+		running = false;
+		_stopTick();
+		return;
+	}
+	remaining = rem;
+	passed = pas;
+	total = Math.max(1, remaining + passed);
+	running = remaining > 0;
+	_ensureTicking();
+	_updateVotingState(true);
+}
 
-    export function stop() {
-        _stopTick();
-        remaining = 0;
-        passed = 0;
-        total = 1;
-        running = false;
-        showVotes = false;
-    }
+export function stop() {
+	_stopTick();
+	remaining = 0;
+	passed = 0;
+	total = 1;
+	running = false;
+	showVotes = false;
+}
 
-    function _ensureTicking() {
-        if (!running) {
-            _stopTick();
-            return;
-        }
-        if (_tickId !== null) return;
-        _lastAt = performance.now();
-        _tickId = window.setInterval(_onTick, 100);
-    }
+function _ensureTicking() {
+	if (!running) {
+		_stopTick();
+		return;
+	}
+	if (_tickId !== null) return;
+	_lastAt = performance.now();
+	_tickId = window.setInterval(_onTick, 100);
+}
 
-    function _stopTick() {
-        if (_tickId !== null) {
-            clearInterval(_tickId);
-            _tickId = null;
-        }
-    }
+function _stopTick() {
+	if (_tickId !== null) {
+		clearInterval(_tickId);
+		_tickId = null;
+	}
+}
 
-    function _onTick() {
-        const now = performance.now();
-        const dt = (now - _lastAt) / 1000;
-        _lastAt = now;
+function _onTick() {
+	const now = performance.now();
+	const dt = (now - _lastAt) / 1000;
+	_lastAt = now;
 
-        if (!running) {
-            _stopTick();
-            return;
-        }
+	if (!running) {
+		_stopTick();
+		return;
+	}
 
-        remaining = Math.max(0, remaining - dt);
-        if (remaining === 0) {
-            running = false;
-            _stopTick();
-            new Audio("/alarmding3.mp3").play();
-        }
-        // Only update voting state during tick for timer mode
-        // For other poll types, votes are always shown
-        if (pollType === "timer") {
-            _updateVotingState(false);
-        }
-    }
+	remaining = Math.max(0, remaining - dt);
+	if (remaining === 0) {
+		running = false;
+		_stopTick();
+		new Audio("/alarmding3.mp3").play();
+	}
+	// Only update voting state during tick for timer mode
+	// For other poll types, votes are always shown
+	if (pollType === "timer") {
+		_updateVotingState(false);
+	}
+}
 
-    function _updateVotingState(_fromSetTimer: boolean) {
-        const was = showVotes;
-        // For timer mode, show votes at 10 seconds
-        // For voting polls, always show votes immediately
-        if (pollType === "timer") {
-            showVotes =
-                remaining <= 10 ? true : remaining >= 11 ? false : showVotes;
-            if (!was && showVotes && remaining <= 10) {
-                animKey++;
-            }
-        } else {
-            showVotes = true;
-            if (!was && showVotes && _fromSetTimer) {
-                animKey++;
-            }
-        }
-    }
+function _updateVotingState(_fromSetTimer: boolean) {
+	const was = showVotes;
+	// For timer mode, show votes at 10 seconds
+	// For voting polls, always show votes immediately
+	if (pollType === "timer") {
+		showVotes = remaining <= 10 ? true : remaining >= 11 ? false : showVotes;
+		if (!was && showVotes && remaining <= 10) {
+			animKey++;
+		}
+	} else {
+		showVotes = true;
+		if (!was && showVotes && _fromSetTimer) {
+			animKey++;
+		}
+	}
+}
 
-    const secondsInt = $derived(Math.ceil(remaining));
-    const timeLabel = $derived(
-        `${Math.floor(secondsInt / 60)}:${String(secondsInt % 60).padStart(2, "0")}`,
-    );
+const secondsInt = $derived(Math.ceil(remaining));
+const timeLabel = $derived(
+	`${Math.floor(secondsInt / 60)}:${String(secondsInt % 60).padStart(2, "0")}`,
+);
 
-    const fraction = $derived(Math.max(0, Math.min(1, remaining / total)));
-    const dashLen = $derived(
-        Math.round(283 * (fraction - (1 / total) * (1 - fraction))),
-    );
-    const dashArray = $derived(`${Math.max(0, Math.min(283, dashLen))} 283`);
+const fraction = $derived(Math.max(0, Math.min(1, remaining / total)));
+const dashLen = $derived(
+	Math.round(283 * (fraction - (1 / total) * (1 - fraction))),
+);
+const dashArray = $derived(`${Math.max(0, Math.min(283, dashLen))} 283`);
 
-    function lerpColor(c1: number[], c2: number[], t: number): string {
-        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
-        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
-        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
-        return `rgb(${r}, ${g}, ${b})`;
-    }
+function lerpColor(c1: number[], c2: number[], t: number): string {
+	const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+	const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+	const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+	return `rgb(${r}, ${g}, ${b})`;
+}
 
-    const currentColor = $derived.by(() => {
-        const green = [79, 160, 82];
-        const yellow = [242, 168, 0];
-        const red = [192, 90, 90];
+const currentColor = $derived.by(() => {
+	const green = [79, 160, 82];
+	const yellow = [242, 168, 0];
+	const red = [192, 90, 90];
 
-        if (remaining > 20) return `rgb(${green.join(",")})`;
-        if (remaining > 10) {
-            const t = (20 - remaining) / 10;
-            return lerpColor(green, yellow, t);
-        }
-        if (remaining > 3) {
-            const t = (10 - remaining) / 7;
-            return lerpColor(yellow, red, t);
-        }
-        return `rgb(${red.join(",")})`;
-    });
+	if (remaining > 20) return `rgb(${green.join(",")})`;
+	if (remaining > 10) {
+		const t = (20 - remaining) / 10;
+		return lerpColor(green, yellow, t);
+	}
+	if (remaining > 3) {
+		const t = (10 - remaining) / 7;
+		return lerpColor(yellow, red, t);
+	}
+	return `rgb(${red.join(",")})`;
+});
 
-    function percent(count: number, total: number): string {
-        const p = total > 0 ? (count / total) * 100 : 0;
-        return `${p.toFixed(0)}%`;
-    }
+function percent(count: number, total: number): string {
+	const p = total > 0 ? (count / total) * 100 : 0;
+	return `${p.toFixed(0)}%`;
+}
 
-    function handleVote(choice: string) {
-        if (onvote) {
-            onvote(choice);
-        }
-    }
+function handleVote(choice: string) {
+	if (onvote) {
+		onvote(choice);
+	}
+}
 
-    // Calculate the maximum vote count to highlight top votes
-    const maxVoteCount = $derived.by(() => {
-        const voteCounts = Object.values(votes);
-        return voteCounts.length > 0 ? Math.max(...voteCounts) : 0;
-    });
+// Calculate the maximum vote count to highlight top votes
+const maxVoteCount = $derived.by(() => {
+	const voteCounts = Object.values(votes);
+	return voteCounts.length > 0 ? Math.max(...voteCounts) : 0;
+});
 
-    // Check if an option has the top vote count
-    function isTopVote(optionKey: string): boolean {
-        const voteCount = votes[optionKey] || 0;
-        return voteCount > 0 && voteCount === maxVoteCount;
-    }
+// Check if an option has the top vote count
+function isTopVote(optionKey: string): boolean {
+	const voteCount = votes[optionKey] || 0;
+	return voteCount > 0 && voteCount === maxVoteCount;
+}
 
-    // Build voting options based on poll type
-    const votingOptions = $derived.by(() => {
-        if (pollType === "timer") {
-            return [
-                { key: "A", label: "More Time", icon: "" },
-                { key: "B", label: "Move On", icon: "" },
-            ];
-        } else if (pollType === "roman") {
-            return [
-                { key: "support", label: "Support", icon: "👍" },
-                { key: "oppose", label: "Oppose", icon: "👎" },
-                { key: "abstain", label: "Abstain", icon: "👋" },
-            ];
-        } else if (pollType === "fist-of-five") {
-            return [
-                { key: "0", label: "0", icon: "" },
-                { key: "1", label: "1", icon: "" },
-                { key: "2", label: "2", icon: "" },
-                { key: "3", label: "3", icon: "" },
-                { key: "4", label: "4", icon: "" },
-                { key: "5", label: "5", icon: "" },
-            ];
-        } else if (pollType === "multiple-choice") {
-            return choices.map((choice, i) => ({
-                key: `choice_${i}`,
-                label: choice,
-                icon: "",
-            }));
-        }
-        return [];
-    });
+// Build voting options based on poll type
+const votingOptions = $derived.by(() => {
+	if (pollType === "timer") {
+		return [
+			{ key: "A", label: "More Time", icon: "" },
+			{ key: "B", label: "Move On", icon: "" },
+		];
+	} else if (pollType === "roman") {
+		return [
+			{ key: "support", label: "Support", icon: "👍" },
+			{ key: "oppose", label: "Oppose", icon: "👎" },
+			{ key: "abstain", label: "Abstain", icon: "👋" },
+		];
+	} else if (pollType === "fist-of-five") {
+		return [
+			{ key: "0", label: "0", icon: "" },
+			{ key: "1", label: "1", icon: "" },
+			{ key: "2", label: "2", icon: "" },
+			{ key: "3", label: "3", icon: "" },
+			{ key: "4", label: "4", icon: "" },
+			{ key: "5", label: "5", icon: "" },
+		];
+	} else if (pollType === "multiple-choice") {
+		return choices.map((choice, i) => ({
+			key: `choice_${i}`,
+			label: choice,
+			icon: "",
+		}));
+	}
+	return [];
+});
 
-    function handleAdd(seconds: number) {
-        if (onaddtime) {
-            onaddtime(seconds);
-        }
-    }
+function handleAdd(seconds: number) {
+	if (onaddtime) {
+		onaddtime(seconds);
+	}
+}
 
-    function handleStopClick() {
-        hoverMenuOpen = false;
-        if (onstopTimer) {
-            onstopTimer();
-        }
-    }
+function handleStopClick() {
+	hoverMenuOpen = false;
+	if (onstopTimer) {
+		onstopTimer();
+	}
+}
 
-    function handleRecordAgreement() {
-        hoverMenuOpen = false;
-        if (onrecordagreement) {
-            onrecordagreement({
-                pollType,
-                question,
-                choices,
-                votes,
-                votingOptions,
-            });
-        }
-    }
+function handleRecordAgreement() {
+	hoverMenuOpen = false;
+	if (onrecordagreement) {
+		onrecordagreement({
+			pollType,
+			question,
+			choices,
+			votes,
+			votingOptions,
+		});
+	}
+}
 
-    $effect(() => {
-        if (!visible) {
-            _stopTick();
-        }
-    });
+$effect(() => {
+	if (!visible) {
+		_stopTick();
+	}
+});
 
-    // Update voting state when poll type changes or when visible changes
-    $effect(() => {
-        // For non-timer poll types, always show votes immediately when running
-        if (pollType !== "timer" && running) {
-            if (!showVotes) {
-                showVotes = true;
-                animKey++;
-            }
-        }
-    });
+// Update voting state when poll type changes or when visible changes
+$effect(() => {
+	// For non-timer poll types, always show votes immediately when running
+	if (pollType !== "timer" && running) {
+		if (!showVotes) {
+			showVotes = true;
+			animKey++;
+		}
+	}
+});
 
-    onDestroy(() => {
-        _stopTick();
-        if (menuCloseTimeout) {
-            clearTimeout(menuCloseTimeout);
-            menuCloseTimeout = null;
-        }
-    });
+onDestroy(() => {
+	_stopTick();
+	if (menuCloseTimeout) {
+		clearTimeout(menuCloseTimeout);
+		menuCloseTimeout = null;
+	}
+});
 </script>
 
 {#if visible}

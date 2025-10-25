@@ -1,98 +1,100 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { goto } from "$app/navigation";
-    import { page } from "$app/stores";
-    import Input from "$lib/components/ui/Input.svelte";
-    import Button from "$lib/components/ui/Button.svelte";
+import { onMount } from "svelte";
+import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import Button from "$lib/components/ui/Button.svelte";
+import Input from "$lib/components/ui/Input.svelte";
 
-    let email: string = $state("");
-    let name: string = $state("");
-    let password: string = $state("");
-    let confirmPassword: string = $state("");
-    let error: string = $state("");
-    let loading: boolean = $state(false);
-    let redirectBoardId: string = $state("");
+let email: string = $state("");
+let name: string = $state("");
+let password: string = $state("");
+let confirmPassword: string = $state("");
+let error: string = $state("");
+let loading: boolean = $state(false);
+let redirectBoardId: string = $state("");
 
-    // Validate redirect parameter to prevent open redirect attacks
-    function validateRedirectBoardId(redirect: string | null): string {
-        if (!redirect) return "";
-        // Only allow alphanumeric characters, hyphens, and underscores (valid board IDs)
-        // This prevents URLs, path traversal, and XSS attempts
-        if (/^[a-zA-Z0-9_-]+$/.test(redirect)) {
-            return redirect;
-        }
-        return "";
-    }
+// Validate redirect parameter to prevent open redirect attacks
+function validateRedirectBoardId(redirect: string | null): string {
+	if (!redirect) return "";
+	// Only allow alphanumeric characters, hyphens, and underscores (valid board IDs)
+	// This prevents URLs, path traversal, and XSS attempts
+	if (/^[a-zA-Z0-9_-]+$/.test(redirect)) {
+		return redirect;
+	}
+	return "";
+}
 
-    // Check if user is already logged in and redirect to dashboard
-    onMount(async () => {
-        // Get and validate redirect board ID from query string
-        redirectBoardId = validateRedirectBoardId($page.url.searchParams.get("redirect"));
+// Check if user is already logged in and redirect to dashboard
+onMount(async () => {
+	// Get and validate redirect board ID from query string
+	redirectBoardId = validateRedirectBoardId(
+		$page.url.searchParams.get("redirect"),
+	);
 
-        try {
-            const response = await fetch("/api/auth/me");
-            if (response.ok) {
-                // User is already authenticated, redirect appropriately
-                if (redirectBoardId) {
-                    goto(`/board/${redirectBoardId}`);
-                } else {
-                    goto("/");
-                }
-            }
-        } catch (err) {
-            // User not authenticated, show register form
-            console.log("User not authenticated, showing register form");
-        }
-    });
+	try {
+		const response = await fetch("/api/auth/me");
+		if (response.ok) {
+			// User is already authenticated, redirect appropriately
+			if (redirectBoardId) {
+				goto(`/board/${redirectBoardId}`);
+			} else {
+				goto("/");
+			}
+		}
+	} catch (err) {
+		// User not authenticated, show register form
+		console.log("User not authenticated, showing register form");
+	}
+});
 
-    async function handleRegister() {
-        if (!email || !password) {
-            error = "Email and password are required";
-            return;
-        }
+async function handleRegister() {
+	if (!email || !password) {
+		error = "Email and password are required";
+		return;
+	}
 
-        if (password !== confirmPassword) {
-            error = "Passwords do not match";
-            return;
-        }
+	if (password !== confirmPassword) {
+		error = "Passwords do not match";
+		return;
+	}
 
-        if (password.length < 6) {
-            error = "Password must be at least 6 characters";
-            return;
-        }
+	if (password.length < 6) {
+		error = "Password must be at least 6 characters";
+		return;
+	}
 
-        loading = true;
-        error = "";
+	loading = true;
+	error = "";
 
-        try {
-            const response = await fetch("/api/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email,
-                    name: name || undefined,
-                    password,
-                }),
-            });
+	try {
+		const response = await fetch("/api/auth/register", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				email,
+				name: name || undefined,
+				password,
+			}),
+		});
 
-            const data = await response.json();
+		const data = await response.json();
 
-            if (response.ok) {
-                // Redirect to board or dashboard
-                if (redirectBoardId) {
-                    window.location.href = `/board/${redirectBoardId}`;
-                } else {
-                    window.location.href = "/";
-                }
-            } else {
-                error = data.error || "Registration failed";
-            }
-        } catch (err) {
-            error = "Network error. Please try again.";
-        } finally {
-            loading = false;
-        }
-    }
+		if (response.ok) {
+			// Redirect to board or dashboard
+			if (redirectBoardId) {
+				window.location.href = `/board/${redirectBoardId}`;
+			} else {
+				window.location.href = "/";
+			}
+		} else {
+			error = data.error || "Registration failed";
+		}
+	} catch (err) {
+		error = "Network error. Please try again.";
+	} finally {
+		loading = false;
+	}
+}
 </script>
 
 <div class="register-page">

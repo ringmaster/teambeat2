@@ -1,66 +1,66 @@
 <script lang="ts">
-    import Icon from "./Icon.svelte";
+import Icon from "./Icon.svelte";
 
-    interface Props {
-        type: "success" | "error" | "warning" | "info";
-        message: string;
-        actions?: Array<{
-            label: string;
-            onClick: () => void;
-            variant?: "primary" | "secondary";
-        }>;
-        autoHide?: boolean;
-        duration?: number;
-        visible?: boolean;
-        onClose?: () => void;
-    }
+interface Props {
+	type: "success" | "error" | "warning" | "info";
+	message: string;
+	actions?: Array<{
+		label: string;
+		onClick: () => void;
+		variant?: "primary" | "secondary";
+	}>;
+	autoHide?: boolean;
+	duration?: number;
+	visible?: boolean;
+	onClose?: () => void;
+}
 
-    let {
-        type,
-        message,
-        actions = [],
-        autoHide = true,
-        duration = 4000,
-        visible = true,
-        onClose,
-    }: Props = $props();
+let {
+	type,
+	message,
+	actions = [],
+	autoHide = true,
+	duration = 4000,
+	visible = true,
+	onClose,
+}: Props = $props();
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    $effect(() => {
-        if (visible && autoHide && actions.length === 0) {
-            timeoutId = setTimeout(() => {
-                onClose?.();
-            }, duration);
-        }
+$effect(() => {
+	if (visible && autoHide && actions.length === 0) {
+		timeoutId = setTimeout(() => {
+			onClose?.();
+		}, duration);
+	}
 
-        return () => {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
-        };
-    });
+	return () => {
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
+	};
+});
 
-    function handleClose() {
-        visible = false;
-        onClose?.();
-    }
+function handleClose() {
+	visible = false;
+	onClose?.();
+}
 
-    function handleAction(action: {
-        label: string;
-        onClick: () => void;
-        variant?: "primary" | "secondary";
-    }) {
-        action.onClick();
-        // Don't auto-close when action is taken - let the container handle it
-    }
+function handleAction(action: {
+	label: string;
+	onClick: () => void;
+	variant?: "primary" | "secondary";
+}) {
+	action.onClick();
+	// Don't auto-close when action is taken - let the container handle it
+}
 
-    const iconMap = {
-        success: "check-circle",
-        error: "x-circle",
-        warning: "alert-triangle",
-        info: "info",
-    };
+const iconMap = {
+	success: "check-circle",
+	error: "x-circle",
+	warning: "alert-triangle",
+	info: "info",
+};
 </script>
 
 {#if visible}

@@ -1,96 +1,96 @@
 <script lang="ts">
-    import Icon from "./ui/Icon.svelte";
+import Icon from "./ui/Icon.svelte";
 
-    interface User {
-        userId: string;
-        userName: string;
-        email: string;
-        role: "admin" | "facilitator" | "member";
-        joinedAt: string;
-    }
+interface User {
+	userId: string;
+	userName: string;
+	email: string;
+	role: "admin" | "facilitator" | "member";
+	joinedAt: string;
+}
 
-    interface Props {
-        seriesId: string;
-        currentUserRole: string;
-        users: User[];
-        onUserAdded: (email: string) => void;
-        onUserRemoved: (userId: string) => void;
-        onUserRoleChanged: (
-            userId: string,
-            newRole: "admin" | "facilitator" | "member",
-        ) => void;
-    }
+interface Props {
+	seriesId: string;
+	currentUserRole: string;
+	users: User[];
+	onUserAdded: (email: string) => void;
+	onUserRemoved: (userId: string) => void;
+	onUserRoleChanged: (
+		userId: string,
+		newRole: "admin" | "facilitator" | "member",
+	) => void;
+}
 
-    let {
-        seriesId: _seriesId,
-        currentUserRole,
-        users = $bindable(),
-        onUserAdded,
-        onUserRemoved,
-        onUserRoleChanged,
-    }: Props = $props();
+let {
+	seriesId: _seriesId,
+	currentUserRole,
+	users = $bindable(),
+	onUserAdded,
+	onUserRemoved,
+	onUserRoleChanged,
+}: Props = $props();
 
-    let newUserEmail = $state("");
-    let addingUser = $state(false);
-    let addUserError = $state("");
+let newUserEmail = $state("");
+let addingUser = $state(false);
+let addUserError = $state("");
 
-    async function handleAddUser() {
-        if (!newUserEmail.trim()) {
-            addUserError = "Email is required";
-            return;
-        }
+async function handleAddUser() {
+	if (!newUserEmail.trim()) {
+		addUserError = "Email is required";
+		return;
+	}
 
-        if (!isValidEmail(newUserEmail)) {
-            addUserError = "Please enter a valid email address";
-            return;
-        }
+	if (!isValidEmail(newUserEmail)) {
+		addUserError = "Please enter a valid email address";
+		return;
+	}
 
-        addingUser = true;
-        addUserError = "";
+	addingUser = true;
+	addUserError = "";
 
-        try {
-            await onUserAdded(newUserEmail.trim());
-            newUserEmail = "";
-        } catch (error) {
-            addUserError = "Failed to add user";
-        } finally {
-            addingUser = false;
-        }
-    }
+	try {
+		await onUserAdded(newUserEmail.trim());
+		newUserEmail = "";
+	} catch (error) {
+		addUserError = "Failed to add user";
+	} finally {
+		addingUser = false;
+	}
+}
 
-    function isValidEmail(email: string): boolean {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
+function isValidEmail(email: string): boolean {
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	return emailRegex.test(email);
+}
 
-    function canModifyUser(targetUserRole: string): boolean {
-        // Only admins can modify other users
-        if (currentUserRole !== "admin") return false;
+function canModifyUser(targetUserRole: string): boolean {
+	// Only admins can modify other users
+	if (currentUserRole !== "admin") return false;
 
-        // Admins can modify facilitators and members, but not other admins
-        return targetUserRole !== "admin";
-    }
+	// Admins can modify facilitators and members, but not other admins
+	return targetUserRole !== "admin";
+}
 
-    function canRemoveUser(targetUserRole: string): boolean {
-        // Only admins can remove users
-        if (currentUserRole !== "admin") return false;
+function canRemoveUser(targetUserRole: string): boolean {
+	// Only admins can remove users
+	if (currentUserRole !== "admin") return false;
 
-        // Admins can remove facilitators and members, but not other admins
-        return targetUserRole !== "admin";
-    }
+	// Admins can remove facilitators and members, but not other admins
+	return targetUserRole !== "admin";
+}
 
-    function getRoleBadgeClass(role: string): string {
-        switch (role) {
-            case "admin":
-                return "badge-error";
-            case "facilitator":
-                return "badge-warning";
-            case "member":
-                return "badge-neutral";
-            default:
-                return "badge-ghost";
-        }
-    }
+function getRoleBadgeClass(role: string): string {
+	switch (role) {
+		case "admin":
+			return "badge-error";
+		case "facilitator":
+			return "badge-warning";
+		case "member":
+			return "badge-neutral";
+		default:
+			return "badge-ghost";
+	}
+}
 </script>
 
 <div class="user-management">

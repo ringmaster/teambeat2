@@ -1,162 +1,161 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import { toastStore } from "$lib/stores/toast";
-    import AdminNav from "$lib/components/AdminNav.svelte";
-    import type { PageData } from "./$types";
+import { goto } from "$app/navigation";
+import AdminNav from "$lib/components/AdminNav.svelte";
+import { toastStore } from "$lib/stores/toast";
+import type { PageData } from "./$types";
 
-    let { data }: { data: PageData } = $props();
+let { data }: { data: PageData } = $props();
 
-    let searchInput = $state(data.search);
-    let isSearching = $state(false);
-    let deletingUserId = $state<string | null>(null);
-    let togglingVerificationUserId = $state<string | null>(null);
+let searchInput = $state(data.search);
+let isSearching = $state(false);
+let deletingUserId = $state<string | null>(null);
+let togglingVerificationUserId = $state<string | null>(null);
 
-    async function handleSearch(event: Event) {
-        event.preventDefault();
-        isSearching = true;
-        const params = new URLSearchParams();
-        params.set("page", "1");
-        if (searchInput) {
-            params.set("search", searchInput);
-        }
-        await goto(`/admin/users?${params.toString()}`);
-        isSearching = false;
-    }
+async function handleSearch(event: Event) {
+	event.preventDefault();
+	isSearching = true;
+	const params = new URLSearchParams();
+	params.set("page", "1");
+	if (searchInput) {
+		params.set("search", searchInput);
+	}
+	await goto(`/admin/users?${params.toString()}`);
+	isSearching = false;
+}
 
-    function handleClearSearch() {
-        searchInput = "";
-        goto("/admin/users");
-    }
+function handleClearSearch() {
+	searchInput = "";
+	goto("/admin/users");
+}
 
-    async function generateResetUrl(userId: string, userEmail: string) {
-        try {
-            const response = await fetch(
-                "/api/admin/users/generate-reset-token",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId }),
-                },
-            );
+async function generateResetUrl(userId: string, userEmail: string) {
+	try {
+		const response = await fetch("/api/admin/users/generate-reset-token", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ userId }),
+		});
 
-            if (!response.ok) {
-                throw new Error("Failed to generate reset URL");
-            }
+		if (!response.ok) {
+			throw new Error("Failed to generate reset URL");
+		}
 
-            const result = await response.json();
+		const result = await response.json();
 
-            // Copy to clipboard
-            await navigator.clipboard.writeText(result.resetUrl);
-            toastStore.success(`Password reset URL copied for ${userEmail}`);
-        } catch (err) {
-            toastStore.error("Failed to generate reset URL");
-            console.error(err);
-        }
-    }
+		// Copy to clipboard
+		await navigator.clipboard.writeText(result.resetUrl);
+		toastStore.success(`Password reset URL copied for ${userEmail}`);
+	} catch (err) {
+		toastStore.error("Failed to generate reset URL");
+		console.error(err);
+	}
+}
 
-    function confirmDeleteUser(userId: string, userEmail: string) {
-        toastStore.warning(
-            `Delete user ${userEmail}? This action cannot be undone.`,
-            {
-                autoHide: false,
-                actions: [
-                    {
-                        label: "Delete",
-                        onClick: () => deleteUser(userId, userEmail),
-                        variant: "primary",
-                    },
-                    {
-                        label: "Cancel",
-                        onClick: () => {},
-                        variant: "secondary",
-                    },
-                ],
-            },
-        );
-    }
+function confirmDeleteUser(userId: string, userEmail: string) {
+	toastStore.warning(
+		`Delete user ${userEmail}? This action cannot be undone.`,
+		{
+			autoHide: false,
+			actions: [
+				{
+					label: "Delete",
+					onClick: () => deleteUser(userId, userEmail),
+					variant: "primary",
+				},
+				{
+					label: "Cancel",
+					onClick: () => {},
+					variant: "secondary",
+				},
+			],
+		},
+	);
+}
 
-    async function deleteUser(userId: string, userEmail: string) {
-        deletingUserId = userId;
-        try {
-            const response = await fetch(`/api/admin/users/${userId}`, {
-                method: "DELETE",
-            });
+async function deleteUser(userId: string, userEmail: string) {
+	deletingUserId = userId;
+	try {
+		const response = await fetch(`/api/admin/users/${userId}`, {
+			method: "DELETE",
+		});
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Failed to delete user");
-            }
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to delete user");
+		}
 
-            toastStore.success(`User ${userEmail} deleted successfully`);
+		toastStore.success(`User ${userEmail} deleted successfully`);
 
-            // Reload the page
-            window.location.reload();
-        } catch (err) {
-            toastStore.error(
-                err instanceof Error ? err.message : "Failed to delete user",
-            );
-            console.error(err);
-        } finally {
-            deletingUserId = null;
-        }
-    }
+		// Reload the page
+		window.location.reload();
+	} catch (err) {
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to delete user",
+		);
+		console.error(err);
+	} finally {
+		deletingUserId = null;
+	}
+}
 
-    function goToPage(page: number) {
-        const params = new URLSearchParams();
-        params.set("page", page.toString());
-        if (data.search) {
-            params.set("search", data.search);
-        }
-        goto(`/admin/users?${params.toString()}`);
-    }
+function goToPage(page: number) {
+	const params = new URLSearchParams();
+	params.set("page", page.toString());
+	if (data.search) {
+		params.set("search", data.search);
+	}
+	goto(`/admin/users?${params.toString()}`);
+}
 
-    const totalPages = Math.ceil(data.totalCount / data.pageSize);
-    const hasPrevPage = data.page > 1;
-    const hasNextPage = data.page < totalPages;
+const totalPages = Math.ceil(data.totalCount / data.pageSize);
+const hasPrevPage = data.page > 1;
+const hasNextPage = data.page < totalPages;
 
-    function formatDate(dateStr: string): string {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
-    }
+function formatDate(dateStr: string): string {
+	const date = new Date(dateStr);
+	return date.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+}
 
-    async function toggleEmailVerification(
-        userId: string,
-        currentStatus: boolean,
-        userEmail: string,
-    ) {
-        togglingVerificationUserId = userId;
-        try {
-            const response = await fetch(`/api/admin/users/${userId}/verify`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ verified: !currentStatus }),
-            });
+async function toggleEmailVerification(
+	userId: string,
+	currentStatus: boolean,
+	userEmail: string,
+) {
+	togglingVerificationUserId = userId;
+	try {
+		const response = await fetch(`/api/admin/users/${userId}/verify`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ verified: !currentStatus }),
+		});
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Failed to update verification status");
-            }
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to update verification status");
+		}
 
-            const newStatus = !currentStatus;
-            toastStore.success(
-                `Email verification ${newStatus ? "enabled" : "disabled"} for ${userEmail}`,
-            );
+		const newStatus = !currentStatus;
+		toastStore.success(
+			`Email verification ${newStatus ? "enabled" : "disabled"} for ${userEmail}`,
+		);
 
-            // Reload the page to refresh the user list
-            window.location.reload();
-        } catch (err) {
-            toastStore.error(
-                err instanceof Error ? err.message : "Failed to update verification status",
-            );
-            console.error(err);
-        } finally {
-            togglingVerificationUserId = null;
-        }
-    }
+		// Reload the page to refresh the user list
+		window.location.reload();
+	} catch (err) {
+		toastStore.error(
+			err instanceof Error
+				? err.message
+				: "Failed to update verification status",
+		);
+		console.error(err);
+	} finally {
+		togglingVerificationUserId = null;
+	}
+}
 </script>
 
 <AdminNav />

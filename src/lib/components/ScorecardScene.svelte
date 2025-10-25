@@ -1,391 +1,383 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import type {
-        SceneScorecard,
-        SceneScorecardResult,
-    } from "$lib/types/scorecard";
-    import type { Board, Scene } from "$lib/types";
-    import Icon from "./ui/Icon.svelte";
-    import { toastStore } from "$lib/stores/toast";
-    import {
-        parseData,
-        parseFile,
-        needsArrayWrapping,
-        wrapArray,
-        type DataFormat,
-    } from "$lib/utils/data-parser";
+import { onMount } from "svelte";
+import { toastStore } from "$lib/stores/toast";
+import type { Board, Scene } from "$lib/types";
+import type {
+	SceneScorecard,
+	SceneScorecardResult,
+} from "$lib/types/scorecard";
+import {
+	type DataFormat,
+	needsArrayWrapping,
+	parseData,
+	parseFile,
+	wrapArray,
+} from "$lib/utils/data-parser";
+import Icon from "./ui/Icon.svelte";
 
-    interface Props {
-        sceneId: string;
-        boardId: string;
-        board: Board;
-        scene: Scene;
-        canEdit: boolean;
-        userRole: string;
-    }
+interface Props {
+	sceneId: string;
+	boardId: string;
+	board: Board;
+	scene: Scene;
+	canEdit: boolean;
+	userRole: string;
+}
 
-    let { sceneId, boardId, board, scene, canEdit, userRole }: Props = $props();
+let { sceneId, boardId, board, scene, canEdit, userRole }: Props = $props();
 
-    let sceneScorecards = $state<SceneScorecard[]>([]);
-    let allResults = $state<SceneScorecardResult[]>([]);
-    let loading = $state(true);
-    let processing = $state(false);
-    let error = $state<string | null>(null);
-    let showDataDialog = $state(false);
-    let dataInputs = $state<Record<string, string>>({});
-    let uploadedFiles = $state<Record<string, File | null>>({});
-    let parsedData = $state<Record<string, any>>({});
-    let parseErrors = $state<Record<string, string | null>>({});
-    let dragOver = $state<Record<string, boolean>>({});
-    let processedAt = $state<string | null>(null);
-    let collectedDataByScorecard = $state<Record<string, Record<string, any>>>(
-        {},
-    );
-    let dropdownOpen = $state<string | null>(null);
+let sceneScorecards = $state<SceneScorecard[]>([]);
+let allResults = $state<SceneScorecardResult[]>([]);
+let loading = $state(true);
+let processing = $state(false);
+let error = $state<string | null>(null);
+let showDataDialog = $state(false);
+let dataInputs = $state<Record<string, string>>({});
+let uploadedFiles = $state<Record<string, File | null>>({});
+let parsedData = $state<Record<string, any>>({});
+let parseErrors = $state<Record<string, string | null>>({});
+let dragOver = $state<Record<string, boolean>>({});
+let processedAt = $state<string | null>(null);
+let collectedDataByScorecard = $state<Record<string, Record<string, any>>>({});
+let dropdownOpen = $state<string | null>(null);
 
-    // Combine results from all scorecards, grouping by section
-    let resultsBySection = $derived(() => {
-        const grouped: Record<string, SceneScorecardResult[]> = {};
+// Combine results from all scorecards, grouping by section
+let resultsBySection = $derived(() => {
+	const grouped: Record<string, SceneScorecardResult[]> = {};
 
-        allResults.forEach((result) => {
-            if (!grouped[result.section]) {
-                grouped[result.section] = [];
-            }
-            grouped[result.section].push(result);
-        });
+	allResults.forEach((result) => {
+		if (!grouped[result.section]) {
+			grouped[result.section] = [];
+		}
+		grouped[result.section].push(result);
+	});
 
-        return grouped;
-    });
+	return grouped;
+});
 
-    // Get visible columns for dropdown
-    const visibleColumns = $derived(() => {
-        if (!board.columns || !scene.id) return [];
-        const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
-        return board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
-    });
+// Get visible columns for dropdown
+const visibleColumns = $derived(() => {
+	if (!board.columns || !scene.id) return [];
+	const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
+	return board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
+});
 
-    async function loadSceneScorecards() {
-        try {
-            loading = true;
-            error = null;
-            const response = await fetch(`/api/scenes/${sceneId}/scorecards`);
-            const data = await response.json();
+async function loadSceneScorecards() {
+	try {
+		loading = true;
+		error = null;
+		const response = await fetch(`/api/scenes/${sceneId}/scorecards`);
+		const data = await response.json();
 
-            if (data.success) {
-                sceneScorecards = data.sceneScorecards;
-                if (sceneScorecards.length > 0) {
-                    await loadAllResults();
-                }
-            } else {
-                error = data.error || "Failed to load scorecards";
-            }
-        } catch (e) {
-            error = "Failed to load scorecards";
-            console.error("Error loading scorecards:", e);
-        } finally {
-            loading = false;
-        }
-    }
+		if (data.success) {
+			sceneScorecards = data.sceneScorecards;
+			if (sceneScorecards.length > 0) {
+				await loadAllResults();
+			}
+		} else {
+			error = data.error || "Failed to load scorecards";
+		}
+	} catch (e) {
+		error = "Failed to load scorecards";
+		console.error("Error loading scorecards:", e);
+	} finally {
+		loading = false;
+	}
+}
 
-    async function loadAllResults() {
-        try {
-            const allResultsTemp: SceneScorecardResult[] = [];
-            const collectedDataTemp: Record<string, Record<string, any>> = {};
-            let latestProcessedAt: string | null = null;
+async function loadAllResults() {
+	try {
+		const allResultsTemp: SceneScorecardResult[] = [];
+		const collectedDataTemp: Record<string, Record<string, any>> = {};
+		let latestProcessedAt: string | null = null;
 
-            for (const sceneScorecard of sceneScorecards) {
-                const response = await fetch(
-                    `/api/scene-scorecards/${sceneScorecard.id}/results`,
-                );
-                const data = await response.json();
+		for (const sceneScorecard of sceneScorecards) {
+			const response = await fetch(
+				`/api/scene-scorecards/${sceneScorecard.id}/results`,
+			);
+			const data = await response.json();
 
-                if (data.success) {
-                    allResultsTemp.push(...data.results);
+			if (data.success) {
+				allResultsTemp.push(...data.results);
 
-                    if (data.collectedData) {
-                        collectedDataTemp[sceneScorecard.id] = JSON.parse(
-                            data.collectedData,
-                        );
-                    }
+				if (data.collectedData) {
+					collectedDataTemp[sceneScorecard.id] = JSON.parse(data.collectedData);
+				}
 
-                    // Track the latest processedAt
-                    if (data.processedAt) {
-                        if (
-                            !latestProcessedAt ||
-                            new Date(data.processedAt) >
-                                new Date(latestProcessedAt)
-                        ) {
-                            latestProcessedAt = data.processedAt;
-                        }
-                    }
-                }
-            }
+				// Track the latest processedAt
+				if (data.processedAt) {
+					if (
+						!latestProcessedAt ||
+						new Date(data.processedAt) > new Date(latestProcessedAt)
+					) {
+						latestProcessedAt = data.processedAt;
+					}
+				}
+			}
+		}
 
-            allResults = allResultsTemp;
-            collectedDataByScorecard = collectedDataTemp;
-            processedAt = latestProcessedAt;
-        } catch (e) {
-            error = "Failed to load results";
-            console.error("Error loading results:", e);
-        }
-    }
+		allResults = allResultsTemp;
+		collectedDataByScorecard = collectedDataTemp;
+		processedAt = latestProcessedAt;
+	} catch (e) {
+		error = "Failed to load results";
+		console.error("Error loading results:", e);
+	}
+}
 
-    function openDataDialog() {
-        if (sceneScorecards.length === 0) return;
+function openDataDialog() {
+	if (sceneScorecards.length === 0) return;
 
-        // Initialize data inputs for all datasources across all scorecards
-        const inputs: Record<string, string> = {};
-        sceneScorecards.forEach((ss) => {
-            ss.datasources?.forEach((ds) => {
-                inputs[`${ss.id}-${ds.id}`] = "";
-            });
-        });
-        dataInputs = inputs;
-        showDataDialog = true;
-    }
+	// Initialize data inputs for all datasources across all scorecards
+	const inputs: Record<string, string> = {};
+	sceneScorecards.forEach((ss) => {
+		ss.datasources?.forEach((ds) => {
+			inputs[`${ss.id}-${ds.id}`] = "";
+		});
+	});
+	dataInputs = inputs;
+	showDataDialog = true;
+}
 
-    function loadPreviousData() {
-        if (Object.keys(collectedDataByScorecard).length === 0) return;
+function loadPreviousData() {
+	if (Object.keys(collectedDataByScorecard).length === 0) return;
 
-        const inputs: Record<string, string> = {};
-        sceneScorecards.forEach((ss) => {
-            const collectedData = collectedDataByScorecard[ss.id];
-            ss.datasources?.forEach((ds) => {
-                if (collectedData?.[ds.id]) {
-                    inputs[`${ss.id}-${ds.id}`] = JSON.stringify(
-                        collectedData[ds.id],
-                        null,
-                        2,
-                    );
-                } else {
-                    inputs[`${ss.id}-${ds.id}`] = "";
-                }
-            });
-        });
-        dataInputs = inputs;
-    }
+	const inputs: Record<string, string> = {};
+	sceneScorecards.forEach((ss) => {
+		const collectedData = collectedDataByScorecard[ss.id];
+		ss.datasources?.forEach((ds) => {
+			if (collectedData?.[ds.id]) {
+				inputs[`${ss.id}-${ds.id}`] = JSON.stringify(
+					collectedData[ds.id],
+					null,
+					2,
+				);
+			} else {
+				inputs[`${ss.id}-${ds.id}`] = "";
+			}
+		});
+	});
+	dataInputs = inputs;
+}
 
-    async function handleFileUpload(key: string, file: File) {
-        uploadedFiles[key] = file;
-        parseErrors[key] = null;
+async function handleFileUpload(key: string, file: File) {
+	uploadedFiles[key] = file;
+	parseErrors[key] = null;
 
-        // Parse the file
-        const result = await parseFile(file);
+	// Parse the file
+	const result = await parseFile(file);
 
-        if (result.success && result.data) {
-            parsedData[key] = result.data;
-            dataInputs[key] = ""; // Clear text input when file is uploaded
-        } else {
-            parseErrors[key] = result.error || "Failed to parse file";
-            uploadedFiles[key] = null;
-        }
-    }
+	if (result.success && result.data) {
+		parsedData[key] = result.data;
+		dataInputs[key] = ""; // Clear text input when file is uploaded
+	} else {
+		parseErrors[key] = result.error || "Failed to parse file";
+		uploadedFiles[key] = null;
+	}
+}
 
-    async function handleFileDrop(key: string, event: DragEvent) {
-        event.preventDefault();
-        dragOver[key] = false;
+async function handleFileDrop(key: string, event: DragEvent) {
+	event.preventDefault();
+	dragOver[key] = false;
 
-        const files = event.dataTransfer?.files;
-        if (files && files.length > 0) {
-            await handleFileUpload(key, files[0]);
-        }
-    }
+	const files = event.dataTransfer?.files;
+	if (files && files.length > 0) {
+		await handleFileUpload(key, files[0]);
+	}
+}
 
-    function handleDragOver(key: string, event: DragEvent) {
-        event.preventDefault();
-        dragOver[key] = true;
-    }
+function handleDragOver(key: string, event: DragEvent) {
+	event.preventDefault();
+	dragOver[key] = true;
+}
 
-    function handleDragLeave(key: string) {
-        dragOver[key] = false;
-    }
+function handleDragLeave(key: string) {
+	dragOver[key] = false;
+}
 
-    function clearFile(key: string) {
-        uploadedFiles[key] = null;
-        parsedData[key] = undefined;
-        parseErrors[key] = null;
-    }
+function clearFile(key: string) {
+	uploadedFiles[key] = null;
+	parsedData[key] = undefined;
+	parseErrors[key] = null;
+}
 
-    async function handleTextInput(key: string, value: string) {
-        dataInputs[key] = value;
+async function handleTextInput(key: string, value: string) {
+	dataInputs[key] = value;
 
-        // Clear file if text is entered
-        if (value.trim() && uploadedFiles[key]) {
-            uploadedFiles[key] = null;
-            parsedData[key] = undefined;
-        }
+	// Clear file if text is entered
+	if (value.trim() && uploadedFiles[key]) {
+		uploadedFiles[key] = null;
+		parsedData[key] = undefined;
+	}
 
-        // Try to parse the text input
-        if (value.trim()) {
-            const result = parseData(value);
-            if (result.success && result.data) {
-                parsedData[key] = result.data;
-                parseErrors[key] = null;
-            } else {
-                parseErrors[key] = result.error || null;
-            }
-        } else {
-            parsedData[key] = undefined;
-            parseErrors[key] = null;
-        }
-    }
+	// Try to parse the text input
+	if (value.trim()) {
+		const result = parseData(value);
+		if (result.success && result.data) {
+			parsedData[key] = result.data;
+			parseErrors[key] = null;
+		} else {
+			parseErrors[key] = result.error || null;
+		}
+	} else {
+		parsedData[key] = undefined;
+		parseErrors[key] = null;
+	}
+}
 
-    async function processData() {
-        try {
-            processing = true;
-            error = null;
+async function processData() {
+	try {
+		processing = true;
+		error = null;
 
-            // Process each scorecard separately
-            for (const ss of sceneScorecards) {
-                const datasourceData: Record<string, any> = {};
+		// Process each scorecard separately
+		for (const ss of sceneScorecards) {
+			const datasourceData: Record<string, any> = {};
 
-                ss.datasources?.forEach((ds) => {
-                    const key = `${ss.id}-${ds.id}`;
+			ss.datasources?.forEach((ds) => {
+				const key = `${ss.id}-${ds.id}`;
 
-                    // Use parsed data if available (from file upload or text input)
-                    if (parsedData[key]) {
-                        datasourceData[ds.id] = parsedData[key];
-                    } else {
-                        // Fallback to raw text input for backward compatibility
-                        const jsonStr = dataInputs[key];
-                        if (jsonStr?.trim()) {
-                            try {
-                                datasourceData[ds.id] = JSON.parse(jsonStr);
-                            } catch (e) {
-                                throw new Error(
-                                    `Invalid JSON for ${ss.scorecard.name} - ${ds.name}`,
-                                );
-                            }
-                        }
-                    }
-                });
+				// Use parsed data if available (from file upload or text input)
+				if (parsedData[key]) {
+					datasourceData[ds.id] = parsedData[key];
+				} else {
+					// Fallback to raw text input for backward compatibility
+					const jsonStr = dataInputs[key];
+					if (jsonStr?.trim()) {
+						try {
+							datasourceData[ds.id] = JSON.parse(jsonStr);
+						} catch (e) {
+							throw new Error(
+								`Invalid JSON for ${ss.scorecard.name} - ${ds.name}`,
+							);
+						}
+					}
+				}
+			});
 
-                const response = await fetch(
-                    `/api/scene-scorecards/${ss.id}/collect-data`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            datasource_data: datasourceData,
-                        }),
-                    },
-                );
+			const response = await fetch(
+				`/api/scene-scorecards/${ss.id}/collect-data`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						datasource_data: datasourceData,
+					}),
+				},
+			);
 
-                const data = await response.json();
+			const data = await response.json();
 
-                if (!data.success) {
-                    throw new Error(
-                        data.error || `Failed to process ${ss.scorecard.name}`,
-                    );
-                }
-            }
+			if (!data.success) {
+				throw new Error(data.error || `Failed to process ${ss.scorecard.name}`);
+			}
+		}
 
-            showDataDialog = false;
-            await loadAllResults();
-            toastStore.success("Data processed successfully");
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to process data";
-            toastStore.error(error);
-            console.error("Error processing data:", e);
-        } finally {
-            processing = false;
-        }
-    }
+		showDataDialog = false;
+		await loadAllResults();
+		toastStore.success("Data processed successfully");
+	} catch (e) {
+		error = e instanceof Error ? e.message : "Failed to process data";
+		toastStore.error(error);
+		console.error("Error processing data:", e);
+	} finally {
+		processing = false;
+	}
+}
 
-    async function rerunProcessing() {
-        if (Object.keys(collectedDataByScorecard).length === 0) {
-            toastStore.error("No previous data to reprocess");
-            return;
-        }
+async function rerunProcessing() {
+	if (Object.keys(collectedDataByScorecard).length === 0) {
+		toastStore.error("No previous data to reprocess");
+		return;
+	}
 
-        try {
-            processing = true;
-            error = null;
+	try {
+		processing = true;
+		error = null;
 
-            for (const ss of sceneScorecards) {
-                const collectedData = collectedDataByScorecard[ss.id];
-                if (!collectedData) continue;
+		for (const ss of sceneScorecards) {
+			const collectedData = collectedDataByScorecard[ss.id];
+			if (!collectedData) continue;
 
-                const response = await fetch(
-                    `/api/scene-scorecards/${ss.id}/collect-data`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            datasource_data: collectedData,
-                        }),
-                    },
-                );
+			const response = await fetch(
+				`/api/scene-scorecards/${ss.id}/collect-data`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						datasource_data: collectedData,
+					}),
+				},
+			);
 
-                const data = await response.json();
+			const data = await response.json();
 
-                if (!data.success) {
-                    throw new Error(
-                        data.error ||
-                            `Failed to reprocess ${ss.scorecard.name}`,
-                    );
-                }
-            }
+			if (!data.success) {
+				throw new Error(
+					data.error || `Failed to reprocess ${ss.scorecard.name}`,
+				);
+			}
+		}
 
-            await loadAllResults();
-            toastStore.success("Data reprocessed successfully");
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to reprocess data";
-            toastStore.error(error);
-            console.error("Error reprocessing data:", e);
-        } finally {
-            processing = false;
-        }
-    }
+		await loadAllResults();
+		toastStore.success("Data reprocessed successfully");
+	} catch (e) {
+		error = e instanceof Error ? e.message : "Failed to reprocess data";
+		toastStore.error(error);
+		console.error("Error reprocessing data:", e);
+	} finally {
+		processing = false;
+	}
+}
 
-    async function copyToCard(result: SceneScorecardResult, columnId: string) {
-        try {
-            const response = await fetch(
-                `/api/scene-scorecard-results/${result.id}/flag`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ column_id: columnId }),
-                },
-            );
+async function copyToCard(result: SceneScorecardResult, columnId: string) {
+	try {
+		const response = await fetch(
+			`/api/scene-scorecard-results/${result.id}/flag`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ column_id: columnId }),
+			},
+		);
 
-            const data = await response.json();
+		const data = await response.json();
 
-            if (data.success) {
-                toastStore.success("Result copied to card");
-                dropdownOpen = null;
-            } else {
-                toastStore.error(data.error || "Failed to copy to card");
-            }
-        } catch (e) {
-            toastStore.error("Failed to copy to card");
-            console.error("Error copying to card:", e);
-        }
-    }
+		if (data.success) {
+			toastStore.success("Result copied to card");
+			dropdownOpen = null;
+		} else {
+			toastStore.error(data.error || "Failed to copy to card");
+		}
+	} catch (e) {
+		toastStore.error("Failed to copy to card");
+		console.error("Error copying to card:", e);
+	}
+}
 
-    function closeDropdown() {
-        dropdownOpen = null;
-    }
+function closeDropdown() {
+	dropdownOpen = null;
+}
 
-    function clickOutside(node: HTMLElement, handler: () => void) {
-        const handleClick = (event: MouseEvent) => {
-            if (node && !node.contains(event.target as Node)) {
-                handler();
-            }
-        };
+function clickOutside(node: HTMLElement, handler: () => void) {
+	const handleClick = (event: MouseEvent) => {
+		if (node && !node.contains(event.target as Node)) {
+			handler();
+		}
+	};
 
-        document.addEventListener("click", handleClick, true);
+	document.addEventListener("click", handleClick, true);
 
-        return {
-            destroy() {
-                document.removeEventListener("click", handleClick, true);
-            },
-        };
-    }
+	return {
+		destroy() {
+			document.removeEventListener("click", handleClick, true);
+		},
+	};
+}
 
-    onMount(() => {
-        loadSceneScorecards();
-    });
+onMount(() => {
+	loadSceneScorecards();
+});
 </script>
 
 <div class="scorecard-scene-wrapper">

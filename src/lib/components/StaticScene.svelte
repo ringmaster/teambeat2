@@ -1,36 +1,36 @@
 <script lang="ts">
-    import { marked } from "marked";
-    import { onMount } from "svelte";
+import { marked } from "marked";
+import { onMount } from "svelte";
 
-    interface Props {
-        scene: any;
-    }
+interface Props {
+	scene: any;
+}
 
-    const { scene }: Props = $props();
+const { scene }: Props = $props();
 
-    let renderedHTML = $state("");
+let renderedHTML = $state("");
 
-    // Configure marked to use GitHub-flavored markdown
-    onMount(() => {
-        marked.setOptions({
-            gfm: true,
-            breaks: true,
-        });
+// Configure marked to use GitHub-flavored markdown
+onMount(() => {
+	marked.setOptions({
+		gfm: true,
+		breaks: true,
+	});
 
-        // Render the markdown content
-        if (scene.description) {
-            renderedHTML = marked.parse(scene.description) as string;
-        }
-    });
+	// Render the markdown content
+	if (scene.description) {
+		renderedHTML = marked.parse(scene.description) as string;
+	}
+});
 
-    // Re-render when description changes
-    $effect(() => {
-        if (scene.description) {
-            renderedHTML = marked.parse(scene.description) as string;
-        } else {
-            renderedHTML = "";
-        }
-    });
+// Re-render when description changes
+$effect(() => {
+	if (scene.description) {
+		renderedHTML = marked.parse(scene.description) as string;
+	} else {
+		renderedHTML = "";
+	}
+});
 </script>
 
 <div class="static-scene">

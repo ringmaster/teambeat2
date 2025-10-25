@@ -1,17 +1,17 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { requireUserForApi } from '$lib/server/auth/index.js';
-import { getBoardWithDetails } from '$lib/server/repositories/board.js';
-import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
-import { db } from '$lib/server/db/index.js';
-import { scenesColumns, scenes } from '$lib/server/db/schema.js';
-import { eq, and } from 'drizzle-orm';
-import { z } from 'zod';
-import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
+import { json } from "@sveltejs/kit";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { requireUserForApi } from "$lib/server/auth/index.js";
+import { db } from "$lib/server/db/index.js";
+import { scenes, scenesColumns } from "$lib/server/db/schema.js";
+import { getBoardWithDetails } from "$lib/server/repositories/board.js";
+import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
+import { broadcastSceneChanged } from "$lib/server/sse/broadcast.js";
+import type { RequestHandler } from "./$types";
 
 const updateColumnDisplaySchema = z.object({
 	columnId: z.string().uuid(),
-	state: z.enum(['visible', 'hidden'])
+	state: z.enum(["visible", "hidden"]),
 });
 
 export const PUT: RequestHandler = async (event) => {
@@ -21,33 +21,32 @@ export const PUT: RequestHandler = async (event) => {
 		const sceneId = event.params.sceneId;
 		const body = await event.request.json();
 		const data = updateColumnDisplaySchema.parse(body);
-		
+
 		const board = await getBoardWithDetails(boardId);
 		if (!board) {
 			return json(
-				{ success: false, error: 'Board not found' },
-				{ status: 404 }
+				{ success: false, error: "Board not found" },
+				{ status: 404 },
 			);
 		}
-		
+
 		// Check if user has permission to update this board
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
-		if (!userRole || !['admin', 'facilitator'].includes(userRole)) {
-			return json(
-				{ success: false, error: 'Access denied' },
-				{ status: 403 }
-			);
+		if (!userRole || !["admin", "facilitator"].includes(userRole)) {
+			return json({ success: false, error: "Access denied" }, { status: 403 });
 		}
-		
+
 		// If visible, delete the row; if hidden, create/update it
-		if (data.state === 'visible') {
+		if (data.state === "visible") {
 			// Delete the row to indicate visible state (default)
 			await db
 				.delete(scenesColumns)
-				.where(and(
-					eq(scenesColumns.sceneId, sceneId),
-					eq(scenesColumns.columnId, data.columnId)
-				));
+				.where(
+					and(
+						eq(scenesColumns.sceneId, sceneId),
+						eq(scenesColumns.columnId, data.columnId),
+					),
+				);
 		} else {
 			// Insert or update to hidden state
 			await db
@@ -55,48 +54,50 @@ export const PUT: RequestHandler = async (event) => {
 				.values({
 					sceneId,
 					columnId: data.columnId,
-					state: 'hidden'
+					state: "hidden",
 				})
 				.onConflictDoUpdate({
 					target: [scenesColumns.sceneId, scenesColumns.columnId],
 					set: {
-						state: 'hidden'
-					}
+						state: "hidden",
+					},
 				});
 		}
-		
+
 		// Get the updated board data with column visibility to broadcast
 		const updatedBoard = await getBoardWithDetails(boardId);
-		
+
 		// Broadcast board update to all connected clients so they get the updated hiddenColumnsByScene
 		if (updatedBoard) {
-			const { broadcastBoardUpdated } = await import('$lib/server/sse/broadcast.js');
+			const { broadcastBoardUpdated } = await import(
+				"$lib/server/sse/broadcast.js"
+			);
 			broadcastBoardUpdated(boardId, updatedBoard);
 		}
-		
+
 		return json({
-			success: true
+			success: true,
 		});
 	} catch (error) {
 		if (error instanceof Response) {
 			throw error;
 		}
-		
+
 		if (error instanceof z.ZodError) {
 			return json(
-				{ success: false, error: 'Invalid input', details: error.errors },
-				{ status: 400 }
+				{ success: false, error: "Invalid input", details: error.errors },
+				{ status: 400 },
 			);
 		}
-		
-		console.error('Error updating scene column settings:', error);
+
+		console.error("Error updating scene column settings:", error);
 		return json(
-			{ 
-				success: false, 
-				error: 'Failed to update column display settings',
-				details: error instanceof Error ? error.message : String(error)
+			{
+				success: false,
+				error: "Failed to update column display settings",
+				details: error instanceof Error ? error.message : String(error),
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 };

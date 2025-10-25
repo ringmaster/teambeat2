@@ -1,51 +1,51 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import Input from "$lib/components/ui/Input.svelte";
-    import Button from "$lib/components/ui/Button.svelte";
+import { goto } from "$app/navigation";
+import Button from "$lib/components/ui/Button.svelte";
+import Input from "$lib/components/ui/Input.svelte";
 
-    let email: string = $state("");
-    let loading: boolean = $state(false);
-    let submitted: boolean = $state(false);
-    let error: string = $state("");
+let email: string = $state("");
+let loading: boolean = $state(false);
+let submitted: boolean = $state(false);
+let error: string = $state("");
 
-    async function handleSubmit() {
-        if (!email) {
-            error = "Please enter your email address";
-            return;
-        }
+async function handleSubmit() {
+	if (!email) {
+		error = "Please enter your email address";
+		return;
+	}
 
-        loading = true;
-        error = "";
+	loading = true;
+	error = "";
 
-        try {
-            const response = await fetch("/api/auth/request-password-reset", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
+	try {
+		const response = await fetch("/api/auth/request-password-reset", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email }),
+		});
 
-            const data = await response.json();
+		const data = await response.json();
 
-            if (response.ok || response.status === 429) {
-                // Show success for both OK and rate limit (don't reveal email existence)
-                if (response.status === 429) {
-                    error = data.error;
-                } else {
-                    submitted = true;
-                }
-            } else {
-                error = data.error || "Failed to send reset email";
-            }
-        } catch {
-            error = "Network error. Please try again.";
-        } finally {
-            loading = false;
-        }
-    }
+		if (response.ok || response.status === 429) {
+			// Show success for both OK and rate limit (don't reveal email existence)
+			if (response.status === 429) {
+				error = data.error;
+			} else {
+				submitted = true;
+			}
+		} else {
+			error = data.error || "Failed to send reset email";
+		}
+	} catch {
+		error = "Network error. Please try again.";
+	} finally {
+		loading = false;
+	}
+}
 
-    function handleBackToLogin() {
-        goto("/login");
-    }
+function handleBackToLogin() {
+	goto("/login");
+}
 </script>
 
 <div class="reset-request-page">

@@ -1,51 +1,45 @@
 <script lang="ts">
-    import { fade, fly } from "svelte/transition";
-    import { cubicOut } from "svelte/easing";
+import { cubicOut } from "svelte/easing";
+import { fade, fly } from "svelte/transition";
 
-    interface Props {
-        show: boolean;
-        title?: string;
-        onClose: () => void;
-        size?: "sm" | "md" | "lg" | "xl";
-        children?: any;
-    }
+interface Props {
+	show: boolean;
+	title?: string;
+	onClose: () => void;
+	size?: "sm" | "md" | "lg" | "xl";
+	children?: any;
+}
 
-    let {
-        show = false,
-        title,
-        onClose,
-        size = "md",
-        children,
-    }: Props = $props();
+let { show = false, title, onClose, size = "md", children }: Props = $props();
 
-    let dialogElement: HTMLDivElement = $state() as HTMLDivElement;
+let dialogElement: HTMLDivElement = $state() as HTMLDivElement;
 
-    // Handle escape key
-    function handleKeydown(event: KeyboardEvent) {
-        if (event.key === "Escape" && show) {
-            onClose();
-        }
-    }
+// Handle escape key
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape" && show) {
+		onClose();
+	}
+}
 
-    // Handle overlay click
-    function handleOverlayClick(event: MouseEvent) {
-        if (event.target === event.currentTarget) {
-            onClose();
-        }
-    }
+// Handle overlay click
+function handleOverlayClick(event: MouseEvent) {
+	if (event.target === event.currentTarget) {
+		onClose();
+	}
+}
 
-    // Focus management
-    $effect(() => {
-        if (show && dialogElement) {
-            // Focus the dialog when it opens
-            const focusableElements = dialogElement.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-            );
-            if (focusableElements.length > 0) {
-                (focusableElements[0] as HTMLElement).focus();
-            }
-        }
-    });
+// Focus management
+$effect(() => {
+	if (show && dialogElement) {
+		// Focus the dialog when it opens
+		const focusableElements = dialogElement.querySelectorAll(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+		);
+		if (focusableElements.length > 0) {
+			(focusableElements[0] as HTMLElement).focus();
+		}
+	}
+});
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

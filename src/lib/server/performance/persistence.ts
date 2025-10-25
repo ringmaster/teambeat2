@@ -3,10 +3,14 @@
  * Periodically saves metrics to database for historical analysis
  */
 
-import { db } from '$lib/server/db';
-import { metricSnapshots, boardMetrics, slowQueries } from '$lib/server/db/schema';
-import { performanceTracker } from './tracker';
-import { lt, gte, and } from 'drizzle-orm';
+import { and, gte, lt } from "drizzle-orm";
+import { db } from "$lib/server/db";
+import {
+	boardMetrics,
+	metricSnapshots,
+	slowQueries,
+} from "$lib/server/db/schema";
+import { performanceTracker } from "./tracker";
 
 class MetricsPersistence {
 	private persistInterval: NodeJS.Timeout | null = null;
@@ -38,13 +42,19 @@ class MetricsPersistence {
 				total_operations: stats.sse.totalOperations,
 				broadcast_p95: stats.sse.broadcastPercentiles.p95,
 				broadcast_p99: stats.sse.broadcastPercentiles.p99,
-				messages_sent: stats.sse.messagesSent
+				messages_sent: stats.sse.messagesSent,
 			});
 
 			// Aggregate board-level metrics
-			const boardStats = new Map<number, { count: number; totalDuration: number }>();
+			const boardStats = new Map<
+				number,
+				{ count: number; totalDuration: number }
+			>();
 			for (const broadcast of stats.sse.recentBroadcasts) {
-				const existing = boardStats.get(broadcast.boardId) || { count: 0, totalDuration: 0 };
+				const existing = boardStats.get(broadcast.boardId) || {
+					count: 0,
+					totalDuration: 0,
+				};
 				existing.count++;
 				existing.totalDuration += broadcast.duration;
 				boardStats.set(broadcast.boardId, existing);
@@ -57,7 +67,7 @@ class MetricsPersistence {
 					board_id: boardId.toString(),
 					timestamp: stats.timestamp,
 					broadcast_count: metrics.count,
-					avg_broadcast_duration: metrics.totalDuration / metrics.count
+					avg_broadcast_duration: metrics.totalDuration / metrics.count,
 				});
 			}
 
@@ -68,48 +78,57 @@ class MetricsPersistence {
 					timestamp: query.timestamp,
 					duration: query.duration,
 					query: query.query,
-					board_id: query.boardId?.toString() || null
+					board_id: query.boardId?.toString() || null,
 				});
 			}
 		} catch (error) {
-			console.error('Failed to persist performance metrics:', error);
+			console.error("Failed to persist performance metrics:", error);
 		}
 	}
 
 	private async cleanup() {
 		try {
-			const cutoff = Date.now() - (this.RETENTION_DAYS * 24 * 60 * 60 * 1000);
+			const cutoff = Date.now() - this.RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
-			await db.delete(metricSnapshots).where(lt(metricSnapshots.timestamp, cutoff));
+			await db
+				.delete(metricSnapshots)
+				.where(lt(metricSnapshots.timestamp, cutoff));
 			await db.delete(boardMetrics).where(lt(boardMetrics.timestamp, cutoff));
 			await db.delete(slowQueries).where(lt(slowQueries.timestamp, cutoff));
 		} catch (error) {
-			console.error('Failed to cleanup old metrics:', error);
+			console.error("Failed to cleanup old metrics:", error);
 		}
 	}
 
 	async getHistoricalMetrics(startTime: number, endTime: number) {
-		return await db.select()
+		return await db
+			.select()
 			.from(metricSnapshots)
-			.where(and(
-				gte(metricSnapshots.timestamp, startTime),
-				lt(metricSnapshots.timestamp, endTime)
-			))
+			.where(
+				and(
+					gte(metricSnapshots.timestamp, startTime),
+					lt(metricSnapshots.timestamp, endTime),
+				),
+			)
 			.orderBy(metricSnapshots.timestamp);
 	}
 
 	async getBoardHistory(boardId: number, startTime: number, endTime: number) {
-		return await db.select()
+		return await db
+			.select()
 			.from(boardMetrics)
-			.where(and(
-				gte(boardMetrics.timestamp, startTime),
-				lt(boardMetrics.timestamp, endTime)
-			))
+			.where(
+				and(
+					gte(boardMetrics.timestamp, startTime),
+					lt(boardMetrics.timestamp, endTime),
+				),
+			)
 			.orderBy(boardMetrics.timestamp);
 	}
 
 	async getSlowQueryHistory(limit = 100) {
-		return await db.select()
+		return await db
+			.select()
 			.from(slowQueries)
 			.orderBy(slowQueries.timestamp)
 			.limit(limit);

@@ -1,39 +1,39 @@
 <script lang="ts">
-    interface Props {
-        name?: string;
-        email?: string;
-        size?: "sm" | "md" | "lg";
-        class?: string;
-    }
+interface Props {
+	name?: string;
+	email?: string;
+	size?: "sm" | "md" | "lg";
+	class?: string;
+}
 
-    let {
-        name = "",
-        email = "",
-        size = "md",
-        class: className = "",
-    }: Props = $props();
+let {
+	name = "",
+	email = "",
+	size = "md",
+	class: className = "",
+}: Props = $props();
 
-    let displayText = $derived.by(() => {
-        if (name) {
-            return name[0].toUpperCase();
-        } else if (email) {
-            return email[0].toUpperCase();
-        }
-        return "?";
-    });
+let displayText = $derived.by(() => {
+	if (name) {
+		return name[0].toUpperCase();
+	} else if (email) {
+		return email[0].toUpperCase();
+	}
+	return "?";
+});
 
-    let sizeClass = $derived.by(() => {
-        switch (size) {
-            case "sm":
-                return "avatar-sm";
-            case "md":
-                return "avatar-md";
-            case "lg":
-                return "avatar-lg";
-            default:
-                return "avatar-md";
-        }
-    });
+let sizeClass = $derived.by(() => {
+	switch (size) {
+		case "sm":
+			return "avatar-sm";
+		case "md":
+			return "avatar-md";
+		case "lg":
+			return "avatar-lg";
+		default:
+			return "avatar-md";
+	}
+});
 </script>
 
 <div class="avatar {sizeClass} {className}">

@@ -1,59 +1,57 @@
 <script lang="ts">
-    import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
+import BoardListingItem from "$lib/components/ui/BoardListingItem.svelte";
 
-    interface Props {
-        showTemplateSelector: boolean;
-        templates: any[];
-        boardId: string;
-        onToggleTemplateSelector: () => void;
-        onSetupTemplate: (template: any) => void;
-        onConfigureClick: () => void;
-        onCloneBoard?: (sourceId: string) => void;
-    }
+interface Props {
+	showTemplateSelector: boolean;
+	templates: any[];
+	boardId: string;
+	onToggleTemplateSelector: () => void;
+	onSetupTemplate: (template: any) => void;
+	onConfigureClick: () => void;
+	onCloneBoard?: (sourceId: string) => void;
+}
 
-    let {
-        showTemplateSelector = $bindable(),
-        templates,
-        boardId,
-        onToggleTemplateSelector,
-        onSetupTemplate,
-        onConfigureClick,
-        onCloneBoard,
-    }: Props = $props();
+let {
+	showTemplateSelector = $bindable(),
+	templates,
+	boardId,
+	onToggleTemplateSelector,
+	onSetupTemplate,
+	onConfigureClick,
+	onCloneBoard,
+}: Props = $props();
 
-    let showCloneSelector = $state(false);
-    let cloneSources = $state(null);
-    let loadingCloneSources = $state(false);
+let showCloneSelector = $state(false);
+let cloneSources = $state(null);
+let loadingCloneSources = $state(false);
 
-    async function toggleCloneSelector() {
-        showCloneSelector = !showCloneSelector;
+async function toggleCloneSelector() {
+	showCloneSelector = !showCloneSelector;
 
-        if (showCloneSelector && !cloneSources) {
-            loadingCloneSources = true;
-            try {
-                const response = await fetch(
-                    `/api/boards/${boardId}/clone-sources`,
-                );
-                const data = await response.json();
+	if (showCloneSelector && !cloneSources) {
+		loadingCloneSources = true;
+		try {
+			const response = await fetch(`/api/boards/${boardId}/clone-sources`);
+			const data = await response.json();
 
-                if (data.success) {
-                    cloneSources = data.data;
-                } else {
-                    console.error("Failed to fetch clone sources:", data.error);
-                }
-            } catch (error) {
-                console.error("Error fetching clone sources:", error);
-            } finally {
-                loadingCloneSources = false;
-            }
-        }
-    }
+			if (data.success) {
+				cloneSources = data.data;
+			} else {
+				console.error("Failed to fetch clone sources:", data.error);
+			}
+		} catch (error) {
+			console.error("Error fetching clone sources:", error);
+		} finally {
+			loadingCloneSources = false;
+		}
+	}
+}
 
-    function handleCloneBoard(sourceId: string) {
-        if (onCloneBoard) {
-            onCloneBoard(sourceId);
-        }
-    }
+function handleCloneBoard(sourceId: string) {
+	if (onCloneBoard) {
+		onCloneBoard(sourceId);
+	}
+}
 </script>
 
 <div id="empty-board-setup" class="setup-container">

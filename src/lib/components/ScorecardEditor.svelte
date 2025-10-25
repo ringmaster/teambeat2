@@ -1,179 +1,190 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import type { Scorecard, ScorecardDatasource } from '$lib/types/scorecard';
-  import { toastStore } from '$lib/stores/toast';
+import { onMount } from "svelte";
+import { toastStore } from "$lib/stores/toast";
+import type { Scorecard, ScorecardDatasource } from "$lib/types/scorecard";
 
-  interface Props {
-    scorecardId: string;
-    seriesId: string;
-    canEdit: boolean;
-  }
+interface Props {
+	scorecardId: string;
+	seriesId: string;
+	canEdit: boolean;
+}
 
-  let { scorecardId, seriesId, canEdit }: Props = $props();
+let { scorecardId, seriesId, canEdit }: Props = $props();
 
-  let scorecard = $state<Scorecard | null>(null);
-  let datasources = $state<ScorecardDatasource[]>([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-  let saving = $state(false);
-  let editMode = $state(false);
-  let editedName = $state('');
-  let editedDescription = $state('');
-  let draggedIndex = $state<number | null>(null);
+let scorecard = $state<Scorecard | null>(null);
+let datasources = $state<ScorecardDatasource[]>([]);
+let loading = $state(true);
+let error = $state<string | null>(null);
+let saving = $state(false);
+let editMode = $state(false);
+let editedName = $state("");
+let editedDescription = $state("");
+let draggedIndex = $state<number | null>(null);
 
-  async function loadScorecard() {
-    try {
-      loading = true;
-      error = null;
-      const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`);
-      const data = await response.json();
+async function loadScorecard() {
+	try {
+		loading = true;
+		error = null;
+		const response = await fetch(
+			`/api/series/${seriesId}/scorecards/${scorecardId}`,
+		);
+		const data = await response.json();
 
-      if (data.success) {
-        scorecard = data.scorecard;
-        datasources = data.scorecard.datasources || [];
-        editedName = scorecard.name;
-        editedDescription = scorecard.description || '';
-      } else {
-        error = data.error || 'Failed to load scorecard';
-      }
-    } catch (e) {
-      error = 'Failed to load scorecard';
-      console.error('Error loading scorecard:', e);
-    } finally {
-      loading = false;
-    }
-  }
+		if (data.success) {
+			scorecard = data.scorecard;
+			datasources = data.scorecard.datasources || [];
+			editedName = scorecard.name;
+			editedDescription = scorecard.description || "";
+		} else {
+			error = data.error || "Failed to load scorecard";
+		}
+	} catch (e) {
+		error = "Failed to load scorecard";
+		console.error("Error loading scorecard:", e);
+	} finally {
+		loading = false;
+	}
+}
 
-  async function saveScorecard() {
-    if (!editedName.trim()) return;
+async function saveScorecard() {
+	if (!editedName.trim()) return;
 
-    try {
-      saving = true;
-      error = null;
-      const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editedName,
-          description: editedDescription || null
-        })
-      });
+	try {
+		saving = true;
+		error = null;
+		const response = await fetch(
+			`/api/series/${seriesId}/scorecards/${scorecardId}`,
+			{
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					name: editedName,
+					description: editedDescription || null,
+				}),
+			},
+		);
 
-      const data = await response.json();
+		const data = await response.json();
 
-      if (data.success) {
-        scorecard = data.scorecard;
-        editMode = false;
-      } else {
-        error = data.error || 'Failed to save scorecard';
-      }
-    } catch (e) {
-      error = 'Failed to save scorecard';
-      console.error('Error saving scorecard:', e);
-    } finally {
-      saving = false;
-    }
-  }
+		if (data.success) {
+			scorecard = data.scorecard;
+			editMode = false;
+		} else {
+			error = data.error || "Failed to save scorecard";
+		}
+	} catch (e) {
+		error = "Failed to save scorecard";
+		console.error("Error saving scorecard:", e);
+	} finally {
+		saving = false;
+	}
+}
 
-  function cancelEdit() {
-    if (scorecard) {
-      editedName = scorecard.name;
-      editedDescription = scorecard.description || '';
-    }
-    editMode = false;
-  }
+function cancelEdit() {
+	if (scorecard) {
+		editedName = scorecard.name;
+		editedDescription = scorecard.description || "";
+	}
+	editMode = false;
+}
 
-  async function deleteDatasource(datasourceId: string) {
-    toastStore.warning('Are you sure you want to delete this datasource?', {
-      autoHide: false,
-      actions: [
-        {
-          label: 'Delete',
-          onClick: async () => {
-            try {
-              const response = await fetch(`/api/scorecards/${scorecardId}/datasources/${datasourceId}`, {
-                method: 'DELETE'
-              });
+async function deleteDatasource(datasourceId: string) {
+	toastStore.warning("Are you sure you want to delete this datasource?", {
+		autoHide: false,
+		actions: [
+			{
+				label: "Delete",
+				onClick: async () => {
+					try {
+						const response = await fetch(
+							`/api/scorecards/${scorecardId}/datasources/${datasourceId}`,
+							{
+								method: "DELETE",
+							},
+						);
 
-              const data = await response.json();
+						const data = await response.json();
 
-              if (data.success) {
-                datasources = datasources.filter(d => d.id !== datasourceId);
-                toastStore.success('Datasource deleted successfully');
-              } else {
-                error = data.error || 'Failed to delete datasource';
-                toastStore.error('Failed to delete datasource');
-              }
-            } catch (e) {
-              error = 'Failed to delete datasource';
-              toastStore.error('Failed to delete datasource');
-              console.error('Error deleting datasource:', e);
-            }
-          },
-          variant: 'primary'
-        },
-        {
-          label: 'Cancel',
-          onClick: () => {},
-          variant: 'secondary'
-        }
-      ]
-    });
-  }
+						if (data.success) {
+							datasources = datasources.filter((d) => d.id !== datasourceId);
+							toastStore.success("Datasource deleted successfully");
+						} else {
+							error = data.error || "Failed to delete datasource";
+							toastStore.error("Failed to delete datasource");
+						}
+					} catch (e) {
+						error = "Failed to delete datasource";
+						toastStore.error("Failed to delete datasource");
+						console.error("Error deleting datasource:", e);
+					}
+				},
+				variant: "primary",
+			},
+			{
+				label: "Cancel",
+				onClick: () => {},
+				variant: "secondary",
+			},
+		],
+	});
+}
 
-  function handleDragStart(index: number) {
-    draggedIndex = index;
-  }
+function handleDragStart(index: number) {
+	draggedIndex = index;
+}
 
-  function handleDragOver(e: DragEvent) {
-    e.preventDefault();
-  }
+function handleDragOver(e: DragEvent) {
+	e.preventDefault();
+}
 
-  async function handleDrop(e: DragEvent, dropIndex: number) {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) {
-      draggedIndex = null;
-      return;
-    }
+async function handleDrop(e: DragEvent, dropIndex: number) {
+	e.preventDefault();
+	if (draggedIndex === null || draggedIndex === dropIndex) {
+		draggedIndex = null;
+		return;
+	}
 
-    // Reorder datasources array
-    const reordered = [...datasources];
-    const [movedItem] = reordered.splice(draggedIndex, 1);
-    reordered.splice(dropIndex, 0, movedItem);
-    datasources = reordered;
+	// Reorder datasources array
+	const reordered = [...datasources];
+	const [movedItem] = reordered.splice(draggedIndex, 1);
+	reordered.splice(dropIndex, 0, movedItem);
+	datasources = reordered;
 
-    // Save new order to server
-    try {
-      const response = await fetch(`/api/scorecards/${scorecardId}/datasources/reorder`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          datasource_ids: reordered.map(d => d.id)
-        })
-      });
+	// Save new order to server
+	try {
+		const response = await fetch(
+			`/api/scorecards/${scorecardId}/datasources/reorder`,
+			{
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					datasource_ids: reordered.map((d) => d.id),
+				}),
+			},
+		);
 
-      const data = await response.json();
+		const data = await response.json();
 
-      if (data.success) {
-        datasources = data.datasources;
-      } else {
-        error = data.error || 'Failed to reorder datasources';
-        // Reload to get correct order
-        await loadScorecard();
-      }
-    } catch (e) {
-      error = 'Failed to reorder datasources';
-      console.error('Error reordering datasources:', e);
-      // Reload to get correct order
-      await loadScorecard();
-    } finally {
-      draggedIndex = null;
-    }
-  }
+		if (data.success) {
+			datasources = data.datasources;
+		} else {
+			error = data.error || "Failed to reorder datasources";
+			// Reload to get correct order
+			await loadScorecard();
+		}
+	} catch (e) {
+		error = "Failed to reorder datasources";
+		console.error("Error reordering datasources:", e);
+		// Reload to get correct order
+		await loadScorecard();
+	} finally {
+		draggedIndex = null;
+	}
+}
 
-  onMount(() => {
-    loadScorecard();
-  });
+onMount(() => {
+	loadScorecard();
+});
 </script>
 
 <div class="scorecard-editor">

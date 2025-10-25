@@ -1,36 +1,40 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import type { SchemaCheckResult } from "$lib/server/db/schema-introspection";
-    import AdminNav from "$lib/components/AdminNav.svelte";
+import { onMount } from "svelte";
+import AdminNav from "$lib/components/AdminNav.svelte";
+import type { SchemaCheckResult } from "$lib/server/db/schema-introspection";
 
-    let result: SchemaCheckResult | null = $state(null);
-    let loading = $state(true);
-    let error = $state("");
+let result: SchemaCheckResult | null = $state(null);
+let loading = $state(true);
+let error = $state("");
 
-    async function loadSchemaCheck() {
-        try {
-            const response = await fetch("/api/admin/schema");
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-            }
-            result = await response.json();
-            error = "";
-        } catch (err) {
-            error = err instanceof Error ? err.message : String(err);
-            console.error("Schema check failed:", err);
-        } finally {
-            loading = false;
-        }
-    }
+async function loadSchemaCheck() {
+	try {
+		const response = await fetch("/api/admin/schema");
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ message: response.statusText }));
+			throw new Error(
+				errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+			);
+		}
+		result = await response.json();
+		error = "";
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
+		console.error("Schema check failed:", err);
+	} finally {
+		loading = false;
+	}
+}
 
-    onMount(() => {
-        loadSchemaCheck();
-    });
+onMount(() => {
+	loadSchemaCheck();
+});
 
-    function getSeverityClass(severity: "error" | "warning") {
-        return severity === "error" ? "error" : "warning";
-    }
+function getSeverityClass(severity: "error" | "warning") {
+	return severity === "error" ? "error" : "warning";
+}
 </script>
 
 <AdminNav />

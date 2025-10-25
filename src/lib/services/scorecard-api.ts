@@ -3,7 +3,11 @@
  * Centralized API calls for scorecard and datasource operations
  */
 
-import type { Scorecard, ScorecardDatasource, ScorecardRule } from '$lib/types/scorecard';
+import type {
+	Scorecard,
+	ScorecardDatasource,
+	ScorecardRule,
+} from "$lib/types/scorecard";
 
 export interface ScorecardListResponse {
 	success: boolean;
@@ -32,28 +36,32 @@ export interface SuccessResponse {
  * Scorecard Operations
  */
 
-export async function listScorecards(seriesId: string): Promise<ScorecardListResponse> {
+export async function listScorecards(
+	seriesId: string,
+): Promise<ScorecardListResponse> {
 	const response = await fetch(`/api/series/${seriesId}/scorecards`);
 	return await response.json();
 }
 
 export async function getScorecardDetail(
 	seriesId: string,
-	scorecardId: string
+	scorecardId: string,
 ): Promise<ScorecardDetailResponse> {
-	const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`);
+	const response = await fetch(
+		`/api/series/${seriesId}/scorecards/${scorecardId}`,
+	);
 	return await response.json();
 }
 
 export async function createScorecard(
 	seriesId: string,
 	name: string,
-	description?: string | null
+	description?: string | null,
 ): Promise<ScorecardDetailResponse> {
 	const response = await fetch(`/api/series/${seriesId}/scorecards`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ name, description: description || null })
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ name, description: description || null }),
 	});
 	return await response.json();
 }
@@ -62,20 +70,29 @@ export async function updateScorecard(
 	seriesId: string,
 	scorecardId: string,
 	name: string,
-	description?: string | null
+	description?: string | null,
 ): Promise<ScorecardDetailResponse> {
-	const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ name, description: description || null })
-	});
+	const response = await fetch(
+		`/api/series/${seriesId}/scorecards/${scorecardId}`,
+		{
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name, description: description || null }),
+		},
+	);
 	return await response.json();
 }
 
-export async function deleteScorecard(seriesId: string, scorecardId: string): Promise<SuccessResponse> {
-	const response = await fetch(`/api/series/${seriesId}/scorecards/${scorecardId}`, {
-		method: 'DELETE'
-	});
+export async function deleteScorecard(
+	seriesId: string,
+	scorecardId: string,
+): Promise<SuccessResponse> {
+	const response = await fetch(
+		`/api/series/${seriesId}/scorecards/${scorecardId}`,
+		{
+			method: "DELETE",
+		},
+	);
 	return await response.json();
 }
 
@@ -85,27 +102,29 @@ export async function deleteScorecard(seriesId: string, scorecardId: string): Pr
 
 export async function getDatasourceDetail(
 	scorecardId: string,
-	datasourceId: string
+	datasourceId: string,
 ): Promise<DatasourceDetailResponse> {
-	const response = await fetch(`/api/scorecards/${scorecardId}/datasources/${datasourceId}`);
+	const response = await fetch(
+		`/api/scorecards/${scorecardId}/datasources/${datasourceId}`,
+	);
 	return await response.json();
 }
 
 export async function createDatasource(
 	scorecardId: string,
 	name: string,
-	sourceType: 'paste' | 'api' = 'paste'
+	sourceType: "paste" | "api" = "paste",
 ): Promise<DatasourceDetailResponse> {
 	const response = await fetch(`/api/scorecards/${scorecardId}/datasources`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
 			name,
 			source_type: sourceType,
 			data_schema: null,
 			rules: [],
-			api_config: null
-		})
+			api_config: null,
+		}),
 	});
 	return await response.json();
 }
@@ -118,40 +137,49 @@ export async function updateDatasource(
 		data_schema: string | null;
 		rules: ScorecardRule[];
 		api_config?: any | null;
-	}
+	},
 ): Promise<DatasourceDetailResponse> {
-	const response = await fetch(`/api/scorecards/${scorecardId}/datasources/${datasourceId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			name: data.name,
-			data_schema: data.data_schema,
-			rules: data.rules,
-			api_config: data.api_config || null
-		})
-	});
+	const response = await fetch(
+		`/api/scorecards/${scorecardId}/datasources/${datasourceId}`,
+		{
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: data.name,
+				data_schema: data.data_schema,
+				rules: data.rules,
+				api_config: data.api_config || null,
+			}),
+		},
+	);
 	return await response.json();
 }
 
 export async function deleteDatasource(
 	scorecardId: string,
-	datasourceId: string
+	datasourceId: string,
 ): Promise<SuccessResponse> {
-	const response = await fetch(`/api/scorecards/${scorecardId}/datasources/${datasourceId}`, {
-		method: 'DELETE'
-	});
+	const response = await fetch(
+		`/api/scorecards/${scorecardId}/datasources/${datasourceId}`,
+		{
+			method: "DELETE",
+		},
+	);
 	return await response.json();
 }
 
 export async function reorderDatasources(
 	scorecardId: string,
-	datasourceIds: string[]
+	datasourceIds: string[],
 ): Promise<SuccessResponse> {
-	const response = await fetch(`/api/scorecards/${scorecardId}/datasources/reorder`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ datasource_ids: datasourceIds })
-	});
+	const response = await fetch(
+		`/api/scorecards/${scorecardId}/datasources/reorder`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ datasource_ids: datasourceIds }),
+		},
+	);
 	return await response.json();
 }
 
@@ -167,18 +195,23 @@ export async function getSceneScorecards(sceneId: string): Promise<any> {
 	return await response.json();
 }
 
-export async function attachScorecard(sceneId: string, scorecardId: string): Promise<SuccessResponse> {
+export async function attachScorecard(
+	sceneId: string,
+	scorecardId: string,
+): Promise<SuccessResponse> {
 	const response = await fetch(`/api/scenes/${sceneId}/scorecards`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ scorecard_id: scorecardId })
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ scorecard_id: scorecardId }),
 	});
 	return await response.json();
 }
 
-export async function detachScorecard(sceneScorecardId: string): Promise<SuccessResponse> {
+export async function detachScorecard(
+	sceneScorecardId: string,
+): Promise<SuccessResponse> {
 	const response = await fetch(`/api/scene-scorecards/${sceneScorecardId}`, {
-		method: 'DELETE'
+		method: "DELETE",
 	});
 	return await response.json();
 }

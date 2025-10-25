@@ -1,26 +1,26 @@
 <script lang="ts">
-    import moment from "moment";
+import moment from "moment";
 
-    interface Agreement {
-        id: string;
-        content: string;
-        cardTitle: string | null;
-        source?: 'agreement' | 'comment';
-        completed?: boolean;
-        completedAt?: string | null;
-    }
+interface Agreement {
+	id: string;
+	content: string;
+	cardTitle: string | null;
+	source?: "agreement" | "comment";
+	completed?: boolean;
+	completedAt?: string | null;
+}
 
-    interface Props {
-        agreements: Agreement[];
-    }
+interface Props {
+	agreements: Agreement[];
+}
 
-    const { agreements }: Props = $props();
+const { agreements }: Props = $props();
 
-    // Format date as yyyy-mm-dd
-    function formatDateYYYYMMDD(dateString: string | null | undefined): string {
-        if (!dateString) return "";
-        return moment(dateString).format('YYYY-MM-DD');
-    }
+// Format date as yyyy-mm-dd
+function formatDateYYYYMMDD(dateString: string | null | undefined): string {
+	if (!dateString) return "";
+	return moment(dateString).format("YYYY-MM-DD");
+}
 </script>
 
 <div class="agreements-section">

@@ -1,157 +1,157 @@
 <script lang="ts">
-    import Card from "./Card.svelte";
-    import TextareaWithButton from "./ui/TextareaWithButton.svelte";
-    import Icon from "./ui/Icon.svelte";
-    import { slide, crossfade } from "svelte/transition";
-    import { quintOut } from "svelte/easing";
-    import { flip } from "svelte/animate";
-    import { getSceneCapability } from "$lib/utils/scene-capability";
+import { flip } from "svelte/animate";
+import { quintOut } from "svelte/easing";
+import { crossfade, slide } from "svelte/transition";
+import { getSceneCapability } from "$lib/utils/scene-capability";
+import Card from "./Card.svelte";
+import Icon from "./ui/Icon.svelte";
+import TextareaWithButton from "./ui/TextareaWithButton.svelte";
 
-    const [send, receive] = crossfade({
-        duration: 200,
-        easing: quintOut,
-    });
+const [send, receive] = crossfade({
+	duration: 200,
+	easing: quintOut,
+});
 
-    interface Props {
-        column: any;
-        cards: any[];
-        currentScene: any;
-        groupingMode: boolean;
-        selectedCards: Set<string>;
-        board: any;
-        dragTargetColumnId: string;
-        dragOverCardId?: string;
-        cardDropPosition?: string;
-        draggedCardId?: string;
-        onDragOver: (e: DragEvent, columnId: string) => void;
-        onDragEnter: (e: DragEvent, columnId: string) => void;
-        onDragLeave: (e: DragEvent, columnId: string) => void;
-        onDrop: (e: DragEvent, columnId: string) => void;
-        onCardDrop: (e: DragEvent, targetCardId: string) => void;
-        onCardDragOver?: (
-            e: DragEvent,
-            cardId: string,
-            cardSeq: number,
-            columnId: string,
-        ) => void;
-        onCardDragLeave?: (e: DragEvent) => void;
-        onDragStart: (e: DragEvent, cardId: string) => void;
-        onToggleCardSelection: (cardId: string) => void;
-        onVoteCard: (cardId: string, delta: 1 | -1) => void;
-        onCommentCard: (cardId: string) => void;
-        onAddCard: (columnId: string) => void;
-        onGroupCards: (cards: any[]) => void;
-        onGetColumnContent: (columnId: string) => string;
-        onSetColumnContent: (columnId: string, content: string) => void;
-        onDeleteCard: (cardId: string) => void;
-        onEditCard: (cardId: string) => void;
-        onReaction?: (cardId: string, emoji: string) => void;
-        userRole: string;
-        currentUserId: string;
-        hasVotes: boolean;
-        userVotesByCard: Map<string, number>;
-        allVotesByCard: Map<string, number>;
-        isSingleColumn?: boolean;
-    }
+interface Props {
+	column: any;
+	cards: any[];
+	currentScene: any;
+	groupingMode: boolean;
+	selectedCards: Set<string>;
+	board: any;
+	dragTargetColumnId: string;
+	dragOverCardId?: string;
+	cardDropPosition?: string;
+	draggedCardId?: string;
+	onDragOver: (e: DragEvent, columnId: string) => void;
+	onDragEnter: (e: DragEvent, columnId: string) => void;
+	onDragLeave: (e: DragEvent, columnId: string) => void;
+	onDrop: (e: DragEvent, columnId: string) => void;
+	onCardDrop: (e: DragEvent, targetCardId: string) => void;
+	onCardDragOver?: (
+		e: DragEvent,
+		cardId: string,
+		cardSeq: number,
+		columnId: string,
+	) => void;
+	onCardDragLeave?: (e: DragEvent) => void;
+	onDragStart: (e: DragEvent, cardId: string) => void;
+	onToggleCardSelection: (cardId: string) => void;
+	onVoteCard: (cardId: string, delta: 1 | -1) => void;
+	onCommentCard: (cardId: string) => void;
+	onAddCard: (columnId: string) => void;
+	onGroupCards: (cards: any[]) => void;
+	onGetColumnContent: (columnId: string) => string;
+	onSetColumnContent: (columnId: string, content: string) => void;
+	onDeleteCard: (cardId: string) => void;
+	onEditCard: (cardId: string) => void;
+	onReaction?: (cardId: string, emoji: string) => void;
+	userRole: string;
+	currentUserId: string;
+	hasVotes: boolean;
+	userVotesByCard: Map<string, number>;
+	allVotesByCard: Map<string, number>;
+	isSingleColumn?: boolean;
+}
 
-    let {
-        column,
-        cards,
-        currentScene,
-        groupingMode,
-        selectedCards,
-        board,
-        dragTargetColumnId,
-        dragOverCardId,
-        cardDropPosition,
-        draggedCardId,
-        onDragOver,
-        onDragEnter,
-        onDragLeave,
-        onDrop,
-        onCardDrop,
-        onCardDragOver,
-        onCardDragLeave,
-        onDragStart,
-        onToggleCardSelection,
-        onVoteCard,
-        onCommentCard,
-        onAddCard,
-        onGetColumnContent,
-        onSetColumnContent,
-        onDeleteCard,
-        onEditCard,
-        onReaction,
-        userRole,
-        currentUserId,
-        hasVotes,
-        userVotesByCard,
-        allVotesByCard,
-        isSingleColumn = false,
-    }: Props = $props();
+let {
+	column,
+	cards,
+	currentScene,
+	groupingMode,
+	selectedCards,
+	board,
+	dragTargetColumnId,
+	dragOverCardId,
+	cardDropPosition,
+	draggedCardId,
+	onDragOver,
+	onDragEnter,
+	onDragLeave,
+	onDrop,
+	onCardDrop,
+	onCardDragOver,
+	onCardDragLeave,
+	onDragStart,
+	onToggleCardSelection,
+	onVoteCard,
+	onCommentCard,
+	onAddCard,
+	onGetColumnContent,
+	onSetColumnContent,
+	onDeleteCard,
+	onEditCard,
+	onReaction,
+	userRole,
+	currentUserId,
+	hasVotes,
+	userVotesByCard,
+	allVotesByCard,
+	isSingleColumn = false,
+}: Props = $props();
 
-    // Filter cards for this column
-    let columnCards = $derived(
-        cards.filter((card) => card && card.columnId === column.id),
-    );
+// Filter cards for this column
+let columnCards = $derived(
+	cards.filter((card) => card && card.columnId === column.id),
+);
 
-    // Get lead cards and their subordinate cards
-    let leadCards = $derived(columnCards.filter((card) => card.isGroupLead));
+// Get lead cards and their subordinate cards
+let leadCards = $derived(columnCards.filter((card) => card.isGroupLead));
 
-    let ungroupedCards = $derived(columnCards.filter((card) => !card.groupId));
+let ungroupedCards = $derived(columnCards.filter((card) => !card.groupId));
 
-    // Check if sequencing is enabled
-    let canSequence = $derived(
-        getSceneCapability(currentScene, board?.status, "allow_sequence_cards"),
-    );
+// Check if sequencing is enabled
+let canSequence = $derived(
+	getSceneCapability(currentScene, board?.status, "allow_sequence_cards"),
+);
 
-    // Function to get subordinate cards for a lead card
-    function getSubordinateCards(leadCard: any) {
-        return columnCards.filter(
-            (card) => card.groupId === leadCard.groupId && !card.isGroupLead,
-        );
-    }
+// Function to get subordinate cards for a lead card
+function getSubordinateCards(leadCard: any) {
+	return columnCards.filter(
+		(card) => card.groupId === leadCard.groupId && !card.isGroupLead,
+	);
+}
 
-    // Helper function to determine if showing a drop indicator would be redundant
-    function shouldShowDropIndicator(
-        hoveredCard: any,
-        position: "above" | "below",
-    ): boolean {
-        // Don't show indicator on the dragged card itself
-        if (draggedCardId === hoveredCard.id) {
-            return false;
-        }
+// Helper function to determine if showing a drop indicator would be redundant
+function shouldShowDropIndicator(
+	hoveredCard: any,
+	position: "above" | "below",
+): boolean {
+	// Don't show indicator on the dragged card itself
+	if (draggedCardId === hoveredCard.id) {
+		return false;
+	}
 
-        // If we don't have a dragged card, don't show
-        if (!draggedCardId) {
-            return false;
-        }
+	// If we don't have a dragged card, don't show
+	if (!draggedCardId) {
+		return false;
+	}
 
-        // Find the dragged card in ungroupedCards
-        const draggedCardIndex = ungroupedCards.findIndex(
-            (c) => c.id === draggedCardId,
-        );
-        const hoveredCardIndex = ungroupedCards.findIndex(
-            (c) => c.id === hoveredCard.id,
-        );
+	// Find the dragged card in ungroupedCards
+	const draggedCardIndex = ungroupedCards.findIndex(
+		(c) => c.id === draggedCardId,
+	);
+	const hoveredCardIndex = ungroupedCards.findIndex(
+		(c) => c.id === hoveredCard.id,
+	);
 
-        // If either card isn't found, allow the indicator
-        if (draggedCardIndex === -1 || hoveredCardIndex === -1) {
-            return true;
-        }
+	// If either card isn't found, allow the indicator
+	if (draggedCardIndex === -1 || hoveredCardIndex === -1) {
+		return true;
+	}
 
-        // Check if dropping would be redundant:
-        // - Dropping "above" a card that's directly after the dragged card = no movement
-        // - Dropping "below" a card that's directly before the dragged card = no movement
-        if (position === "above" && hoveredCardIndex === draggedCardIndex + 1) {
-            return false; // Hovering above the card right after the dragged card
-        }
-        if (position === "below" && hoveredCardIndex === draggedCardIndex - 1) {
-            return false; // Hovering below the card right before the dragged card
-        }
+	// Check if dropping would be redundant:
+	// - Dropping "above" a card that's directly after the dragged card = no movement
+	// - Dropping "below" a card that's directly before the dragged card = no movement
+	if (position === "above" && hoveredCardIndex === draggedCardIndex + 1) {
+		return false; // Hovering above the card right after the dragged card
+	}
+	if (position === "below" && hoveredCardIndex === draggedCardIndex - 1) {
+		return false; // Hovering below the card right before the dragged card
+	}
 
-        return true;
-    }
+	return true;
+}
 </script>
 
 <div

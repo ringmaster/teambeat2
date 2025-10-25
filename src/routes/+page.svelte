@@ -1,24 +1,24 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Dashboard from "$lib/components/Dashboard.svelte";
-    import Welcome from "$lib/components/Welcome.svelte";
+import { onMount } from "svelte";
+import Dashboard from "$lib/components/Dashboard.svelte";
+import Welcome from "$lib/components/Welcome.svelte";
 
-    let user: any = $state(null);
-    let loading = $state(true);
+let user: any = $state(null);
+let loading = $state(true);
 
-    onMount(async () => {
-        try {
-            const userResponse = await fetch("/api/auth/me");
-            if (userResponse.ok) {
-                const userData = await userResponse.json();
-                user = userData.user;
-            }
-        } catch (error) {
-            console.error("Failed to load user data:", error);
-        } finally {
-            loading = false;
-        }
-    });
+onMount(async () => {
+	try {
+		const userResponse = await fetch("/api/auth/me");
+		if (userResponse.ok) {
+			const userData = await userResponse.json();
+			user = userData.user;
+		}
+	} catch (error) {
+		console.error("Failed to load user data:", error);
+	} finally {
+		loading = false;
+	}
+});
 </script>
 
 {#if loading}

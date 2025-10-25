@@ -1,25 +1,22 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { getUser } from '$lib/server/auth/index.js';
-import { findUserById } from '$lib/server/repositories/user.js';
+import { json } from "@sveltejs/kit";
+import { getUser } from "$lib/server/auth/index.js";
+import { findUserById } from "$lib/server/repositories/user.js";
+import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {
 	const sessionUser = getUser(event);
 
 	if (!sessionUser) {
 		return json(
-			{ success: false, error: 'Not authenticated' },
-			{ status: 401 }
+			{ success: false, error: "Not authenticated" },
+			{ status: 401 },
 		);
 	}
 
 	const user = await findUserById(sessionUser.userId);
 
 	if (!user) {
-		return json(
-			{ success: false, error: 'User not found' },
-			{ status: 404 }
-		);
+		return json({ success: false, error: "User not found" }, { status: 404 });
 	}
 
 	return json({
@@ -29,7 +26,7 @@ export const GET: RequestHandler = async (event) => {
 			email: user.email,
 			name: user.name,
 			isAdmin: user.is_admin || false,
-			emailVerified: user.emailVerified || false
-		}
+			emailVerified: user.emailVerified || false,
+		},
 	});
 };

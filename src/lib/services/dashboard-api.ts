@@ -37,9 +37,9 @@ export interface BoardResponse {
  */
 
 export async function checkEmailConfig(): Promise<EmailConfigResponse> {
-	const response = await fetch('/api/auth/email-config');
+	const response = await fetch("/api/auth/email-config");
 	if (!response.ok) {
-		throw new Error('Failed to check email configuration');
+		throw new Error("Failed to check email configuration");
 	}
 	return await response.json();
 }
@@ -49,40 +49,43 @@ export async function checkEmailConfig(): Promise<EmailConfigResponse> {
  */
 
 export async function listSeries(): Promise<SeriesListResponse> {
-	const response = await fetch('/api/series');
+	const response = await fetch("/api/series");
 	if (!response.ok) {
-		throw new Error('Failed to list series');
+		throw new Error("Failed to list series");
 	}
 	return await response.json();
 }
 
 export async function createSeries(name: string): Promise<SeriesResponse> {
-	const response = await fetch('/api/series', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ name: name.trim() })
+	const response = await fetch("/api/series", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ name: name.trim() }),
 	});
 
 	const data = await response.json();
 
 	if (!response.ok) {
-		throw new Error(data.error || 'Failed to create series');
+		throw new Error(data.error || "Failed to create series");
 	}
 
 	return data;
 }
 
-export async function renameSeries(seriesId: string, name: string): Promise<SeriesResponse> {
+export async function renameSeries(
+	seriesId: string,
+	name: string,
+): Promise<SeriesResponse> {
 	const response = await fetch(`/api/series/${seriesId}`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ name: name.trim() })
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ name: name.trim() }),
 	});
 
 	const data = await response.json();
 
 	if (!response.ok) {
-		throw new Error(data.error || 'Failed to rename series');
+		throw new Error(data.error || "Failed to rename series");
 	}
 
 	return data;
@@ -90,12 +93,12 @@ export async function renameSeries(seriesId: string, name: string): Promise<Seri
 
 export async function deleteSeries(seriesId: string): Promise<void> {
 	const response = await fetch(`/api/series/${seriesId}`, {
-		method: 'DELETE'
+		method: "DELETE",
 	});
 
 	if (!response.ok) {
 		const data = await response.json();
-		throw new Error(data.error || 'Failed to delete series');
+		throw new Error(data.error || "Failed to delete series");
 	}
 }
 
@@ -103,48 +106,64 @@ export async function deleteSeries(seriesId: string): Promise<void> {
  * Series User Management
  */
 
-export async function listSeriesUsers(seriesId: string): Promise<SeriesUsersResponse> {
+export async function listSeriesUsers(
+	seriesId: string,
+): Promise<SeriesUsersResponse> {
 	const response = await fetch(`/api/series/${seriesId}/users`);
 	if (!response.ok) {
-		throw new Error('Failed to list series users');
+		throw new Error("Failed to list series users");
 	}
 	return await response.json();
 }
 
-export async function addSeriesUser(seriesId: string, email: string, role: string = 'member'): Promise<void> {
+export async function addSeriesUser(
+	seriesId: string,
+	email: string,
+	role: string = "member",
+): Promise<void> {
 	const response = await fetch(`/api/series/${seriesId}/users`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email, role })
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, role }),
 	});
 
 	if (!response.ok) {
 		const data = await response.json();
-		throw new Error(data.error || 'Failed to add user');
+		throw new Error(data.error || "Failed to add user");
 	}
 }
 
-export async function removeSeriesUser(seriesId: string, userId: string): Promise<void> {
-	const response = await fetch(`/api/series/${seriesId}/users?userId=${userId}`, {
-		method: 'DELETE'
-	});
+export async function removeSeriesUser(
+	seriesId: string,
+	userId: string,
+): Promise<void> {
+	const response = await fetch(
+		`/api/series/${seriesId}/users?userId=${userId}`,
+		{
+			method: "DELETE",
+		},
+	);
 
 	if (!response.ok) {
 		const data = await response.json();
-		throw new Error(data.error || 'Failed to remove user');
+		throw new Error(data.error || "Failed to remove user");
 	}
 }
 
-export async function updateSeriesUserRole(seriesId: string, userId: string, role: string): Promise<void> {
+export async function updateSeriesUserRole(
+	seriesId: string,
+	userId: string,
+	role: string,
+): Promise<void> {
 	const response = await fetch(`/api/series/${seriesId}/users`, {
-		method: 'PUT',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ userId, role })
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ userId, role }),
 	});
 
 	if (!response.ok) {
 		const data = await response.json();
-		throw new Error(data.error || 'Failed to update user role');
+		throw new Error(data.error || "Failed to update user role");
 	}
 }
 
@@ -152,32 +171,38 @@ export async function updateSeriesUserRole(seriesId: string, userId: string, rol
  * Board Operations
  */
 
-export async function createBoard(name: string, seriesId: string): Promise<BoardResponse> {
-	const response = await fetch('/api/boards', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ name, seriesId })
+export async function createBoard(
+	name: string,
+	seriesId: string,
+): Promise<BoardResponse> {
+	const response = await fetch("/api/boards", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ name, seriesId }),
 	});
 
 	const data = await response.json();
 
 	if (!response.ok) {
-		throw new Error(data.error || 'Failed to create board');
+		throw new Error(data.error || "Failed to create board");
 	}
 
 	return data;
 }
 
-export async function cloneBoardInto(targetBoardId: string, sourceBoardId: string): Promise<void> {
+export async function cloneBoardInto(
+	targetBoardId: string,
+	sourceBoardId: string,
+): Promise<void> {
 	const response = await fetch(`/api/boards/${targetBoardId}/clone`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ sourceId: sourceBoardId })
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ sourceId: sourceBoardId }),
 	});
 
 	if (!response.ok) {
 		const data = await response.json();
-		throw new Error(data.error || 'Failed to clone board');
+		throw new Error(data.error || "Failed to clone board");
 	}
 }
 
@@ -187,7 +212,7 @@ export async function cloneBoardInto(targetBoardId: string, sourceBoardId: strin
 export async function createAndCloneBoard(
 	name: string,
 	seriesId: string,
-	sourceBoardId: string
+	sourceBoardId: string,
 ): Promise<string> {
 	// Create the new board
 	const createData = await createBoard(name, seriesId);

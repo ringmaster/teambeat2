@@ -1,66 +1,68 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { toastStore } from '$lib/stores/toast';
+import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import { toastStore } from "$lib/stores/toast";
 
-	let token = $state('');
-	let newPassword = $state('');
-	let confirmPassword = $state('');
-	let isResetting = $state(false);
-	let isSuccess = $state(false);
+let token = $state("");
+let newPassword = $state("");
+let confirmPassword = $state("");
+let isResetting = $state(false);
+let isSuccess = $state(false);
 
-	// Get token from URL on mount
-	$effect(() => {
-		token = $page.url.searchParams.get('token') || '';
-	});
+// Get token from URL on mount
+$effect(() => {
+	token = $page.url.searchParams.get("token") || "";
+});
 
-	async function handleSubmit(event: Event) {
-		event.preventDefault();
+async function handleSubmit(event: Event) {
+	event.preventDefault();
 
-		// Validation
-		if (!token) {
-			toastStore.error('Invalid or missing reset token');
-			return;
-		}
-
-		if (newPassword.length < 8) {
-			toastStore.error('Password must be at least 8 characters');
-			return;
-		}
-
-		if (newPassword !== confirmPassword) {
-			toastStore.error('Passwords do not match');
-			return;
-		}
-
-		isResetting = true;
-
-		try {
-			const response = await fetch('/api/auth/reset-password', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ token, newPassword })
-			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Failed to reset password');
-			}
-
-			isSuccess = true;
-			toastStore.success('Password reset successfully');
-
-			// Redirect to login after 2 seconds
-			setTimeout(() => {
-				goto('/login');
-			}, 2000);
-		} catch (err) {
-			toastStore.error(err instanceof Error ? err.message : 'Failed to reset password');
-			console.error(err);
-		} finally {
-			isResetting = false;
-		}
+	// Validation
+	if (!token) {
+		toastStore.error("Invalid or missing reset token");
+		return;
 	}
+
+	if (newPassword.length < 8) {
+		toastStore.error("Password must be at least 8 characters");
+		return;
+	}
+
+	if (newPassword !== confirmPassword) {
+		toastStore.error("Passwords do not match");
+		return;
+	}
+
+	isResetting = true;
+
+	try {
+		const response = await fetch("/api/auth/reset-password", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token, newPassword }),
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || "Failed to reset password");
+		}
+
+		isSuccess = true;
+		toastStore.success("Password reset successfully");
+
+		// Redirect to login after 2 seconds
+		setTimeout(() => {
+			goto("/login");
+		}, 2000);
+	} catch (err) {
+		toastStore.error(
+			err instanceof Error ? err.message : "Failed to reset password",
+		);
+		console.error(err);
+	} finally {
+		isResetting = false;
+	}
+}
 </script>
 
 <div class="reset-password-page">
