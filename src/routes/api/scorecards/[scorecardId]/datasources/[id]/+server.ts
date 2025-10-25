@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { findScorecardById } from '$lib/server/repositories/scorecard.js';
@@ -13,7 +13,7 @@ import {
 // GET /api/scorecards/[scorecardId]/datasources/[id] - Get datasource
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const scorecardId = event.params.scorecardId;
     const datasourceId = event.params.id;
 
@@ -56,7 +56,7 @@ export const GET: RequestHandler = async (event) => {
 // PUT /api/scorecards/[scorecardId]/datasources/[id] - Update datasource
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const scorecardId = event.params.scorecardId;
     const datasourceId = event.params.id;
     const body = await event.request.json();
@@ -107,7 +107,7 @@ export const PUT: RequestHandler = async (event) => {
 // DELETE /api/scorecards/[scorecardId]/datasources/[id] - Delete datasource
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const scorecardId = event.params.scorecardId;
     const datasourceId = event.params.id;
 

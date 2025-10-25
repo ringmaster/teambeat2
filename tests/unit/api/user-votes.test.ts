@@ -4,7 +4,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -25,7 +25,7 @@ vi.mock('../../../src/lib/server/utils/voting-data', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { getBoardWithDetails } from '../../../src/lib/server/repositories/board';
 import { getUserRoleInSeries } from '../../../src/lib/server/repositories/board-series';
 import { getAllUsersVotesForBoard } from '../../../src/lib/server/repositories/vote';
@@ -64,7 +64,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 		vi.mocked(buildUserVotingApiResponse).mockResolvedValue(mockVotingResponse);
@@ -73,7 +73,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 		const response = await GET(event);
 		const data = await response.json();
 
-		expect(requireUser).toHaveBeenCalledWith(event);
+		expect(requireUserForApi).toHaveBeenCalledWith(event);
 		expect(getBoardWithDetails).toHaveBeenCalledWith('board-1');
 		expect(getUserRoleInSeries).toHaveBeenCalledWith('user-1', 'series-1');
 		expect(buildUserVotingApiResponse).toHaveBeenCalledWith('board-1', 'user-1');
@@ -116,7 +116,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 			{ voteId: 'v4', cardId: 'card-2', userId: 'user-1', createdAt: new Date() }
 		];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(buildUserVotingApiResponse).mockResolvedValue(mockVotingResponse);
@@ -136,7 +136,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 	it('should return 404 when board is not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'user@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({ params: { id: 'board-1' } });
@@ -161,7 +161,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 			scenes: []
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue(null);
 
@@ -180,7 +180,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 	it('should return 500 on general failure', async () => {
 		const mockUser = { userId: 'user-1', email: 'user@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockRejectedValue(new Error('Database error'));
 
 		const event = createMockRequestEvent({ params: { id: 'board-1' } });
@@ -196,7 +196,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 
 	it('should handle authentication errors by rethrowing Response', async () => {
 		const authError = new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw authError;
 		});
 
@@ -221,7 +221,7 @@ describe('GET /api/boards/[id]/user-votes', () => {
 			voting_stats: { totalUsers: 0, activeUsers: 0, usersWhoVoted: 0, usersWhoHaventVoted: 0, totalVotesCast: 0, maxPossibleVotes: 0, remainingVotes: 0, maxVotesPerUser: 5 }
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 		vi.mocked(buildUserVotingApiResponse).mockResolvedValue(mockVotingResponse);

@@ -5,7 +5,7 @@ import { SCENE_FLAGS } from '../../../src/lib/scene-flags';
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -52,7 +52,7 @@ vi.mock('../../../src/lib/server/db/index', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { findBoardById } from '../../../src/lib/server/repositories/board';
 import { getUserRoleInSeries } from '../../../src/lib/server/repositories/board-series';
 import { getTemplate } from '../../../src/lib/server/templates';
@@ -105,7 +105,7 @@ describe('POST /api/boards/[id]/setup-template', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(getTemplate).mockReturnValue(mockTemplate);
@@ -189,7 +189,7 @@ describe('POST /api/boards/[id]/setup-template', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(getTemplate).mockReturnValue(mockTemplate);
@@ -216,7 +216,7 @@ describe('POST /api/boards/[id]/setup-template', () => {
 	it('returns 404 when board not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -243,7 +243,7 @@ describe('POST /api/boards/[id]/setup-template', () => {
 			status: 'draft'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue(null);
 
@@ -271,7 +271,7 @@ describe('POST /api/boards/[id]/setup-template', () => {
 			status: 'draft'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -319,7 +319,7 @@ describe('POST /api/boards/[id]/setup-template', () => {
 			}]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(getTemplate).mockReturnValue(mockTemplate);

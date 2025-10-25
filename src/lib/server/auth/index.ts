@@ -1,20 +1,41 @@
 import { getSession } from './session.js';
 import type { SessionData } from './session.js';
 import type { RequestEvent } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 
 export function getUser(event: RequestEvent): SessionData | null {
 	const sessionId = event.cookies.get('session');
 	if (!sessionId) {
+		console.warn('[Auth] No session cookie found');
 		return null;
 	}
-	
-	return getSession(sessionId);
+
+	const session = getSession(sessionId);
+	if (!session) {
+		console.warn('[Auth] Session not found or expired:', sessionId.substring(0, 8) + '...');
+	}
+
+	return session;
 }
 
 export function requireUser(event: RequestEvent): SessionData {
 	const user = getUser(event);
 	if (!user) {
-		throw new Response('Unauthorized', { status: 401 });
+		// Redirect to login page with return URL
+		const returnUrl = event.url.pathname + event.url.search;
+		throw redirect(303, `/login?redirect=${encodeURIComponent(returnUrl)}`);
+	}
+	return user;
+}
+
+export function requireUserForApi(event: RequestEvent): SessionData {
+	const user = getUser(event);
+	if (!user) {
+		// Return 401 JSON response for API endpoints
+		throw new Response(JSON.stringify({ error: 'Unauthorized' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 	return user;
 }

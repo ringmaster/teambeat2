@@ -4,7 +4,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -39,7 +39,7 @@ vi.mock('../../../src/lib/server/db/index', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { getBoardWithDetails } from '../../../src/lib/server/repositories/board';
 import { getUserRoleInSeries } from '../../../src/lib/server/repositories/board-series';
 import { createAgreement } from '../../../src/lib/server/repositories/agreement';
@@ -70,7 +70,7 @@ describe('GET /api/boards/[id]/agreements', () => {
 			}
 		];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 		vi.mocked(buildEnrichedAgreementsData).mockResolvedValue(mockAgreements as any);
@@ -79,7 +79,7 @@ describe('GET /api/boards/[id]/agreements', () => {
 		const response = await GET(event);
 		const data = await response.json();
 
-		expect(requireUser).toHaveBeenCalledWith(event);
+		expect(requireUserForApi).toHaveBeenCalledWith(event);
 		expect(getBoardWithDetails).toHaveBeenCalledWith('board-1');
 		expect(getUserRoleInSeries).toHaveBeenCalledWith('user-1', 'series-1');
 		expect(buildEnrichedAgreementsData).toHaveBeenCalledWith('board-1', mockBoard);
@@ -92,7 +92,7 @@ describe('GET /api/boards/[id]/agreements', () => {
 	it('should return 404 when board is not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'user@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({ params: { id: 'board-1' } });
@@ -114,7 +114,7 @@ describe('GET /api/boards/[id]/agreements', () => {
 			seriesId: 'series-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue(null);
 
@@ -132,7 +132,7 @@ describe('GET /api/boards/[id]/agreements', () => {
 
 	it('should handle authentication errors by rethrowing Response', async () => {
 		const authError = new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw authError;
 		});
 
@@ -144,7 +144,7 @@ describe('GET /api/boards/[id]/agreements', () => {
 	it('should return 500 on general failure', async () => {
 		const mockUser = { userId: 'user-1', email: 'user@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockRejectedValue(new Error('Database error'));
 
 		const event = createMockRequestEvent({ params: { id: 'board-1' } });
@@ -180,7 +180,7 @@ describe('POST /api/boards/[id]/agreements', () => {
 		};
 		const mockAgreements = [mockAgreement];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(createAgreement).mockResolvedValue(mockAgreement as any);
@@ -221,7 +221,7 @@ describe('POST /api/boards/[id]/agreements', () => {
 			content: 'Admin agreement'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(createAgreement).mockResolvedValue(mockAgreement as any);
@@ -247,7 +247,7 @@ describe('POST /api/boards/[id]/agreements', () => {
 			seriesId: 'series-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 
@@ -275,7 +275,7 @@ describe('POST /api/boards/[id]/agreements', () => {
 			seriesId: 'series-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -296,7 +296,7 @@ describe('POST /api/boards/[id]/agreements', () => {
 	it('should return 404 when board is not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'user@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -322,7 +322,7 @@ describe('POST /api/boards/[id]/agreements', () => {
 			seriesId: 'series-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue(null);
 

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { updateCard, getCardById } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
@@ -17,7 +17,7 @@ const updateCardSchema = z.object({
 
 export const PATCH: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
     const cardId = event.params.cardId;
     const body = await event.request.json();

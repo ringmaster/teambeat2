@@ -4,7 +4,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock the repository functions
@@ -19,7 +19,7 @@ vi.mock('../../../src/lib/server/repositories/user', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { createBoardSeries, findSeriesWithBoardsByUser } from '../../../src/lib/server/repositories/board-series';
 import { findUserById, canCreateResources } from '../../../src/lib/server/repositories/user';
 
@@ -38,7 +38,7 @@ describe('GET /api/series', () => {
 			{ id: '2', name: 'Series 2', role: 'member', boards: [] }
 		];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findSeriesWithBoardsByUser).mockResolvedValue(mockSeries);
 
 		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/series' });
@@ -52,7 +52,7 @@ describe('GET /api/series', () => {
 	});
 
 	it('throws 401 when user is not authenticated', async () => {
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw new Response('Unauthorized', { status: 401 });
 		});
 
@@ -64,7 +64,7 @@ describe('GET /api/series', () => {
 	it('returns 500 on repository error', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findSeriesWithBoardsByUser).mockRejectedValue(new Error('Database error'));
 
 		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/series' });
@@ -96,7 +96,7 @@ describe('POST /api/series', () => {
 			creatorId: 'user-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -143,7 +143,7 @@ describe('POST /api/series', () => {
 	it('returns 403 when user email is not verified', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -180,7 +180,7 @@ describe('POST /api/series', () => {
 	it('returns 404 when user is not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -204,7 +204,7 @@ describe('POST /api/series', () => {
 	it('returns 400 for invalid input', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -235,7 +235,7 @@ describe('POST /api/series', () => {
 	});
 
 	it('throws 401 when user is not authenticated', async () => {
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw new Response('Unauthorized', { status: 401 });
 		});
 
@@ -251,7 +251,7 @@ describe('POST /api/series', () => {
 	it('returns 500 on repository error', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',

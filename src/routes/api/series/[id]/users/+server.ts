@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries, getSeriesMembers, addUserToSeries, removeUserFromSeries, updateUserRoleInSeries, hasActiveBoards } from '$lib/server/repositories/board-series.js';
 import { findUserByEmail } from '$lib/server/repositories/user.js';
 import { z } from 'zod';
@@ -21,7 +21,7 @@ const removeUserSchema = z.object({
 
 export const GET: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const seriesId = event.params.id;
 
 		// Check if user has access to this series
@@ -53,7 +53,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const seriesId = event.params.id;
 		const body = await event.request.json();
 		const data = addUserSchema.parse(body);
@@ -113,7 +113,7 @@ export const POST: RequestHandler = async (event) => {
 
 export const PUT: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const seriesId = event.params.id;
 		const body = await event.request.json();
 		const data = updateUserRoleSchema.parse(body);
@@ -172,7 +172,7 @@ export const PUT: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const seriesId = event.params.id;
 		const url = new URL(event.request.url);
 		const userIdToRemove = url.searchParams.get('userId');

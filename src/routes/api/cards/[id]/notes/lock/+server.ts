@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { acquireNotesLock } from '$lib/server/notes-lock.js';
 import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
 import { db } from '$lib/server/db';
@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const { id: cardId } = event.params;
 
     if (!cardId) {
@@ -109,7 +109,7 @@ export const POST: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const { id: cardId } = event.params;
 
     const { releaseNotesLock } = await import('$lib/server/notes-lock.js');

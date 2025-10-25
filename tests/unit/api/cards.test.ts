@@ -5,7 +5,7 @@ import { SCENE_FLAGS } from '../../../src/lib/scene-flags';
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock all dependencies
@@ -34,7 +34,7 @@ vi.mock('../../../src/lib/server/utils/cards-data', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { findCardById, updateCard, deleteCard } from '../../../src/lib/server/repositories/card';
 import { getBoardWithDetails, findBoardByColumnId } from '../../../src/lib/server/repositories/board';
 import { getUserRoleInSeries } from '../../../src/lib/server/repositories/board-series';
@@ -66,7 +66,7 @@ describe('PUT /api/cards/[id]', () => {
 		const updatedCard = { ...mockCard, content: 'New content' };
 		const enrichedCard = { ...updatedCard, reactionCount: 0, commentCount: 0 };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -110,7 +110,7 @@ describe('PUT /api/cards/[id]', () => {
 		const updatedCard = { ...mockCard, content: 'New content' };
 		const enrichedCard = { ...updatedCard, reactionCount: 0, commentCount: 0 };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -135,7 +135,7 @@ describe('PUT /api/cards/[id]', () => {
 	it('returns 404 when card not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -170,7 +170,7 @@ describe('PUT /api/cards/[id]', () => {
 			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -208,7 +208,7 @@ describe('PUT /api/cards/[id]', () => {
 			scenes: [{ id: 'scene-1', flags: [] }] // No ALLOW_EDIT_CARDS flag
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -246,7 +246,7 @@ describe('PUT /api/cards/[id]', () => {
 			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -270,7 +270,7 @@ describe('PUT /api/cards/[id]', () => {
 	it('returns 400 for invalid input', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'PUT',
@@ -310,7 +310,7 @@ describe('DELETE /api/cards/[id]', () => {
 			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -348,7 +348,7 @@ describe('DELETE /api/cards/[id]', () => {
 			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
@@ -385,7 +385,7 @@ describe('DELETE /api/cards/[id]', () => {
 			scenes: [{ id: 'scene-1', flags: [SCENE_FLAGS.ALLOW_EDIT_CARDS] }]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findCardById).mockResolvedValue(mockCard);
 		vi.mocked(findBoardByColumnId).mockResolvedValue('board-1');
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);

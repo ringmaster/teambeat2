@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { createCard } from '$lib/server/repositories/card.js';
 import { broadcastCardCreated } from '$lib/server/sse/broadcast.js';
@@ -19,7 +19,7 @@ const copyToCardSchema = z.object({
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const questionId = event.params.questionId;
     const body = await event.request.json();
     const data = copyToCardSchema.parse(body);

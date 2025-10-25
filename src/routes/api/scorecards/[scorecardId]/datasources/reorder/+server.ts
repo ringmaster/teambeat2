@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { findScorecardById } from '$lib/server/repositories/scorecard.js';
@@ -9,7 +9,7 @@ import { reorderDatasources } from '$lib/server/repositories/scorecard-datasourc
 // PUT /api/scorecards/[scorecardId]/datasources/reorder - Reorder datasources
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const scorecardId = event.params.scorecardId;
     const body = await event.request.json();
 

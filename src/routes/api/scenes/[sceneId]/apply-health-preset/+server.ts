@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { findSceneById } from '$lib/server/repositories/scene.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import {
@@ -16,7 +16,7 @@ const applyPresetSchema = z.object({
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const sceneId = event.params.sceneId;
     const body = await event.request.json();
     const data = applyPresetSchema.parse(body);

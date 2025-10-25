@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { createBoardSeries, findSeriesWithBoardsByUser } from '$lib/server/repositories/board-series.js';
 import { findUserById, canCreateResources } from '$lib/server/repositories/user.js';
 import { z } from 'zod';
@@ -13,7 +13,7 @@ const createSeriesSchema = z.object({
 
 export const GET: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const series = await findSeriesWithBoardsByUser(user.userId);
 		
 		return json({
@@ -34,7 +34,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
 	try {
-		const sessionUser = requireUser(event);
+		const sessionUser = requireUserForApi(event);
 		const body = await event.request.json();
 		const data = createSeriesSchema.parse(body);
 

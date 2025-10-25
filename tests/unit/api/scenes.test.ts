@@ -6,7 +6,7 @@ import { SCENE_FLAGS } from '../../../src/lib/scene-flags';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -69,7 +69,7 @@ vi.mock('../../../src/lib/server/db/index', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import {
 	getBoardWithDetails,
 	updateBoardScene,
@@ -108,7 +108,7 @@ describe('PUT /api/boards/[id]/scene', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(buildAllCardsData).mockResolvedValue([]);
@@ -155,7 +155,7 @@ describe('PUT /api/boards/[id]/scene', () => {
 			visible_column_ids: ['col-1']
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(buildPresentModeData).mockResolvedValue(mockPresentData);
@@ -189,7 +189,7 @@ describe('PUT /api/boards/[id]/scene', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 
@@ -221,7 +221,7 @@ describe('PUT /api/boards/[id]/scene', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -244,7 +244,7 @@ describe('PUT /api/boards/[id]/scene', () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 		const validSceneId = '00000000-0000-4000-8000-000000000001';
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -286,7 +286,7 @@ describe('POST /api/boards/[id]/scenes', () => {
 			createdAt: new Date().toISOString()
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(getSceneFlags).mockResolvedValue([SCENE_FLAGS.ALLOW_ADD_CARDS]);
@@ -362,7 +362,7 @@ describe('POST /api/boards/[id]/scenes', () => {
 	it('should fail without valid title', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -385,7 +385,7 @@ describe('POST /api/boards/[id]/scenes', () => {
 	it('should fail with invalid mode', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -412,7 +412,7 @@ describe('POST /api/boards/[id]/scenes', () => {
 			seriesId: 'series-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 
@@ -451,7 +451,7 @@ describe('POST /api/boards/[id]/scenes', () => {
 			createdAt: new Date().toISOString()
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardById)
 			.mockResolvedValueOnce(mockBoard) // First call in permission check
 			.mockResolvedValueOnce(mockBoard); // Second call after scene creation

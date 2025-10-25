@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db';
 import { comments, cards, boards, users, columns } from '$lib/server/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
@@ -47,7 +47,7 @@ async function getCardCommentCounts(cardId: string) {
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const { card_id, content, is_agreement = false, is_reaction = false } = await event.request.json();
 
     if (!content?.trim()) {

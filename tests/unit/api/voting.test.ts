@@ -7,7 +7,7 @@ import { SCENE_FLAGS } from '../../../src/lib/scene-flags';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -59,7 +59,7 @@ vi.mock('../../../src/lib/server/utils/cards-data', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import {
 	findCardById,
 	getCardsForBoard
@@ -138,7 +138,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 2 }));
 		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(mockCard as any);
@@ -169,7 +169,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			isGroupLead: false
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ card: subordinateCard }));
 
 		const event = createMockRequestEvent({
@@ -197,7 +197,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ board: boardWithoutVoting }));
 
 		const event = createMockRequestEvent({
@@ -218,7 +218,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	it('should fail when no votes remaining', async () => {
 		const mockUser = { userId: 'user-1', email: 'member@example.com', name: 'Member' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 5 })); // Already used all votes
 
 		const event = createMockRequestEvent({
@@ -239,7 +239,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	it('should validate delta parameter', async () => {
 		const mockUser = { userId: 'user-1', email: 'member@example.com', name: 'Member' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -278,7 +278,7 @@ describe('DELETE /api/boards/[id]/votes/clear', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(clearBoardVotes).mockResolvedValue({ deletedCount: 25 });
@@ -307,7 +307,7 @@ describe('DELETE /api/boards/[id]/votes/clear', () => {
 			status: 'active'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 
@@ -328,7 +328,7 @@ describe('DELETE /api/boards/[id]/votes/clear', () => {
 	it('should fail when board not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -367,7 +367,7 @@ describe('POST /api/boards/[id]/votes/increase-allocation', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails)
 			.mockResolvedValueOnce(mockBoard)
 			.mockResolvedValueOnce({ ...mockBoard, votingAllocation: 6 });
@@ -398,7 +398,7 @@ describe('POST /api/boards/[id]/votes/increase-allocation', () => {
 			votingAllocation: 50 // Already at max
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -425,7 +425,7 @@ describe('POST /api/boards/[id]/votes/increase-allocation', () => {
 			votingAllocation: 5
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 

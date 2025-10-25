@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { findSceneById } from '$lib/server/repositories/scene.js';
@@ -16,7 +16,7 @@ import { broadcastScorecardResultFlagged } from '$lib/server/sse/broadcast.js';
 // POST /api/scene-scorecard-results/[resultId]/flag - Flag result for discussion
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const resultId = event.params.resultId;
     const body = await event.request.json();
 

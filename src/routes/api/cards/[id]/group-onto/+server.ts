@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import {
   findCardById,
   groupCardOntoTarget,
@@ -26,7 +26,7 @@ const moveToColumnSchema = z.object({
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
     const body = await event.request.json();
     const data = groupOntoSchema.parse(body);
@@ -134,7 +134,7 @@ export const POST: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
     const body = await event.request.json();
     const data = moveToColumnSchema.parse(body);

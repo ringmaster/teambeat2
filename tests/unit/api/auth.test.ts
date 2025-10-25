@@ -30,7 +30,7 @@ vi.mock('../../../src/lib/server/repositories/session', () => ({
 vi.mock('../../../src/lib/server/auth/index', () => ({
 	setSessionCookie: vi.fn(),
 	clearSessionCookie: vi.fn(),
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 vi.mock('bcryptjs', () => ({

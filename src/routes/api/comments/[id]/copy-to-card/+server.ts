@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db/index.js';
 import { comments, cards, columns } from '$lib/server/db/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
@@ -21,7 +21,7 @@ const copyToCardSchema = z.object({
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const commentId = event.params.id;
     const body = await event.request.json();
     const data = copyToCardSchema.parse(body);

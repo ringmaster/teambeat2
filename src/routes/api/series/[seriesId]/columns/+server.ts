@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { getColumnsBySeriesId } from '$lib/server/repositories/board.js';
 
 export const GET: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const seriesId = event.params.seriesId;
 		const excludeBoardId = event.url.searchParams.get('excludeBoardId');
 

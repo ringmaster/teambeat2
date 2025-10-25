@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { findCardById } from '$lib/server/repositories/card.js';
 import { castVote, getVoteContext, getVoteCountsByCard } from '$lib/server/repositories/vote.js';
 import { broadcastVoteChanged, broadcastVoteChangedToUser, broadcastVoteUpdatesBasedOnScene } from '$lib/server/sse/broadcast.js';
@@ -11,7 +11,7 @@ import { getSceneCapability } from '$lib/utils/scene-capability.js';
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
 
     let requestBody;

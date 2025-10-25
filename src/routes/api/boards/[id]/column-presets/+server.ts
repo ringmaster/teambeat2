@@ -3,14 +3,14 @@ import { db } from '$lib/server/db';
 import { boards } from '$lib/server/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { COLUMN_PRESETS } from '$lib/data/column-presets';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {
     try {
-        const user = requireUser(event);
+        const user = requireUserForApi(event);
         const boardId = event.params.id;
 
         // Get the board to find its series

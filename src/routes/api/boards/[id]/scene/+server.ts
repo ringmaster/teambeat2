@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardScene } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
@@ -15,7 +15,7 @@ const updateSceneSchema = z.object({
 
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
     const body = await event.request.json();
     const data = updateSceneSchema.parse(body);

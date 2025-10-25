@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { findCardById, updateCard, deleteCard, resequenceCard, getCardsForBoard } from '$lib/server/repositories/card.js';
 import { getBoardWithDetails, findBoardByColumnId } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
@@ -20,7 +20,7 @@ const resequenceCardSchema = z.object({
 
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
     const body = await event.request.json();
     const data = updateCardSchema.parse(body);
@@ -109,7 +109,7 @@ export const PUT: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
 
     const card = await findCardById(cardId);
@@ -185,7 +185,7 @@ export const DELETE: RequestHandler = async (event) => {
 
 export const PATCH: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
     const body = await event.request.json();
     const data = resequenceCardSchema.parse(body);

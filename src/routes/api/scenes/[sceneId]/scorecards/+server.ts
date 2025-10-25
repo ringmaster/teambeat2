@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { findSceneById } from '$lib/server/repositories/scene.js';
@@ -13,7 +13,7 @@ import { broadcastScorecardAttached } from '$lib/server/sse/broadcast.js';
 // GET /api/scenes/[sceneId]/scorecards - List scorecards attached to scene
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const sceneId = event.params.sceneId;
 
     // Get scene to check series access
@@ -48,7 +48,7 @@ export const GET: RequestHandler = async (event) => {
 // POST /api/scenes/[sceneId]/scorecards/attach - Attach scorecard to scene
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const sceneId = event.params.sceneId;
     const body = await event.request.json();
 

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { findBoardById } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastSceneChanged } from '$lib/server/sse/broadcast.js';
@@ -13,7 +13,7 @@ import type { SceneFlag } from '$lib/server/db/scene-flags.js';
 
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
 
     const board = await findBoardById(boardId);
@@ -70,7 +70,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
     const body = await event.request.json();
 

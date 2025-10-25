@@ -4,7 +4,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock database
@@ -40,7 +40,7 @@ vi.mock('../../../src/lib/server/repositories/health', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { db } from '../../../src/lib/server/db/index';
 import { findSceneById } from '../../../src/lib/server/repositories/scene';
 import { getBoardWithDetails } from '../../../src/lib/server/repositories/board';
@@ -76,7 +76,7 @@ describe('POST /api/health-responses', () => {
 			rating: 4
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({
@@ -123,7 +123,7 @@ describe('POST /api/health-responses', () => {
 			questionType: 'range1to5'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({
@@ -171,7 +171,7 @@ describe('POST /api/health-responses', () => {
 			status: 'active'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({
@@ -222,7 +222,7 @@ describe('POST /api/health-responses', () => {
 			status: 'active'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({
@@ -273,7 +273,7 @@ describe('POST /api/health-responses', () => {
 			status: 'active'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({
@@ -320,7 +320,7 @@ describe('POST /api/health-responses', () => {
 			seriesId: 'series-1'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({
@@ -370,7 +370,7 @@ describe('POST /api/health-responses', () => {
 			status: 'archived'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({
 				innerJoin: vi.fn(() => ({

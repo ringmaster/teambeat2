@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getBoardWithDetails } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries, getSeriesMembers } from '$lib/server/repositories/board-series.js';
 import { getBoardPresence } from '$lib/server/repositories/presence.js';
@@ -9,7 +9,7 @@ import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js
 
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
 
     // Update user presence on this board

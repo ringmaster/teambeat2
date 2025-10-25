@@ -5,7 +5,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -35,7 +35,7 @@ vi.mock('../../../src/lib/server/api-utils', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { findScorecardById } from '../../../src/lib/server/repositories/scorecard';
 import {
 	createDatasource,
@@ -65,7 +65,7 @@ describe('POST /api/scorecards/[scorecardId]/datasources', () => {
 			rules: []
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(createDatasource).mockResolvedValue(mockDatasource);
@@ -105,7 +105,7 @@ describe('POST /api/scorecards/[scorecardId]/datasources', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 
@@ -135,7 +135,7 @@ describe('POST /api/scorecards/[scorecardId]/datasources', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 
@@ -166,7 +166,7 @@ describe('POST /api/scorecards/[scorecardId]/datasources', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 
@@ -196,7 +196,7 @@ describe('POST /api/scorecards/[scorecardId]/datasources', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 
@@ -222,7 +222,7 @@ describe('POST /api/scorecards/[scorecardId]/datasources', () => {
 	it('should fail when scorecard not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -269,7 +269,7 @@ describe('PUT /api/scorecards/[scorecardId]/datasources/[id]', () => {
 			rules: [{ id: 'rule-1' }]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(findDatasourceById).mockResolvedValue(mockExistingDatasource);
@@ -306,7 +306,7 @@ describe('PUT /api/scorecards/[scorecardId]/datasources/[id]', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(findDatasourceById).mockResolvedValue(null);
@@ -341,7 +341,7 @@ describe('PUT /api/scorecards/[scorecardId]/datasources/[id]', () => {
 			name: 'Old Name'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(findDatasourceById).mockResolvedValue(mockExistingDatasource);
@@ -382,7 +382,7 @@ describe('DELETE /api/scorecards/[scorecardId]/datasources/[id]', () => {
 			name: 'Test Datasource'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(findDatasourceById).mockResolvedValue(mockExistingDatasource);
@@ -409,7 +409,7 @@ describe('DELETE /api/scorecards/[scorecardId]/datasources/[id]', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
 
@@ -435,7 +435,7 @@ describe('DELETE /api/scorecards/[scorecardId]/datasources/[id]', () => {
 			name: 'Test Scorecard'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findScorecardById).mockResolvedValue(mockScorecard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(findDatasourceById).mockResolvedValue(null);

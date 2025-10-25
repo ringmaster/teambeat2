@@ -4,7 +4,7 @@ import { createMockRequestEvent, withAuthenticatedUser } from '../helpers/mock-r
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock the repository functions
@@ -24,7 +24,7 @@ vi.mock('../../../src/lib/server/repositories/user', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { createBoard, findBoardsByUser } from '../../../src/lib/server/repositories/board';
 import { getUserRoleInSeries, addUserToSeries } from '../../../src/lib/server/repositories/board-series';
 import { findUserById, canCreateResources } from '../../../src/lib/server/repositories/user';
@@ -41,7 +41,7 @@ describe('GET /api/boards', () => {
 			{ id: '2', name: 'Board 2', seriesId: 'series-1' }
 		];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardsByUser).mockResolvedValue(mockBoards);
 
 		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/boards' });
@@ -55,7 +55,7 @@ describe('GET /api/boards', () => {
 	});
 
 	it('throws 401 when user is not authenticated', async () => {
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw new Response('Unauthorized', { status: 401 });
 		});
 
@@ -67,7 +67,7 @@ describe('GET /api/boards', () => {
 	it('returns 500 on repository error', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findBoardsByUser).mockRejectedValue(new Error('Database error'));
 
 		const event = createMockRequestEvent({ url: 'http://localhost:5173/api/boards' });
@@ -98,7 +98,7 @@ describe('POST /api/boards', () => {
 			votingAllocation: 5
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -150,7 +150,7 @@ describe('POST /api/boards', () => {
 			seriesId
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -186,7 +186,7 @@ describe('POST /api/boards', () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 		const seriesId = '123e4567-e89b-12d3-a456-426614174000';
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -225,7 +225,7 @@ describe('POST /api/boards', () => {
 	it('returns 400 for invalid input', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findUserById).mockResolvedValue({
 			id: 'user-1',
 			email: 'test@example.com',
@@ -255,7 +255,7 @@ describe('POST /api/boards', () => {
 	});
 
 	it('throws 401 when user is not authenticated', async () => {
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw new Response('Unauthorized', { status: 401 });
 		});
 

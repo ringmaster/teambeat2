@@ -1,13 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { verifyPasskeyRegistration } from '$lib/server/auth/webauthn.js';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
   try {
     // Require authenticated user
-    const sessionUser = requireUser({ cookies } as any);
+    const sessionUser = requireUserForApi({ cookies } as any);
 
     if (!sessionUser) {
       return json({ error: 'Unauthorized' }, { status: 401 });

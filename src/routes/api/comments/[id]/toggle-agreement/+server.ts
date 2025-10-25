@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db';
 import { comments, cards, boards, columns, seriesMembers } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { broadcastUpdatePresentation } from '$lib/server/sse/broadcast.js';
 
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const { id: commentId } = event.params;
     const { is_agreement } = await event.request.json();
 

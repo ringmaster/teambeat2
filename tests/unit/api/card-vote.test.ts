@@ -4,7 +4,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -37,7 +37,7 @@ vi.mock('../../../src/lib/server/sse/broadcast', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { findCardById } from '../../../src/lib/server/repositories/card';
 import { castVote, getVoteContext, getVoteCountsByCard } from '../../../src/lib/server/repositories/vote';
 import { updatePresence } from '../../../src/lib/server/repositories/presence';
@@ -102,7 +102,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext());
 		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(mockCard as any);
@@ -153,7 +153,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 1 }));
 		vi.mocked(castVote).mockResolvedValue({ action: 'removed', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(mockCard as any);
@@ -176,7 +176,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 400 when request body is invalid JSON', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -195,7 +195,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 400 when delta is not 1 or -1', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'POST',
@@ -212,7 +212,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 404 when card is not found', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -236,7 +236,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			isGroupLead: false
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ card: subordinateCard }));
 
 		const event = createMockRequestEvent({
@@ -254,7 +254,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 403 when user does not have access to series', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ userRole: null }));
 
 		const event = createMockRequestEvent({
@@ -280,7 +280,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ board: boardWithoutVoting }));
 
 		const event = createMockRequestEvent({
@@ -298,7 +298,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 400 when user has no votes remaining', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 5 }));
 
 		const event = createMockRequestEvent({
@@ -316,7 +316,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 400 when trying to remove votes but user has none', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ currentVoteCount: 0 }));
 
 		const event = createMockRequestEvent({
@@ -356,7 +356,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			'card-2': 1
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext());
 		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(mockCard as any);
@@ -407,7 +407,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext({ board: boardWithHiddenVotes }));
 		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(mockCard as any);
@@ -430,7 +430,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 404 when card is not found after vote update', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext());
 		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(null); // Card not found after vote
@@ -451,7 +451,7 @@ describe('POST /api/cards/[id]/vote', () => {
 
 	it('should handle authentication errors by rethrowing Response', async () => {
 		const authError = new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-		vi.mocked(requireUser).mockImplementation(() => {
+		vi.mocked(requireUserForApi).mockImplementation(() => {
 			throw authError;
 		});
 
@@ -465,7 +465,7 @@ describe('POST /api/cards/[id]/vote', () => {
 	});
 
 	it('should return 500 on general failure', async () => {
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockRejectedValue(new Error('Database error'));
 
 		const event = createMockRequestEvent({
@@ -502,7 +502,7 @@ describe('POST /api/cards/[id]/vote', () => {
 			}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getVoteContext).mockResolvedValue(createMockVoteContext());
 		vi.mocked(castVote).mockResolvedValue({ action: 'added', voteId: 'vote-1' });
 		vi.mocked(findCardById).mockResolvedValue(mockCard as any);

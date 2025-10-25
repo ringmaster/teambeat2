@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { handleApiError } from '$lib/server/api-utils.js';
 import { findSceneById } from '$lib/server/repositories/scene.js';
@@ -13,7 +13,7 @@ import { broadcastScorecardDetached } from '$lib/server/sse/broadcast.js';
 // DELETE /api/scene-scorecards/[id] - Detach scorecard from scene
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const sceneScorecardId = event.params.id;
 
     // Get scene scorecard to verify it exists

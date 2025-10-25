@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth';
+import { requireUserForApi } from '$lib/server/auth';
 import { findBoardById, startBoardTimer, stopBoardTimer, getBoardTimer, updateBoardTimer, clearTimerVotes, broadcastTimerUpdate } from '$lib/server/repositories/board';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series';
 
 export const POST: RequestHandler = async (event) => {
-  const user = requireUser(event);
+  const user = requireUserForApi(event);
   const boardId = event.params.id;
 
   try {
@@ -52,7 +52,7 @@ export const POST: RequestHandler = async (event) => {
 };
 
 export const PUT: RequestHandler = async (event) => {
-  const user = requireUser(event);
+  const user = requireUserForApi(event);
   const boardId = event.params.id;
 
   try {
@@ -88,7 +88,7 @@ export const PUT: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-  const user = requireUser(event);
+  const user = requireUserForApi(event);
   const boardId = event.params.id;
 
   try {

@@ -19,70 +19,62 @@ export const load: PageServerLoad = async (event) => {
     'pragma': 'no-cache'
   });
 
-  try {
-    // Require authenticated user
-    const user = requireUser(event);
+  // Require authenticated user (throws redirect if not authenticated)
+  const user = requireUser(event);
 
-    // Update user presence on this board
-    await refreshPresenceOnBoardAction(event);
+  // Update user presence on this board
+  await refreshPresenceOnBoardAction(event);
 
-    // Load board with full details
-    const board = await getBoardWithDetails(params.id);
-    if (!board) {
-      throw error(404, 'Board not found');
-    }
-
-    // Check if user has access to this board and get their role
-    let userRole = await getUserRoleInSeries(user.userId, board.seriesId);
-    if (!userRole) {
-      // Only auto-add users to active boards
-      if (board.status === 'active') {
-        await addUserToSeries(board.seriesId, user.userId, 'member');
-        userRole = 'member';
-      } else {
-        // User not a member and board is not active
-        throw error(404, 'Board not found');
-      }
-    }
-
-    // Non-admin/facilitator users cannot access draft boards
-    if (board.status === 'draft' && !['admin', 'facilitator'].includes(userRole)) {
-      throw error(404, 'Board not found');
-    }
-
-    // Load all necessary data in parallel
-    const [agreements, templates, lastHealthCheckDate, scorecardCountsByScene] = await Promise.all([
-      findAgreementsByBoardId(params.id),
-      Promise.resolve(getTemplateList()),
-      board.seriesId ? getLastHealthCheckDate(board.seriesId) : Promise.resolve(null),
-      getScorecardCountsByBoard(params.id)
-    ]);
-
-    // Create page title
-    const pageTitle = board.series
-      ? `${board.name} - ${board.series} - TeamBeat`
-      : `${board.name} - TeamBeat`;
-
-    // Create description for OpenGraph
-    const description = 'Collaborative team meetings for agile teams';
-
-    return {
-      board,
-      cards: board.cards || [],
-      agreements: agreements || [],
-      templates: templates || [],
-      user,
-      userRole,
-      lastHealthCheckDate,
-      scorecardCountsByScene,
-      pageTitle,
-      description
-    };
-  } catch (err) {
-    console.error('Error loading board:', err);
-    if (err instanceof Response) {
-      throw err;
-    }
-    throw error(500, 'Failed to load board');
+  // Load board with full details
+  const board = await getBoardWithDetails(params.id);
+  if (!board) {
+    throw error(404, 'Board not found');
   }
+
+  // Check if user has access to this board and get their role
+  let userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+  if (!userRole) {
+    // Only auto-add users to active boards
+    if (board.status === 'active') {
+      await addUserToSeries(board.seriesId, user.userId, 'member');
+      userRole = 'member';
+    } else {
+      // User not a member and board is not active
+      throw error(404, 'Board not found');
+    }
+  }
+
+  // Non-admin/facilitator users cannot access draft boards
+  if (board.status === 'draft' && !['admin', 'facilitator'].includes(userRole)) {
+    throw error(404, 'Board not found');
+  }
+
+  // Load all necessary data in parallel
+  const [agreements, templates, lastHealthCheckDate, scorecardCountsByScene] = await Promise.all([
+    findAgreementsByBoardId(params.id),
+    Promise.resolve(getTemplateList()),
+    board.seriesId ? getLastHealthCheckDate(board.seriesId) : Promise.resolve(null),
+    getScorecardCountsByBoard(params.id)
+  ]);
+
+  // Create page title
+  const pageTitle = board.series
+    ? `${board.name} - ${board.series} - TeamBeat`
+    : `${board.name} - TeamBeat`;
+
+  // Create description for OpenGraph
+  const description = 'Collaborative team meetings for agile teams';
+
+  return {
+    board,
+    cards: board.cards || [],
+    agreements: agreements || [],
+    templates: templates || [],
+    user,
+    userRole,
+    lastHealthCheckDate,
+    scorecardCountsByScene,
+    pageTitle,
+    description
+  };
 };

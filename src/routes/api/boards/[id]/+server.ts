@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardStatus, updateBoardSettings, deleteBoard } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
 import { broadcastBoardUpdated } from '$lib/server/sse/broadcast.js';
@@ -19,7 +19,7 @@ const updateBoardSchema = z.object({
 
 export const GET: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const boardId = event.params.id;
 
 		// Update user presence on this board
@@ -69,7 +69,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const PATCH: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const boardId = event.params.id;
 		const body = await event.request.json();
 		const data = updateBoardSchema.parse(body);
@@ -135,7 +135,7 @@ export const PATCH: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
 	try {
-		const user = requireUser(event);
+		const user = requireUserForApi(event);
 		const boardId = event.params.id;
 
 		const board = await getBoardWithDetails(boardId);

@@ -7,7 +7,7 @@ import { SCENE_FLAGS } from '../../../src/lib/scene-flags';
 
 // Mock the auth module
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -71,7 +71,7 @@ vi.mock('../../../src/lib/server/db/index', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import { findAgreementById } from '../../../src/lib/server/repositories/agreement';
 import { findCommentById } from '../../../src/lib/server/repositories/comment';
 import { createCard } from '../../../src/lib/server/repositories/card';
@@ -121,7 +121,7 @@ describe('POST /api/agreements/[id]/copy-to-card', () => {
 
 		const enrichedCard = { ...mockCard, reactionCount: 0, commentCount: 0 };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findAgreementById).mockResolvedValue(mockAgreement);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
@@ -169,7 +169,7 @@ describe('POST /api/agreements/[id]/copy-to-card', () => {
 			hiddenColumnsByScene: {}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findAgreementById).mockResolvedValue(mockAgreement);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
@@ -214,7 +214,7 @@ describe('POST /api/agreements/[id]/copy-to-card', () => {
 			hiddenColumnsByScene: {}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findAgreementById).mockResolvedValue(mockAgreement);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
@@ -257,7 +257,7 @@ describe('POST /api/agreements/[id]/copy-to-card', () => {
 			]
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findAgreementById).mockResolvedValue(mockAgreement);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('member');
@@ -280,7 +280,7 @@ describe('POST /api/agreements/[id]/copy-to-card', () => {
 	it('returns 404 when agreement not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(findAgreementById).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -341,7 +341,7 @@ describe('POST /api/comments/[id]/copy-to-card', () => {
 
 		const enrichedCard = { ...mockCard, reactionCount: 0, commentCount: 0 };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(createCard).mockResolvedValue(mockCard);
@@ -413,7 +413,7 @@ describe('POST /api/comments/[id]/copy-to-card', () => {
 			hiddenColumnsByScene: {}
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -495,7 +495,7 @@ describe('POST /api/health-questions/[questionId]/copy-to-card', () => {
 			content: '**How is the team doing?**\n\n_Rate team health_\n\n**Average:** 3.00 (0 responses)\n\n**Distribution:** 🔴 Red: 0 | 🟡 Yellow: 0 | 🟢 Green: 0'
 		};
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getSceneFlags).mockResolvedValue([SCENE_FLAGS.ALLOW_ADD_CARDS]);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 		vi.mocked(createCard).mockResolvedValue(mockCard);
@@ -577,7 +577,7 @@ describe('POST /api/health-questions/[questionId]/copy-to-card', () => {
 			seriesId: 'series-1'
 		}];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getSceneFlags).mockResolvedValue([]); // No ALLOW_ADD_CARDS flag
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -629,7 +629,7 @@ describe('POST /api/health-questions/[questionId]/copy-to-card', () => {
 			seriesId: 'series-1'
 		}];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getSceneFlags).mockResolvedValue([SCENE_FLAGS.ALLOW_ADD_CARDS]);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
@@ -664,7 +664,7 @@ describe('POST /api/health-questions/[questionId]/copy-to-card', () => {
 	it('returns 404 when question not found', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		vi.mocked(db.select).mockReturnValue({
 			from: vi.fn(() => ({

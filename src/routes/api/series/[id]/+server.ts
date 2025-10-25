@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { findSeriesById, getUserRoleInSeries, getSeriesMembers } from '$lib/server/repositories/board-series.js';
 import { db } from '$lib/server/db/index.js';
 import { boardSeries, seriesMembers, boards, columns, scenes, cards, votes, comments } from '$lib/server/db/schema.js';
@@ -8,7 +8,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const seriesId = event.params.id;
 
     const [series, userRole, members] = await Promise.all([
@@ -51,7 +51,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const seriesId = event.params.id;
     const { name } = await event.request.json();
 
@@ -104,7 +104,7 @@ export const PUT: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const seriesId = event.params.id;
 
     console.log(`Attempting to delete series: ${seriesId} by user: ${user.userId}`);

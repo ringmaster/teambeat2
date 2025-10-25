@@ -9,7 +9,7 @@ import { createMockRequestEvent } from '../helpers/mock-request';
 
 // Mock auth modules
 vi.mock('../../../src/lib/server/auth/index', () => ({
-	requireUser: vi.fn()
+	requireUserForApi: vi.fn()
 }));
 
 // Mock repositories
@@ -27,7 +27,7 @@ vi.mock('../../../src/lib/server/repositories/user', () => ({
 }));
 
 // Import mocked modules
-import { requireUser } from '../../../src/lib/server/auth/index';
+import { requireUserForApi } from '../../../src/lib/server/auth/index';
 import {
 	getUserRoleInSeries,
 	getSeriesMembers,
@@ -51,7 +51,7 @@ describe('GET /api/series/[id]/users', () => {
 			{ userId: 'user-3', email: 'member@example.com', name: 'Member', role: 'member' }
 		];
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(getSeriesMembers).mockResolvedValue(mockMembers);
 
@@ -72,7 +72,7 @@ describe('GET /api/series/[id]/users', () => {
 	it('should fail when user has no access to series', async () => {
 		const mockUser = { userId: 'user-1', email: 'test@example.com', name: 'Test User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue(null);
 
 		const event = createMockRequestEvent({
@@ -98,7 +98,7 @@ describe('PUT /api/series/[id]/users', () => {
 	it('should update user role successfully as admin', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('member');
 		vi.mocked(updateUserRoleInSeries).mockResolvedValue(undefined);
 
@@ -122,7 +122,7 @@ describe('PUT /api/series/[id]/users', () => {
 	it('should fail when non-admin tries to change roles', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
 		const event = createMockRequestEvent({
@@ -146,7 +146,7 @@ describe('PUT /api/series/[id]/users', () => {
 	it('should fail when trying to change role of another admin', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('admin');
 
 		const event = createMockRequestEvent({
@@ -170,7 +170,7 @@ describe('PUT /api/series/[id]/users', () => {
 	it('should allow admin to change their own role', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('admin');
 		vi.mocked(updateUserRoleInSeries).mockResolvedValue(undefined);
 
@@ -194,7 +194,7 @@ describe('PUT /api/series/[id]/users', () => {
 	it('should fail when user not in series', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce(null);
 
 		const event = createMockRequestEvent({
@@ -218,7 +218,7 @@ describe('PUT /api/series/[id]/users', () => {
 	it('should validate role is one of admin, facilitator, or member', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 
 		const event = createMockRequestEvent({
@@ -249,7 +249,7 @@ describe('POST /api/series/[id]/users', () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 		const mockTargetUser = { id: '00000000-0000-4000-8000-000000000002', email: 'newuser@example.com', name: 'New User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce(null);
 		vi.mocked(findUserByEmail).mockResolvedValue(mockTargetUser);
 		vi.mocked(hasActiveBoards).mockResolvedValue(true);
@@ -275,7 +275,7 @@ describe('POST /api/series/[id]/users', () => {
 	it('should fail when non-admin tries to add user', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
 		const event = createMockRequestEvent({
@@ -298,7 +298,7 @@ describe('POST /api/series/[id]/users', () => {
 	it('should fail when user not found by email', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('admin');
 		vi.mocked(findUserByEmail).mockResolvedValue(null);
 
@@ -323,7 +323,7 @@ describe('POST /api/series/[id]/users', () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 		const mockTargetUser = { id: '00000000-0000-4000-8000-000000000002', email: 'existing@example.com', name: 'Existing User' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('member');
 		vi.mocked(findUserByEmail).mockResolvedValue(mockTargetUser);
 
@@ -353,7 +353,7 @@ describe('DELETE /api/series/[id]/users', () => {
 	it('should remove user from series successfully as admin', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('member');
 		vi.mocked(removeUserFromSeries).mockResolvedValue(undefined);
 
@@ -373,7 +373,7 @@ describe('DELETE /api/series/[id]/users', () => {
 	it('should fail when non-admin tries to remove user', async () => {
 		const mockUser = { userId: 'user-1', email: 'facilitator@example.com', name: 'Facilitator' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue('facilitator');
 
 		const event = createMockRequestEvent({
@@ -393,7 +393,7 @@ describe('DELETE /api/series/[id]/users', () => {
 	it('should fail when trying to remove user not in series', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce(null);
 
 		const event = createMockRequestEvent({
@@ -413,7 +413,7 @@ describe('DELETE /api/series/[id]/users', () => {
 	it('should fail when trying to remove another admin', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('admin');
 
 		const event = createMockRequestEvent({
@@ -433,7 +433,7 @@ describe('DELETE /api/series/[id]/users', () => {
 	it('should allow admin to remove themselves', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getUserRoleInSeries).mockResolvedValueOnce('admin').mockResolvedValueOnce('admin');
 		vi.mocked(removeUserFromSeries).mockResolvedValue(undefined);
 
@@ -453,7 +453,7 @@ describe('DELETE /api/series/[id]/users', () => {
 	it('should fail when userId not provided', async () => {
 		const mockUser = { userId: '00000000-0000-4000-8000-000000000001', email: 'admin@example.com', name: 'Admin' };
 
-		vi.mocked(requireUser).mockReturnValue(mockUser);
+		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 
 		const event = createMockRequestEvent({
 			method: 'DELETE',

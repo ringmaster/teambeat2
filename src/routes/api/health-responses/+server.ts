@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { createOrUpdateHealthResponse } from '$lib/server/repositories/health.js';
 import { findSceneById } from '$lib/server/repositories/scene.js';
@@ -17,7 +17,7 @@ const createResponseSchema = z.object({
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const body = await event.request.json();
     const data = createResponseSchema.parse(body);
 

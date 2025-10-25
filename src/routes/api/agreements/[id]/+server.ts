@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import {
   findAgreementById,
   updateAgreement,
@@ -20,7 +20,7 @@ const updateAgreementSchema = z.object({
 
 export const PUT: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const agreementId = event.params.id;
     const body = await event.request.json();
     const data = updateAgreementSchema.parse(body);
@@ -70,7 +70,7 @@ export const PUT: RequestHandler = async (event) => {
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const agreementId = event.params.id;
 
     const agreement = await findAgreementById(agreementId);

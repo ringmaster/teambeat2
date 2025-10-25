@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { getBoardWithDetails, updateBoardSettings } from '$lib/server/repositories/board.js';
 import { getUserRoleInSeries } from '$lib/server/repositories/board-series.js';
 import { clearBoardVotes } from '$lib/server/repositories/vote.js';
@@ -9,7 +9,7 @@ import { getSceneCapability, getCurrentScene } from '$lib/utils/scene-capability
 
 export const DELETE: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
 
     const board = await getBoardWithDetails(boardId);

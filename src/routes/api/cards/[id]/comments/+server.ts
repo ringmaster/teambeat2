@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import { db } from '$lib/server/db';
 import { comments, cards, boards, users, columns } from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { getUserDisplayName } from '$lib/utils/animalNames';
 
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const cardId = event.params.id;
 
     // Get card with board info to verify it exists and user has access

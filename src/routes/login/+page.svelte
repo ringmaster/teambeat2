@@ -11,14 +11,14 @@
     let password: string = $state("");
     let error: string = $state("");
     let loading: boolean = $state(false);
-    let redirectBoardId: string = $state("");
+    let redirectUrl: string = $state("");
 
     // Validate redirect parameter to prevent open redirect attacks
-    function validateRedirectBoardId(redirect: string | null): string {
+    function validateRedirect(redirect: string | null): string {
         if (!redirect) return "";
-        // Only allow alphanumeric characters, hyphens, and underscores (valid board IDs)
-        // This prevents URLs, path traversal, and XSS attempts
-        if (/^[a-zA-Z0-9_-]+$/.test(redirect)) {
+        // Allow internal paths only (must start with /)
+        // This prevents external URLs and XSS attempts
+        if (redirect.startsWith('/') && !redirect.startsWith('//')) {
             return redirect;
         }
         return "";
@@ -26,15 +26,15 @@
 
     // Check if user is already logged in and redirect to dashboard
     onMount(async () => {
-        // Get and validate redirect board ID from query string
-        redirectBoardId = validateRedirectBoardId($page.url.searchParams.get("redirect"));
+        // Get and validate redirect URL from query string
+        redirectUrl = validateRedirect($page.url.searchParams.get("redirect"));
 
         try {
             const response = await fetch("/api/auth/me");
             if (response.ok) {
                 // User is already authenticated, redirect appropriately
-                if (redirectBoardId) {
-                    goto(resolve(`/board/${redirectBoardId}`));
+                if (redirectUrl) {
+                    goto(redirectUrl);
                 } else {
                     goto(resolve("/"));
                 }
@@ -64,9 +64,9 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Redirect to board or dashboard
-                if (redirectBoardId) {
-                    window.location.href = `/board/${redirectBoardId}`;
+                // Redirect to requested page or dashboard
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
                 } else {
                     window.location.href = "/";
                 }
@@ -229,7 +229,7 @@
         <div class="login-footer">
             <p class="text-muted">
                 Don't have an account?
-                <a href={resolve(redirectBoardId ? `/register?redirect=${redirectBoardId}` : "/register")} class="login-signup-link"
+                <a href={resolve(redirectUrl ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : "/register")} class="login-signup-link"
                     >Sign up</a
                 >
             </p>

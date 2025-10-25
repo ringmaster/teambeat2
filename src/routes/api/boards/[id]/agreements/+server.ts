@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireUser } from '$lib/server/auth/index.js';
+import { requireUserForApi } from '$lib/server/auth/index.js';
 import {
   createAgreement,
   findAgreementsByBoardId,
@@ -20,7 +20,7 @@ const createAgreementSchema = z.object({
 
 export const GET: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
 
     await refreshPresenceOnBoardAction(event);
@@ -54,7 +54,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
   try {
-    const user = requireUser(event);
+    const user = requireUserForApi(event);
     const boardId = event.params.id;
     const body = await event.request.json();
     const data = createAgreementSchema.parse(body);
