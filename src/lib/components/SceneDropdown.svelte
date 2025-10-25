@@ -1,6 +1,7 @@
 <script lang="ts">
     import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
     import { onMount, onDestroy } from "svelte";
+    import { browser } from "$app/environment";
 
     interface Props {
         board: any;
@@ -29,17 +30,17 @@
     }: Props = $props();
 
     // Button should only be disabled if board is completed or archived
-    const isButtonDisabled = $derived(() => {
-        return false; //board.status === "completed" || board.status === "archived";
-    });
+    const isButtonDisabled = $derived(false); // board.status === "completed" || board.status === "archived"
 
     // Check if a scene would be skipped based on its display rule
     function wouldSceneBeSkipped(scene: any): boolean {
+        // Only evaluate display rules in the browser to avoid SSR issues
+        if (!browser) return false;
         return !evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene);
     }
 
     function handleNextScene() {
-        if (!isButtonDisabled() && onNextScene) {
+        if (!isButtonDisabled && onNextScene) {
             onNextScene();
         }
     }
@@ -54,11 +55,15 @@
     }
 
     onMount(() => {
-        window.addEventListener('keydown', handleKeydown);
+        if (browser) {
+            window.addEventListener('keydown', handleKeydown);
+        }
     });
 
     onDestroy(() => {
-        window.removeEventListener('keydown', handleKeydown);
+        if (browser) {
+            window.removeEventListener('keydown', handleKeydown);
+        }
     });
 </script>
 
@@ -120,7 +125,7 @@
     <button
         class="toolbar-button toolbar-button-primary toolbar-button-right cooltipz--bottom"
         onclick={handleNextScene}
-        disabled={isButtonDisabled()}
+        disabled={isButtonDisabled}
         aria-label="Next scene (Ctrl+G)"
         data-testid="next-scene-button"
     >

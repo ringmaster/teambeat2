@@ -1,64 +1,78 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { boards, boardSeries } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { requireUser } from '$lib/server/auth/index.js';
+import { getBoardWithDetails } from '$lib/server/repositories/board.js';
+import { getUserRoleInSeries, addUserToSeries } from '$lib/server/repositories/board-series.js';
+import { findAgreementsByBoardId } from '$lib/server/repositories/agreement.js';
 import { getLastHealthCheckDate } from '$lib/server/repositories/health';
 import { getScorecardCountsByBoard } from '$lib/server/repositories/scene-scorecard';
+import { getTemplateList } from '$lib/server/templates.js';
+import { refreshPresenceOnBoardAction } from '$lib/server/middleware/presence.js';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async (event) => {
+  const { params, setHeaders } = event;
+
+  // Set cache control headers to prevent aggressive caching of dynamic board data
+  setHeaders({
+    'cache-control': 'private, no-cache, no-store, must-revalidate',
+    'expires': '0',
+    'pragma': 'no-cache'
+  });
+
   try {
-    // Get board data with series information
-    const boardData = await db
-      .select({
-        id: boards.id,
-        name: boards.name,
-        status: boards.status,
-        createdAt: boards.createdAt,
-        seriesId: boards.seriesId,
-        seriesName: boardSeries.name,
-        seriesDescription: boardSeries.description
-      })
-      .from(boards)
-      .leftJoin(boardSeries, eq(boards.seriesId, boardSeries.id))
-      .where(eq(boards.id, params.id))
-      .limit(1);
+    // Require authenticated user
+    const user = requireUser(event);
 
-    if (!boardData.length) {
+    // Update user presence on this board
+    await refreshPresenceOnBoardAction(event);
+
+    // Load board with full details
+    const board = await getBoardWithDetails(params.id);
+    if (!board) {
       throw error(404, 'Board not found');
     }
 
-    const board = boardData[0];
-
-    // Get the most recent health check date if this board is part of a series
-    let lastHealthCheckDate: string | null = null;
-    if (board.seriesId) {
-      lastHealthCheckDate = await getLastHealthCheckDate(board.seriesId);
+    // Check if user has access to this board and get their role
+    let userRole = await getUserRoleInSeries(user.userId, board.seriesId);
+    if (!userRole) {
+      // Only auto-add users to active boards
+      if (board.status === 'active') {
+        await addUserToSeries(board.seriesId, user.userId, 'member');
+        userRole = 'member';
+      } else {
+        // User not a member and board is not active
+        throw error(404, 'Board not found');
+      }
     }
 
-    // Get scorecard counts by scene for this board
-    const scorecardCountsByScene = await getScorecardCountsByBoard(params.id);
+    // Non-admin/facilitator users cannot access draft boards
+    if (board.status === 'draft' && !['admin', 'facilitator'].includes(userRole)) {
+      throw error(404, 'Board not found');
+    }
+
+    // Load all necessary data in parallel
+    const [agreements, templates, lastHealthCheckDate, scorecardCountsByScene] = await Promise.all([
+      findAgreementsByBoardId(params.id),
+      Promise.resolve(getTemplateList()),
+      board.seriesId ? getLastHealthCheckDate(board.seriesId) : Promise.resolve(null),
+      getScorecardCountsByBoard(params.id)
+    ]);
 
     // Create page title
-    const pageTitle = board.seriesName
-      ? `${board.name} - ${board.seriesName} - TeamBeat`
+    const pageTitle = board.series
+      ? `${board.name} - ${board.series} - TeamBeat`
       : `${board.name} - TeamBeat`;
 
     // Create description for OpenGraph
-    const description = board.seriesDescription ?
-      `${board.seriesDescription} - Collaborative team meeting board` :
-      'Collaborative team meetings for agile teams';
+    const description = 'Collaborative team meetings for agile teams';
 
     return {
-      board: {
-        id: board.id,
-        name: board.name,
-        status: board.status,
-        createdAt: board.createdAt,
-        seriesId: board.seriesId,
-        seriesName: board.seriesName,
-        seriesDescription: board.seriesDescription
-      },
+      board,
+      cards: board.cards || [],
+      agreements: agreements || [],
+      templates: templates || [],
+      user,
+      userRole,
       lastHealthCheckDate,
       scorecardCountsByScene,
       pageTitle,
@@ -66,6 +80,9 @@ export const load: PageServerLoad = async ({ params }) => {
     };
   } catch (err) {
     console.error('Error loading board:', err);
+    if (err instanceof Response) {
+      throw err;
+    }
     throw error(500, 'Failed to load board');
   }
 };

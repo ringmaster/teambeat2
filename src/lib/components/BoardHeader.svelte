@@ -170,7 +170,7 @@
                         {agreements}
                         {lastHealthCheckDate}
                         {scorecardCountsByScene}
-                        {showSceneDropdown}
+                        bind:showSceneDropdown
                         {onSceneChange}
                         {onNextScene}
                         {onShowSceneDropdown}

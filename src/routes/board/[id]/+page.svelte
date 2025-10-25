@@ -29,6 +29,11 @@
     interface Props {
         data: {
             board: any;
+            cards: any[];
+            agreements: any[];
+            templates: any[];
+            user: any;
+            userRole: string;
             lastHealthCheckDate: string | null;
             scorecardCountsByScene: Record<string, number>;
             pageTitle: string;
@@ -53,12 +58,12 @@
 
     const { data }: Props = $props();
 
-    let board: any = $state(null);
-    let cards: any[] = $state([]);
-    let user: any = $state(null);
-    let userRole = $state("");
+    let board: any = $state(data.board);
+    let cards: any[] = $state(data.cards);
+    let user: any = $state(data.user);
+    let userRole = $state(data.userRole);
     let notesLockStatus = $state(null);
-    let loading = $state(true);
+    let loading = $state(false);
     let eventSource: SSEClient | null = null;
     let boardId = $state("");
     let clientId = $state("");
@@ -130,9 +135,9 @@
 
     // Comment state for present mode
     let comments = $state<any[]>([]);
-    let agreements = $state<any[]>([]);
-    let lastHealthCheckDate = $state<string | null>(null);
-    let scorecardCountsByScene = $state<Record<string, number>>({});
+    let agreements = $state<any[]>(data.agreements);
+    let lastHealthCheckDate = $state<string | null>(data.lastHealthCheckDate);
+    let scorecardCountsByScene = $state<Record<string, number>>(data.scorecardCountsByScene || {});
 
     // Poll/Timer state
     let showPollDropdown = $state(false);
@@ -174,48 +179,16 @@
     });
 
     // Templates
-    let templates: any[] = $state([]);
+    let templates: any[] = $state(data.templates);
 
     onMount(async () => {
         boardId = $page.params.id!;
-        lastHealthCheckDate = data.lastHealthCheckDate;
-        scorecardCountsByScene = data.scorecardCountsByScene || {};
 
         try {
-            // Load user info
-            const userResponse = await fetch("/api/auth/me");
-            if (!userResponse.ok) {
-                goto(resolve(`/login?redirect=${boardId}`));
-                return;
-            }
-            const userData = await userResponse.json();
-            user = userData.user;
-
-            // Load templates, board data, cards, and agreements
-            const [templatesData, boardData, cardsData, agreementsData] =
-                await Promise.all([
-                    boardApi.fetchTemplates(),
-                    boardApi.fetchBoard(boardId),
-                    boardApi.fetchCards(boardId),
-                    boardApi.fetchAgreements(boardId),
-                ]);
-
-            // Load templates
-            templates = templatesData.templates || [];
-
-            // Load board data
-            board = boardData.board;
-            userRole = boardData.userRole;
-
-            // Load cards and agreements (we need them for display rule evaluation)
-            cards = cardsData.cards || [];
-            agreements = agreementsData.agreements || [];
-
             // Set current scene if available, checking display rules
-            if (board.currentSceneId) {
-                const scenesData = await boardApi.fetchScenes(boardId);
-                const scenes = scenesData.scenes || [];
-                const requestedScene = scenes.find(
+            // Scenes are already loaded in board.scenes from server
+            if (board.currentSceneId && board.scenes) {
+                const requestedScene = board.scenes.find(
                     (s: any) => s.id === board.currentSceneId,
                 );
 
@@ -224,7 +197,7 @@
                     currentScene = requestedScene;
                 } else {
                     // Find the first valid scene
-                    for (const scene of scenes) {
+                    for (const scene of board.scenes) {
                         if (evaluateDisplayRule(scene, board, cards, agreements, lastHealthCheckDate, scorecardCountsByScene)) {
                             currentScene = scene;
                             // Update the board's current scene
@@ -262,10 +235,8 @@
 
             // Set up SSE connection
             setupSSE();
-            loading = false;
         } catch (error) {
             console.error("Error loading board:", error);
-            loading = false;
         }
     });
 
