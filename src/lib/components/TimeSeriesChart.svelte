@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy, onMount } from "svelte";
-import { browser } from "$app/environment";
 import uPlot from "uplot";
+import { browser } from "$app/environment";
 import "uplot/dist/uPlot.min.css";
 
 interface Props {

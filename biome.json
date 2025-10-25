@@ -1,7 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.3.0/schema.json",
 	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-	"files": { "includes": ["**", "!!**/dist"] },
 	"formatter": { "enabled": true, "indentStyle": "tab" },
 	"linter": {
 		"enabled": true,
@@ -82,7 +81,16 @@
 				"useNamespaceKeyword": "error"
 			}
 		},
-		"includes": ["**", "!build/", "!.svelte-kit/", "!dist/", "!node_modules/"]
+		"includes": [
+			"**",
+			"!build/",
+			"!.svelte-kit/",
+			"!dist/",
+			"!node_modules/",
+			"!drizzle/meta/",
+			"!drizzle/postgres/",
+			"!drizzle/sqlite/"
+		]
 	},
 	"javascript": {
 		"formatter": { "quoteStyle": "double" },
@@ -217,6 +225,14 @@
 	},
 	"overrides": [
 		{
+			"includes": ["src/app.d.ts"],
+			"linter": {
+				"rules": {
+					"style": { "noNamespace": "off" }
+				}
+			}
+		},
+		{
 			"includes": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 			"linter": {
 				"rules": {
@@ -253,7 +269,12 @@
 			"javascript": { "globals": [] },
 			"linter": {
 				"rules": {
-					"correctness": { "noInnerDeclarations": "off", "noSelfAssign": "off" }
+					"correctness": {
+						"noInnerDeclarations": "off",
+						"noSelfAssign": "off",
+						"noUndeclaredVariables": "off",
+						"noUnusedVariables": "off"
+					}
 				}
 			}
 		},

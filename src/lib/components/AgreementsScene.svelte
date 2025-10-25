@@ -1,8 +1,8 @@
 <script lang="ts">
+import { browser } from "$app/environment";
 import { toastStore } from "$lib/stores/toast";
 import type { Board, Scene } from "$lib/types";
 import { getSceneCapability } from "$lib/utils/scene-capability";
-import { browser } from "$app/environment";
 import Icon from "./ui/Icon.svelte";
 
 interface Props {

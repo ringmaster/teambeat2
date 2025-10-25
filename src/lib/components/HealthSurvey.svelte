@@ -149,7 +149,10 @@ onMount(() => {
 			}
 		};
 
-		window.addEventListener("scene_updated", handleSceneUpdate as EventListener);
+		window.addEventListener(
+			"scene_updated",
+			handleSceneUpdate as EventListener,
+		);
 
 		return () => {
 			window.removeEventListener(
