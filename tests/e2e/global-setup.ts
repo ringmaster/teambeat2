@@ -2,11 +2,12 @@ import type { FullConfig } from "@playwright/test";
 import { setTestUserIds, TestUsers } from "./fixtures/auth-helpers";
 import { TestDatabase } from "./fixtures/test-db";
 
-async function globalSetup(_config: FullConfig) {
+async function globalSetup(config: FullConfig) {
 	console.log("Setting up global test environment...");
 
-	// Create a consistent test database path that the web server will use
-	const testDbPath = "./teambeat-test.db";
+	// Use a fixed test database path so webServer config can reference it
+	// This gets cleaned up in global teardown
+	const testDbPath = "/tmp/teambeat-playwright-test.db";
 	process.env.DATABASE_URL = testDbPath;
 
 	// Initialize test database and run migrations

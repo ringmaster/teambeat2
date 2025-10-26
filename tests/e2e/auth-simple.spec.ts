@@ -10,7 +10,9 @@ test.describe("Simple Authentication Tests", () => {
 		await page.goto("/login");
 
 		// Check that login page elements are present
-		await expect(page.locator('h2:has-text("Welcome back")')).toBeVisible();
+		await expect(
+			page.locator('h2:has-text("Log in to TeamBeat")'),
+		).toBeVisible();
 		await expect(page.locator("#email")).toBeVisible();
 		await expect(page.locator("#password")).toBeVisible();
 		await expect(page.locator('button[type="submit"]')).toBeVisible();
@@ -98,7 +100,9 @@ test.describe("Simple Authentication Tests", () => {
 	test("should navigate between login and register pages", async ({ page }) => {
 		// Start at login
 		await page.goto("/login");
-		await expect(page.locator('h2:has-text("Welcome back")')).toBeVisible();
+		await expect(
+			page.locator('h2:has-text("Log in to TeamBeat")'),
+		).toBeVisible();
 
 		// Navigate to register
 		await page.locator('a[href="/register"]').first().click();
@@ -108,7 +112,9 @@ test.describe("Simple Authentication Tests", () => {
 		// Navigate back to login
 		await page.click('a[href="/login"]');
 		await expect(page).toHaveURL(/.*login/);
-		await expect(page.locator('h2:has-text("Welcome back")')).toBeVisible();
+		await expect(
+			page.locator('h2:has-text("Log in to TeamBeat")'),
+		).toBeVisible();
 	});
 
 	test("should redirect to login when accessing protected pages", async ({

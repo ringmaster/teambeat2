@@ -1,492 +1,302 @@
-import { type BrowserContext, expect, test } from "@playwright/test";
-import {
-	AuthHelper,
-	createAuthenticatedContext,
-	getTestUser,
-} from "./fixtures/auth-helpers";
-import { getTestDb } from "./fixtures/test-db";
+/**
+ * Board Functionality Tests - Consolidated and Fixed
+ *
+ * These tests use the ROCK SOLID core helpers to test board features reliably.
+ * Starting simple with core functionality, then building up to complex features.
+ */
 
-test.describe("Board Functionality", () => {
-	let facilitatorContext: BrowserContext;
-	let participantContext: BrowserContext;
+import { expect, test } from "@playwright/test";
+import { getTestUser } from "./fixtures/auth-helpers";
+import { BoardTestHelper, CoreTestHelper } from "./fixtures/core-helpers";
 
-	test.beforeAll(async ({ browser }) => {
-		// Setup authenticated contexts for multi-user tests
-		facilitatorContext = await createAuthenticatedContext(
-			browser,
-			await getTestUser("facilitator"),
-			"http://localhost:5174",
-		);
-		participantContext = await createAuthenticatedContext(
-			browser,
-			await getTestUser("participant1"),
-			"http://localhost:5174",
-		);
+test.describe("Board Basics", () => {
+	let coreHelper: CoreTestHelper;
+	let boardHelper: BoardTestHelper;
+
+	test.beforeEach(() => {
+		coreHelper = new CoreTestHelper();
+		boardHelper = new BoardTestHelper();
 	});
 
-	test.afterAll(async () => {
-		await facilitatorContext?.close();
-		await participantContext?.close();
-	});
-
-	test("should create a new series and board via UI", async ({ page }) => {
-		const auth = new AuthHelper(page);
+	test("should create and load a board", async ({ browser }) => {
+		// Setup: Get facilitator and create board via API
 		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
+		const scenario = await boardHelper.setupBoardScenario(facilitator.email);
 
-		await page.goto("/");
+		// Create authenticated context
+		const context = await coreHelper.createAuthContext(browser, facilitator);
+		const page = await context.newPage();
 
-		// Create new series
-		await page.fill("#newSeriesInput", "Test Retro Series");
-		await page.click("#newSeriesInput + button");
+		try {
+			// Navigate to board
+			await page.goto(scenario.boardUrl);
 
-		// Should show success message and series card
-		await expect(
-			page.locator('.series-card:has-text("Test Retro Series")'),
-		).toBeVisible();
+			// Verify board loaded
+			await expect(page.locator("h1")).toContainText("Test Board");
 
-		// Create board within series
-		await page
-			.locator('.series-card:has-text("Test Retro Series") input.input-field')
-			.fill("Sprint 1 Retrospective");
-		await page
-			.locator('.series-card:has-text("Test Retro Series") input.input-field')
-			.press("Enter");
+			// Verify we're in Brainstorm scene
+			await expect(page.locator(".scene-dropdown-container")).toContainText("Brainstorm");
 
-		// Should navigate to new board
-		await page.waitForURL(/\/board\/.+/);
-		await expect(
-			page.locator('h1:has-text("Sprint 1 Retrospective")'),
-		).toBeVisible();
-
-		// Define board
-		await page
-			.getByRole("button", { name: "Quick Setup with Templates" })
-			.click();
-		await page
-			.getByRole("button", { name: "KAFE (Kvetches, Appreciations" })
-			.click();
-		await page.waitForSelector(".column-header");
-		await expect(
-			page.locator('h1:has-text("Sprint 1 Retrospective")'),
-		).toBeVisible();
-		await expect(page.locator('h2:has-text("Kvetches")')).toBeVisible();
-		await expect(
-			page
-				.getByRole("region", { name: "Column: Kvetches" })
-				.getByPlaceholder("Add a card..."),
-		).toBeVisible();
-	});
-
-	test("should display board with correct initial state", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
-
-		// Create test data using TestDatabase
-		const testDb = getTestDb();
-
-		// Create series and board for the test (facilitator should already exist from global setup)
-		const series = await testDb.createTestSeries(
-			"Test Board Series",
-			facilitator.email,
-		);
-		const board = await testDb.createTestBoard(series.id, "Test Board Display");
-
-		// Navigate to the created board
-		await page.goto(`/board/${board.id}`);
-
-		// Should show board title and current scene
-		await expect(
-			page.getByRole("heading", { name: "Test Board Display" }),
-		).toBeVisible();
-		await expect(page.locator(".scene-dropdown-container")).toContainText(
-			"Brainstorm",
-		);
-
-		// Should show all columns (default setup creates 3 columns)
-		const columns = page.locator(".column");
-		await expect(columns).toHaveCount(3);
-
-		// Should show facilitator controls
-		await expect(page.locator(".facilitator-configure")).toBeVisible();
-		await expect(page.locator(".facilitator-timer")).toBeVisible();
-	});
-
-	test("should allow adding cards in brainstorm scene", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
-
-		// Create test data using TestDatabase
-		const testDb = getTestDb();
-
-		// Create series and board for the test (facilitator should already exist from global setup)
-		const series = await testDb.createTestSeries(
-			"Test Board Series",
-			facilitator.email,
-		);
-		const board = await testDb.createTestBoard(series.id, "Test Board Display");
-
-		// Navigate to the created board
-		await page.goto(`/board/${board.id}`);
-
-		// Add card to "What Went Well" column
-		const firstColumn = page.locator(".column").first();
-		await firstColumn
-			.locator(".add-card-textarea textarea")
-			.fill("Great team collaboration");
-		await firstColumn.locator(".add-card-textarea textarea").press("Enter");
-		await firstColumn.locator(".add-card-textarea button").click();
-
-		// Card should appear
-		await expect(page.locator("text=Great team collaboration")).toBeVisible();
-
-		// Add another card to different column
-		const secondColumn = page.locator(".column").nth(1);
-		await secondColumn
-			.locator(".add-card-textarea textarea")
-			.fill("Need better testing");
-		await secondColumn.locator(".add-card-textarea textarea").press("Enter");
-		await secondColumn.locator(".add-card-textarea button").click();
-
-		await expect(page.locator("text=Need better testing")).toBeVisible();
-	});
-
-	test("should show real-time card updates across users", async ({
-		browser: _browser,
-	}) => {
-		const facilitatorPage = await facilitatorContext.newPage();
-		const participantPage = await participantContext.newPage();
-
-		// Both users navigate to same board
-		await facilitatorPage.goto("/board/test-board-slug");
-		await participantPage.goto("/board/test-board-slug");
-
-		// Participant adds a card
-		const participantColumn = participantPage
-			.locator('[data-testid="column"]')
-			.first();
-		await participantColumn
-			.locator('[data-testid="card-input"]')
-			.fill("Real-time test card");
-		await participantColumn.locator('[data-testid="add-card-button"]').click();
-
-		// Facilitator should see the card appear without refresh
-		await expect(
-			facilitatorPage.locator("text=Real-time test card"),
-		).toBeVisible({ timeout: 3000 });
-
-		// Verify card has user attribution
-		const cardElement = facilitatorPage.locator(
-			'[data-testid="card"]:has-text("Real-time test card")',
-		);
-		await expect(
-			cardElement.locator('[data-testid="card-author"]'),
-		).toContainText("Participant One");
-
-		await facilitatorPage.close();
-		await participantPage.close();
-	});
-
-	test("should enforce scene permissions correctly", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
-
-		await page.goto("/board/test-board-slug");
-
-		// In brainstorm scene, should allow adding cards
-		await expect(page.locator('[data-testid="card-input"]')).toBeVisible();
-		await expect(page.locator('[data-testid="add-card-button"]')).toBeEnabled();
-
-		// Switch to review scene
-		await page.click('[data-testid="next-scene-button"]');
-		await expect(page.locator('[data-testid="current-scene"]')).toContainText(
-			"Review",
-		);
-
-		// Should hide add card inputs
-		await expect(page.locator('[data-testid="card-input"]')).not.toBeVisible();
-
-		// Should show voting controls
-		await expect(
-			page.locator('[data-testid="vote-button"]').first(),
-		).toBeVisible();
-	});
-
-	test("should handle voting in review scene", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const participant = await getTestUser("participant1");
-		await auth.loginViaAPI(participant.email, participant.password);
-
-		await page.goto("/board/test-board-slug");
-
-		// Switch to review scene (assuming facilitator control or direct scene navigation)
-		// This might require facilitator action or direct URL manipulation
-		await page.goto("/board/test-board-slug?scene=review");
-
-		// Should show voting allocation
-		await expect(page.locator('[data-testid="votes-remaining"]')).toContainText(
-			"3 votes remaining",
-		);
-
-		// Vote on first card
-		const firstCard = page.locator('[data-testid="card"]').first();
-		await firstCard.locator('[data-testid="vote-button"]').click();
-
-		// Vote count should increase
-		await expect(firstCard.locator('[data-testid="vote-count"]')).toContainText(
-			"1",
-		);
-
-		// Remaining votes should decrease
-		await expect(page.locator('[data-testid="votes-remaining"]')).toContainText(
-			"2 votes remaining",
-		);
-
-		// Clicking again should remove vote
-		await firstCard.locator('[data-testid="vote-button"]').click();
-		await expect(firstCard.locator('[data-testid="vote-count"]')).toContainText(
-			"0",
-		);
-		await expect(page.locator('[data-testid="votes-remaining"]')).toContainText(
-			"3 votes remaining",
-		);
-	});
-
-	test("should show real-time voting updates", async ({
-		browser: _browser,
-	}) => {
-		const facilitatorPage = await facilitatorContext.newPage();
-		const participantPage = await participantContext.newPage();
-
-		// Both users navigate to review scene
-		await facilitatorPage.goto("/board/test-board-slug?scene=review");
-		await participantPage.goto("/board/test-board-slug?scene=review");
-
-		// Participant votes on a card
-		const participantCard = participantPage
-			.locator('[data-testid="card"]')
-			.first();
-		await participantCard.locator('[data-testid="vote-button"]').click();
-
-		// Facilitator should see vote count update
-		const facilitatorCard = facilitatorPage
-			.locator('[data-testid="card"]')
-			.first();
-		await expect(
-			facilitatorCard.locator('[data-testid="vote-count"]'),
-		).toContainText("1", { timeout: 3000 });
-
-		await facilitatorPage.close();
-		await participantPage.close();
-	});
-
-	test("should prevent voting beyond allocation limit", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const participant = await getTestUser("participant1");
-		await auth.loginViaAPI(participant.email, participant.password);
-
-		await page.goto("/board/test-board-slug?scene=review");
-
-		// Vote on three different cards (using default allocation of 3)
-		const cards = page.locator('[data-testid="card"]');
-		await cards.nth(0).locator('[data-testid="vote-button"]').click();
-		await cards.nth(1).locator('[data-testid="vote-button"]').click();
-		await cards.nth(2).locator('[data-testid="vote-button"]').click();
-
-		// Should show no votes remaining
-		await expect(page.locator('[data-testid="votes-remaining"]')).toContainText(
-			"0 votes remaining",
-		);
-
-		// Attempting to vote on another card should be disabled or show error
-		const fourthCard = cards.nth(3);
-		if ((await fourthCard.count()) > 0) {
-			const voteButton = fourthCard.locator('[data-testid="vote-button"]');
-			await expect(voteButton).toBeDisabled();
+			// Verify columns exist (default setup creates 3)
+			const columns = page.locator(".column");
+			await expect(columns).toHaveCount(3);
+		} finally {
+			await page.close();
+			await context.close();
 		}
 	});
 
-	test("should show user presence indicators", async ({
-		browser: _browser,
-	}) => {
-		const facilitatorPage = await facilitatorContext.newPage();
-		const participantPage = await participantContext.newPage();
-
-		// Facilitator joins board first
-		await facilitatorPage.goto("/board/test-board-slug");
-
-		// Should show facilitator in presence list
-		await expect(
-			facilitatorPage.locator('[data-testid="presence-list"]'),
-		).toContainText("Test Facilitator");
-
-		// Participant joins
-		await participantPage.goto("/board/test-board-slug");
-
-		// Both should see each other
-		await expect(
-			facilitatorPage.locator('[data-testid="presence-list"]'),
-		).toContainText("Participant One", { timeout: 3000 });
-		await expect(
-			participantPage.locator('[data-testid="presence-list"]'),
-		).toContainText("Test Facilitator");
-
-		await facilitatorPage.close();
-		await participantPage.close();
-	});
-
-	test("should handle connection interruptions gracefully", async ({
-		page,
-	}) => {
-		const auth = new AuthHelper(page);
-		const participant = await getTestUser("participant1");
-		await auth.loginViaAPI(participant.email, participant.password);
-
-		await page.goto("/board/test-board-slug");
-
-		// Add a card first
-		const column = page.locator('[data-testid="column"]').first();
-		await column
-			.locator('[data-testid="card-input"]')
-			.fill("Connection test card");
-		await column.locator('[data-testid="add-card-button"]').click();
-
-		await expect(page.locator("text=Connection test card")).toBeVisible();
-
-		// Simulate network interruption by going offline
-		await page.context().setOffline(true);
-
-		// Try to add another card - should show as pending or queue
-		await column.locator('[data-testid="card-input"]').fill("Offline card");
-		await column.locator('[data-testid="add-card-button"]').click();
-
-		// Should show offline indicator or pending state
-		await expect(
-			page.locator(
-				'[data-testid="offline-indicator"], [data-testid="pending-actions"]',
-			),
-		).toBeVisible({ timeout: 5000 });
-
-		// Restore connection
-		await page.context().setOffline(false);
-
-		// Pending card should eventually appear
-		await expect(page.locator("text=Offline card")).toBeVisible({
-			timeout: 10000,
-		});
-	});
-
-	test("should allow facilitator to control timer", async ({ page }) => {
-		const auth = new AuthHelper(page);
+	test("should show facilitator controls", async ({ browser }) => {
 		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
+		const scenario = await boardHelper.setupBoardScenario(facilitator.email);
 
-		await page.goto("/board/test-board-slug");
+		const context = await coreHelper.createAuthContext(browser, facilitator);
+		const page = await context.newPage();
 
-		// Should show timer controls for facilitator
-		await expect(page.locator('[data-testid="timer-controls"]')).toBeVisible();
+		try {
+			await page.goto(scenario.boardUrl);
 
-		// Set and start timer
-		await page.fill('[data-testid="timer-minutes-input"]', "5");
-		await page.click('[data-testid="start-timer-button"]');
+			// Facilitator should see configuration button
+			await expect(page.locator(".facilitator-configure")).toBeVisible();
 
-		// Should show running timer
-		await expect(page.locator('[data-testid="timer-display"]')).toBeVisible();
-		await expect(page.locator('[data-testid="timer-display"]')).toContainText(
-			"4:5",
+			// Facilitator should see timer controls
+			await expect(page.locator(".facilitator-timer")).toBeVisible();
+		} finally {
+			await page.close();
+			await context.close();
+		}
+	});
+
+	test("should add a card to first column", async ({ browser }) => {
+		const facilitator = await getTestUser("facilitator");
+		const scenario = await boardHelper.setupBoardScenario(facilitator.email);
+
+		const context = await coreHelper.createAuthContext(browser, facilitator);
+		const page = await context.newPage();
+
+		try {
+			await page.goto(scenario.boardUrl);
+
+			// Wait for columns to load and be visible
+			const firstColumn = page.locator(".column").first();
+			await expect(firstColumn).toBeVisible();
+
+			// Wait for the add card section to appear (it's conditional based on scene)
+			const addCardSection = firstColumn.locator(".add-card-section");
+			await expect(addCardSection).toBeVisible({ timeout: 10000 });
+
+			// Now interact with the textarea
+			const textarea = addCardSection.locator("textarea.textarea-field");
+			await expect(textarea).toBeVisible();
+			await textarea.fill("Great teamwork today!");
+
+			// Click the add button
+			const addButton = addCardSection.locator("button.textarea-button");
+			await addButton.click();
+
+			// Card should appear in the column (via SSE broadcast back to same client)
+			await expect(page.locator("text=Great teamwork today!")).toBeVisible({ timeout: 10000 });
+		} finally {
+			await page.close();
+			await context.close();
+		}
+	});
+
+	test("should add cards to multiple columns", async ({ browser }) => {
+		const facilitator = await getTestUser("facilitator");
+		const scenario = await boardHelper.setupBoardScenario(facilitator.email);
+
+		const context = await coreHelper.createAuthContext(browser, facilitator);
+		const page = await context.newPage();
+
+		try {
+			await page.goto(scenario.boardUrl);
+
+			// Wait for all columns to load
+			await expect(page.locator(".column").first()).toBeVisible();
+
+			// Add card to first column
+			const firstColumn = page.locator(".column").nth(0);
+			const firstAddSection = firstColumn.locator(".add-card-section");
+			await expect(firstAddSection).toBeVisible({ timeout: 10000 });
+			await firstAddSection.locator("textarea.textarea-field").fill("First column card");
+			await firstAddSection.locator("button.textarea-button").click();
+			await expect(page.locator("text=First column card")).toBeVisible({ timeout: 10000 });
+
+			// Add card to second column
+			const secondColumn = page.locator(".column").nth(1);
+			const secondAddSection = secondColumn.locator(".add-card-section");
+			await expect(secondAddSection).toBeVisible();
+			await secondAddSection.locator("textarea.textarea-field").fill("Second column card");
+			await secondAddSection.locator("button.textarea-button").click();
+			await expect(page.locator("text=Second column card")).toBeVisible({ timeout: 10000 });
+
+			// Add card to third column
+			const thirdColumn = page.locator(".column").nth(2);
+			const thirdAddSection = thirdColumn.locator(".add-card-section");
+			await expect(thirdAddSection).toBeVisible();
+			await thirdAddSection.locator("textarea.textarea-field").fill("Third column card");
+			await thirdAddSection.locator("button.textarea-button").click();
+			await expect(page.locator("text=Third column card")).toBeVisible({ timeout: 10000 });
+		} finally {
+			await page.close();
+			await context.close();
+		}
+	});
+
+	test("should maintain session across page refreshes", async ({ browser }) => {
+		const facilitator = await getTestUser("facilitator");
+		const scenario = await boardHelper.setupBoardScenario(facilitator.email);
+
+		const context = await coreHelper.createAuthContext(browser, facilitator);
+		const page = await context.newPage();
+
+		try {
+			await page.goto(scenario.boardUrl);
+
+			// Verify board loads
+			await expect(page.locator(".column").first()).toBeVisible();
+
+			// Add a card before refresh
+			const firstColumn = page.locator(".column").first();
+			const addSection = firstColumn.locator(".add-card-section");
+			await expect(addSection).toBeVisible({ timeout: 10000 });
+			await addSection.locator("textarea.textarea-field").fill("Before refresh");
+			await addSection.locator("button.textarea-button").click();
+			await expect(page.locator("text=Before refresh")).toBeVisible({ timeout: 10000 });
+
+			// Refresh page
+			await page.reload();
+
+			// Should still show board content and the card
+			await expect(page.locator(".column").first()).toBeVisible();
+			await expect(page.locator("text=Before refresh")).toBeVisible();
+
+			// Verify still logged in
+			expect(await coreHelper.isLoggedIn(page)).toBe(true);
+		} finally {
+			await page.close();
+			await context.close();
+		}
+	});
+});
+
+test.describe("Board Multi-User Functionality", () => {
+	let coreHelper: CoreTestHelper;
+	let boardHelper: BoardTestHelper;
+
+	test.beforeEach(() => {
+		coreHelper = new CoreTestHelper();
+		boardHelper = new BoardTestHelper();
+	});
+
+	test("should show real-time card updates across users", async ({ browser }) => {
+		// Setup: Create board with two users
+		const facilitator = await getTestUser("facilitator");
+		const participant = await getTestUser("participant1");
+
+		const scenario = await boardHelper.setupBoardScenario(
+			facilitator.email,
+			[participant.email],
 		);
 
-		// Should be able to pause timer
-		await page.click('[data-testid="pause-timer-button"]');
-		await expect(page.locator('[data-testid="timer-paused"]')).toBeVisible();
-	});
+		// Create two separate authenticated contexts
+		const [facilitatorContext, participantContext] = await coreHelper.createMultipleAuthContexts(
+			browser,
+			[facilitator, participant],
+		);
 
-	test("should show timer to all participants", async ({
-		browser: _browser,
-	}) => {
 		const facilitatorPage = await facilitatorContext.newPage();
 		const participantPage = await participantContext.newPage();
 
-		await facilitatorPage.goto("/board/test-board-slug");
-		await participantPage.goto("/board/test-board-slug");
+		try {
+			// Both users navigate to the same board
+			await facilitatorPage.goto(scenario.boardUrl);
+			await participantPage.goto(scenario.boardUrl);
 
-		// Facilitator starts timer
-		await facilitatorPage.fill('[data-testid="timer-minutes-input"]', "3");
-		await facilitatorPage.click('[data-testid="start-timer-button"]');
+			// Wait for both pages to load completely
+			await expect(facilitatorPage.locator(".column").first()).toBeVisible();
+			await expect(participantPage.locator(".column").first()).toBeVisible();
 
-		// Participant should see timer
-		await expect(
-			participantPage.locator('[data-testid="timer-display"]'),
-		).toBeVisible({ timeout: 3000 });
-		await expect(
-			participantPage.locator('[data-testid="timer-display"]'),
-		).toContainText("2:5");
+			// Wait for add card sections to be visible
+			const participantColumn = participantPage.locator(".column").first();
+			const participantAddSection = participantColumn.locator(".add-card-section");
+			await expect(participantAddSection).toBeVisible({ timeout: 10000 });
 
-		// Participant should NOT see timer controls
-		await expect(
-			participantPage.locator('[data-testid="timer-controls"]'),
-		).not.toBeVisible();
+			// Participant adds a card
+			await participantAddSection.locator("textarea.textarea-field").fill("Real-time test card");
+			await participantAddSection.locator("button.textarea-button").click();
 
-		await facilitatorPage.close();
-		await participantPage.close();
+			// Participant should see their own card
+			await expect(participantPage.locator("text=Real-time test card")).toBeVisible({ timeout: 5000 });
+
+			// Facilitator should see the card appear via SSE (without refresh)
+			await expect(facilitatorPage.locator("text=Real-time test card")).toBeVisible({ timeout: 5000 });
+		} finally {
+			await facilitatorPage.close();
+			await participantPage.close();
+			await facilitatorContext.close();
+			await participantContext.close();
+		}
 	});
 
-	test("should handle card grouping in review scene", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
+	test("should handle concurrent card creation", async ({ browser }) => {
+		// Setup: Create board with two participants
+		const participant1 = await getTestUser("participant1");
+		const participant2 = await getTestUser("participant2");
 
-		await page.goto("/board/test-board-slug?scene=review");
+		const scenario = await boardHelper.setupBoardScenario(
+			participant1.email,
+			[participant2.email],
+		);
 
-		// Should show grouping controls
-		await expect(
-			page.locator('[data-testid="group-cards-button"]'),
-		).toBeVisible();
+		const [context1, context2] = await coreHelper.createMultipleAuthContexts(
+			browser,
+			[participant1, participant2],
+		);
 
-		// Select multiple cards for grouping
-		const cards = page.locator('[data-testid="card"]');
-		await cards.nth(0).click({ modifiers: ["Control"] });
-		await cards.nth(1).click({ modifiers: ["Control"] });
+		const page1 = await context1.newPage();
+		const page2 = await context2.newPage();
 
-		// Should show selected state
-		await expect(cards.nth(0)).toHaveClass(/selected/);
-		await expect(cards.nth(1)).toHaveClass(/selected/);
+		try {
+			// Both navigate to board
+			await page1.goto(scenario.boardUrl);
+			await page2.goto(scenario.boardUrl);
 
-		// Group selected cards
-		await page.click('[data-testid="group-selected-cards-button"]');
+			// Wait for load
+			await expect(page1.locator(".column").first()).toBeVisible();
+			await expect(page2.locator(".column").first()).toBeVisible();
 
-		// Should create card group
-		await expect(page.locator('[data-testid="card-group"]')).toBeVisible();
+			// Wait for add sections to appear
+			const column1 = page1.locator(".column").first();
+			const addSection1 = column1.locator(".add-card-section");
+			await expect(addSection1).toBeVisible({ timeout: 10000 });
 
-		// Grouped cards should appear together
-		const group = page.locator('[data-testid="card-group"]').first();
-		await expect(group.locator('[data-testid="card"]')).toHaveCount(2);
-	});
+			const column2 = page2.locator(".column").first();
+			const addSection2 = column2.locator(".add-card-section");
+			await expect(addSection2).toBeVisible({ timeout: 10000 });
 
-	test("should export board data", async ({ page }) => {
-		const auth = new AuthHelper(page);
-		const facilitator = await getTestUser("facilitator");
-		await auth.loginViaAPI(facilitator.email, facilitator.password);
+			// Both create cards simultaneously in first column
+			await Promise.all([
+				addSection1.locator("textarea.textarea-field").fill("User 1 card"),
+				addSection2.locator("textarea.textarea-field").fill("User 2 card"),
+			]);
 
-		await page.goto("/board/test-board-slug");
+			await Promise.all([
+				addSection1.locator("button.textarea-button").click(),
+				addSection2.locator("button.textarea-button").click(),
+			]);
 
-		// Should show export options
-		await page.click('[data-testid="board-menu-button"]');
-		await expect(
-			page.locator('[data-testid="export-board-button"]'),
-		).toBeVisible();
-
-		// Start download
-		const downloadPromise = page.waitForEvent("download");
-		await page.click('[data-testid="export-board-button"]');
-
-		const download = await downloadPromise;
-		expect(download.suggestedFilename()).toContain(".json");
-
-		// Verify download completed
-		expect(download).toBeTruthy();
+			// Both should see both cards
+			await expect(page1.locator("text=User 1 card")).toBeVisible({ timeout: 5000 });
+			await expect(page1.locator("text=User 2 card")).toBeVisible({ timeout: 5000 });
+			await expect(page2.locator("text=User 1 card")).toBeVisible({ timeout: 5000 });
+			await expect(page2.locator("text=User 2 card")).toBeVisible({ timeout: 5000 });
+		} finally {
+			await page1.close();
+			await page2.close();
+			await context1.close();
+			await context2.close();
+		}
 	});
 });

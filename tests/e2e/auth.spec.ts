@@ -119,7 +119,7 @@ test.describe("Authentication", () => {
 
 		// Should redirect to welcome page
 		await page.waitForURL(/\/$/);
-		await expect(page.locator("text=Welcome")).toBeVisible();
+		await expect(page.locator("text=Welcome to TeamBeat")).toBeVisible();
 
 		// Verify user is logged out
 		expect(await auth.isLoggedIn()).toBe(false);

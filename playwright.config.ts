@@ -5,6 +5,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
 	testDir: "./tests/e2e",
+	/* Test timeout */
+	timeout: 60 * 1000, // 60 seconds per test
 	/* Run tests in files in parallel */
 	fullyParallel: true,
 	/* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -69,9 +71,15 @@ export default defineConfig({
 
 	/* Run your local dev server before starting the tests */
 	webServer: {
-		command: "DATABASE_URL=./teambeat-test.db npm run dev -- --port 5174",
+		command: "npm run dev -- --port 5174",
 		url: "http://localhost:5174",
 		reuseExistingServer: false,
 		timeout: 120 * 1000,
+		env: {
+			// Use fixed test database path (created by globalSetup)
+			DATABASE_URL: "/tmp/teambeat-playwright-test.db",
+			// Disable rate limiting for tests to avoid rate limit errors
+			DISABLE_RATE_LIMITING: "true",
+		},
 	},
 });

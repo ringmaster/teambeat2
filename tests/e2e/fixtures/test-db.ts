@@ -80,7 +80,13 @@ export class TestDatabase {
 	}
 
 	async cleanup() {
-		// Clean up test database file and related files
+		// For in-memory databases, no file cleanup needed
+		if (this.testDbPath === ":memory:" || this.testDbPath.startsWith("file::memory:")) {
+			console.log("✓ Test database cleaned up (in-memory, no files to remove)");
+			return;
+		}
+
+		// Clean up test database file and related files (for file-based tests)
 		const filesToClean = [
 			this.testDbPath,
 			this.testDbPath + "-shm",
@@ -96,9 +102,6 @@ export class TestDatabase {
 				}
 			}
 		}
-
-		// Clear environment variable
-		delete process.env.DATABASE_URL;
 
 		console.log("✓ Test database cleaned up");
 	}
@@ -248,10 +251,10 @@ export class TestDatabase {
 			})
 			.returning();
 
-		// Create default columns
-		const whatWentWellId = `col_${uuid()}`;
-		const whatCanImproveId = `col_${uuid()}`;
-		const actionItemsId = `col_${uuid()}`;
+		// Create default columns (use plain UUIDs to match API validation)
+		const whatWentWellId = uuid();
+		const whatCanImproveId = uuid();
+		const actionItemsId = uuid();
 
 		await db.insert(schema.columns).values([
 			{
@@ -292,15 +295,6 @@ export class TestDatabase {
 				description: "Add cards and ideas",
 				mode: "columns",
 				seq: 1,
-				allowAddCards: true,
-				allowEditCards: true,
-				allowObscureCards: false,
-				allowMoveCards: true,
-				allowGroupCards: false,
-				showVotes: false,
-				allowVoting: false,
-				showComments: true,
-				allowComments: true,
 			},
 			{
 				id: reviewSceneId,
@@ -309,16 +303,25 @@ export class TestDatabase {
 				description: "Review cards and vote",
 				mode: "columns",
 				seq: 2,
-				allowAddCards: false,
-				allowEditCards: false,
-				allowObscureCards: false,
-				allowMoveCards: false,
-				allowGroupCards: true,
-				showVotes: true,
-				allowVoting: true,
-				showComments: true,
-				allowComments: true,
 			},
+		]);
+
+		// Add scene flags for Brainstorm
+		await db.insert(schema.sceneFlags).values([
+			{ sceneId: brainstormSceneId, flag: "allow_add_cards" },
+			{ sceneId: brainstormSceneId, flag: "allow_edit_cards" },
+			{ sceneId: brainstormSceneId, flag: "allow_move_cards" },
+			{ sceneId: brainstormSceneId, flag: "show_comments" },
+			{ sceneId: brainstormSceneId, flag: "allow_comments" },
+		]);
+
+		// Add scene flags for Review & Vote
+		await db.insert(schema.sceneFlags).values([
+			{ sceneId: reviewSceneId, flag: "allow_group_cards" },
+			{ sceneId: reviewSceneId, flag: "show_votes" },
+			{ sceneId: reviewSceneId, flag: "allow_voting" },
+			{ sceneId: reviewSceneId, flag: "show_comments" },
+			{ sceneId: reviewSceneId, flag: "allow_comments" },
 		]);
 
 		// Link scenes to columns

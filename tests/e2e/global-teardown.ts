@@ -5,21 +5,26 @@ async function globalTeardown(_config: FullConfig) {
 	console.log("Cleaning up global test environment...");
 
 	try {
-		// Clean up the specific test database file
-		const testDbPath = "./teambeat-test.db";
-		const filesToClean = [testDbPath, testDbPath + "-shm", testDbPath + "-wal"];
+		// Clean up the test database file (set by global-setup in /tmp)
+		const testDbPath = process.env.DATABASE_URL;
+		if (testDbPath && !testDbPath.includes(":memory:")) {
+			const filesToClean = [testDbPath, testDbPath + "-shm", testDbPath + "-wal"];
 
-		for (const file of filesToClean) {
-			if (existsSync(file)) {
-				try {
-					unlinkSync(file);
-				} catch (error) {
-					// Ignore cleanup errors
+			for (const file of filesToClean) {
+				if (existsSync(file)) {
+					try {
+						unlinkSync(file);
+						console.log(`✓ Removed ${file}`);
+					} catch (error) {
+						console.warn(`Could not remove ${file}:`, error);
+					}
 				}
 			}
-		}
 
-		console.log("Test database cleaned up");
+			console.log("✓ Test database cleaned up");
+		} else {
+			console.log("✓ No test database files to clean up");
+		}
 	} catch (error) {
 		console.warn("Error during test database cleanup:", error);
 	}
