@@ -123,6 +123,7 @@ export async function getCardsForBoard(boardId: string) {
 			seq: cards.seq,
 			createdAt: cards.createdAt,
 			updatedAt: cards.updatedAt,
+			quadrantMetadata: cards.quadrantMetadata,
 			voteCount: count(votes.id),
 		})
 		.from(cards)
@@ -141,6 +142,7 @@ export async function getCardsForBoard(boardId: string) {
 			cards.seq,
 			cards.createdAt,
 			cards.updatedAt,
+			cards.quadrantMetadata,
 			users.name,
 		)
 		.orderBy(cards.seq, cards.createdAt);

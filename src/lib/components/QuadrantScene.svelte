@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { contourDensity } from "d3-contour";
 	import type { QuadrantConfig, QuadrantPosition } from "$lib/types/quadrant";
 	import Card from "./Card.svelte";
 
@@ -31,6 +32,8 @@
 	let loading = $state(true);
 	let draggedCardId = $state<string | null>(null);
 	let draggedMarkerId = $state<string | null>(null);
+	let selectedCardId = $state<string | null>(null);
+	let selectedCardPositions = $state<QuadrantPosition[]>([]);
 
 	// Parse grid dimensions
 	let gridCols = $derived(config ? Number.parseInt(config.grid_size[0]) : 2);
@@ -86,8 +89,11 @@
 				}
 			);
 			const data = await response.json();
+			console.log("Consensus calculation response:", data);
 			if (!data.success) {
 				alert(`Failed to calculate consensus: ${data.error}`);
+			} else {
+				console.log("Consensus calculated successfully. Card positions:", data.card_positions);
 			}
 		} catch (error) {
 			console.error("Failed to calculate consensus:", error);
@@ -169,6 +175,42 @@
 		if (e.dataTransfer) {
 			e.dataTransfer.effectAllowed = "move";
 			e.dataTransfer.setData("text/plain", cardId);
+
+			// Create a circular marker as the drag image
+			const dragImage = document.createElement('div');
+			const cardIndex = getCardIndex(cardId);
+			dragImage.textContent = cardIndex.toString();
+
+			// Get computed colors from CSS variables
+			const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#4D7A75';
+			const primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#39495C';
+
+			dragImage.style.cssText = `
+				position: absolute;
+				top: -1000px;
+				left: -1000px;
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: ${accent};
+				border: 3px solid ${primary};
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				font-size: 1rem;
+				line-height: 1;
+			`;
+			document.body.appendChild(dragImage);
+			e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+			// Clean up after drag starts
+			requestAnimationFrame(() => {
+				if (document.body.contains(dragImage)) {
+					document.body.removeChild(dragImage);
+				}
+			});
 		}
 	}
 
@@ -182,6 +224,42 @@
 		draggedMarkerId = cardId;
 		if (e.dataTransfer) {
 			e.dataTransfer.effectAllowed = "move";
+
+			// Create a custom drag image that looks like the marker
+			const dragImage = document.createElement('div');
+			const cardIndex = getCardIndex(cardId);
+			dragImage.textContent = cardIndex.toString();
+
+			// Get computed colors from CSS variables
+			const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#4D7A75';
+			const primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#39495C';
+
+			dragImage.style.cssText = `
+				position: absolute;
+				top: -1000px;
+				left: -1000px;
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: ${accent};
+				border: 3px solid ${primary};
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				font-size: 1rem;
+				line-height: 1;
+			`;
+			document.body.appendChild(dragImage);
+			e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+			// Clean up after drag starts
+			requestAnimationFrame(() => {
+				if (document.body.contains(dragImage)) {
+					document.body.removeChild(dragImage);
+				}
+			});
 		}
 	}
 
@@ -260,6 +338,172 @@
 			console.error("Failed to reset positions:", error);
 		}
 	}
+
+	// Card selection for Results phase
+	async function handleCardSelection(cardId: string) {
+		if (selectedCardId === cardId) {
+			selectedCardId = null; // Deselect if clicking the same card
+			selectedCardPositions = [];
+		} else {
+			selectedCardId = cardId;
+			// Load all user positions for this card
+			await loadCardPositions(cardId);
+		}
+	}
+
+	// Load individual user positions for selected card
+	async function loadCardPositions(cardId: string) {
+		try {
+			const response = await fetch(
+				`/api/scenes/${scene.id}/quadrant/positions?card_id=${cardId}`
+			);
+			const data = await response.json();
+			if (data.success) {
+				selectedCardPositions = data.positions;
+			}
+		} catch (error) {
+			console.error("Failed to load card positions:", error);
+		}
+	}
+
+	// Generate contour data from selected card positions
+	let contourData = $derived.by(() => {
+		if (selectedCardPositions.length === 0) return [];
+
+		// Convert positions to d3-contour format
+		// Map from 0-96 range to 0-100 percentage for consistency
+		const points = selectedCardPositions.map(p => ({
+			x: (p.x_value / 96) * 100,
+			// Invert Y (0 at bottom in data, but 0 at top in display)
+			y: 100 - ((p.y_value / 96) * 100)
+		}));
+
+		// Create density contours with higher thresholds for smoother appearance
+		const density = contourDensity()
+			.x(d => d.x)
+			.y(d => d.y)
+			.size([100, 100]) // Use 100x100 coordinate space
+			.bandwidth(20) // Increased smoothing bandwidth
+			.thresholds(20); // More contour levels for smoother gradients
+
+		return density(points);
+	});
+
+	// Get color for contour level (white → #3c495b)
+	function getContourColor(index: number, total: number): string {
+		// Ratio from 0 (outermost, white) to 1 (apex, #3c495b)
+		const ratio = index / Math.max(total - 1, 1);
+
+		// Target color #3c495b = rgb(60, 73, 91)
+		const targetR = 60;
+		const targetG = 73;
+		const targetB = 91;
+
+		// Interpolate from white (255, 255, 255) to target
+		const r = Math.round(255 - (255 - targetR) * ratio);
+		const g = Math.round(255 - (255 - targetG) * ratio);
+		const b = Math.round(255 - (255 - targetB) * ratio);
+
+		return `rgb(${r}, ${g}, ${b})`;
+	}
+
+	// Drag handlers for consensus markers (facilitator only)
+	let draggedConsensusCardId = $state<string | null>(null);
+
+	function handleConsensusMarkerDragStart(e: DragEvent, cardId: string) {
+		if (!isFacilitator && !isAdmin) return;
+
+		e.stopPropagation();
+		draggedConsensusCardId = cardId;
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = "move";
+
+			// Create a custom drag image
+			const dragImage = document.createElement('div');
+			const cardIndex = getCardIndex(cardId);
+			dragImage.textContent = cardIndex.toString();
+
+			const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#4D7A75';
+			const primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#39495C';
+
+			dragImage.style.cssText = `
+				position: absolute;
+				top: -1000px;
+				left: -1000px;
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: ${accent};
+				border: 3px solid ${primary};
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				font-size: 1rem;
+				line-height: 1;
+			`;
+			document.body.appendChild(dragImage);
+			e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+			requestAnimationFrame(() => {
+				if (document.body.contains(dragImage)) {
+					document.body.removeChild(dragImage);
+				}
+			});
+		}
+	}
+
+	function handleConsensusMarkerDragEnd() {
+		draggedConsensusCardId = null;
+	}
+
+	function handleResultsGridDrop(e: DragEvent) {
+		e.preventDefault();
+		if (!draggedConsensusCardId || (!isFacilitator && !isAdmin)) return;
+
+		// Get grid dimensions and mouse position
+		const gridEl = e.currentTarget as HTMLElement;
+		const rect = gridEl.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		// Convert to percentage (0-96 range)
+		const xPercent = Math.max(0, Math.min(96, Math.round((x / rect.width) * 96)));
+		// Invert Y so 0 is at bottom
+		const yPercent = Math.max(0, Math.min(96, Math.round(((rect.height - y) / rect.height) * 96)));
+
+		updateFacilitatorPosition(draggedConsensusCardId, xPercent, yPercent);
+		draggedConsensusCardId = null;
+	}
+
+	function handleResultsGridDragOver(e: DragEvent) {
+		if (!draggedConsensusCardId || (!isFacilitator && !isAdmin)) return;
+		e.preventDefault();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = "move";
+		}
+	}
+
+	async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
+		try {
+			const response = await fetch(`/api/scenes/${scene.id}/quadrant/facilitator-position`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					card_id: cardId,
+					facilitator_x: x,
+					facilitator_y: y,
+				}),
+			});
+			const data = await response.json();
+			if (!data.success) {
+				console.error("Failed to update facilitator position:", data.error);
+			}
+		} catch (error) {
+			console.error("Failed to update facilitator position:", error);
+		}
+	}
 </script>
 
 <div class="quadrant-scene">
@@ -322,10 +566,14 @@
 									{/each}
 								</div>
 
-								<!-- Main axis lines -->
+								<!-- Main axis lines (only show when they align with grid divisions) -->
 								<div class="axis-lines">
-									<div class="x-axis-line"></div>
-									<div class="y-axis-line"></div>
+									{#if gridRows % 2 === 0}
+										<div class="x-axis-line"></div>
+									{/if}
+									{#if gridCols % 2 === 0}
+										<div class="y-axis-line"></div>
+									{/if}
 								</div>
 
 								<!-- Axis range labels -->
@@ -433,28 +681,160 @@
 		{/if}
 
 		<div class="results-phase">
-			<h3>Results: {config.x_axis_label} vs {config.y_axis_label}</h3>
-			<p class="instructions">
-				Cards are positioned at consensus coordinates based on all participant placements.
-			</p>
+			<div class="quadrant-layout">
+				<!-- Left: Grid area -->
+				<div class="grid-area">
+					<div class="y-axis-label">{config.y_axis_label}</div>
+					<div class="grid-wrapper">
+						<div
+							class="quadrant-grid"
+							style="--grid-cols: {gridCols}; --grid-rows: {gridRows};"
+							ondrop={handleResultsGridDrop}
+							ondragover={handleResultsGridDragOver}
+						>
+							<!-- Grid lines -->
+							<div class="grid-lines">
+								{#each Array(gridRows - 1) as _, i}
+									<div class="horizontal-line" style="top: {((i + 1) / gridRows) * 100}%"></div>
+								{/each}
+								{#each Array(gridCols - 1) as _, i}
+									<div class="vertical-line" style="left: {((i + 1) / gridCols) * 100}%"></div>
+								{/each}
+							</div>
 
-			<div class="results-grid">
-				{#each cards as card (card.id)}
-					{@const metadata = getCardMetadata(card)}
-					{#if metadata}
-						<div class="result-card">
-							<div class="card-content">{card.content}</div>
-							<div class="metadata">
-								<div>Quadrant: {metadata.quadrant_label}</div>
-								<div>Participants: {metadata.participant_count}</div>
-								<div>
-									Position: ({Math.round(metadata.facilitator_x || metadata.consensus_x)},
-									{Math.round(metadata.facilitator_y || metadata.consensus_y)})
+							<!-- Main axis lines (only show when they align with grid divisions) -->
+							<div class="axis-lines">
+								{#if gridRows % 2 === 0}
+									<div class="x-axis-line"></div>
+								{/if}
+								{#if gridCols % 2 === 0}
+									<div class="y-axis-line"></div>
+								{/if}
+							</div>
+
+							<!-- Axis range labels -->
+							<div class="axis-range-labels">
+								<!-- X-axis labels (horizontal) -->
+								<div class="x-range-label x-min">{config.x_axis_values[0]}</div>
+								<div class="x-range-label x-max">{config.x_axis_values[config.x_axis_values.length - 1]}</div>
+								<!-- Y-axis labels (vertical) -->
+								<div class="y-range-label y-min">{config.y_axis_values[0]}</div>
+								<div class="y-range-label y-max">{config.y_axis_values[config.y_axis_values.length - 1]}</div>
+							</div>
+
+							<!-- Heatmap overlay (when card is selected) -->
+							{#if selectedCardId && contourData.length > 0}
+								<svg class="heatmap-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
+									{#each contourData as contour, i (i)}
+										{@const pathData = contour.coordinates[0].map((ring, ringIndex) => {
+											const points = ring.map(([x, y]) => `${x},${y}`).join(' L ');
+											return ringIndex === 0 ? `M ${points} Z` : '';
+										}).join(' ')}
+										<path
+											d={pathData}
+											fill={getContourColor(i, contourData.length)}
+											fill-opacity="0.5"
+											stroke="none"
+										/>
+									{/each}
+
+									<!-- Individual user position dots -->
+									{#each selectedCardPositions as position (position.id)}
+										{@const x = (position.x_value / 96) * 100}
+										{@const y = 100 - ((position.y_value / 96) * 100)}
+										<circle
+											cx={x}
+											cy={y}
+											r="1.5"
+											fill="rgba(255, 255, 255, 0.8)"
+											stroke="rgba(0, 0, 0, 0.5)"
+											stroke-width="0.3"
+										/>
+									{/each}
+								</svg>
+							{/if}
+
+							<!-- Consensus card positions -->
+							{#each cards as card (card.id)}
+								{@const metadata = getCardMetadata(card)}
+								{#if metadata}
+									{@const consensusX = metadata.facilitator_x || metadata.consensus_x}
+									{@const consensusY = metadata.facilitator_y || metadata.consensus_y}
+									{@const markerPos = getMarkerPosition({ x_value: consensusX, y_value: consensusY } as any)}
+									{@const cardIndex = getCardIndex(card.id)}
+									<div
+										class="card-marker consensus-marker"
+										class:selected={selectedCardId === card.id}
+										class:draggable={isFacilitator || isAdmin}
+										style="left: {markerPos.x}%; top: {markerPos.y}%;"
+										title="{card.content} - {metadata.quadrant_label}"
+										draggable={isFacilitator || isAdmin}
+										onclick={() => handleCardSelection(card.id)}
+										ondragstart={(e) => handleConsensusMarkerDragStart(e, card.id)}
+										ondragend={handleConsensusMarkerDragEnd}
+									>
+										{cardIndex}
+									</div>
+								{/if}
+							{/each}
+						</div>
+						<div class="x-axis-label">{config.x_axis_label}</div>
+					</div>
+				</div>
+
+				<!-- Right: Cards sidebar -->
+				<div class="cards-sidebar">
+					<div class="cards-list">
+						{#each cards as card (card.id)}
+							{@const metadata = getCardMetadata(card)}
+							{@const cardIndex = getCardIndex(card.id)}
+							<div
+								class="card-wrapper results-card"
+								class:selected={selectedCardId === card.id}
+							>
+								<button
+									aria-label="Select Card {cardIndex}"
+									class="selection-button"
+									class:active={selectedCardId === card.id}
+									onclick={() => handleCardSelection(card.id)}
+								>
+									<span class="selection-number">{cardIndex}</span>
+								</button>
+								<div class="card-container">
+									<Card
+										{card}
+										isGrouped={false}
+										groupingMode={false}
+										isSelected={false}
+										currentScene={scene}
+										{board}
+										{userRole}
+										{currentUserId}
+										onDragStart={() => {}}
+										onToggleSelection={handleToggleSelection}
+										onVote={handleVote}
+										onComment={handleComment}
+										onDelete={handleDelete}
+										onEdit={handleEdit}
+										onCardDrop={handleCardDrop}
+										onCardDragOver={handleCardDragOver}
+										onCardDragLeave={handleCardDragLeave}
+									/>
+									{#if metadata}
+										<div class="consensus-info">
+											<div class="quadrant-badge">{metadata.quadrant_label}</div>
+											<div class="participant-count">{metadata.participant_count} participants</div>
+										</div>
+									{:else}
+										<div class="consensus-info">
+											<div class="no-placement">No placements yet</div>
+										</div>
+									{/if}
 								</div>
 							</div>
-						</div>
-					{/if}
-				{/each}
+						{/each}
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -663,8 +1043,8 @@
 		left: 0;
 		right: 0;
 		top: 50%;
-		height: 3px;
-		background: var(--color-text-muted);
+		height: 2px;
+		background: var(--color-border-hover);
 		transform: translateY(-50%);
 	}
 
@@ -673,8 +1053,8 @@
 		top: 0;
 		bottom: 0;
 		left: 50%;
-		width: 3px;
-		background: var(--color-text-muted);
+		width: 2px;
+		background: var(--color-border-hover);
 		transform: translateX(-50%);
 	}
 
@@ -834,45 +1214,129 @@
 		pointer-events: none;
 	}
 
-	// Results phase
+	// Results phase (reuses input-phase grid layout)
 	.results-phase {
-		padding: var(--spacing-4);
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
 
-		h3 {
-			margin-bottom: var(--spacing-2);
-			color: var(--color-gray-800);
+	.heatmap-overlay {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+		z-index: 5;
+	}
+
+	.consensus-marker {
+		cursor: pointer;
+
+		&:hover {
+			background: var(--color-accent-hover);
+			border-color: var(--color-primary-hover);
+			transform: translate(-50%, -50%) scale(1.15);
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 		}
 
-		.instructions {
-			margin-bottom: var(--spacing-6);
-			color: var(--color-gray-600);
+		&.selected {
+			background: var(--color-primary);
+			border-color: var(--color-accent);
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 30%, transparent),
+				0 4px 20px rgba(0, 0, 0, 0.6);
+			z-index: 20;
 		}
 	}
 
-	.results-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-		gap: var(--spacing-4);
-	}
+	.results-card {
+		position: relative;
+		transition: all 0.2s;
 
-	.result-card {
-		padding: var(--spacing-4);
-		background: white;
-		border: 1px solid var(--color-gray-200);
-		border-radius: 8px;
-
-		.card-content {
-			margin-bottom: var(--spacing-3);
-			font-weight: 500;
-		}
-
-		.metadata {
-			font-size: 0.875rem;
-			color: var(--color-gray-600);
-
-			div {
-				margin-bottom: var(--spacing-1);
+		&.selected {
+			&::after {
+				content: "";
+				position: absolute;
+				inset: -4px;
+				background: var(--color-accent);
+				border: 2px solid var(--color-accent);
+				border-radius: var(--radius-md);
+				opacity: 0.3;
+				pointer-events: none;
+				z-index: -1;
 			}
+		}
+	}
+
+	.selection-button {
+		position: absolute;
+		left: 0;
+		top: var(--spacing-3);
+		flex-shrink: 0;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		border: 2px solid var(--color-border);
+		background: white;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s;
+		z-index: 10;
+
+		&:hover:not(.active) {
+			border-color: var(--color-accent);
+			background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+		}
+
+		&.active {
+			border-color: var(--color-accent);
+			background: var(--color-accent);
+
+			.selection-number {
+				color: white;
+			}
+		}
+	}
+
+	.selection-number {
+		font-size: 0.875rem;
+		line-height: 1;
+		color: var(--color-text-muted);
+		font-weight: 700;
+	}
+
+	.card-container {
+		flex: 1;
+		width: 100%;
+	}
+
+	.consensus-info {
+		margin-top: var(--spacing-2);
+		padding-top: var(--spacing-2);
+		border-top: 1px solid var(--color-border);
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-1);
+
+		.quadrant-badge {
+			font-size: 0.75rem;
+			font-weight: 600;
+			color: var(--color-accent);
+		}
+
+		.participant-count {
+			font-size: 0.7rem;
+			color: var(--color-text-secondary);
+		}
+
+		.no-placement {
+			font-size: 0.75rem;
+			color: var(--color-text-muted);
+			font-style: italic;
 		}
 	}
 </style>

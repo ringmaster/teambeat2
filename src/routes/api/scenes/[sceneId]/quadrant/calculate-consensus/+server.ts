@@ -2,7 +2,7 @@ import { json } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import { requireUserForApi } from "$lib/server/auth/index.js";
 import { db } from "$lib/server/db/index.js";
-import { boards, cards, scenes, seriesMembers } from "$lib/server/db/schema.js";
+import { boards, cards, columns, scenes, seriesMembers } from "$lib/server/db/schema.js";
 import { getQuadrantPositionsForCard } from "$lib/server/repositories/quadrant-position.js";
 import {
 	calculateConsensusPosition,
@@ -10,7 +10,8 @@ import {
 	getQuadrantLabel,
 	type QuadrantConfig,
 } from "$lib/server/utils/quadrant-calculator.js";
-import { broadcastQuadrantResultsCalculated } from "$lib/server/sse/broadcast.js";
+import { broadcastQuadrantResultsCalculated, broadcastSceneChanged } from "$lib/server/sse/broadcast.js";
+import { findSceneById } from "$lib/server/repositories/scene.js";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async (event) => {
@@ -79,10 +80,10 @@ export const POST: RequestHandler = async (event) => {
 			.select()
 			.from(cards)
 			.innerJoin(
-				(db as any).columns,
-				eq(cards.columnId, (db as any).columns.id),
+				columns,
+				eq(cards.columnId, columns.id),
 			)
-			.where(eq((db as any).columns.boardId, board.id));
+			.where(eq(columns.boardId, board.id));
 
 		const cardPositions: any[] = [];
 
@@ -156,6 +157,12 @@ export const POST: RequestHandler = async (event) => {
 			.update(scenes)
 			.set({ quadrantPhase: "results" })
 			.where(eq(scenes.id, sceneId));
+
+		// Get the updated scene and broadcast the change
+		const updatedScene = await findSceneById(sceneId);
+		if (board.currentSceneId === sceneId) {
+			await broadcastSceneChanged(board.id, updatedScene);
+		}
 
 		// Broadcast the results to all users
 		await broadcastQuadrantResultsCalculated(board.id, sceneId, cardPositions);

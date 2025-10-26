@@ -604,6 +604,74 @@ function handleSSEMessage(data: any) {
 				}
 			}
 			break;
+		case "quadrant_results_calculated":
+			// Update cards with consensus metadata
+			if (data.card_positions && Array.isArray(data.card_positions)) {
+				cards = cards.map((card) => {
+					const position = data.card_positions.find((p: any) => p.card_id === card.id);
+					if (position) {
+						// Build metadata for this card
+						const newMetadata = {
+							scene_id: data.scene_id,
+							consensus_x: position.consensus_x,
+							consensus_y: position.consensus_y,
+							facilitator_x: position.facilitator_x,
+							facilitator_y: position.facilitator_y,
+							mode_quadrant: position.mode_quadrant,
+							quadrant_label: position.quadrant_label,
+							participant_count: position.participant_count,
+							timestamp: new Date().toISOString(),
+						};
+
+						// Parse existing metadata or create new array
+						const existingMetadata = card.quadrantMetadata
+							? JSON.parse(card.quadrantMetadata)
+							: [];
+
+						// Replace or add metadata for this scene
+						const updatedMetadata = existingMetadata.filter(
+							(m: any) => m.scene_id !== data.scene_id,
+						);
+						updatedMetadata.push(newMetadata);
+
+						return {
+							...card,
+							quadrantMetadata: JSON.stringify(updatedMetadata),
+						};
+					}
+					return card;
+				});
+			}
+			break;
+		case "quadrant_facilitator_position_updated":
+			// Update facilitator-adjusted position for a card
+			if (data.card_id && data.scene_id) {
+				cards = cards.map((card) => {
+					if (card.id === data.card_id) {
+						// Parse existing metadata
+						const existingMetadata = card.quadrantMetadata
+							? JSON.parse(card.quadrantMetadata)
+							: [];
+
+						// Find and update metadata for this scene
+						const metadataForScene = existingMetadata.find(
+							(m: any) => m.scene_id === data.scene_id,
+						);
+
+						if (metadataForScene) {
+							metadataForScene.facilitator_x = data.facilitator_x;
+							metadataForScene.facilitator_y = data.facilitator_y;
+
+							return {
+								...card,
+								quadrantMetadata: JSON.stringify(existingMetadata),
+							};
+						}
+					}
+					return card;
+				});
+			}
+			break;
 		case "update_presentation":
 			if (currentScene?.mode === "present") {
 				// Update the selected card ID if provided

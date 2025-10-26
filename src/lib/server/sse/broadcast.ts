@@ -577,6 +577,26 @@ export function broadcastCardQuadrantAdjusted(
 	sseManager.broadcastToBoard(boardId, message);
 }
 
+export function broadcastQuadrantFacilitatorPositionUpdated(
+	boardId: string,
+	sceneId: string,
+	cardId: string,
+	facilitatorX: number,
+	facilitatorY: number,
+) {
+	const message: SSEMessage = {
+		type: "quadrant_facilitator_position_updated",
+		board_id: boardId,
+		scene_id: sceneId,
+		card_id: cardId,
+		facilitator_x: facilitatorX,
+		facilitator_y: facilitatorY,
+		timestamp: Date.now(),
+	};
+
+	sseManager.broadcastToBoard(boardId, message);
+}
+
 export function broadcastPresentFilterChanged(
 	boardId: string,
 	sceneId: string,
