@@ -253,6 +253,7 @@ export async function getBoardWithDetails(boardId: string) {
 			userId: cards.userId,
 			content: cards.content,
 			groupId: cards.groupId,
+			quadrantMetadata: cards.quadrantMetadata,
 			createdAt: cards.createdAt,
 			updatedAt: cards.updatedAt,
 		})

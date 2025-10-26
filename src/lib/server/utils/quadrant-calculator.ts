@@ -22,22 +22,57 @@ export interface QuadrantPosition {
 
 /**
  * Calculate consensus position from multiple user placements
- * Returns the mean x and y coordinates
+ * Returns the mean x and y coordinates, plus consensus quality metrics
  */
 export function calculateConsensusPosition(positions: QuadrantPosition[]): {
 	consensus_x: number;
 	consensus_y: number;
+	std_dev: number;
+	consensus_score: number;
+	spread: string;
 } {
 	if (positions.length === 0) {
 		throw new Error("Cannot calculate consensus with no positions");
 	}
 
-	const consensus_x =
-		positions.reduce((sum, p) => sum + p.xValue, 0) / positions.length;
-	const consensus_y =
-		positions.reduce((sum, p) => sum + p.yValue, 0) / positions.length;
+	// Calculate mean position
+	const sum_x = positions.reduce((sum, p) => sum + p.xValue, 0);
+	const sum_y = positions.reduce((sum, p) => sum + p.yValue, 0);
+	const mean_x = sum_x / positions.length;
+	const mean_y = sum_y / positions.length;
 
-	return { consensus_x, consensus_y };
+	// Calculate variance (sum of squared distances from mean)
+	const variance = positions.reduce((sum, p) => {
+		return (
+			sum +
+			Math.pow(p.xValue - mean_x, 2) +
+			Math.pow(p.yValue - mean_y, 2)
+		);
+	}, 0) / positions.length;
+
+	const std_dev = Math.sqrt(variance);
+
+	// Normalize to 0-100 scale (assuming 0-96 coordinate range)
+	// std_dev of 0 = 100% consensus, std_dev of ~40 = 0% consensus
+	const consensus_score = Math.max(0, Math.min(100, 100 - std_dev * 2.5));
+
+	// Categorize spread
+	let spread: string;
+	if (std_dev < 15) {
+		spread = "tight";
+	} else if (std_dev < 30) {
+		spread = "moderate";
+	} else {
+		spread = "dispersed";
+	}
+
+	return {
+		consensus_x: Math.round(mean_x),
+		consensus_y: Math.round(mean_y),
+		std_dev: Math.round(std_dev * 10) / 10, // Round to 1 decimal
+		consensus_score: Math.round(consensus_score),
+		spread,
+	};
 }
 
 /**

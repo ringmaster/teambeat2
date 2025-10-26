@@ -97,8 +97,9 @@ export const POST: RequestHandler = async (event) => {
 				continue;
 			}
 
-			// Calculate consensus position
-			const { consensus_x, consensus_y } = calculateConsensusPosition(positions);
+			// Calculate consensus position with quality metrics
+			const { consensus_x, consensus_y, std_dev, consensus_score, spread } =
+				calculateConsensusPosition(positions);
 
 			// Calculate mode quadrant
 			const mode_quadrant = getModeQuadrant(positions, config);
@@ -116,6 +117,9 @@ export const POST: RequestHandler = async (event) => {
 				mode_quadrant,
 				quadrant_label,
 				participant_count: positions.length,
+				std_dev,
+				consensus_score,
+				spread,
 				timestamp: new Date().toISOString(),
 			};
 
@@ -149,6 +153,9 @@ export const POST: RequestHandler = async (event) => {
 				mode_quadrant,
 				quadrant_label,
 				participant_count: positions.length,
+				std_dev,
+				consensus_score,
+				spread,
 			});
 		}
 

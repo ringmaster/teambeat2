@@ -823,7 +823,14 @@
 									{#if metadata}
 										<div class="consensus-info">
 											<div class="quadrant-badge">{metadata.quadrant_label}</div>
-											<div class="participant-count">{metadata.participant_count} participants</div>
+											<div class="participant-count">
+												{metadata.participant_count} participants, {metadata.consensus_score}% agreement
+											</div>
+											{#if metadata.spread}
+												<div class="spread-indicator spread-{metadata.spread}">
+													{metadata.spread}
+												</div>
+											{/if}
 										</div>
 									{:else}
 										<div class="consensus-info">
@@ -1010,6 +1017,7 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
+		z-index: 6;
 	}
 
 	.horizontal-line {
@@ -1018,7 +1026,6 @@
 		right: 0;
 		height: 2px;
 		background: var(--color-border-hover);
-		z-index: 0;
 	}
 
 	.vertical-line {
@@ -1027,7 +1034,6 @@
 		bottom: 0;
 		width: 2px;
 		background: var(--color-border-hover);
-		z-index: 0;
 	}
 
 	// Main axis lines
@@ -1035,7 +1041,7 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
-		z-index: 1;
+		z-index: 7;
 	}
 
 	.x-axis-line {
@@ -1337,6 +1343,32 @@
 			font-size: 0.75rem;
 			color: var(--color-text-muted);
 			font-style: italic;
+		}
+
+		.spread-indicator {
+			font-size: 0.65rem;
+			font-weight: 600;
+			padding: var(--spacing-1) var(--spacing-2);
+			border-radius: var(--radius-sm);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			display: inline-block;
+			margin-top: var(--spacing-1);
+
+			&.spread-tight {
+				background: color-mix(in srgb, var(--color-success) 15%, transparent);
+				color: var(--color-success);
+			}
+
+			&.spread-moderate {
+				background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+				color: var(--color-warning);
+			}
+
+			&.spread-dispersed {
+				background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+				color: var(--color-danger);
+			}
 		}
 	}
 </style>

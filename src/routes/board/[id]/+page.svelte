@@ -620,6 +620,9 @@ function handleSSEMessage(data: any) {
 							mode_quadrant: position.mode_quadrant,
 							quadrant_label: position.quadrant_label,
 							participant_count: position.participant_count,
+							std_dev: position.std_dev,
+							consensus_score: position.consensus_score,
+							spread: position.spread,
 							timestamp: new Date().toISOString(),
 						};
 
