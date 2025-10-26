@@ -16,7 +16,8 @@ export interface CreateSceneData {
 		| "agreements"
 		| "scorecard"
 		| "static"
-		| "survey";
+		| "survey"
+		| "quadrant";
 	seq: number;
 	flags?: SceneFlag[];
 }
@@ -61,6 +62,12 @@ export async function findSceneById(sceneId: string) {
 			selectedCardId: scenes.selectedCardId,
 			createdAt: scenes.createdAt,
 			seriesId: boards.seriesId,
+			displayRule: scenes.displayRule,
+			displayMode: scenes.displayMode,
+			focusedQuestionId: scenes.focusedQuestionId,
+			quadrantConfig: scenes.quadrantConfig,
+			presentModeFilter: scenes.presentModeFilter,
+			quadrantPhase: scenes.quadrantPhase,
 		})
 		.from(scenes)
 		.innerJoin(boards, eq(scenes.boardId, boards.id))
@@ -91,10 +98,14 @@ export async function updateScene(
 			| "agreements"
 			| "scorecard"
 			| "static"
-			| "survey";
+			| "survey"
+			| "quadrant";
 		displayRule?: string | null;
 		displayMode?: "collecting" | "results";
 		focusedQuestionId?: string | null;
+		quadrantConfig?: string | null;
+		presentModeFilter?: string | null;
+		quadrantPhase?: "input" | "results" | null;
 	},
 ) {
 	const [scene] = await db

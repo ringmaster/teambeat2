@@ -9,6 +9,8 @@ import Icon from "./ui/Icon.svelte";
 import Modal from "./ui/Modal.svelte";
 import "flatpickr/dist/flatpickr.min.css";
 import { COLUMN_PRESETS } from "$lib/data/column-presets";
+import { QUADRANT_TEMPLATES } from "$lib/data/quadrant-templates";
+import type { QuadrantConfig } from "$lib/types/quadrant";
 import * as boardApi from "$lib/services/board-api";
 import * as dashboardApi from "$lib/services/dashboard-api";
 import * as scorecardApi from "$lib/services/scorecard-api";
@@ -104,6 +106,17 @@ let columnPresets = $state<Array<{ value: string; used?: boolean }>>([]);
 // Debounce timer for static scene content
 let contentDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Quadrant configuration state
+let quadrantConfigForm = $state<QuadrantConfig>({
+	grid_size: "2x2",
+	x_axis_label: "",
+	y_axis_label: "",
+	x_axis_values: [],
+	y_axis_values: [],
+});
+let showQuadrantTemplates = $state(false);
+let lastLoadedQuadrantSceneId = $state<string | null>(null);
+
 // Update form when board changes
 $effect(() => {
 	if (board) {
@@ -174,6 +187,29 @@ $effect(() => {
 			datePickerInstance = null;
 		}
 	};
+});
+
+// Load quadrant configuration when a quadrant scene is selected (only on scene change)
+$effect(() => {
+	if (selectedScene?.mode === "quadrant" && selectedScene.id !== lastLoadedQuadrantSceneId) {
+		lastLoadedQuadrantSceneId = selectedScene.id;
+		if (selectedScene.quadrantConfig) {
+			const config = JSON.parse(selectedScene.quadrantConfig);
+			quadrantConfigForm = config;
+		} else {
+			// Reset to default if no config
+			quadrantConfigForm = {
+				grid_size: "2x2",
+				x_axis_label: "",
+				y_axis_label: "",
+				x_axis_values: [],
+				y_axis_values: [],
+			};
+		}
+	} else if (selectedScene?.mode !== "quadrant") {
+		// Reset tracking when leaving quadrant mode
+		lastLoadedQuadrantSceneId = null;
+	}
 });
 
 // Load column states for scenes
@@ -279,6 +315,26 @@ function debouncedUpdateSceneDescription(sceneId: string, description: string) {
 	contentDebounceTimer = setTimeout(() => {
 		onUpdateScene(sceneId, { description });
 	}, 500);
+}
+
+function updateQuadrantConfig(sceneId: string, config: QuadrantConfig) {
+	const configJson = JSON.stringify(config);
+	onUpdateScene(sceneId, { quadrantConfig: configJson });
+}
+
+function applyQuadrantTemplate(sceneId: string, templateId: string) {
+	const template = QUADRANT_TEMPLATES.find((t) => t.id === templateId);
+	if (template) {
+		// Just populate the form fields - don't store template_id
+		quadrantConfigForm = {
+			grid_size: template.grid_size,
+			x_axis_label: template.x_axis_label,
+			y_axis_label: template.y_axis_label,
+			x_axis_values: template.x_axis_values,
+			y_axis_values: template.y_axis_values,
+		};
+		updateQuadrantConfig(sceneId, quadrantConfigForm);
+	}
 }
 
 async function updateColumnDisplay(
@@ -719,6 +775,7 @@ let isThreeColumnMode = $derived(
                         <option value="agreements">Agreements</option>
                         <option value="columns">Columns</option>
                         <option value="present">Present</option>
+                        <option value="quadrant">Quadrant</option>
                         <option value="review">Review</option>
                         <option value="scorecard">Scorecard</option>
                         <option value="static">Static Content</option>
@@ -754,6 +811,135 @@ let isThreeColumnMode = $derived(
                     </div>
                 {/if}
 
+                {#if selectedScene.mode === "quadrant"}
+                    <div class="form-section">
+                        <div class="section-header-with-action">
+                            <h3>Quadrant Configuration</h3>
+                            <div class="preset-dropdown-container">
+                                <button
+                                    onclick={() => showQuadrantTemplates = !showQuadrantTemplates}
+                                    class="btn-secondary"
+                                    type="button"
+                                >
+                                    <Icon name="book-open" size="sm" />
+                                    Apply Template
+                                </button>
+                                {#if showQuadrantTemplates}
+                                    <div class="preset-dropdown">
+                                        {#each QUADRANT_TEMPLATES as template (template.id)}
+                                            <button
+                                                class="preset-option"
+                                                onclick={() => {
+                                                    applyQuadrantTemplate(selectedScene.id, template.id);
+                                                    showQuadrantTemplates = false;
+                                                }}
+                                                type="button"
+                                            >
+                                                <div class="preset-name">{template.name}</div>
+                                                <div class="preset-description">
+                                                    {template.grid_size} grid: {template.x_axis_label} vs {template.y_axis_label}
+                                                </div>
+                                            </button>
+                                        {/each}
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="grid-size">Grid Size</label>
+                            <select
+                                id="grid-size"
+                                bind:value={quadrantConfigForm.grid_size}
+                                onchange={() => updateQuadrantConfig(selectedScene.id, quadrantConfigForm)}
+                                class="select"
+                            >
+                                <option value="2x2">2x2</option>
+                                <option value="3x3">3x3</option>
+                                <option value="2x3">2x3</option>
+                                <option value="3x2">3x2</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="x-axis-label">X-Axis Label</label>
+                            <input
+                                id="x-axis-label"
+                                type="text"
+                                bind:value={quadrantConfigForm.x_axis_label}
+                                oninput={() => updateQuadrantConfig(selectedScene.id, quadrantConfigForm)}
+                                placeholder="e.g., Importance, Effort, Risk"
+                                class="input"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="y-axis-label">Y-Axis Label</label>
+                            <input
+                                id="y-axis-label"
+                                type="text"
+                                bind:value={quadrantConfigForm.y_axis_label}
+                                oninput={() => updateQuadrantConfig(selectedScene.id, quadrantConfigForm)}
+                                placeholder="e.g., Urgency, Impact, Value"
+                                class="input"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="x-axis-values">X-Axis Values (comma-separated)</label>
+                            <input
+                                id="x-axis-values"
+                                type="text"
+                                value={quadrantConfigForm.x_axis_values?.join(", ") || ""}
+                                oninput={(e) => {
+                                    quadrantConfigForm.x_axis_values = e.currentTarget.value
+                                        .split(",")
+                                        .map(v => v.trim())
+                                        .filter(v => v);
+                                    updateQuadrantConfig(selectedScene.id, quadrantConfigForm);
+                                }}
+                                placeholder="e.g., Low, High (for 2x2) or Low, Medium, High (for 3x3)"
+                                class="input"
+                            />
+                            <p class="field-hint">
+                                Labels for each column (should match grid width: {quadrantConfigForm.grid_size[0]} values)
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="y-axis-values">Y-Axis Values (comma-separated)</label>
+                            <input
+                                id="y-axis-values"
+                                type="text"
+                                value={quadrantConfigForm.y_axis_values?.join(", ") || ""}
+                                oninput={(e) => {
+                                    quadrantConfigForm.y_axis_values = e.currentTarget.value
+                                        .split(",")
+                                        .map(v => v.trim())
+                                        .filter(v => v);
+                                    updateQuadrantConfig(selectedScene.id, quadrantConfigForm);
+                                }}
+                                placeholder="e.g., Low, High (for 2x2) or Low, Medium, High (for 3x3)"
+                                class="input"
+                            />
+                            <p class="field-hint">
+                                Labels for each row (should match grid height: {quadrantConfigForm.grid_size[2]} values)
+                            </p>
+                        </div>
+
+                        {#if quadrantConfigForm.x_axis_label && quadrantConfigForm.y_axis_label}
+                            <div class="quadrant-preview">
+                                <h4>Preview</h4>
+                                <div class="preview-info">
+                                    <div><strong>X-Axis:</strong> {quadrantConfigForm.x_axis_label}</div>
+                                    <div><strong>Y-Axis:</strong> {quadrantConfigForm.y_axis_label}</div>
+                                    <div><strong>Grid:</strong> {quadrantConfigForm.grid_size}</div>
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+
                 {#if selectedScene.flags}
                     <SceneOptionsConfig
                         sceneMode={selectedScene.mode}
@@ -766,7 +952,7 @@ let isThreeColumnMode = $derived(
                     />
                 {/if}
 
-                {#if selectedScene.mode !== "static" && selectedScene.mode !== "survey"}
+                {#if selectedScene.mode !== "static" && selectedScene.mode !== "survey" && selectedScene.mode !== "quadrant"}
                     <div class="form-section">
                         <h3>Columns</h3>
                         <div class="checkbox-grid">
@@ -1753,6 +1939,93 @@ Date:                   days_since days_since_uk</code
                 );
                 color: var(--color-accent);
             }
+        }
+    }
+
+    .quadrant-preview {
+        margin-top: var(--spacing-4);
+        padding: var(--spacing-4);
+        background: var(--color-gray-50);
+        border: 1px solid var(--color-gray-200);
+        border-radius: 4px;
+
+        h4 {
+            margin-bottom: var(--spacing-3);
+            color: var(--color-gray-700);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .preview-info {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-2);
+            font-size: 0.875rem;
+            color: var(--color-gray-600);
+
+            strong {
+                color: var(--color-gray-800);
+                font-weight: 500;
+            }
+        }
+    }
+
+    .section-header-with-action {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-4);
+
+        h3 {
+            margin: 0;
+        }
+    }
+
+    .preset-dropdown-container {
+        position: relative;
+    }
+
+    .preset-dropdown {
+        position: absolute;
+        top: calc(100% + 0.25rem);
+        right: 0;
+        min-width: 300px;
+        max-width: 400px;
+        background-color: white;
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        overflow: hidden;
+    }
+
+    .preset-option {
+        width: 100%;
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid var(--color-gray-200);
+        background-color: white;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background-color: var(--color-gray-50);
+        }
+
+        .preset-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--color-gray-900);
+        }
+
+        .preset-description {
+            font-size: 0.875rem;
+            color: var(--color-gray-600);
         }
     }
 </style>

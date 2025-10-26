@@ -94,13 +94,14 @@ export const POST: RequestHandler = async (event) => {
 				"scorecard",
 				"static",
 				"survey",
+				"quadrant",
 			].includes(mode)
 		) {
 			return json(
 				{
 					success: false,
 					error:
-						"Valid scene mode is required (columns, present, review, agreements, scorecard, static, or survey)",
+						"Valid scene mode is required (columns, present, review, agreements, scorecard, static, survey, or quadrant)",
 				},
 				{ status: 400 },
 			);

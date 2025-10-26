@@ -520,3 +520,75 @@ export function broadcastSceneUpdated(boardId: string, sceneId: string) {
 
 	sseManager.broadcastToBoard(boardId, message);
 }
+
+// Quadrant scene broadcasts
+
+export function broadcastQuadrantPhaseChanged(
+	boardId: string,
+	sceneId: string,
+	phase: "input" | "results",
+) {
+	const message: SSEMessage = {
+		type: "quadrant_phase_changed",
+		board_id: boardId,
+		scene_id: sceneId,
+		phase,
+		timestamp: Date.now(),
+	};
+
+	sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastQuadrantResultsCalculated(
+	boardId: string,
+	sceneId: string,
+	cardPositions: any[],
+) {
+	const message: SSEMessage = {
+		type: "quadrant_results_calculated",
+		board_id: boardId,
+		scene_id: sceneId,
+		card_positions: cardPositions,
+		timestamp: Date.now(),
+	};
+
+	sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastCardQuadrantAdjusted(
+	boardId: string,
+	cardId: string,
+	sceneId: string,
+	facilitatorX: number,
+	facilitatorY: number,
+	quadrantLabel: string,
+) {
+	const message: SSEMessage = {
+		type: "card_quadrant_adjusted",
+		board_id: boardId,
+		card_id: cardId,
+		scene_id: sceneId,
+		facilitator_x: facilitatorX,
+		facilitator_y: facilitatorY,
+		quadrant_label: quadrantLabel,
+		timestamp: Date.now(),
+	};
+
+	sseManager.broadcastToBoard(boardId, message);
+}
+
+export function broadcastPresentFilterChanged(
+	boardId: string,
+	sceneId: string,
+	filter: any,
+) {
+	const message: SSEMessage = {
+		type: "present_filter_changed",
+		board_id: boardId,
+		scene_id: sceneId,
+		filter,
+		timestamp: Date.now(),
+	};
+
+	sseManager.broadcastToBoard(boardId, message);
+}

@@ -29,11 +29,15 @@ const updateSceneSchema = z.object({
 			"scorecard",
 			"static",
 			"survey",
+			"quadrant",
 		])
 		.optional(),
 	displayRule: z.string().nullish(),
 	displayMode: z.enum(["collecting", "results"]).optional(),
 	focusedQuestionId: z.string().nullish(),
+	quadrantConfig: z.string().nullish(),
+	presentModeFilter: z.string().nullish(),
+	quadrantPhase: z.enum(["input", "results"]).nullish(),
 	flags: z.array(z.string()).optional(),
 });
 

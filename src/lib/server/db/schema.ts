@@ -154,6 +154,7 @@ export const scenes = table("scenes", {
 			| "scorecard"
 			| "static"
 			| "survey"
+			| "quadrant"
 		>(),
 	seq: integer("seq").notNull(),
 	selectedCardId: text("selected_card_id").references(() => cards.id, {
@@ -169,6 +170,10 @@ export const scenes = table("scenes", {
 		(): any => healthQuestions.id,
 		{ onDelete: "set null" },
 	),
+	// Quadrant scene configuration
+	quadrantConfig: text("quadrant_config"), // JSON: {grid_size, x_axis_label, y_axis_label, x_axis_values, y_axis_values, template_id}
+	presentModeFilter: text("present_mode_filter"), // JSON: {type, scene_id?, quadrant_label?}
+	quadrantPhase: text("quadrant_phase").$type<"input" | "results">(), // Current phase for quadrant scenes
 	createdAt: text("created_at")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -217,6 +222,7 @@ export const cards = table("cards", {
 	groupId: text("group_id"),
 	isGroupLead: booleanField("is_group_lead").notNull().default(false),
 	seq: integer("seq").default(0),
+	quadrantMetadata: text("quadrant_metadata"), // JSON array: [{scene_id, consensus_x, consensus_y, facilitator_x, facilitator_y, mode_quadrant, quadrant_label, participant_count, timestamp}]
 	createdAt: text("created_at")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -224,6 +230,35 @@ export const cards = table("cards", {
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
 });
+
+export const quadrantPositions = table(
+	"quadrant_positions",
+	{
+		id: text("id").primaryKey(),
+		cardId: text("card_id")
+			.notNull()
+			.references(() => cards.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		sceneId: text("scene_id")
+			.notNull()
+			.references(() => scenes.id, { onDelete: "cascade" }),
+		xValue: integer("x_value").notNull(), // 1-96 range
+		yValue: integer("y_value").notNull(), // 1-96 range
+		createdAt: text("created_at")
+			.notNull()
+			.$defaultFn(() => new Date().toISOString()),
+		updatedAt: text("updated_at")
+			.notNull()
+			.$defaultFn(() => new Date().toISOString()),
+	},
+	(table) => ({
+		pk: unique().on(table.cardId, table.userId, table.sceneId),
+		sceneIdx: indexField("quadrant_positions_scene_idx").on(table.sceneId),
+		cardIdx: indexField("quadrant_positions_card_idx").on(table.cardId),
+	}),
+);
 
 export const votes = table("votes", {
 	id: text("id").primaryKey(),
@@ -605,6 +640,7 @@ export const scenesRelations = relations(scenes, ({ one, many }) => ({
 	sceneFlags: many(sceneFlags),
 	healthQuestions: many(healthQuestions),
 	sceneScorecards: many(sceneScorecards),
+	quadrantPositions: many(quadrantPositions),
 }));
 
 export const scenesColumnsRelations = relations(scenesColumns, ({ one }) => ({
@@ -636,7 +672,26 @@ export const cardsRelations = relations(cards, ({ one, many }) => ({
 	}),
 	votes: many(votes),
 	comments: many(comments),
+	quadrantPositions: many(quadrantPositions),
 }));
+
+export const quadrantPositionsRelations = relations(
+	quadrantPositions,
+	({ one }) => ({
+		card: one(cards, {
+			fields: [quadrantPositions.cardId],
+			references: [cards.id],
+		}),
+		user: one(users, {
+			fields: [quadrantPositions.userId],
+			references: [users.id],
+		}),
+		scene: one(scenes, {
+			fields: [quadrantPositions.sceneId],
+			references: [scenes.id],
+		}),
+	}),
+);
 
 export const votesRelations = relations(votes, ({ one }) => ({
 	card: one(cards, {
@@ -734,6 +789,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 	healthResponses: many(healthResponses),
 	presence: many(presence),
 	authenticators: many(userAuthenticators),
+	quadrantPositions: many(quadrantPositions),
 }));
 
 export const userAuthenticatorsRelations = relations(

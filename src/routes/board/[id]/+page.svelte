@@ -16,6 +16,7 @@ import PollDropdown, {
 	type PollConfig,
 } from "$lib/components/PollDropdown.svelte";
 import PresentMode from "$lib/components/PresentMode.svelte";
+import QuadrantScene from "$lib/components/QuadrantScene.svelte";
 import ReviewScene from "$lib/components/ReviewScene.svelte";
 import ScorecardScene from "$lib/components/ScorecardScene.svelte";
 import StaticScene from "$lib/components/StaticScene.svelte";
@@ -2697,6 +2698,17 @@ let dragState = $derived({
         <StaticScene scene={currentScene} />
     {:else if currentScene?.mode === "survey"}
         <HealthSurvey scene={currentScene} {boardId} boardStatus={board.status} {userRole} />
+    {:else if currentScene?.mode === "quadrant"}
+        <QuadrantScene
+            scene={currentScene}
+            {cards}
+            {boardId}
+            {board}
+            {userRole}
+            currentUserId={user?.id}
+            isAdmin={userRole === "admin"}
+            isFacilitator={userRole === "facilitator"}
+        />
     {:else}
         <BoardColumns
             board={displayBoard}
