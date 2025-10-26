@@ -51,6 +51,11 @@ This project prioritizes **developer autonomy** over framework magic. We choose 
 - Use `let computed = $derived(expression)` for computed values
 - **Never mix runes with legacy Svelte syntax** - causes compilation errors
 
+**CRITICAL $derived SYNTAX** - This is a recurring mistake:
+- Use `$derived(expression)` for simple expressions: `let doubled = $derived(count * 2)`
+- Use `$derived.by(() => {...})` for complex logic with function body: `let filtered = $derived.by(() => { return items.filter(...); })`
+- **NEVER use `$derived(() => {...})`** - This creates a function, not a value, causing "X is not a function" errors
+
 Example:
 ```svelte
 <script lang="ts">
@@ -59,10 +64,21 @@ Example:
   let doubled = $derived(count * 2);
   let { user } = $props();
 
+  // Correct - $derived.by for complex logic
+  let filteredItems = $derived.by(() => {
+    if (!config) return items;
+    return items.filter(item => item.active);
+  });
+
   // Wrong - Legacy mode (DO NOT USE)
   // export let user;
   // let count = 0;
   // $: doubled = count * 2;
+
+  // Wrong - $derived with arrow function (DO NOT USE)
+  // let filteredItems = $derived(() => {
+  //   return items.filter(item => item.active);
+  // });
 </script>
 ```
 

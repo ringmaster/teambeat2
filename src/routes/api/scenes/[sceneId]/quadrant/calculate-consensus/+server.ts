@@ -87,13 +87,32 @@ export const POST: RequestHandler = async (event) => {
 
 		const cardPositions: any[] = [];
 
-		// Calculate consensus for each card that has positions
+		// Calculate consensus for each card
 		for (const cardRow of allCards) {
 			const card = cardRow.cards;
 			const positions = await getQuadrantPositionsForCard(card.id, sceneId);
 
+			// Get existing metadata
+			const existingMetadataArray = card.quadrantMetadata
+				? JSON.parse(card.quadrantMetadata)
+				: [];
+
 			if (positions.length === 0) {
-				// Skip cards with no positions
+				// Remove metadata for this scene if there are no positions
+				const updatedMetadata = existingMetadataArray.filter(
+					(m: any) => m.scene_id !== sceneId,
+				);
+
+				// Only update if there was metadata to remove
+				if (existingMetadataArray.length !== updatedMetadata.length) {
+					await db
+						.update(cards)
+						.set({
+							quadrantMetadata: JSON.stringify(updatedMetadata),
+							updatedAt: new Date().toISOString(),
+						})
+						.where(eq(cards.id, card.id));
+				}
 				continue;
 			}
 
@@ -124,12 +143,7 @@ export const POST: RequestHandler = async (event) => {
 			};
 
 			// Update card with quadrant metadata
-			// Get existing metadata if any
-			const existingMetadataArray = card.quadrantMetadata
-				? JSON.parse(card.quadrantMetadata)
-				: [];
-
-			// Replace or add metadata for this scene
+			// Replace or add metadata for this scene (existingMetadataArray already loaded above)
 			const updatedMetadata = existingMetadataArray.filter(
 				(m: any) => m.scene_id !== sceneId,
 			);

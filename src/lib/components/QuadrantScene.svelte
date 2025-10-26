@@ -1,432 +1,519 @@
 <script lang="ts">
-	import { contourDensity } from "d3-contour";
-	import type { QuadrantConfig, QuadrantPosition } from "$lib/types/quadrant";
-	import Card from "./Card.svelte";
+import { contourDensity } from "d3-contour";
+import type { QuadrantConfig, QuadrantPosition } from "$lib/types/quadrant";
+import Card from "./Card.svelte";
 
-	let {
-		scene,
-		cards,
-		boardId,
-		board,
-		userRole,
-		currentUserId,
-		isAdmin = false,
-		isFacilitator = false,
-	}: {
-		scene: any;
-		cards: any[];
-		boardId: string;
-		board: any;
-		userRole: string;
-		currentUserId: string;
-		isAdmin?: boolean;
-		isFacilitator?: boolean;
-	} = $props();
+let {
+	scene,
+	cards,
+	boardId,
+	board,
+	userRole,
+	currentUserId,
+	isAdmin = false,
+	isFacilitator = false,
+}: {
+	scene: any;
+	cards: any[];
+	boardId: string;
+	board: any;
+	userRole: string;
+	currentUserId: string;
+	isAdmin?: boolean;
+	isFacilitator?: boolean;
+} = $props();
 
-	let config = $derived<QuadrantConfig>(
-		scene.quadrantConfig ? JSON.parse(scene.quadrantConfig) : null
+let config = $derived<QuadrantConfig>(
+	scene.quadrantConfig ? JSON.parse(scene.quadrantConfig) : null,
+);
+let phase = $derived<"input" | "results" | null>(scene.quadrantPhase);
+
+let userPositions = $state<QuadrantPosition[]>([]);
+let loading = $state(true);
+let draggedCardId = $state<string | null>(null);
+let draggedMarkerId = $state<string | null>(null);
+let selectedCardId = $state<string | null>(null);
+let selectedCardPositions = $state<QuadrantPosition[]>([]);
+
+// Parse grid dimensions
+let gridCols = $derived(config ? Number.parseInt(config.grid_size[0]) : 2);
+let gridRows = $derived(config ? Number.parseInt(config.grid_size[2]) : 2);
+
+// Filter cards based on selected columns (if configured)
+let filteredCards = $derived.by(() => {
+	if (
+		!config ||
+		!config.selected_column_ids ||
+		config.selected_column_ids.length === 0
+	) {
+		return cards;
+	}
+	// Note: cards use camelCase 'columnId', not snake_case 'column_id'
+	return cards.filter((card) =>
+		config.selected_column_ids!.includes(card.columnId),
 	);
-	let phase = $derived<"input" | "results" | null>(scene.quadrantPhase);
+});
 
-	let userPositions = $state<QuadrantPosition[]>([]);
-	let loading = $state(true);
-	let draggedCardId = $state<string | null>(null);
-	let draggedMarkerId = $state<string | null>(null);
-	let selectedCardId = $state<string | null>(null);
-	let selectedCardPositions = $state<QuadrantPosition[]>([]);
-
-	// Parse grid dimensions
-	let gridCols = $derived(config ? Number.parseInt(config.grid_size[0]) : 2);
-	let gridRows = $derived(config ? Number.parseInt(config.grid_size[2]) : 2);
-
-	// Load user positions if in input phase
-	$effect(() => {
-		if (phase === "input") {
-			loadPositions();
-		}
-	});
-
-	async function loadPositions() {
-		try {
-			const response = await fetch(
-				`/api/scenes/${scene.id}/quadrant/positions`
-			);
-			const data = await response.json();
-			if (data.success) {
-				userPositions = data.positions;
-			}
-		} catch (error) {
-			console.error("Failed to load positions:", error);
-		} finally {
-			loading = false;
-		}
+// Load user positions if in input phase
+$effect(() => {
+	if (phase === "input") {
+		loadPositions();
 	}
+});
 
-	async function startInput() {
-		try {
-			const response = await fetch(
-				`/api/scenes/${scene.id}/quadrant/start-input`,
-				{
-					method: "POST",
-				}
-			);
-			const data = await response.json();
-			if (!data.success) {
-				alert(`Failed to start input: ${data.error}`);
-			}
-		} catch (error) {
-			console.error("Failed to start input:", error);
-			alert("Failed to start input phase");
+async function loadPositions() {
+	try {
+		const response = await fetch(`/api/scenes/${scene.id}/quadrant/positions`);
+		const data = await response.json();
+		if (data.success) {
+			userPositions = data.positions;
 		}
+	} catch (error) {
+		console.error("Failed to load positions:", error);
+	} finally {
+		loading = false;
 	}
+}
 
-	async function calculateConsensus() {
-		try {
-			const response = await fetch(
-				`/api/scenes/${scene.id}/quadrant/calculate-consensus`,
-				{
-					method: "POST",
-				}
+async function startInput() {
+	try {
+		const response = await fetch(
+			`/api/scenes/${scene.id}/quadrant/start-input`,
+			{
+				method: "POST",
+			},
+		);
+		const data = await response.json();
+		if (!data.success) {
+			alert(`Failed to start input: ${data.error}`);
+		}
+	} catch (error) {
+		console.error("Failed to start input:", error);
+		alert("Failed to start input phase");
+	}
+}
+
+async function calculateConsensus() {
+	try {
+		const response = await fetch(
+			`/api/scenes/${scene.id}/quadrant/calculate-consensus`,
+			{
+				method: "POST",
+			},
+		);
+		const data = await response.json();
+		console.log("Consensus calculation response:", data);
+		if (!data.success) {
+			alert(`Failed to calculate consensus: ${data.error}`);
+		} else {
+			console.log(
+				"Consensus calculated successfully. Card positions:",
+				data.card_positions,
 			);
-			const data = await response.json();
-			console.log("Consensus calculation response:", data);
-			if (!data.success) {
-				alert(`Failed to calculate consensus: ${data.error}`);
+		}
+	} catch (error) {
+		console.error("Failed to calculate consensus:", error);
+		alert("Failed to calculate consensus");
+	}
+}
+
+async function switchToInput() {
+	try {
+		const response = await fetch(`/api/boards/${boardId}/scenes/${scene.id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ quadrantPhase: "input" }),
+		});
+		const data = await response.json();
+		if (!data.success) {
+			alert(`Failed to switch to input phase: ${data.error}`);
+		}
+	} catch (error) {
+		console.error("Failed to switch to input phase:", error);
+		alert("Failed to switch to input phase");
+	}
+}
+
+async function handlePhaseChange(newPhase: "input" | "results") {
+	if (newPhase === phase) return;
+
+	if (newPhase === "results") {
+		await calculateConsensus();
+
+		// Reload selected card positions to update the topographic graph
+		if (selectedCardId) {
+			await loadCardPositions(selectedCardId);
+		}
+	} else {
+		await switchToInput();
+	}
+}
+
+function getCardPosition(cardId: string): QuadrantPosition | undefined {
+	return userPositions.find((p) => p.card_id === cardId);
+}
+
+function getCardMetadata(card: any) {
+	if (!card.quadrantMetadata) return null;
+	const metadata = JSON.parse(card.quadrantMetadata);
+	return metadata.find((m: any) => m.scene_id === scene.id);
+}
+
+async function placeCard(cardId: string, x: number, y: number) {
+	try {
+		const response = await fetch(`/api/quadrant-positions/${cardId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				scene_id: scene.id,
+				x_value: x,
+				y_value: y,
+			}),
+		});
+		const data = await response.json();
+		if (data.success) {
+			// Update local positions
+			const existingIndex = userPositions.findIndex(
+				(p) => p.card_id === cardId,
+			);
+			if (existingIndex >= 0) {
+				userPositions[existingIndex] = data.position;
 			} else {
-				console.log("Consensus calculated successfully. Card positions:", data.card_positions);
+				userPositions = [...userPositions, data.position];
 			}
-		} catch (error) {
-			console.error("Failed to calculate consensus:", error);
-			alert("Failed to calculate consensus");
 		}
+	} catch (error) {
+		console.error("Failed to place card:", error);
 	}
+}
 
-	async function switchToInput() {
-		try {
-			const response = await fetch(
-				`/api/boards/${boardId}/scenes/${scene.id}`,
+// Drag and drop handlers for cards
+function handleCardDragStart(e: DragEvent, cardId: string) {
+	draggedCardId = cardId;
+	if (e.dataTransfer) {
+		e.dataTransfer.effectAllowed = "move";
+		e.dataTransfer.setData("text/plain", cardId);
+
+		// Create a circular marker as the drag image
+		const dragImage = document.createElement("div");
+		const cardIndex = getCardIndex(cardId);
+		dragImage.textContent = cardIndex.toString();
+
+		// Get computed colors from CSS variables
+		const accent =
+			getComputedStyle(document.documentElement)
+				.getPropertyValue("--color-accent")
+				.trim() || "#4D7A75";
+		const primary =
+			getComputedStyle(document.documentElement)
+				.getPropertyValue("--color-primary")
+				.trim() || "#39495C";
+
+		dragImage.style.cssText = `
+				position: absolute;
+				top: -1000px;
+				left: -1000px;
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: ${accent};
+				border: 3px solid ${primary};
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				font-size: 1rem;
+				line-height: 1;
+			`;
+		document.body.appendChild(dragImage);
+		e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+		// Clean up after drag starts
+		requestAnimationFrame(() => {
+			if (document.body.contains(dragImage)) {
+				document.body.removeChild(dragImage);
+			}
+		});
+	}
+}
+
+function handleCardDragEnd() {
+	draggedCardId = null;
+}
+
+// Drag handlers for markers
+function handleMarkerDragStart(e: DragEvent, cardId: string) {
+	e.stopPropagation();
+	draggedMarkerId = cardId;
+	if (e.dataTransfer) {
+		e.dataTransfer.effectAllowed = "move";
+
+		// Create a custom drag image that looks like the marker
+		const dragImage = document.createElement("div");
+		const cardIndex = getCardIndex(cardId);
+		dragImage.textContent = cardIndex.toString();
+
+		// Get computed colors from CSS variables
+		const accent =
+			getComputedStyle(document.documentElement)
+				.getPropertyValue("--color-accent")
+				.trim() || "#4D7A75";
+		const primary =
+			getComputedStyle(document.documentElement)
+				.getPropertyValue("--color-primary")
+				.trim() || "#39495C";
+
+		dragImage.style.cssText = `
+				position: absolute;
+				top: -1000px;
+				left: -1000px;
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: ${accent};
+				border: 3px solid ${primary};
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				font-size: 1rem;
+				line-height: 1;
+			`;
+		document.body.appendChild(dragImage);
+		e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+		// Clean up after drag starts
+		requestAnimationFrame(() => {
+			if (document.body.contains(dragImage)) {
+				document.body.removeChild(dragImage);
+			}
+		});
+	}
+}
+
+function handleMarkerDragEnd() {
+	draggedMarkerId = null;
+}
+
+// Drop handler for grid
+function handleGridDrop(e: DragEvent) {
+	e.preventDefault();
+	const cardId = draggedCardId || draggedMarkerId;
+	if (!cardId) return;
+
+	// Get grid dimensions and mouse position
+	const gridEl = e.currentTarget as HTMLElement;
+	const rect = gridEl.getBoundingClientRect();
+	const x = e.clientX - rect.left;
+	const y = e.clientY - rect.top;
+
+	// Convert to percentage (0-96 range)
+	const xPercent = Math.max(0, Math.min(96, Math.round((x / rect.width) * 96)));
+	// Invert Y so 0 is at bottom
+	const yPercent = Math.max(
+		0,
+		Math.min(96, Math.round(((rect.height - y) / rect.height) * 96)),
+	);
+
+	placeCard(cardId, xPercent, yPercent);
+	draggedCardId = null;
+	draggedMarkerId = null;
+}
+
+function handleGridDragOver(e: DragEvent) {
+	e.preventDefault();
+	if (e.dataTransfer) {
+		e.dataTransfer.dropEffect = "move";
+	}
+}
+
+// Get positioned card IDs
+let positionedCardIds = $derived(new Set(userPositions.map((p) => p.card_id)));
+
+// Convert card position to grid coordinates (percentage)
+function getMarkerPosition(position: QuadrantPosition): {
+	x: number;
+	y: number;
+} {
+	// X is normal (0-96 left to right)
+	const x = (position.x_value / 96) * 100;
+	// Y is inverted (0 at bottom, 96 at top)
+	const y = 100 - (position.y_value / 96) * 100;
+	return { x, y };
+}
+
+// Get card index for numbering
+function getCardIndex(cardId: string): number {
+	return filteredCards.findIndex((c) => c.id === cardId) + 1;
+}
+
+// Simplified card handlers (quadrant scene doesn't need full card functionality)
+function handleCardDrop() {}
+function handleCardDragOver() {}
+function handleCardDragLeave() {}
+function handleToggleSelection() {}
+function handleVote() {}
+function handleComment() {}
+function handleDelete() {}
+function handleEdit() {}
+
+// Clear current user's card positions
+async function clearMyInput() {
+	try {
+		// Delete all positions for this user in this scene
+		const deletePromises = userPositions.map((position) =>
+			fetch(
+				`/api/quadrant-positions/${position.card_id}?scene_id=${scene.id}`,
 				{
-					method: "PATCH",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ quadrantPhase: "input" }),
-				}
-			);
-			const data = await response.json();
-			if (!data.success) {
-				alert(`Failed to switch to input phase: ${data.error}`);
-			}
-		} catch (error) {
-			console.error("Failed to switch to input phase:", error);
-			alert("Failed to switch to input phase");
-		}
-	}
-
-	async function handlePhaseChange(newPhase: "input" | "results") {
-		if (newPhase === phase) return;
-
-		if (newPhase === "results") {
-			await calculateConsensus();
-		} else {
-			await switchToInput();
-		}
-	}
-
-	function getCardPosition(cardId: string): QuadrantPosition | undefined {
-		return userPositions.find((p) => p.card_id === cardId);
-	}
-
-	function getCardMetadata(card: any) {
-		if (!card.quadrantMetadata) return null;
-		const metadata = JSON.parse(card.quadrantMetadata);
-		return metadata.find((m: any) => m.scene_id === scene.id);
-	}
-
-	async function placeCard(cardId: string, x: number, y: number) {
-		try {
-			const response = await fetch(`/api/quadrant-positions/${cardId}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					scene_id: scene.id,
-					x_value: x,
-					y_value: y,
-				}),
-			});
-			const data = await response.json();
-			if (data.success) {
-				// Update local positions
-				const existingIndex = userPositions.findIndex(
-					(p) => p.card_id === cardId
-				);
-				if (existingIndex >= 0) {
-					userPositions[existingIndex] = data.position;
-				} else {
-					userPositions = [...userPositions, data.position];
-				}
-			}
-		} catch (error) {
-			console.error("Failed to place card:", error);
-		}
-	}
-
-	// Drag and drop handlers for cards
-	function handleCardDragStart(e: DragEvent, cardId: string) {
-		draggedCardId = cardId;
-		if (e.dataTransfer) {
-			e.dataTransfer.effectAllowed = "move";
-			e.dataTransfer.setData("text/plain", cardId);
-
-			// Create a circular marker as the drag image
-			const dragImage = document.createElement('div');
-			const cardIndex = getCardIndex(cardId);
-			dragImage.textContent = cardIndex.toString();
-
-			// Get computed colors from CSS variables
-			const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#4D7A75';
-			const primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#39495C';
-
-			dragImage.style.cssText = `
-				position: absolute;
-				top: -1000px;
-				left: -1000px;
-				width: 40px;
-				height: 40px;
-				border-radius: 50%;
-				background: ${accent};
-				border: 3px solid ${primary};
-				color: white;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				font-weight: 700;
-				font-size: 1rem;
-				line-height: 1;
-			`;
-			document.body.appendChild(dragImage);
-			e.dataTransfer.setDragImage(dragImage, 20, 20);
-
-			// Clean up after drag starts
-			requestAnimationFrame(() => {
-				if (document.body.contains(dragImage)) {
-					document.body.removeChild(dragImage);
-				}
-			});
-		}
-	}
-
-	function handleCardDragEnd() {
-		draggedCardId = null;
-	}
-
-	// Drag handlers for markers
-	function handleMarkerDragStart(e: DragEvent, cardId: string) {
-		e.stopPropagation();
-		draggedMarkerId = cardId;
-		if (e.dataTransfer) {
-			e.dataTransfer.effectAllowed = "move";
-
-			// Create a custom drag image that looks like the marker
-			const dragImage = document.createElement('div');
-			const cardIndex = getCardIndex(cardId);
-			dragImage.textContent = cardIndex.toString();
-
-			// Get computed colors from CSS variables
-			const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#4D7A75';
-			const primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#39495C';
-
-			dragImage.style.cssText = `
-				position: absolute;
-				top: -1000px;
-				left: -1000px;
-				width: 40px;
-				height: 40px;
-				border-radius: 50%;
-				background: ${accent};
-				border: 3px solid ${primary};
-				color: white;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				font-weight: 700;
-				font-size: 1rem;
-				line-height: 1;
-			`;
-			document.body.appendChild(dragImage);
-			e.dataTransfer.setDragImage(dragImage, 20, 20);
-
-			// Clean up after drag starts
-			requestAnimationFrame(() => {
-				if (document.body.contains(dragImage)) {
-					document.body.removeChild(dragImage);
-				}
-			});
-		}
-	}
-
-	function handleMarkerDragEnd() {
-		draggedMarkerId = null;
-	}
-
-	// Drop handler for grid
-	function handleGridDrop(e: DragEvent) {
-		e.preventDefault();
-		const cardId = draggedCardId || draggedMarkerId;
-		if (!cardId) return;
-
-		// Get grid dimensions and mouse position
-		const gridEl = e.currentTarget as HTMLElement;
-		const rect = gridEl.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
-
-		// Convert to percentage (0-96 range)
-		const xPercent = Math.max(0, Math.min(96, Math.round((x / rect.width) * 96)));
-		// Invert Y so 0 is at bottom
-		const yPercent = Math.max(0, Math.min(96, Math.round(((rect.height - y) / rect.height) * 96)));
-
-		placeCard(cardId, xPercent, yPercent);
-		draggedCardId = null;
-		draggedMarkerId = null;
-	}
-
-	function handleGridDragOver(e: DragEvent) {
-		e.preventDefault();
-		if (e.dataTransfer) {
-			e.dataTransfer.dropEffect = "move";
-		}
-	}
-
-	// Get positioned card IDs
-	let positionedCardIds = $derived(new Set(userPositions.map(p => p.card_id)));
-
-	// Convert card position to grid coordinates (percentage)
-	function getMarkerPosition(position: QuadrantPosition): { x: number; y: number } {
-		// X is normal (0-96 left to right)
-		const x = (position.x_value / 96) * 100;
-		// Y is inverted (0 at bottom, 96 at top)
-		const y = 100 - ((position.y_value / 96) * 100);
-		return { x, y };
-	}
-
-	// Get card index for numbering
-	function getCardIndex(cardId: string): number {
-		return cards.findIndex(c => c.id === cardId) + 1;
-	}
-
-	// Simplified card handlers (quadrant scene doesn't need full card functionality)
-	function handleCardDrop() { }
-	function handleCardDragOver() { }
-	function handleCardDragLeave() { }
-	function handleToggleSelection() { }
-	function handleVote() { }
-	function handleComment() { }
-	function handleDelete() { }
-	function handleEdit() { }
-
-	// Reset all card positions
-	async function resetAllPositions() {
-		try {
-			// Delete all positions for this user in this scene
-			const deletePromises = userPositions.map(position =>
-				fetch(`/api/quadrant-positions/${position.card_id}?scene_id=${scene.id}`, {
 					method: "DELETE",
-				})
-			);
-			await Promise.all(deletePromises);
-			userPositions = [];
-		} catch (error) {
-			console.error("Failed to reset positions:", error);
-		}
-	}
+				},
+			),
+		);
+		await Promise.all(deletePromises);
+		userPositions = [];
 
-	// Card selection for Results phase
-	async function handleCardSelection(cardId: string) {
-		if (selectedCardId === cardId) {
-			selectedCardId = null; // Deselect if clicking the same card
-			selectedCardPositions = [];
-		} else {
-			selectedCardId = cardId;
-			// Load all user positions for this card
-			await loadCardPositions(cardId);
-		}
-	}
+		// If we're in results phase, recalculate consensus to update the display
+		if (phase === "results") {
+			await calculateConsensus();
 
-	// Load individual user positions for selected card
-	async function loadCardPositions(cardId: string) {
-		try {
-			const response = await fetch(
-				`/api/scenes/${scene.id}/quadrant/positions?card_id=${cardId}`
-			);
-			const data = await response.json();
-			if (data.success) {
-				selectedCardPositions = data.positions;
+			// Reload selected card positions to update the topographic graph
+			if (selectedCardId) {
+				await loadCardPositions(selectedCardId);
 			}
-		} catch (error) {
-			console.error("Failed to load card positions:", error);
 		}
+	} catch (error) {
+		console.error("Failed to clear positions:", error);
 	}
+}
 
-	// Generate contour data from selected card positions
-	let contourData = $derived.by(() => {
-		if (selectedCardPositions.length === 0) return [];
+// Reset all users' positions (facilitator/admin only)
+async function resetAllPositions() {
+	if (!isFacilitator && !isAdmin) return;
 
-		// Convert positions to d3-contour format
-		// Map from 0-96 range to 0-100 percentage for consistency
-		const points = selectedCardPositions.map(p => ({
-			x: (p.x_value / 96) * 100,
-			// Invert Y (0 at bottom in data, but 0 at top in display)
-			y: 100 - ((p.y_value / 96) * 100)
-		}));
+	try {
+		const response = await fetch(
+			`/api/scenes/${scene.id}/quadrant/reset-all-positions`,
+			{
+				method: "POST",
+			},
+		);
+		const data = await response.json();
+		if (data.success) {
+			userPositions = [];
 
-		// Create density contours with higher thresholds for smoother appearance
-		const density = contourDensity()
-			.x(d => d.x)
-			.y(d => d.y)
-			.size([100, 100]) // Use 100x100 coordinate space
-			.bandwidth(20) // Increased smoothing bandwidth
-			.thresholds(20); // More contour levels for smoother gradients
+			// If we're in results phase, recalculate consensus to update the display
+			if (phase === "results") {
+				await calculateConsensus();
 
-		return density(points);
-	});
-
-	// Get color for contour level (white → #3c495b)
-	function getContourColor(index: number, total: number): string {
-		// Ratio from 0 (outermost, white) to 1 (apex, #3c495b)
-		const ratio = index / Math.max(total - 1, 1);
-
-		// Target color #3c495b = rgb(60, 73, 91)
-		const targetR = 60;
-		const targetG = 73;
-		const targetB = 91;
-
-		// Interpolate from white (255, 255, 255) to target
-		const r = Math.round(255 - (255 - targetR) * ratio);
-		const g = Math.round(255 - (255 - targetG) * ratio);
-		const b = Math.round(255 - (255 - targetB) * ratio);
-
-		return `rgb(${r}, ${g}, ${b})`;
+				// Reload selected card positions to update the topographic graph
+				if (selectedCardId) {
+					await loadCardPositions(selectedCardId);
+				}
+			}
+		} else {
+			console.error("Failed to reset all positions:", data.error);
+		}
+	} catch (error) {
+		console.error("Failed to reset all positions:", error);
 	}
+}
 
-	// Drag handlers for consensus markers (facilitator only)
-	let draggedConsensusCardId = $state<string | null>(null);
+// Card selection for Results phase
+async function handleCardSelection(cardId: string) {
+	if (selectedCardId === cardId) {
+		selectedCardId = null; // Deselect if clicking the same card
+		selectedCardPositions = [];
+	} else {
+		selectedCardId = cardId;
+		// Load all user positions for this card
+		await loadCardPositions(cardId);
+	}
+}
 
-	function handleConsensusMarkerDragStart(e: DragEvent, cardId: string) {
-		if (!isFacilitator && !isAdmin) return;
+// Load individual user positions for selected card
+async function loadCardPositions(cardId: string) {
+	try {
+		const response = await fetch(
+			`/api/scenes/${scene.id}/quadrant/positions?card_id=${cardId}`,
+		);
+		const data = await response.json();
+		if (data.success) {
+			selectedCardPositions = data.positions;
+		}
+	} catch (error) {
+		console.error("Failed to load card positions:", error);
+	}
+}
 
-		e.stopPropagation();
-		draggedConsensusCardId = cardId;
-		if (e.dataTransfer) {
-			e.dataTransfer.effectAllowed = "move";
+// Generate contour data from selected card positions
+let contourData = $derived.by(() => {
+	if (selectedCardPositions.length === 0) return [];
 
-			// Create a custom drag image
-			const dragImage = document.createElement('div');
-			const cardIndex = getCardIndex(cardId);
-			dragImage.textContent = cardIndex.toString();
+	// Convert positions to d3-contour format
+	// Map from 0-96 range to 0-100 percentage for consistency
+	const points = selectedCardPositions.map((p) => ({
+		x: (p.x_value / 96) * 100,
+		// Invert Y (0 at bottom in data, but 0 at top in display)
+		y: 100 - (p.y_value / 96) * 100,
+	}));
 
-			const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#4D7A75';
-			const primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#39495C';
+	// Create density contours with higher thresholds for smoother appearance
+	const density = contourDensity()
+		.x((d) => d.x)
+		.y((d) => d.y)
+		.size([100, 100]) // Use 100x100 coordinate space
+		.bandwidth(20) // Increased smoothing bandwidth
+		.thresholds(20); // More contour levels for smoother gradients
 
-			dragImage.style.cssText = `
+	return density(points);
+});
+
+// Get color for contour level (white → #3c495b)
+function getContourColor(index: number, total: number): string {
+	// Ratio from 0 (outermost, white) to 1 (apex, #3c495b)
+	const ratio = index / Math.max(total - 1, 1);
+
+	// Target color #3c495b = rgb(60, 73, 91)
+	const targetR = 60;
+	const targetG = 73;
+	const targetB = 91;
+
+	// Interpolate from white (255, 255, 255) to target
+	const r = Math.round(255 - (255 - targetR) * ratio);
+	const g = Math.round(255 - (255 - targetG) * ratio);
+	const b = Math.round(255 - (255 - targetB) * ratio);
+
+	return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Drag handlers for consensus markers (facilitator only)
+let draggedConsensusCardId = $state<string | null>(null);
+
+function handleConsensusMarkerDragStart(e: DragEvent, cardId: string) {
+	if (!isFacilitator && !isAdmin) return;
+
+	e.stopPropagation();
+	draggedConsensusCardId = cardId;
+	if (e.dataTransfer) {
+		e.dataTransfer.effectAllowed = "move";
+
+		// Create a custom drag image
+		const dragImage = document.createElement("div");
+		const cardIndex = getCardIndex(cardId);
+		dragImage.textContent = cardIndex.toString();
+
+		const accent =
+			getComputedStyle(document.documentElement)
+				.getPropertyValue("--color-accent")
+				.trim() || "#4D7A75";
+		const primary =
+			getComputedStyle(document.documentElement)
+				.getPropertyValue("--color-primary")
+				.trim() || "#39495C";
+
+		dragImage.style.cssText = `
 				position: absolute;
 				top: -1000px;
 				left: -1000px;
@@ -443,51 +530,56 @@
 				font-size: 1rem;
 				line-height: 1;
 			`;
-			document.body.appendChild(dragImage);
-			e.dataTransfer.setDragImage(dragImage, 20, 20);
+		document.body.appendChild(dragImage);
+		e.dataTransfer.setDragImage(dragImage, 20, 20);
 
-			requestAnimationFrame(() => {
-				if (document.body.contains(dragImage)) {
-					document.body.removeChild(dragImage);
-				}
-			});
-		}
+		requestAnimationFrame(() => {
+			if (document.body.contains(dragImage)) {
+				document.body.removeChild(dragImage);
+			}
+		});
 	}
+}
 
-	function handleConsensusMarkerDragEnd() {
-		draggedConsensusCardId = null;
+function handleConsensusMarkerDragEnd() {
+	draggedConsensusCardId = null;
+}
+
+function handleResultsGridDrop(e: DragEvent) {
+	e.preventDefault();
+	if (!draggedConsensusCardId || (!isFacilitator && !isAdmin)) return;
+
+	// Get grid dimensions and mouse position
+	const gridEl = e.currentTarget as HTMLElement;
+	const rect = gridEl.getBoundingClientRect();
+	const x = e.clientX - rect.left;
+	const y = e.clientY - rect.top;
+
+	// Convert to percentage (0-96 range)
+	const xPercent = Math.max(0, Math.min(96, Math.round((x / rect.width) * 96)));
+	// Invert Y so 0 is at bottom
+	const yPercent = Math.max(
+		0,
+		Math.min(96, Math.round(((rect.height - y) / rect.height) * 96)),
+	);
+
+	updateFacilitatorPosition(draggedConsensusCardId, xPercent, yPercent);
+	draggedConsensusCardId = null;
+}
+
+function handleResultsGridDragOver(e: DragEvent) {
+	if (!draggedConsensusCardId || (!isFacilitator && !isAdmin)) return;
+	e.preventDefault();
+	if (e.dataTransfer) {
+		e.dataTransfer.dropEffect = "move";
 	}
+}
 
-	function handleResultsGridDrop(e: DragEvent) {
-		e.preventDefault();
-		if (!draggedConsensusCardId || (!isFacilitator && !isAdmin)) return;
-
-		// Get grid dimensions and mouse position
-		const gridEl = e.currentTarget as HTMLElement;
-		const rect = gridEl.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
-
-		// Convert to percentage (0-96 range)
-		const xPercent = Math.max(0, Math.min(96, Math.round((x / rect.width) * 96)));
-		// Invert Y so 0 is at bottom
-		const yPercent = Math.max(0, Math.min(96, Math.round(((rect.height - y) / rect.height) * 96)));
-
-		updateFacilitatorPosition(draggedConsensusCardId, xPercent, yPercent);
-		draggedConsensusCardId = null;
-	}
-
-	function handleResultsGridDragOver(e: DragEvent) {
-		if (!draggedConsensusCardId || (!isFacilitator && !isAdmin)) return;
-		e.preventDefault();
-		if (e.dataTransfer) {
-			e.dataTransfer.dropEffect = "move";
-		}
-	}
-
-	async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
-		try {
-			const response = await fetch(`/api/scenes/${scene.id}/quadrant/facilitator-position`, {
+async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
+	try {
+		const response = await fetch(
+			`/api/scenes/${scene.id}/quadrant/facilitator-position`,
+			{
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -495,15 +587,16 @@
 					facilitator_x: x,
 					facilitator_y: y,
 				}),
-			});
-			const data = await response.json();
-			if (!data.success) {
-				console.error("Failed to update facilitator position:", data.error);
-			}
-		} catch (error) {
-			console.error("Failed to update facilitator position:", error);
+			},
+		);
+		const data = await response.json();
+		if (!data.success) {
+			console.error("Failed to update facilitator position:", data.error);
 		}
+	} catch (error) {
+		console.error("Failed to update facilitator position:", error);
 	}
+}
 </script>
 
 <div class="quadrant-scene">
@@ -514,6 +607,13 @@
 			<h3>Quadrant Scene: {config.x_axis_label} vs {config.y_axis_label}</h3>
 			<p>Grid size: {config.grid_size}</p>
 			<button onclick={startInput} class="start-button">Start Input Phase</button>
+		</div>
+	{:else if !phase}
+		<!-- Member users waiting for facilitator to start -->
+		<div class="setup">
+			<h3>Quadrant Scene: {config.x_axis_label} vs {config.y_axis_label}</h3>
+			<p>Grid size: {config.grid_size}</p>
+			<p class="waiting-message">Waiting for facilitator to start the input phase...</p>
 		</div>
 	{:else if phase === "input"}
 		{#if isFacilitator || isAdmin}
@@ -602,9 +702,14 @@
 									</div>
 								{/each}
 
-								<!-- Reset button positioned below bottom-right corner -->
-								<button onclick={resetAllPositions} class="reset-button" type="button">
-									Reset All
+								<!-- Reset buttons positioned below bottom-right corner -->
+								{#if isFacilitator || isAdmin}
+									<button onclick={resetAllPositions} class="reset-button admin" type="button" aria-label="Reset all users' positions">
+										Reset All
+									</button>
+								{/if}
+								<button onclick={clearMyInput} class="reset-button" type="button" aria-label="Clear my card positions">
+									Clear My Input
 								</button>
 							</div>
 							<div class="x-axis-label">{config.x_axis_label}</div>
@@ -614,8 +719,9 @@
 					<!-- Right: Cards sidebar -->
 					<div class="cards-sidebar">
 						<div class="cards-list">
-							{#each cards as card (card.id)}
+							{#each filteredCards as card (card.id)}
 								{@const isPositioned = positionedCardIds.has(card.id)}
+								{@const cardIndex = getCardIndex(card.id)}
 								<div
 									class="card-wrapper"
 									class:positioned={isPositioned}
@@ -623,30 +729,35 @@
 									ondragstart={(e) => handleCardDragStart(e, card.id)}
 									ondragend={handleCardDragEnd}
 								>
-									<Card
-										{card}
-										isGrouped={false}
-										groupingMode={false}
-										isSelected={false}
-										currentScene={scene}
-										{board}
-										{userRole}
-										{currentUserId}
-										onDragStart={() => {}}
-										onToggleSelection={handleToggleSelection}
-										onVote={handleVote}
-										onComment={handleComment}
-										onDelete={handleDelete}
-										onEdit={handleEdit}
-										onCardDrop={handleCardDrop}
-										onCardDragOver={handleCardDragOver}
-										onCardDragLeave={handleCardDragLeave}
-									/>
-									{#if isPositioned}
-										<div class="positioned-badge">
-											Placed
-										</div>
-									{/if}
+									<div class="selection-indicator-static" class:highlighted={isPositioned}>
+										<span class="selection-number">{cardIndex}</span>
+									</div>
+									<div class="card-container">
+										<Card
+											{card}
+											isGrouped={false}
+											groupingMode={false}
+											isSelected={false}
+											currentScene={scene}
+											{board}
+											{userRole}
+											{currentUserId}
+											onDragStart={() => {}}
+											onToggleSelection={handleToggleSelection}
+											onVote={handleVote}
+											onComment={handleComment}
+											onDelete={handleDelete}
+											onEdit={handleEdit}
+											onCardDrop={handleCardDrop}
+											onCardDragOver={handleCardDragOver}
+											onCardDragLeave={handleCardDragLeave}
+										/>
+										{#if isPositioned}
+											<div class="positioned-badge">
+												Placed
+											</div>
+										{/if}
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -755,7 +866,7 @@
 							{/if}
 
 							<!-- Consensus card positions -->
-							{#each cards as card (card.id)}
+							{#each filteredCards as card (card.id)}
 								{@const metadata = getCardMetadata(card)}
 								{#if metadata}
 									{@const consensusX = metadata.facilitator_x || metadata.consensus_x}
@@ -785,7 +896,7 @@
 				<!-- Right: Cards sidebar -->
 				<div class="cards-sidebar">
 					<div class="cards-list">
-						{#each cards as card (card.id)}
+						{#each filteredCards as card (card.id)}
 							{@const metadata = getCardMetadata(card)}
 							{@const cardIndex = getCardIndex(card.id)}
 							<div
@@ -848,7 +959,10 @@
 </div>
 
 <style lang="less">
+	@import "$lib/styles/_mixins.less";
+
 	.quadrant-scene {
+	    .page-container();
 		height: 100%;
 		display: flex;
 		flex-direction: column;
@@ -937,6 +1051,12 @@
 			margin-bottom: var(--spacing-6);
 			color: var(--color-gray-600);
 		}
+
+		.waiting-message {
+			font-style: italic;
+			color: var(--color-text-muted);
+			margin-bottom: 0;
+		}
 	}
 
 	.start-button {
@@ -962,10 +1082,8 @@
 	}
 
 	.input-phase {
-		flex: 1;
-		display: flex;
+		.page-container();
 		flex-direction: column;
-		overflow: hidden;
 	}
 
 	.quadrant-layout {
@@ -973,7 +1091,7 @@
 		display: flex;
 		gap: var(--spacing-6);
 		padding: var(--spacing-4);
-		overflow: hidden;
+		min-height: 0;
 	}
 
 	// Left side: Grid area
@@ -1002,6 +1120,7 @@
 		flex-direction: column;
 		gap: var(--spacing-3);
 		min-width: 0;
+		min-height: 0;
 	}
 
 	.quadrant-grid {
@@ -1091,6 +1210,8 @@
 	.y-range-label {
 		position: absolute;
 		left: 8px;
+		transform: rotate(-90deg);
+		transform-origin: center;
 
 		&.y-min {
 			bottom: 32px; // Offset more to avoid overlap with x-min
@@ -1145,7 +1266,6 @@
 	.reset-button {
 		position: absolute;
 		bottom: -44px; // Position below the grid (accounting for border + some spacing)
-		right: 0;
 		padding: var(--spacing-2) var(--spacing-4);
 		background: var(--color-danger);
 		color: white;
@@ -1157,6 +1277,27 @@
 		transition: all 0.2s;
 		z-index: 5;
 		min-height: 44px;
+
+		// Default position for "Clear My Input" (always shown)
+		right: 0;
+
+		// When admin button exists, position "Clear My Input" to its left
+		&:not(.admin) {
+			right: 0;
+		}
+
+		&.admin {
+			right: 140px; // Position "Reset All" to the left of "Clear My Input"
+			background: var(--color-warning);
+
+			&:hover {
+				background: var(--color-warning-hover);
+			}
+
+			&:focus {
+				box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warning) 20%, transparent);
+			}
+		}
 
 		&:hover {
 			background: var(--color-danger-hover);
@@ -1179,10 +1320,8 @@
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
-		background: var(--surface-elevated);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-lg);
 		padding: var(--spacing-4);
+		overflow-y: auto;
 	}
 
 	.cards-list {
@@ -1194,8 +1333,10 @@
 	}
 
 	.card-wrapper {
+		display: flex;
+		align-items: flex-start;
 		position: relative;
-		cursor: move;
+		padding-left: 36px; // Space for selection indicator
 		user-select: none;
 
 		&.positioned {
@@ -1205,6 +1346,58 @@
 		&:active {
 			opacity: 0.3;
 		}
+
+		&.selected .card-container {
+			position: relative;
+
+			&::after {
+				content: "";
+				position: absolute;
+				inset: -4px;
+				background: var(--color-accent);
+				border: 2px solid var(--color-accent);
+				border-radius: var(--radius-md);
+				opacity: 0.3;
+				pointer-events: none;
+				z-index: -1;
+			}
+		}
+	}
+
+	.selection-indicator-static {
+		position: absolute;
+		left: 0;
+		top: var(--spacing-3);
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		border: 2px solid var(--color-border);
+		background: transparent;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+
+		&.highlighted {
+			border-color: var(--color-accent);
+			background: var(--color-accent);
+		}
+	}
+
+	.selection-number {
+		font-size: 0.875rem;
+		line-height: 1;
+		color: var(--color-text-muted);
+		font-weight: 700;
+
+		.highlighted & {
+			color: white;
+		}
+	}
+
+	.card-container {
+		flex: 1;
+		width: 100%;
 	}
 
 	.positioned-badge {
@@ -1222,10 +1415,8 @@
 
 	// Results phase (reuses input-phase grid layout)
 	.results-phase {
-		flex: 1;
-		display: flex;
+		.page-container();
 		flex-direction: column;
-		overflow: hidden;
 	}
 
 	.heatmap-overlay {

@@ -113,6 +113,7 @@ let quadrantConfigForm = $state<QuadrantConfig>({
 	y_axis_label: "",
 	x_axis_values: [],
 	y_axis_values: [],
+	selected_column_ids: [],
 });
 let showQuadrantTemplates = $state(false);
 let lastLoadedQuadrantSceneId = $state<string | null>(null);
@@ -204,6 +205,7 @@ $effect(() => {
 				y_axis_label: "",
 				x_axis_values: [],
 				y_axis_values: [],
+				selected_column_ids: [],
 			};
 		}
 	} else if (selectedScene?.mode !== "quadrant") {
@@ -326,12 +328,15 @@ function applyQuadrantTemplate(sceneId: string, templateId: string) {
 	const template = QUADRANT_TEMPLATES.find((t) => t.id === templateId);
 	if (template) {
 		// Just populate the form fields - don't store template_id
+		// Preserve existing column selection
+		const existingColumnIds = quadrantConfigForm.selected_column_ids || [];
 		quadrantConfigForm = {
 			grid_size: template.grid_size,
 			x_axis_label: template.x_axis_label,
 			y_axis_label: template.y_axis_label,
 			x_axis_values: template.x_axis_values,
 			y_axis_values: template.y_axis_values,
+			selected_column_ids: existingColumnIds,
 		};
 		updateQuadrantConfig(sceneId, quadrantConfigForm);
 	}
@@ -925,6 +930,52 @@ let isThreeColumnMode = $derived(
                             <p class="field-hint">
                                 Labels for each row (should match grid height: {quadrantConfigForm.grid_size[2]} values)
                             </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Column Selection</label>
+                            <p class="field-hint">Select which columns to include in the quadrant view (default: all columns)</p>
+                            <div class="checkbox-grid">
+                                {#each board.allColumns || board.columns || [] as column (column.id)}
+                                    <label class="checkbox-item">
+                                        <input
+                                            type="checkbox"
+                                            checked={!quadrantConfigForm.selected_column_ids || quadrantConfigForm.selected_column_ids.length === 0 || quadrantConfigForm.selected_column_ids.includes(column.id)}
+                                            onchange={(e) => {
+                                                const isChecked = e.currentTarget.checked;
+                                                if (!quadrantConfigForm.selected_column_ids) {
+                                                    quadrantConfigForm.selected_column_ids = [];
+                                                }
+
+                                                const wasEmpty = quadrantConfigForm.selected_column_ids.length === 0;
+
+                                                if (isChecked) {
+                                                    // If array was empty (show all mode) and user checks a box,
+                                                    // start filtering by adding only this column
+                                                    if (wasEmpty) {
+                                                        quadrantConfigForm.selected_column_ids = [column.id];
+                                                    } else if (!quadrantConfigForm.selected_column_ids.includes(column.id)) {
+                                                        quadrantConfigForm.selected_column_ids = [...quadrantConfigForm.selected_column_ids, column.id];
+                                                    }
+                                                } else {
+                                                    // If array was empty (show all mode) and user unchecks a box,
+                                                    // initialize with all columns except this one
+                                                    if (wasEmpty) {
+                                                        quadrantConfigForm.selected_column_ids = (board.allColumns || board.columns || [])
+                                                            .map(c => c.id)
+                                                            .filter(id => id !== column.id);
+                                                    } else {
+                                                        quadrantConfigForm.selected_column_ids = quadrantConfigForm.selected_column_ids.filter(id => id !== column.id);
+                                                    }
+                                                }
+
+                                                updateQuadrantConfig(selectedScene.id, quadrantConfigForm);
+                                            }}
+                                        />
+                                        <span>{column.title}</span>
+                                    </label>
+                                {/each}
+                            </div>
                         </div>
 
                         {#if quadrantConfigForm.x_axis_label && quadrantConfigForm.y_axis_label}

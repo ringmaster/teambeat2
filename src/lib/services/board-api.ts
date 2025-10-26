@@ -194,12 +194,12 @@ export async function groupCards(
 
 export async function voteCard(
 	cardId: string,
-	increment: number,
+	delta: number,
 ): Promise<VotingData> {
 	const response = await fetch(`/api/cards/${cardId}/vote`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ increment }),
+		body: JSON.stringify({ delta }),
 	});
 	if (!response.ok) {
 		throw new Error(`Failed to vote on card: ${response.statusText}`);

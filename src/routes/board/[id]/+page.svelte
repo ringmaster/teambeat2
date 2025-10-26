@@ -608,7 +608,15 @@ function handleSSEMessage(data: any) {
 			// Update cards with consensus metadata
 			if (data.card_positions && Array.isArray(data.card_positions)) {
 				cards = cards.map((card) => {
-					const position = data.card_positions.find((p: any) => p.card_id === card.id);
+					const position = data.card_positions.find(
+						(p: any) => p.card_id === card.id,
+					);
+
+					// Parse existing metadata or create new array
+					const existingMetadata = card.quadrantMetadata
+						? JSON.parse(card.quadrantMetadata)
+						: [];
+
 					if (position) {
 						// Build metadata for this card
 						const newMetadata = {
@@ -626,11 +634,6 @@ function handleSSEMessage(data: any) {
 							timestamp: new Date().toISOString(),
 						};
 
-						// Parse existing metadata or create new array
-						const existingMetadata = card.quadrantMetadata
-							? JSON.parse(card.quadrantMetadata)
-							: [];
-
 						// Replace or add metadata for this scene
 						const updatedMetadata = existingMetadata.filter(
 							(m: any) => m.scene_id !== data.scene_id,
@@ -641,6 +644,19 @@ function handleSSEMessage(data: any) {
 							...card,
 							quadrantMetadata: JSON.stringify(updatedMetadata),
 						};
+					} else {
+						// No position for this card - remove metadata for this scene if it exists
+						const updatedMetadata = existingMetadata.filter(
+							(m: any) => m.scene_id !== data.scene_id,
+						);
+
+						// Only update if metadata was actually removed
+						if (updatedMetadata.length !== existingMetadata.length) {
+							return {
+								...card,
+								quadrantMetadata: JSON.stringify(updatedMetadata),
+							};
+						}
 					}
 					return card;
 				});
@@ -2780,7 +2796,7 @@ let dragState = $derived({
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
         />
-    {:else}
+    {:else if !currentScene || currentScene?.mode === "columns"}
         <BoardColumns
             board={displayBoard}
             {cards}
@@ -2815,6 +2831,13 @@ let dragState = $derived({
             {userVotesByCard}
             {allVotesByCard}
         />
+    {:else}
+        <!-- Invalid scene mode -->
+        <div class="error-message">
+            <h3>Invalid Scene Mode</h3>
+            <p>The current scene has an invalid mode: <strong>{currentScene?.mode || 'unknown'}</strong></p>
+            <p>Please contact an administrator to fix this scene configuration.</p>
+        </div>
     {/if}
 {/if}
 
@@ -2930,6 +2953,40 @@ let dragState = $derived({
         background-color: #fed7aa;
         color: #c2410c;
         border-color: #fdba74;
+    }
+
+    .error-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacing-12);
+        text-align: center;
+        color: var(--color-text-primary);
+        max-width: 600px;
+        margin: 0 auto;
+
+        h3 {
+            color: var(--color-danger);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-4);
+        }
+
+        p {
+            margin-bottom: var(--spacing-3);
+            line-height: 1.6;
+            color: var(--color-text-secondary);
+
+            strong {
+                color: var(--color-danger);
+                font-weight: 600;
+            }
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
     }
 
     .connection-status--error {

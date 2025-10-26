@@ -6,6 +6,7 @@ export interface QuadrantConfig {
 	y_axis_label: string;
 	x_axis_values: string[];
 	y_axis_values: string[];
+	selected_column_ids?: string[]; // Optional: filter cards to only these columns
 }
 
 export interface QuadrantPosition {
