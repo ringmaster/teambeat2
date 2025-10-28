@@ -547,6 +547,12 @@ function handleSSEMessage(data: any) {
 		case "card_deleted":
 			cards = cards.filter((c) => c.id !== data.card_id);
 			break;
+		case "scene_created":
+			if (board && data.scene) {
+				console.log("[+page] scene_created - adding scene:", data.scene);
+				board.scenes = [...(board.scenes || []), data.scene];
+			}
+			break;
 		case "scene_changed":
 			if (board && data.scene) {
 				// Store previous scene voting and display state
@@ -565,6 +571,10 @@ function handleSSEMessage(data: any) {
 					);
 					if (sceneIndex !== -1) {
 						board.scenes[sceneIndex] = data.scene;
+					} else {
+						// Scene not found, add it to the list
+						console.log("[+page] scene_changed - adding missing scene:", data.scene);
+						board.scenes = [...board.scenes, data.scene];
 					}
 				}
 
@@ -2796,7 +2806,7 @@ let dragState = $derived({
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
         />
-    {:else if !currentScene || currentScene?.mode === "columns"}
+    {:else if currentScene?.mode === "columns"}
         <BoardColumns
             board={displayBoard}
             {cards}

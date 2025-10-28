@@ -33,6 +33,7 @@ vi.mock("../../../src/lib/server/middleware/presence", () => ({
 // Mock SSE broadcast
 vi.mock("../../../src/lib/server/sse/broadcast", () => ({
 	broadcastSceneChanged: vi.fn(),
+	broadcastSceneCreated: vi.fn(),
 }));
 
 // Mock data builders
@@ -82,7 +83,10 @@ import {
 	getSceneFlags,
 	setSceneFlags,
 } from "../../../src/lib/server/repositories/scene";
-import { broadcastSceneChanged } from "../../../src/lib/server/sse/broadcast";
+import {
+	broadcastSceneChanged,
+	broadcastSceneCreated,
+} from "../../../src/lib/server/sse/broadcast";
 import { buildAllCardsData } from "../../../src/lib/server/utils/cards-data";
 import { buildPresentModeData } from "../../../src/lib/server/utils/present-mode-data";
 
@@ -382,6 +386,10 @@ describe("POST /api/boards/[id]/scenes", () => {
 		expect(data.scene.title).toBe("New Scene");
 		expect(data.scene.flags).toContain(SCENE_FLAGS.ALLOW_ADD_CARDS);
 		expect(setSceneFlags).toHaveBeenCalled();
+		expect(broadcastSceneCreated).toHaveBeenCalledWith("board-1", {
+			...newSceneData,
+			flags: [SCENE_FLAGS.ALLOW_ADD_CARDS],
+		});
 	});
 
 	it("should fail without valid title", async () => {

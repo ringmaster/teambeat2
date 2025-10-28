@@ -600,21 +600,10 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 </script>
 
 <div class="quadrant-scene">
+
+    OK.
 	{#if !config}
 		<div class="error">No quadrant configuration found for this scene.</div>
-	{:else if !phase && (isAdmin || isFacilitator)}
-		<div class="setup">
-			<h3>Quadrant Scene: {config.x_axis_label} vs {config.y_axis_label}</h3>
-			<p>Grid size: {config.grid_size}</p>
-			<button onclick={startInput} class="start-button">Start Input Phase</button>
-		</div>
-	{:else if !phase}
-		<!-- Member users waiting for facilitator to start -->
-		<div class="setup">
-			<h3>Quadrant Scene: {config.x_axis_label} vs {config.y_axis_label}</h3>
-			<p>Grid size: {config.grid_size}</p>
-			<p class="waiting-message">Waiting for facilitator to start the input phase...</p>
-		</div>
 	{:else if phase === "input"}
 		{#if isFacilitator || isAdmin}
 			<div class="facilitator-toolbar">
