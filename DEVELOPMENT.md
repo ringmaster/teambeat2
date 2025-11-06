@@ -655,6 +655,7 @@ If these environment variables are not set, Sentry will not initialize and all e
 - `src/instrumentation.server.ts` - Server-side Sentry initialization (if SENTRY_DSN provided)
 - `src/hooks.client.ts` - Client-side Sentry initialization (if PUBLIC_SENTRY_DSN provided)
 - `src/hooks.server.ts` - Conditionally includes Sentry middleware based on SENTRY_DSN
+- `src/routes/api/sentry-tunnel/+server.ts` - Tunnel endpoint to bypass ad blockers
 
 #### Conditional Behavior
 
@@ -664,6 +665,20 @@ The application checks for Sentry environment variables at startup:
 - **With PUBLIC_SENTRY_DSN**: Sentry tracks client-side errors and session replays
 
 All error handling code works identically whether Sentry is enabled or disabled.
+
+#### Ad Blocker Bypass with Tunneling
+
+Many ad blockers and content blockers prevent requests to sentry.io domains. To work around this:
+
+- **Client-side events** are sent to `/api/sentry-tunnel` on your own domain
+- **Server forwards** these events to Sentry's ingest API
+- **Seamless experience** - Sentry works even with aggressive content blockers
+
+The tunnel endpoint:
+- Only works when `SENTRY_DSN` is configured
+- Returns 404 if Sentry is disabled
+- Preserves all Sentry functionality (errors, performance, replays)
+- Adds minimal latency (~50-100ms for the proxy)
 
 ## Card Notes System
 

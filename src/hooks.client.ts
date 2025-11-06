@@ -7,6 +7,10 @@ if (env.PUBLIC_SENTRY_DSN) {
   Sentry.init({
     dsn: env.PUBLIC_SENTRY_DSN,
 
+    // Use tunnel to bypass ad blockers
+    // https://docs.sentry.io/platforms/javascript/troubleshooting/#dealing-with-ad-blockers
+    tunnel: '/api/sentry-tunnel',
+
     tracesSampleRate: 1.0,
 
     // Enable logs to be sent to Sentry
