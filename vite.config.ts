@@ -8,6 +8,7 @@ export default defineConfig({
       sourceMapsUploadOptions: {
         org: "critical-hit-qr",
         project: "teambeat",
+        authToken: process.env.SENTRY_AUTH_TOKEN,
       },
     }),
     sveltekit(),
