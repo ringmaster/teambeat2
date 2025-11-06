@@ -266,11 +266,13 @@ export async function buildPresentModeData(
 			notesLock = {
 				locked: true,
 				locked_by: lock.userName,
+				locked_by_user_id: lock.userId,
 			};
 		} else {
 			notesLock = {
 				locked: false,
 				locked_by: null,
+				locked_by_user_id: null,
 			};
 		}
 	}

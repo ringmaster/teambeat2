@@ -38,6 +38,7 @@ interface Props {
 	notesLockStatus?: {
 		locked: boolean;
 		locked_by: string | null;
+		locked_by_user_id: string | null;
 	} | null;
 	onVoteCard?: (cardId: string, delta: 1 | -1) => void;
 	onCommentCard?: (cardId: string) => void;
@@ -127,8 +128,9 @@ $effect(() => {
 $effect(() => {
 	if (notesLockStatus !== null && selectedCard) {
 		const lockOwner = notesLockStatus.locked_by;
+		const lockOwnerUserId = notesLockStatus.locked_by_user_id;
 		const isCurrentUserLock =
-			lockOwner === (currentUser.name || currentUser.email);
+			lockOwnerUserId === currentUser.userId;
 
 		if (notesLockStatus.locked) {
 			if (isCurrentUserLock) {
