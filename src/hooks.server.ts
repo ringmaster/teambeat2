@@ -160,6 +160,56 @@ handles.push(async ({ event, resolve }) => {
 		);
 	}
 
+	// Report 500 errors to Sentry
+	if (env.SENTRY_DSN && response.status >= 500) {
+		try {
+			// Clone response to read body without consuming it
+			const responseClone = response.clone();
+			let errorBody: any;
+
+			try {
+				// Try to parse as JSON for better error context
+				errorBody = await responseClone.json();
+			} catch {
+				// If not JSON, try to get text
+				try {
+					errorBody = await responseClone.text();
+				} catch {
+					errorBody = 'Unable to read response body';
+				}
+			}
+
+			// Capture error to Sentry with context
+			Sentry.captureException(new Error(`Server Error ${response.status}: ${pathname}`), {
+				level: 'error',
+				tags: {
+					http_status: response.status,
+					http_method: event.request.method,
+					route_id: event.route.id || 'unknown',
+				},
+				contexts: {
+					response: {
+						status: response.status,
+						statusText: response.statusText,
+						body: errorBody,
+					},
+					request: {
+						url: event.url.toString(),
+						method: event.request.method,
+						headers: Object.fromEntries(event.request.headers.entries()),
+					},
+				},
+				user: event.locals.user ? {
+					id: event.locals.user.userId,
+					email: event.locals.user.email,
+				} : undefined,
+			});
+		} catch (sentryError) {
+			// Don't let Sentry errors break the response
+			console.error('Failed to report error to Sentry:', sentryError);
+		}
+	}
+
 	// Add cache-control headers to all API endpoints to prevent aggressive caching
 	// This is critical for Digital Ocean App Platform and other CDNs that cache GET requests
 	if (pathname.startsWith("/api/")) {

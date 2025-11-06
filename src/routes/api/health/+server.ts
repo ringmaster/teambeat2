@@ -6,7 +6,8 @@ import type { RequestHandler } from "./$types";
 export const GET: RequestHandler = async () => {
 	try {
 		// Test database connectivity with a simple query using Drizzle
-		const result = db.select().from(users).limit(1).all();
+		// Note: Don't use .all() - it's SQLite-specific. Just await the query for both databases.
+		const result = await db.select().from(users).limit(1);
 
 		// If we can query the users table, the database is accessible
 		return json({

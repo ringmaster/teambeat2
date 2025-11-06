@@ -10,6 +10,8 @@ export default defineConfig({
         project: "teambeat",
         authToken: process.env.SENTRY_AUTH_TOKEN,
       },
+      // Disable Sentry features when auth token is not provided
+      autoUploadSourceMaps: !!process.env.SENTRY_AUTH_TOKEN,
     }),
     sveltekit(),
   ],

@@ -345,6 +345,35 @@ The database type cannot be changed at runtime - it's determined at application 
 - Prefer explicit SQL joins over nested queries when performance matters
 - Always handle database errors gracefully with user-friendly messages
 
+### Database-Agnostic Query Syntax
+
+**CRITICAL: Avoid SQLite-specific methods** - Code must work with both SQLite and PostgreSQL.
+
+**Wrong (SQLite-only):**
+```typescript
+// ❌ This will fail on PostgreSQL
+const users = db.select().from(users).limit(1).all();
+const user = db.select().from(users).where(eq(users.id, id)).get();
+```
+
+**Correct (Database-agnostic):**
+```typescript
+// ✅ Works with both SQLite and PostgreSQL
+const users = await db.select().from(users).limit(1);
+const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+```
+
+**Key Differences:**
+- SQLite (better-sqlite3): `.all()` and `.get()` are synchronous methods
+- PostgreSQL (postgres.js): Queries return promises, no special methods needed
+- **Solution**: Just `await` the query directly - Drizzle handles both databases
+
+**Common Mistakes:**
+- Using `.all()` - fails on PostgreSQL
+- Using `.get()` - fails on PostgreSQL
+- Using `.run()` - fails on PostgreSQL
+- Forgetting `await` - works in SQLite but fails in PostgreSQL
+
 ## Authentication System
 
 ### Multi-Factor Authentication Support
@@ -637,18 +666,48 @@ Sentry error tracking is **completely optional** and disabled by default. The ap
 Set environment variables to enable Sentry error tracking:
 
 ```bash
-# Both variables should have the SAME DSN value from your Sentry project
+# Both DSN variables should have the SAME value from your Sentry project
 # The distinction is only about where the variable is accessible:
 # - SENTRY_DSN: server-side only (Node.js)
 # - PUBLIC_SENTRY_DSN: exposed to client-side (browser)
-
 SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 PUBLIC_SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+
+# Auth token for uploading source maps (optional, but recommended for production)
+# This is only needed during the build process, not at runtime
+SENTRY_AUTH_TOKEN=sntrys_your_auth_token_here
 ```
 
-If these environment variables are not set, Sentry will not initialize and all error handling will work normally without external reporting.
+If the DSN variables are not set, Sentry will not initialize and all error handling will work normally without external reporting.
 
 **Note:** The Sentry DSN is not a secret - it's safe to expose to the browser. It identifies your Sentry project but cannot be used maliciously.
+
+#### Source Maps for Better Error Tracking
+
+To get detailed stack traces in Sentry, you need to upload source maps during the build:
+
+1. **Generate a Sentry auth token**: https://sentry.io/settings/account/api/auth-tokens/
+2. **Set `SENTRY_AUTH_TOKEN` as a build-time environment variable**
+
+**For Digital Ocean App Platform:**
+- Add `SENTRY_AUTH_TOKEN` in the dashboard under Environment Variables
+- Set scope to `BUILD_TIME` or `BUILD_AND_RUN_TIME`
+- Mark as "Secret"
+
+**For Docker:**
+```dockerfile
+# Pass as build argument
+docker build --build-arg SENTRY_AUTH_TOKEN=your_token .
+```
+
+**For local development:**
+```bash
+# Add to .env (already in .gitignore)
+SENTRY_AUTH_TOKEN=sntrys_your_token_here
+npm run build
+```
+
+If `SENTRY_AUTH_TOKEN` is not provided, the build will succeed but source maps won't be uploaded. The app will still report errors to Sentry, but stack traces will show minified code instead of original source.
 
 #### Implementation Files
 
@@ -679,6 +738,33 @@ The tunnel endpoint:
 - Returns 404 if Sentry is disabled
 - Preserves all Sentry functionality (errors, performance, replays)
 - Adds minimal latency (~50-100ms for the proxy)
+
+#### Automatic 500 Error Reporting
+
+The application automatically reports all 500-level HTTP responses to Sentry with rich context:
+
+**What's Captured:**
+- Error message with HTTP status and URL
+- Request details (method, URL, headers)
+- Response details (status, body if available)
+- User information (if authenticated)
+- Route ID and performance metrics
+
+**Example Error in Sentry:**
+```
+Server Error 500: /api/boards/123/cards
+Tags: http_status=500, http_method=POST, route_id=/api/boards/[id]/cards
+User: user@example.com (user-id-123)
+Request: POST https://app.example.com/api/boards/123/cards
+Response Body: { "error": "Database connection failed", "details": "..." }
+```
+
+This works for:
+- Thrown errors (already handled by `handleErrorWithSentry()`)
+- 500 responses returned directly (e.g., `return json({ error }, { status: 500 })`)
+- 501, 502, 503, 504 and other 5xx status codes
+
+**Performance Impact:** Minimal - only processes responses with status >= 500
 
 ## Card Notes System
 

@@ -40,6 +40,17 @@ services:
         type: SECRET
       - key: SKIP_MIGRATION
         value: "true"
+      # Sentry configuration (optional)
+      # Uncomment and add values in Digital Ocean dashboard if using Sentry
+      # - key: SENTRY_DSN
+      #   scope: RUN_TIME
+      #   type: SECRET
+      # - key: PUBLIC_SENTRY_DSN
+      #   scope: BUILD_AND_RUN_TIME
+      #   type: SECRET
+      # - key: SENTRY_AUTH_TOKEN
+      #   scope: BUILD_TIME
+      #   type: SECRET
 
     routes:
       - path: /
