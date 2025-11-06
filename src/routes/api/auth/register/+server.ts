@@ -7,6 +7,11 @@ import { emailService, isEmailConfigured } from "$lib/server/email/index.js";
 import { emailVerificationTemplate } from "$lib/server/email/templates.js";
 import { createUser } from "$lib/server/repositories/user.js";
 import type { RequestHandler } from "./$types";
+import {
+	checkLoginRateLimit,
+	recordLoginFailure,
+	resetLoginAttempts,
+} from "$lib/server/rate-limit.js";
 
 const registerSchema = z.object({
 	email: z.string().email("Invalid email format"),
@@ -15,51 +20,92 @@ const registerSchema = z.object({
 });
 
 export const POST: RequestHandler = async (event) => {
-	const { request, cookies, url } = event;
+	const { request, url, getClientAddress } = event;
 	try {
 		const body = await request.json();
 		const data = registerSchema.parse(body);
 
-		const user = await createUser(data);
-		const sessionId = createSession(user.id, user.email);
+		// Get rate limit key based on IP address
+		const ip = getClientAddress();
+		const rateLimitKey = `register:${ip}`;
 
-		setSessionCookie(event, sessionId);
+		// Check rate limit
+		const rateLimitResult = checkLoginRateLimit(rateLimitKey);
 
-		// Send verification email if email is configured
-		if (isEmailConfigured && user.emailVerificationSecret) {
-			const token = generateEmailVerificationToken(
-				user.id,
-				user.emailVerificationSecret,
+		if (!rateLimitResult.allowed) {
+			// Hard block - exceeded all 10 attempts
+			return json(
+				{
+					success: false,
+					error:
+						"Too many registration attempts. Please try again in 15 minutes.",
+					attemptsRemaining: 0,
+				},
+				{ status: 429 },
 			);
-			const verifyUrl = `${url.origin}/verify-email?token=${token}`;
-			const html = emailVerificationTemplate(
-				verifyUrl,
-				user.name || user.email,
-			);
-
-			// Send email asynchronously - don't block registration on email delivery
-			emailService
-				.send({
-					to: user.email,
-					subject: "Verify your TeamBeat email address",
-					html,
-				})
-				.catch((error) => {
-					console.error(
-						"Failed to send verification email during registration:",
-						error,
-					);
-				});
 		}
 
-		return json({
-			success: true,
-			user: {
-				id: user.id,
-				email: user.email,
-				name: user.name,
-			},
-		});
+		// Try to create user
+		try {
+			const user = await createUser(data);
+
+			// Success - reset attempts
+			resetLoginAttempts(rateLimitKey);
+
+			const sessionId = createSession(user.id, user.email);
+			setSessionCookie(event, sessionId);
+
+			// Send verification email if email is configured
+			if (isEmailConfigured && user.emailVerificationSecret) {
+				const token = generateEmailVerificationToken(
+					user.id,
+					user.emailVerificationSecret,
+				);
+				const verifyUrl = `${url.origin}/verify-email?token=${token}`;
+				const html = emailVerificationTemplate(
+					verifyUrl,
+					user.name || user.email,
+				);
+
+				// Send email asynchronously - don't block registration on email delivery
+				emailService
+					.send({
+						to: user.email,
+						subject: "Verify your TeamBeat email address",
+						html,
+					})
+					.catch((error) => {
+						console.error(
+							"Failed to send verification email during registration:",
+							error,
+						);
+					});
+			}
+
+			return json({
+				success: true,
+				user: {
+					id: user.id,
+					email: user.email,
+					name: user.name,
+				},
+			});
+		} catch (userError) {
+			// Record failed attempt (e.g., duplicate email)
+			recordLoginFailure(rateLimitKey);
+
+			// Get updated rate limit info
+			const updatedLimit = checkLoginRateLimit(rateLimitKey);
+
+			return json(
+				{
+					success: false,
+					error: "Registration failed. Email may already be in use.",
+					attemptsRemaining: updatedLimit.attemptsRemaining,
+				},
+				{ status: 400 },
+			);
+		}
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			return json(
@@ -68,9 +114,10 @@ export const POST: RequestHandler = async (event) => {
 			);
 		}
 
+		console.error("Registration error:", error);
 		return json(
 			{ success: false, error: "Registration failed" },
-			{ status: 400 },
+			{ status: 500 },
 		);
 	}
 };

@@ -110,17 +110,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		);
 	}
 
-	// Rate limit auth endpoints aggressively
-	if (
-		pathname.startsWith("/api/auth/login") ||
-		pathname.startsWith("/api/auth/register")
-	) {
-		const key = getRateLimitKey(event);
-		if (!checkRateLimit(key, 5, 15 * 60 * 1000)) {
-			// 5 requests per 15 minutes
-			return new Response("Too many requests", { status: 429 });
-		}
-	}
+	// Note: Login/register rate limiting is now handled in the endpoints themselves
+	// to provide better user feedback with attempt counters
 
 	// Rate limit card/board creation
 	if (
@@ -130,7 +121,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const key = getRateLimitKey(event);
 		if (!checkRateLimit(key, 30, 60 * 1000)) {
 			// 30 per minute
-			return new Response("Too many requests", { status: 429 });
+			return new Response(
+				JSON.stringify({
+					error: "Too many requests. Please slow down.",
+				}),
+				{
+					status: 429,
+					headers: { "Content-Type": "application/json" },
+				},
+			);
 		}
 	}
 

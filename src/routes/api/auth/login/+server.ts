@@ -5,6 +5,11 @@ import { verifyPassword } from "$lib/server/auth/password.js";
 import { createSession } from "$lib/server/auth/session.js";
 import { findUserByEmail } from "$lib/server/repositories/user.js";
 import type { RequestHandler } from "./$types";
+import {
+	checkLoginRateLimit,
+	recordLoginFailure,
+	resetLoginAttempts,
+} from "$lib/server/rate-limit.js";
 
 const loginSchema = z.object({
 	email: z.string().email("Invalid email format"),
@@ -12,21 +17,53 @@ const loginSchema = z.object({
 });
 
 export const POST: RequestHandler = async (event) => {
-	const { request, cookies } = event;
+	const { request, getClientAddress } = event;
 	try {
 		const body = await request.json();
 		const data = loginSchema.parse(body);
 
+		// Get rate limit key based on IP address
+		const ip = getClientAddress();
+		const rateLimitKey = `login:${ip}`;
+
+		// Check rate limit
+		const rateLimitResult = checkLoginRateLimit(rateLimitKey);
+
+		if (!rateLimitResult.allowed) {
+			// Hard block - exceeded all 10 attempts
+			return json(
+				{
+					success: false,
+					error: "Too many login attempts. Please try again in 15 minutes.",
+					attemptsRemaining: 0,
+				},
+				{ status: 429 },
+			);
+		}
+
+		// Validate credentials
 		const user = await findUserByEmail(data.email);
 		if (!user || !verifyPassword(data.password, user.passwordHash)) {
+			// Record failed attempt
+			recordLoginFailure(rateLimitKey);
+
+			// Get updated rate limit info
+			const updatedLimit = checkLoginRateLimit(rateLimitKey);
+
 			return json(
-				{ success: false, error: "Invalid email or password" },
+				{
+					success: false,
+					error: "Invalid email or password",
+					attemptsRemaining: updatedLimit.attemptsRemaining,
+				},
 				{ status: 401 },
 			);
 		}
 
-		const sessionId = createSession(user.id, user.email);
+		// Success - reset attempts
+		resetLoginAttempts(rateLimitKey);
 
+		const sessionId = createSession(user.id, user.email);
 		setSessionCookie(event, sessionId);
 
 		return json({
@@ -45,6 +82,7 @@ export const POST: RequestHandler = async (event) => {
 			);
 		}
 
+		console.error("Login error:", error);
 		return json({ success: false, error: "Login failed" }, { status: 500 });
 	}
 };
