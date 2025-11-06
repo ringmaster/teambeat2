@@ -49,3 +49,6 @@ specifications/*
 /tests/perf/perf
 
 # Test databases (now using in-memory, so no files to ignore)
+
+# Sentry Config File
+.env.sentry-build-plugin

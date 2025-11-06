@@ -53,6 +53,7 @@
     "@aws-sdk/client-ses": "^3.913.0",
     "@dicebear/collection": "^9.2.4",
     "@dicebear/core": "^9.2.4",
+    "@sentry/sveltekit": "^10.23.0",
     "@simplewebauthn/browser": "^13.1.2",
     "@simplewebauthn/server": "^13.1.2",
     "@types/bcryptjs": "^2.4.6",

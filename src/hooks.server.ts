@@ -1,3 +1,5 @@
+import {sequence} from "@sveltejs/kit/hooks";
+import * as Sentry from "@sentry/sveltekit";
 import type { Handle, RequestEvent } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { performanceTracker } from "$lib/server/performance/tracker";
@@ -5,90 +7,96 @@ import { performanceTracker } from "$lib/server/performance/tracker";
 // Function to check if rate limiting is disabled
 // Check dynamically to support runtime environment variable changes (e.g., in tests)
 function isRateLimitingDisabled(): boolean {
-	return env.DISABLE_RATE_LIMITING === "true";
+				return env.DISABLE_RATE_LIMITING === "true";
 }
 
 function getRateLimitKey(event: RequestEvent): string {
-	// Try multiple headers in order of reliability
-	const forwarded = event.request.headers.get("x-forwarded-for");
-	if (forwarded) {
-		return forwarded.split(",")[0].trim();
-	}
+				// Try multiple headers in order of reliability
+				const forwarded = event.request.headers.get("x-forwarded-for");
+				if (forwarded) {
+								return forwarded.split(",")[0].trim();
+				}
 
-	const realIp = event.request.headers.get("x-real-ip");
-	if (realIp) {
-		return realIp;
-	}
+				const realIp = event.request.headers.get("x-real-ip");
+				if (realIp) {
+								return realIp;
+				}
 
-	const cfConnectingIp = event.request.headers.get("cf-connecting-ip"); // Cloudflare
-	if (cfConnectingIp) {
-		return cfConnectingIp;
-	}
+				const cfConnectingIp = event.request.headers.get("cf-connecting-ip"); // Cloudflare
+				if (cfConnectingIp) {
+								return cfConnectingIp;
+				}
 
-	// SvelteKit platform-specific
-	const clientAddress = event.getClientAddress();
-	if (clientAddress && clientAddress !== "127.0.0.1") {
-		return clientAddress;
-	}
+				// SvelteKit platform-specific
+				const clientAddress = event.getClientAddress();
+				if (clientAddress && clientAddress !== "127.0.0.1") {
+								return clientAddress;
+				}
 
-	// Fallback: use session if authenticated, otherwise penalize all unknown
-	const sessionId = event.cookies.get("sessionId");
-	if (sessionId) {
-		return `session:${sessionId}`;
-	}
+				// Fallback: use session if authenticated, otherwise penalize all unknown
+				const sessionId = event.cookies.get("sessionId");
+				if (sessionId) {
+								return `session:${sessionId}`;
+				}
 
-	// Last resort: everyone without an IP shares one rate limit
-	// This is intentionally punitive - if we can't identify you, you get heavily limited
-	return "unknown";
+				// Last resort: everyone without an IP shares one rate limit
+				// This is intentionally punitive - if we can't identify you, you get heavily limited
+				return "unknown";
 }
 
 // Simple in-memory rate limiter
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(
-	key: string,
-	maxRequests: number,
-	windowMs: number,
+				key: string,
+				maxRequests: number,
+				windowMs: number,
 ): boolean {
-	// If rate limiting is disabled, always allow
-	if (isRateLimitingDisabled()) {
-		return true;
-	}
+				// If rate limiting is disabled, always allow
+				if (isRateLimitingDisabled()) {
+								return true;
+				}
 
-	const now = Date.now();
-	const limit = rateLimits.get(key);
+				const now = Date.now();
+				const limit = rateLimits.get(key);
 
-	if (!limit || now > limit.resetAt) {
-		rateLimits.set(key, { count: 1, resetAt: now + windowMs });
-		return true;
-	}
+				if (!limit || now > limit.resetAt) {
+								rateLimits.set(key, { count: 1, resetAt: now + windowMs });
+								return true;
+				}
 
-	if (limit.count >= maxRequests) {
-		return false;
-	}
+				if (limit.count >= maxRequests) {
+								return false;
+				}
 
-	limit.count++;
-	return true;
+				limit.count++;
+				return true;
 }
 
 // Cleanup old entries periodically
 setInterval(() => {
-	const now = Date.now();
-	for (const [key, limit] of rateLimits.entries()) {
-		if (now > limit.resetAt) {
-			rateLimits.delete(key);
-		}
-	}
+				const now = Date.now();
+				for (const [key, limit] of rateLimits.entries()) {
+								if (now > limit.resetAt) {
+												rateLimits.delete(key);
+								}
+				}
 }, 60000); // Every minute
 
 // Deprecated API endpoint patterns from old Teambeat version
 const DEPRECATED_ROUTE_PATTERNS = [
-	/^\/api\/realtime/,
-	/^\/api\/collections\/presence/,
-	// Add more patterns as they are discovered
+				/^\/api\/realtime/,
+				/^\/api\/collections\/presence/,
+				// Add more patterns as they are discovered
 ];
 
-export const handle: Handle = async ({ event, resolve }) => {
+// Conditionally include Sentry handle only if SENTRY_DSN is configured
+const handles: Handle[] = [];
+if (env.SENTRY_DSN) {
+  handles.push(Sentry.sentryHandle());
+}
+
+handles.push(async ({ event, resolve }) => {
 	const { pathname } = event.url;
 
 	// Check if this is a deprecated route
@@ -171,4 +179,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	return response;
-};
+});
+
+export const handle: Handle = sequence(...handles);
+export const handleError = env.SENTRY_DSN ? Sentry.handleErrorWithSentry() : undefined;

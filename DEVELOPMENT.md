@@ -626,6 +626,45 @@ TeamBeat includes a comprehensive performance monitoring system designed for sin
 - Distributed tracing for multi-instance deployments
 - Redis-backed metrics for horizontal scaling
 
+## Error Monitoring with Sentry
+
+### Optional Integration
+
+Sentry error tracking is **completely optional** and disabled by default. The application works perfectly without it.
+
+#### Enabling Sentry
+
+Set environment variables to enable Sentry error tracking:
+
+```bash
+# Both variables should have the SAME DSN value from your Sentry project
+# The distinction is only about where the variable is accessible:
+# - SENTRY_DSN: server-side only (Node.js)
+# - PUBLIC_SENTRY_DSN: exposed to client-side (browser)
+
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+PUBLIC_SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+```
+
+If these environment variables are not set, Sentry will not initialize and all error handling will work normally without external reporting.
+
+**Note:** The Sentry DSN is not a secret - it's safe to expose to the browser. It identifies your Sentry project but cannot be used maliciously.
+
+#### Implementation Files
+
+- `src/instrumentation.server.ts` - Server-side Sentry initialization (if SENTRY_DSN provided)
+- `src/hooks.client.ts` - Client-side Sentry initialization (if PUBLIC_SENTRY_DSN provided)
+- `src/hooks.server.ts` - Conditionally includes Sentry middleware based on SENTRY_DSN
+
+#### Conditional Behavior
+
+The application checks for Sentry environment variables at startup:
+- **No SENTRY_DSN**: Sentry is not initialized, no external error reporting
+- **With SENTRY_DSN**: Sentry tracks server-side errors, performance, and logs
+- **With PUBLIC_SENTRY_DSN**: Sentry tracks client-side errors and session replays
+
+All error handling code works identically whether Sentry is enabled or disabled.
+
 ## Card Notes System
 
 ### Locking Mechanism
