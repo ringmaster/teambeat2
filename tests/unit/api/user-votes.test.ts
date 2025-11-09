@@ -16,20 +16,15 @@ vi.mock("../../../src/lib/server/repositories/board-series", () => ({
 	getUserRoleInSeries: vi.fn(),
 }));
 
-vi.mock("../../../src/lib/server/repositories/vote", () => ({
-	getAllUsersVotesForBoard: vi.fn(),
-}));
-
 vi.mock("../../../src/lib/server/utils/voting-data", () => ({
-	buildUserVotingApiResponse: vi.fn(),
+	buildCompleteVotingResponse: vi.fn(),
 }));
 
 // Import mocked modules
 import { requireUserForApi } from "../../../src/lib/server/auth/index";
 import { getBoardWithDetails } from "../../../src/lib/server/repositories/board";
 import { getUserRoleInSeries } from "../../../src/lib/server/repositories/board-series";
-import { getAllUsersVotesForBoard } from "../../../src/lib/server/repositories/vote";
-import { buildUserVotingApiResponse } from "../../../src/lib/server/utils/voting-data";
+import { buildCompleteVotingResponse } from "../../../src/lib/server/utils/voting-data";
 
 describe("GET /api/boards/[id]/user-votes", () => {
 	beforeEach(() => {
@@ -51,13 +46,7 @@ describe("GET /api/boards/[id]/user-votes", () => {
 		const mockVotingResponse = {
 			success: true,
 			user_voting_data: {
-				user_votes: ["card-1", "card-2"],
-				voting_allocation: {
-					currentVotes: 2,
-					maxVotes: 5,
-					remainingVotes: 3,
-					canVote: true,
-				},
+				votes_by_card: { "card-1": 1, "card-2": 1 },
 			},
 			voting_stats: {
 				totalUsers: 5,
@@ -74,7 +63,9 @@ describe("GET /api/boards/[id]/user-votes", () => {
 		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue("member");
-		vi.mocked(buildUserVotingApiResponse).mockResolvedValue(mockVotingResponse);
+		vi.mocked(buildCompleteVotingResponse).mockResolvedValue(
+			mockVotingResponse,
+		);
 
 		const event = createMockRequestEvent({ params: { id: "board-1" } });
 		const response = await GET(event);
@@ -83,11 +74,11 @@ describe("GET /api/boards/[id]/user-votes", () => {
 		expect(requireUserForApi).toHaveBeenCalledWith(event);
 		expect(getBoardWithDetails).toHaveBeenCalledWith("board-1");
 		expect(getUserRoleInSeries).toHaveBeenCalledWith("user-1", "series-1");
-		expect(buildUserVotingApiResponse).toHaveBeenCalledWith(
+		expect(buildCompleteVotingResponse).toHaveBeenCalledWith(
 			"board-1",
 			"user-1",
+			false, // shouldShowAllVotes = false
 		);
-		expect(getAllUsersVotesForBoard).not.toHaveBeenCalled();
 		expect(data).toEqual(mockVotingResponse);
 		expect(data.all_votes_by_card).toBeUndefined();
 	});
@@ -107,13 +98,7 @@ describe("GET /api/boards/[id]/user-votes", () => {
 		const mockVotingResponse = {
 			success: true,
 			user_voting_data: {
-				user_votes: ["card-1"],
-				voting_allocation: {
-					currentVotes: 1,
-					maxVotes: 5,
-					remainingVotes: 4,
-					canVote: true,
-				},
+				votes_by_card: { "card-1": 1 },
 			},
 			voting_stats: {
 				totalUsers: 3,
@@ -125,45 +110,28 @@ describe("GET /api/boards/[id]/user-votes", () => {
 				remainingVotes: 5,
 				maxVotesPerUser: 5,
 			},
+			all_votes_by_card: {
+				"card-1": 2,
+				"card-2": 2,
+			},
 		};
-		const mockAllVotes = [
-			{
-				voteId: "v1",
-				cardId: "card-1",
-				userId: "user-1",
-				createdAt: new Date(),
-			},
-			{
-				voteId: "v2",
-				cardId: "card-1",
-				userId: "user-2",
-				createdAt: new Date(),
-			},
-			{
-				voteId: "v3",
-				cardId: "card-2",
-				userId: "user-3",
-				createdAt: new Date(),
-			},
-			{
-				voteId: "v4",
-				cardId: "card-2",
-				userId: "user-1",
-				createdAt: new Date(),
-			},
-		];
 
 		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue("facilitator");
-		vi.mocked(buildUserVotingApiResponse).mockResolvedValue(mockVotingResponse);
-		vi.mocked(getAllUsersVotesForBoard).mockResolvedValue(mockAllVotes as any);
+		vi.mocked(buildCompleteVotingResponse).mockResolvedValue(
+			mockVotingResponse,
+		);
 
 		const event = createMockRequestEvent({ params: { id: "board-1" } });
 		const response = await GET(event);
 		const data = await response.json();
 
-		expect(getAllUsersVotesForBoard).toHaveBeenCalledWith("board-1");
+		expect(buildCompleteVotingResponse).toHaveBeenCalledWith(
+			"board-1",
+			"user-1",
+			true, // shouldShowAllVotes = true
+		);
 		expect(data.all_votes_by_card).toEqual({
 			"card-1": 2,
 			"card-2": 2,
@@ -190,7 +158,7 @@ describe("GET /api/boards/[id]/user-votes", () => {
 			error: "Board not found",
 		});
 		expect(getUserRoleInSeries).not.toHaveBeenCalled();
-		expect(buildUserVotingApiResponse).not.toHaveBeenCalled();
+		expect(buildCompleteVotingResponse).not.toHaveBeenCalled();
 	});
 
 	it("should return 403 when user does not have access to series", async () => {
@@ -219,7 +187,7 @@ describe("GET /api/boards/[id]/user-votes", () => {
 			success: false,
 			error: "Access denied",
 		});
-		expect(buildUserVotingApiResponse).not.toHaveBeenCalled();
+		expect(buildCompleteVotingResponse).not.toHaveBeenCalled();
 	});
 
 	it("should return 500 on general failure", async () => {
@@ -273,13 +241,7 @@ describe("GET /api/boards/[id]/user-votes", () => {
 		const mockVotingResponse = {
 			success: true,
 			user_voting_data: {
-				user_votes: [],
-				voting_allocation: {
-					currentVotes: 0,
-					maxVotes: 5,
-					remainingVotes: 5,
-					canVote: true,
-				},
+				votes_by_card: {},
 			},
 			voting_stats: {
 				totalUsers: 0,
@@ -296,13 +258,19 @@ describe("GET /api/boards/[id]/user-votes", () => {
 		vi.mocked(requireUserForApi).mockReturnValue(mockUser);
 		vi.mocked(getBoardWithDetails).mockResolvedValue(mockBoard as any);
 		vi.mocked(getUserRoleInSeries).mockResolvedValue("member");
-		vi.mocked(buildUserVotingApiResponse).mockResolvedValue(mockVotingResponse);
+		vi.mocked(buildCompleteVotingResponse).mockResolvedValue(
+			mockVotingResponse,
+		);
 
 		const event = createMockRequestEvent({ params: { id: "board-1" } });
 		const response = await GET(event);
 		const data = await response.json();
 
-		expect(getAllUsersVotesForBoard).not.toHaveBeenCalled();
+		expect(buildCompleteVotingResponse).toHaveBeenCalledWith(
+			"board-1",
+			"user-1",
+			false, // shouldShowAllVotes = false (no current scene)
+		);
 		expect(data.all_votes_by_card).toBeUndefined();
 	});
 });
