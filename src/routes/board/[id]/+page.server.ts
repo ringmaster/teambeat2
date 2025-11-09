@@ -3,6 +3,7 @@ import { requireUser } from "$lib/server/auth/index.js";
 import { refreshPresenceOnBoardAction } from "$lib/server/middleware/presence.js";
 import { findAgreementsByBoardId } from "$lib/server/repositories/agreement.js";
 import { getBoardWithDetails } from "$lib/server/repositories/board.js";
+import { getCardsForBoard } from "$lib/server/repositories/card.js";
 import {
 	addUserToSeries,
 	getUserRoleInSeries,
@@ -10,6 +11,9 @@ import {
 import { getLastHealthCheckDate } from "$lib/server/repositories/health";
 import { getScorecardCountsByBoard } from "$lib/server/repositories/scene-scorecard";
 import { getTemplateList } from "$lib/server/templates.js";
+import { enrichCardsWithCounts } from "$lib/server/utils/cards-data.js";
+import { buildCompleteVotingResponse } from "$lib/server/utils/voting-data.js";
+import { getSceneCapability } from "$lib/utils/scene-capability.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -56,15 +60,48 @@ export const load: PageServerLoad = async (event) => {
 	}
 
 	// Load all necessary data in parallel
-	const [agreements, templates, lastHealthCheckDate, scorecardCountsByScene] =
-		await Promise.all([
-			findAgreementsByBoardId(params.id),
-			Promise.resolve(getTemplateList()),
-			board.seriesId
-				? getLastHealthCheckDate(board.seriesId)
-				: Promise.resolve(null),
-			getScorecardCountsByBoard(params.id),
-		]);
+	const [
+		agreements,
+		templates,
+		lastHealthCheckDate,
+		scorecardCountsByScene,
+		enrichedCards,
+	] = await Promise.all([
+		findAgreementsByBoardId(params.id),
+		Promise.resolve(getTemplateList()),
+		board.seriesId
+			? getLastHealthCheckDate(board.seriesId)
+			: Promise.resolve(null),
+		getScorecardCountsByBoard(params.id),
+		// Load enriched cards with vote counts, comments, and reactions
+		getCardsForBoard(params.id).then((cards) => enrichCardsWithCounts(cards)),
+	]);
+
+	// Load voting data if current scene has voting capabilities
+	const currentScene = board.scenes?.find((s) => s.id === board.currentSceneId);
+	const shouldLoadVotingData =
+		currentScene &&
+		(getSceneCapability(currentScene, board.status, "allow_voting") ||
+			getSceneCapability(currentScene, board.status, "show_votes"));
+
+	let votingData = null;
+	if (shouldLoadVotingData) {
+		try {
+			const shouldShowAllVotes = getSceneCapability(
+				currentScene,
+				board.status,
+				"show_votes",
+			);
+			votingData = await buildCompleteVotingResponse(
+				params.id,
+				user.userId,
+				shouldShowAllVotes,
+			);
+		} catch (error) {
+			console.error("Failed to load voting data during SSR:", error);
+			// Non-critical data, don't fail the page load
+		}
+	}
 
 	// Create page title
 	const pageTitle = board.series
@@ -76,13 +113,14 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		board,
-		cards: board.cards || [],
+		cards: enrichedCards,
 		agreements: agreements || [],
 		templates: templates || [],
 		user,
 		userRole,
 		lastHealthCheckDate,
 		scorecardCountsByScene,
+		votingData,
 		pageTitle,
 		description,
 	};

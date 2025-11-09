@@ -4,6 +4,7 @@ import { requireUserForApi } from "$lib/server/auth/index.js";
 import { db } from "$lib/server/db/index.js";
 import { boards, scenes, seriesMembers } from "$lib/server/db/schema.js";
 import { broadcastQuadrantPhaseChanged } from "$lib/server/sse/broadcast.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async (event) => {
@@ -63,6 +64,12 @@ export const POST: RequestHandler = async (event) => {
 			.set({ quadrantPhase: "input" })
 			.where(eq(scenes.id, sceneId))
 			.returning();
+
+		// Track feature usage
+		featureTracker.trackFeature('quadrant', 'input_started', user.userId, {
+			boardId: board.id,
+			metadata: { sceneId }
+		});
 
 		// Broadcast the phase change to all users
 		await broadcastQuadrantPhaseChanged(board.id, sceneId, "input");

@@ -10,6 +10,7 @@ import {
 	seriesMembers,
 } from "$lib/server/db/schema";
 import { broadcastUpdatePresentation } from "$lib/server/sse/broadcast.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 export const PUT: RequestHandler = async (event) => {
@@ -69,6 +70,12 @@ export const PUT: RequestHandler = async (event) => {
 			.set({ isAgreement: is_agreement })
 			.where(eq(comments.id, commentId))
 			.returning();
+
+		// Track feature usage
+		featureTracker.trackFeature('agreements', is_agreement ? 'promoted' : 'demoted', user.userId, {
+			boardId: commentData.board.id,
+			metadata: { commentId, cardId: commentData.card.id }
+		});
 
 		// Broadcast the change to all users
 		await broadcastUpdatePresentation(commentData.board.id, {

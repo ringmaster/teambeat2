@@ -15,6 +15,7 @@ import {
 import { enrichCardWithCounts } from "$lib/server/utils/cards-data.js";
 import { buildComprehensiveVotingData } from "$lib/server/utils/voting-data.js";
 import { getSceneCapability } from "$lib/utils/scene-capability.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async (event) => {
@@ -120,6 +121,17 @@ export const POST: RequestHandler = async (event) => {
 
 		// Cast the vote
 		const voteResult = await castVote(cardId, user.userId, delta);
+
+		// Track feature usage
+		featureTracker.trackFeature(
+			'voting',
+			delta > 0 ? 'vote_added' : 'vote_removed',
+			user.userId,
+			{
+				boardId: String(board.id),
+				metadata: { cardId, scene: board.currentScene }
+			}
+		);
 
 		// Get updated card data - fetch single card instead of all cards for board
 		const updatedCard = await findCardById(cardId);

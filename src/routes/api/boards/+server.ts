@@ -13,6 +13,7 @@ import {
 	canCreateResources,
 	findUserById,
 } from "$lib/server/repositories/user.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const createBoardSchema = z.object({
@@ -76,6 +77,12 @@ export const POST: RequestHandler = async (event) => {
 		}
 
 		const board = await createBoard(data);
+
+		// Track feature usage
+		featureTracker.trackFeature('boards', 'created', sessionUser.userId, {
+			boardId: board.id,
+			metadata: { seriesId: data.seriesId }
+		});
 
 		return json({
 			success: true,

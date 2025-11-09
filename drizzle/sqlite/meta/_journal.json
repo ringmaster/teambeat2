@@ -99,6 +99,13 @@
       "when": 1761438590730,
       "tag": "0013_clumsy_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1762000000000,
+      "tag": "0014_add_feature_analytics_tables",
+      "breakpoints": true
     }
   ]
 }

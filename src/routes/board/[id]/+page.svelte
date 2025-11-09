@@ -38,6 +38,7 @@ interface Props {
 		userRole: string;
 		lastHealthCheckDate: string | null;
 		scorecardCountsByScene: Record<string, number>;
+		votingData: any;
 		pageTitle: string;
 		description: string;
 	};
@@ -163,9 +164,9 @@ let pendingTimerInit = $state<{
 // Calculate if user has votes available (same value for all cards on the board)
 let hasVotes = $derived(votingAllocation?.canVote ?? false);
 
-// Load user voting data when board and user are ready
+// Load user voting data when board and user are ready (only if not already loaded from SSR)
 $effect(() => {
-	if (boardId && user?.id && !loading) {
+	if (boardId && user?.id && !loading && !votingStats) {
 		loadUserVotingData();
 	}
 });
@@ -181,6 +182,53 @@ $effect(() => {
 
 // Templates
 let templates: any[] = $state(data.templates);
+
+// Process voting data hydrated from SSR immediately to avoid flash
+if (data.votingData?.user_voting_data) {
+	// Update user votes by card map
+	if (data.votingData.user_voting_data.votes_by_card) {
+		Object.entries(data.votingData.user_voting_data.votes_by_card).forEach(
+			([cardId, count]) => {
+				userVotesByCard.set(cardId, count as number);
+			},
+		);
+	}
+
+	// Update all users' votes by card map if provided
+	if (data.votingData.all_votes_by_card) {
+		Object.entries(data.votingData.all_votes_by_card).forEach(
+			([cardId, count]) => {
+				allVotesByCard.set(cardId, count as number);
+			},
+		);
+
+		// Also update the cards array with the new vote counts
+		cards = cards.map((card) => ({
+			...card,
+			voteCount: data.votingData.all_votes_by_card![card.id] || 0,
+		}));
+	}
+
+	// Update voting stats
+	if (data.votingData.voting_stats) {
+		votingStats = data.votingData.voting_stats;
+
+		// Derive user allocation from voting stats
+		const currentVotes = Array.from(userVotesByCard.values()).reduce(
+			(sum, count) => sum + count,
+			0,
+		);
+		const maxVotes = data.votingData.voting_stats.maxVotesPerUser;
+		const remainingVotes = maxVotes - currentVotes;
+
+		votingAllocation = {
+			currentVotes,
+			maxVotes,
+			remainingVotes,
+			canVote: remainingVotes > 0,
+		};
+	}
+}
 
 onMount(async () => {
 	boardId = $page.params.id!;

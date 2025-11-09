@@ -9,6 +9,7 @@ import {
 	type QuadrantConfig,
 } from "$lib/server/utils/quadrant-calculator.js";
 import { broadcastCardQuadrantAdjusted } from "$lib/server/sse/broadcast.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 export const PUT: RequestHandler = async (event) => {
@@ -150,6 +151,12 @@ export const PUT: RequestHandler = async (event) => {
 				updatedAt: new Date().toISOString(),
 			})
 			.where(eq(cards.id, cardId));
+
+		// Track feature usage
+		featureTracker.trackFeature('quadrant', 'position_adjusted', user.userId, {
+			boardId: board.id,
+			metadata: { cardId, sceneId: scene_id, quadrantLabel: quadrant_label }
+		});
 
 		// Broadcast the adjustment to all users
 		await broadcastCardQuadrantAdjusted(

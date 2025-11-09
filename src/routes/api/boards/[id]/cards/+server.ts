@@ -15,6 +15,7 @@ import {
 	getCurrentScene,
 	getSceneCapability,
 } from "$lib/utils/scene-capability.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const createCardSchema = z.object({
@@ -92,6 +93,12 @@ export const POST: RequestHandler = async (event) => {
 		const card = await createCard({
 			...data,
 			userId: user.userId,
+		});
+
+		// Track feature usage
+		featureTracker.trackFeature('cards', 'created', user.userId, {
+			boardId,
+			metadata: { content: card.content.substring(0, 50) }
 		});
 
 		// Enrich card with counts (new cards will have 0 counts but keeps consistency)

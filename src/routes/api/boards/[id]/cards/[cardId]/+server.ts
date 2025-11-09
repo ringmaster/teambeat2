@@ -11,6 +11,7 @@ import {
 	getCurrentScene,
 	getSceneCapability,
 } from "$lib/utils/scene-capability.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const updateCardSchema = z.object({
@@ -59,6 +60,12 @@ export const PATCH: RequestHandler = async (event) => {
 		}
 
 		const updatedCard = await updateCard(cardId, data);
+
+		// Track feature usage
+		featureTracker.trackFeature('cards', 'updated', user.userId, {
+			boardId,
+			metadata: { cardId }
+		});
 
 		// Enrich the card with reaction and comment counts
 		const enrichedCard = await enrichCardWithCounts(updatedCard);

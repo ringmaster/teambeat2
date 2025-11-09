@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/sveltekit";
 import type { Handle, RequestEvent } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { performanceTracker } from "$lib/server/performance/tracker";
+import "$lib/server/analytics/rollup-service.js"; // Initialize rollup service
 
 // Function to check if rate limiting is disabled
 // Check dynamically to support runtime environment variable changes (e.g., in tests)

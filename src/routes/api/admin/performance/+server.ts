@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { users } from "$lib/server/db/schema";
 import { performanceTracker } from "$lib/server/performance/tracker";
+import { featureTracker } from "$lib/server/analytics/feature-tracker";
 import { getSessionFromCookie } from "$lib/server/repositories/session";
 import type { RequestHandler } from "./$types";
 
@@ -35,11 +36,41 @@ async function requireAdmin(cookies: any) {
 	return session;
 }
 
-export const GET: RequestHandler = async ({ cookies }) => {
+export const GET: RequestHandler = async ({ cookies, url }) => {
 	await requireAdmin(cookies);
 
+	// Parse time range parameter
+	const range = url.searchParams.get("range") || "1h";
+	const hours = (() => {
+		switch (range) {
+			case "5m":
+				return 5 / 60;
+			case "15m":
+				return 15 / 60;
+			case "1h":
+				return 1;
+			case "1d":
+				return 24;
+			case "1w":
+				return 24 * 7;
+			default:
+				return 1;
+		}
+	})();
+
 	const stats = performanceTracker.getStats();
-	return json(stats);
+	const featureStats = {
+		overview: featureTracker.getStats(),
+		recentActivity: featureTracker.getRecentEvents(50),
+		usageByPeriod: featureTracker.getUsageByPeriod(hours),
+		topUsers: featureTracker.getMostActiveUsers(10),
+	};
+
+	return json({
+		...stats,
+		featureAnalytics: featureStats,
+		timeRange: range,
+	});
 };
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
@@ -49,6 +80,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 
 	if (action === "reset") {
 		performanceTracker.reset();
+		featureTracker.reset();
 		return json({ success: true });
 	}
 

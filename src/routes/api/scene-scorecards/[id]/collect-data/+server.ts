@@ -8,6 +8,7 @@ import {
 	findSceneScorecardById,
 } from "$lib/server/repositories/scene-scorecard.js";
 import { broadcastScorecardDataCollected } from "$lib/server/sse/broadcast.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 // POST /api/scene-scorecards/[id]/collect-data - Collect and process data
@@ -56,6 +57,12 @@ export const POST: RequestHandler = async (event) => {
 			sceneScorecardId,
 			body.datasource_data,
 		);
+
+		// Track feature usage
+		featureTracker.trackFeature('scorecards', 'data_collected', user.userId, {
+			boardId: scene.boardId,
+			metadata: { sceneScorecardId, resultCount: result.resultCount, errorCount: result.errors.length }
+		});
 
 		// Broadcast to board users
 		broadcastScorecardDataCollected(

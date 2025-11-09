@@ -854,3 +854,51 @@ export const sceneScorecardResultsRelations = relations(
 		}),
 	}),
 );
+
+// Feature Analytics - Hourly rollups for persistent storage
+export const featureAnalyticsHourly = table(
+	"feature_analytics_hourly",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => nanoid()),
+		hourStart: text("hour_start").notNull(), // ISO string of hour start (e.g., "2025-01-09T14:00:00.000Z")
+		feature: text("feature").notNull(), // e.g., "cards", "comments", "quadrant"
+		action: text("action").notNull(), // e.g., "created", "posted", "position_adjusted"
+		eventCount: integer("event_count").notNull().default(0),
+		uniqueUsersCount: integer("unique_users_count").notNull().default(0),
+		createdAt: text("created_at")
+			.notNull()
+			.$defaultFn(() => new Date().toISOString()),
+	},
+	(table) => ({
+		hourIdx: indexField("feature_analytics_hourly_hour_idx").on(table.hourStart),
+		featureIdx: indexField("feature_analytics_hourly_feature_idx").on(
+			table.feature,
+		),
+	}),
+);
+
+// Feature Analytics - Daily rollups aggregated from hourly
+export const featureAnalyticsDaily = table(
+	"feature_analytics_daily",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => nanoid()),
+		date: text("date").notNull(), // ISO date string (e.g., "2025-01-09")
+		feature: text("feature").notNull(),
+		action: text("action").notNull(),
+		eventCount: integer("event_count").notNull().default(0),
+		uniqueUsersCount: integer("unique_users_count").notNull().default(0),
+		createdAt: text("created_at")
+			.notNull()
+			.$defaultFn(() => new Date().toISOString()),
+	},
+	(table) => ({
+		dateIdx: indexField("feature_analytics_daily_date_idx").on(table.date),
+		featureIdx: indexField("feature_analytics_daily_feature_idx").on(
+			table.feature,
+		),
+	}),
+);

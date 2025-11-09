@@ -218,3 +218,42 @@ export async function buildUserVotingApiResponse(
 		voting_stats: comprehensiveData.voting_stats,
 	};
 }
+
+/**
+ * Builds complete voting response including all users' votes when appropriate
+ * Used by both SSR and API endpoints to ensure consistent data structure
+ */
+export async function buildCompleteVotingResponse(
+	boardId: string,
+	userId: string,
+	includeAllVotes: boolean,
+): Promise<{
+	success: boolean;
+	user_voting_data?: UserVotingData;
+	voting_stats: VotingStats;
+	all_votes_by_card?: Record<string, number>;
+}> {
+	const baseResponse = await buildUserVotingApiResponse(boardId, userId);
+
+	// If votes should be visible to all, add all users' vote counts by card
+	if (includeAllVotes) {
+		const { getAllUsersVotesForBoard } = await import(
+			"../repositories/vote.js"
+		);
+		const allVotes = await getAllUsersVotesForBoard(boardId);
+
+		// Build vote counts by card (card_id -> total_votes)
+		const voteCountsByCard: Record<string, number> = {};
+		allVotes.forEach((vote) => {
+			voteCountsByCard[vote.cardId] =
+				(voteCountsByCard[vote.cardId] || 0) + 1;
+		});
+
+		return {
+			...baseResponse,
+			all_votes_by_card: voteCountsByCard,
+		};
+	}
+
+	return baseResponse;
+}

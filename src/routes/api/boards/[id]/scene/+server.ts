@@ -10,6 +10,7 @@ import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
 import { broadcastSceneChanged } from "$lib/server/sse/broadcast.js";
 import { buildAllCardsData } from "$lib/server/utils/cards-data.js";
 import { buildPresentModeData } from "$lib/server/utils/present-mode-data.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const updateSceneSchema = z.object({
@@ -51,6 +52,12 @@ export const PUT: RequestHandler = async (event) => {
 
 		// Update the board's current scene
 		await updateBoardScene(boardId, data.sceneId);
+
+		// Track feature usage
+		featureTracker.trackFeature('scenes', 'changed', user.userId, {
+			boardId,
+			metadata: { sceneId: data.sceneId, sceneName: scene.name, sceneMode: scene.mode }
+		});
 
 		// Build response data identical to SSE broadcast
 		const responseData: any = {

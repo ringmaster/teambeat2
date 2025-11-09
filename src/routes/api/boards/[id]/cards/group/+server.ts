@@ -9,6 +9,7 @@ import {
 	getCurrentScene,
 	getSceneCapability,
 } from "$lib/utils/scene-capability.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const groupCardsSchema = z.object({
@@ -47,6 +48,12 @@ export const POST: RequestHandler = async (event) => {
 		}
 
 		const groupId = await groupCards(data.cardIds, data.groupId);
+
+		// Track feature usage
+		featureTracker.trackFeature('cards', 'grouped', user.userId, {
+			boardId,
+			metadata: { groupSize: data.cardIds.length }
+		});
 
 		// Broadcast updates for all affected cards
 		// Note: This is a simplified approach. In a more sophisticated implementation,

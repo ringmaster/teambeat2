@@ -12,6 +12,7 @@ import {
 } from "$lib/server/utils/quadrant-calculator.js";
 import { broadcastQuadrantResultsCalculated, broadcastSceneChanged } from "$lib/server/sse/broadcast.js";
 import { findSceneById } from "$lib/server/repositories/scene.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async (event) => {
@@ -178,6 +179,12 @@ export const POST: RequestHandler = async (event) => {
 			.update(scenes)
 			.set({ quadrantPhase: "results" })
 			.where(eq(scenes.id, sceneId));
+
+		// Track feature usage
+		featureTracker.trackFeature('quadrant', 'consensus_calculated', user.userId, {
+			boardId: board.id,
+			metadata: { sceneId, cardCount: cardPositions.length }
+		});
 
 		// Get the updated scene and broadcast the change
 		const updatedScene = await findSceneById(sceneId);

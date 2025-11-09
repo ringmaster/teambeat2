@@ -15,6 +15,7 @@ import {
 	getCurrentScene,
 	getSceneCapability,
 } from "$lib/utils/scene-capability.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 async function getCardCommentCounts(cardId: string) {
@@ -169,6 +170,17 @@ export const POST: RequestHandler = async (event) => {
 				updatedAt: now,
 			})
 			.returning();
+
+		// Track feature usage
+		featureTracker.trackFeature(
+			'comments',
+			is_reaction ? 'reaction_added' : 'posted',
+			user.userId,
+			{
+				boardId: cardData.board.id,
+				metadata: { cardId: card_id, isAgreement: is_agreement }
+			}
+		);
 
 		// Get user info for the response
 		const [userData] = await db

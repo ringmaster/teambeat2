@@ -8,6 +8,7 @@ import { getBoardWithDetails } from "$lib/server/repositories/board.js";
 import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
 import { createOrUpdateHealthResponse } from "$lib/server/repositories/health.js";
 import { findSceneById } from "$lib/server/repositories/scene.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const createResponseSchema = z.object({
@@ -119,6 +120,12 @@ export const POST: RequestHandler = async (event) => {
 			questionId: data.questionId,
 			userId: user.userId,
 			rating: data.rating,
+		});
+
+		// Track feature usage
+		featureTracker.trackFeature('health', 'response_submitted', user.userId, {
+			boardId: board.id,
+			metadata: { questionId: data.questionId, questionType: question.questionType, rating: data.rating }
 		});
 
 		return json({

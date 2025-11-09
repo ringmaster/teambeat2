@@ -8,6 +8,7 @@ import { refreshPresenceOnBoardAction } from "$lib/server/middleware/presence.js
 import { findBoardById } from "$lib/server/repositories/board.js";
 import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
 import { broadcastColumnsUpdated } from "$lib/server/sse/broadcast.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async (event) => {
@@ -76,6 +77,12 @@ export const POST: RequestHandler = async (event) => {
 			.from(columns)
 			.where(eq(columns.id, columnId))
 			.limit(1);
+
+		// Track feature usage
+		featureTracker.trackFeature('columns', 'created', user.userId, {
+			boardId,
+			metadata: { columnId, title: title.trim() }
+		});
 
 		// Get all columns for broadcast
 		const allColumns = await db

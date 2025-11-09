@@ -6,6 +6,7 @@ import {
 	recordPollVote,
 	recordTimerVote,
 } from "$lib/server/repositories/board";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 
 export async function POST(event: any) {
 	const { request } = event;
@@ -44,6 +45,12 @@ export async function POST(event: any) {
 		// Poll mode with flexible choice strings
 		recordPollVote(boardId, userId, choice);
 	}
+
+	// Track feature usage
+	featureTracker.trackFeature('timer', 'vote_cast', userId, {
+		boardId,
+		metadata: { pollType: pollConfig?.pollType || 'poll', choice }
+	});
 
 	const message = await broadcastTimerUpdate(boardId);
 

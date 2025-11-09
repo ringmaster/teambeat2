@@ -2,19 +2,27 @@
 import { onDestroy, onMount } from "svelte";
 import AdminNav from "$lib/components/AdminNav.svelte";
 import TimeSeriesChart from "$lib/components/TimeSeriesChart.svelte";
+import FeatureUsagePieChart from "$lib/components/analytics/FeatureUsagePieChart.svelte";
 import type { PerformanceStats } from "$lib/server/performance/tracker";
 import { toastStore } from "$lib/stores/toast";
 
-let stats: PerformanceStats | null = $state(null);
+let stats: any = $state(null);
 let loading = $state(true);
 let error = $state("");
 let autoRefresh = $state(true);
 let timeRange = $state("1h");
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
+// Reload stats when time range changes
+$effect(() => {
+	if (timeRange) {
+		loadStats();
+	}
+});
+
 async function loadStats() {
 	try {
-		const response = await fetch("/api/admin/performance");
+		const response = await fetch(`/api/admin/performance?range=${timeRange}`);
 		if (!response.ok) {
 			throw new Error("Failed to load performance stats");
 		}
@@ -66,6 +74,29 @@ function formatBytes(bytes: number): string {
 function formatDuration(ms: number): string {
 	if (ms < 1000) return ms.toFixed(2) + " ms";
 	return (ms / 1000).toFixed(2) + " s";
+}
+
+let takingSnapshot = $state(false);
+
+async function takeSnapshot() {
+	try {
+		takingSnapshot = true;
+		const response = await fetch("/api/admin/analytics/snapshot", {
+			method: "POST",
+		});
+
+		if (response.ok) {
+			toastStore.success("Snapshot saved to database successfully");
+		} else {
+			const data = await response.json();
+			toastStore.error(data.error || "Failed to take snapshot");
+		}
+	} catch (err) {
+		console.error("Failed to take snapshot:", err);
+		toastStore.error("Failed to take snapshot");
+	} finally {
+		takingSnapshot = false;
+	}
 }
 
 function formatUptime(ms: number): string {
@@ -300,7 +331,7 @@ onDestroy(() => {
                         <tbody>
                             {#each stats.sse.recentBroadcasts
                                 .slice(-20)
-                                .reverse() as broadcast}
+                                .toReversed() as broadcast}
                                 <tr>
                                     <td
                                         >{new Date(
@@ -335,7 +366,7 @@ onDestroy(() => {
                         <tbody>
                             {#each stats.slowQueries
                                 .slice(-20)
-                                .reverse() as query}
+                                .toReversed() as query}
                                 <tr>
                                     <td
                                         >{new Date(
@@ -376,7 +407,7 @@ onDestroy(() => {
                         <tbody>
                             {#each stats.apiPerformance.recentRequests
                                 .slice(-20)
-                                .reverse() as request}
+                                .toReversed() as request}
                                 <tr>
                                     <td
                                         >{new Date(
@@ -394,6 +425,154 @@ onDestroy(() => {
                             {/each}
                         </tbody>
                     </table>
+                </section>
+            {/if}
+
+            <!-- Feature Analytics -->
+            {#if stats.featureAnalytics}
+                <section class="feature-analytics">
+                    <div class="section-header">
+                        <h2>Feature Usage Analytics</h2>
+                        <button
+                            class="snapshot-button"
+                            onclick={takeSnapshot}
+                            disabled={takingSnapshot}
+                            aria-label="Save current analytics to database"
+                        >
+                            {takingSnapshot ? "Saving..." : "📸 Take Snapshot"}
+                        </button>
+                    </div>
+
+                    <!-- Most Used Features -->
+                    {#if stats.featureAnalytics.overview && stats.featureAnalytics.overview.length > 0}
+                        <div class="analytics-section">
+                            <h3>Most Used Features (All Time)</h3>
+                            <div class="analytics-with-chart">
+                                <div class="analytics-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Feature</th>
+                                                <th>Total Uses</th>
+                                                <th>Unique Users</th>
+                                                <th>Last Used</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {#each stats.featureAnalytics.overview.toSorted((a, b) => b.totalUses - a.totalUses) as feature}
+                                                <tr>
+                                                    <td class="feature-name">{feature.feature}</td>
+                                                    <td><strong>{feature.totalUses.toLocaleString()}</strong></td>
+                                                    <td>{feature.uniqueUsers}</td>
+                                                    <td>{new Date(feature.lastUsed).toLocaleString()}</td>
+                                                    <td class="actions-list">
+                                                        {#each Object.entries(feature.actions) as [action, count]}
+                                                            <span class="action-badge">{action}: {count}</span>
+                                                        {/each}
+                                                    </td>
+                                                </tr>
+                                            {/each}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="analytics-chart">
+                                    <FeatureUsagePieChart
+                                        data={stats.featureAnalytics.overview.map(f => ({
+                                            feature: f.feature,
+                                            count: f.totalUses
+                                        }))}
+                                        title="All Time Usage"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
+
+                    <!-- Usage By Time Period -->
+                    {#if stats.featureAnalytics.usageByPeriod && stats.featureAnalytics.usageByPeriod.length > 0}
+                        <div class="analytics-section">
+                            <h3>Feature Usage (Last {timeRange})</h3>
+                            <div class="analytics-with-chart">
+                                <div class="analytics-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Feature</th>
+                                                <th>Uses</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {#each stats.featureAnalytics.usageByPeriod as usage}
+                                                <tr>
+                                                    <td class="feature-name">{usage.feature}</td>
+                                                    <td><strong>{usage.count}</strong></td>
+                                                </tr>
+                                            {/each}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="analytics-chart">
+                                    <FeatureUsagePieChart
+                                        data={stats.featureAnalytics.usageByPeriod}
+                                        title="Usage (Last {timeRange})"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
+
+                    <!-- Top Users -->
+                    {#if stats.featureAnalytics.topUsers && stats.featureAnalytics.topUsers.length > 0}
+                        <div class="analytics-section">
+                            <h3>Most Active Users</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Feature Uses</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {#each stats.featureAnalytics.topUsers as user}
+                                        <tr>
+                                            <td>{user.userId}</td>
+                                            <td><strong>{user.featureUses}</strong></td>
+                                        </tr>
+                                    {/each}
+                                </tbody>
+                            </table>
+                        </div>
+                    {/if}
+
+                    <!-- Recent Activity -->
+                    {#if stats.featureAnalytics.recentActivity && stats.featureAnalytics.recentActivity.length > 0}
+                        <div class="analytics-section">
+                            <h3>Recent Feature Activity (Last 50 Events)</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Feature</th>
+                                        <th>Action</th>
+                                        <th>User ID</th>
+                                        <th>Board ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {#each stats.featureAnalytics.recentActivity.slice(0, 20) as event}
+                                        <tr>
+                                            <td>{new Date(event.timestamp).toLocaleTimeString()}</td>
+                                            <td class="feature-name">{event.feature}</td>
+                                            <td><span class="action-badge">{event.action}</span></td>
+                                            <td>{event.userId.substring(0, 8)}...</td>
+                                            <td>{event.boardId || 'N/A'}</td>
+                                        </tr>
+                                    {/each}
+                                </tbody>
+                            </table>
+                        </div>
+                    {/if}
                 </section>
             {/if}
         {/if}
@@ -609,6 +788,171 @@ onDestroy(() => {
         .path {
             font-family: "Courier New", monospace;
             font-size: 0.9rem;
+        }
+    }
+
+    .feature-analytics {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+
+        > h2 {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.5rem;
+            color: #374151;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+
+        h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #374151;
+        }
+    }
+
+    .snapshot-button {
+        padding: 0.5rem 1rem;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+
+        &:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        &:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+    }
+
+    .analytics-section {
+        margin-bottom: 2rem;
+
+        h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.2rem;
+            color: #4b5563;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+
+            th,
+            td {
+                text-align: left;
+                padding: 0.75rem;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            th {
+                background: #f9fafb;
+                font-weight: 600;
+                color: #374151;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            tr:last-child td {
+                border-bottom: none;
+            }
+
+            tr:hover {
+                background: #f9fafb;
+            }
+        }
+
+        .feature-name {
+            font-weight: 600;
+            color: #2563eb;
+            text-transform: capitalize;
+        }
+
+        .actions-list {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #eff6ff;
+            color: #2563eb;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .usage-bar-container {
+            position: relative;
+            width: 100%;
+            height: 24px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .usage-bar {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            transition: width 0.3s ease;
+        }
+
+        .usage-bar-label {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .analytics-with-chart {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+
+            @media (max-width: 1200px) {
+                flex-direction: column;
+            }
+
+            .analytics-table {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .analytics-chart {
+                flex-shrink: 0;
+                width: 400px;
+
+                @media (max-width: 1200px) {
+                    width: 100%;
+                    max-width: 500px;
+                    margin: 0 auto;
+                }
+            }
         }
     }
 </style>

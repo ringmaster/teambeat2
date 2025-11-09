@@ -2,8 +2,7 @@ import { json } from "@sveltejs/kit";
 import { requireUserForApi } from "$lib/server/auth/index.js";
 import { getBoardWithDetails } from "$lib/server/repositories/board.js";
 import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
-import { getAllUsersVotesForBoard } from "$lib/server/repositories/vote.js";
-import { buildUserVotingApiResponse } from "$lib/server/utils/voting-data.js";
+import { buildCompleteVotingResponse } from "$lib/server/utils/voting-data.js";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async (event) => {
@@ -31,22 +30,12 @@ export const GET: RequestHandler = async (event) => {
 		);
 		const shouldShowAllVotes = currentScene?.showVotes || false;
 
-		// Use centralized data construction for consistency with SSE messages
-		const response = await buildUserVotingApiResponse(boardId, user.userId);
-
-		// If votes are visible, add all users' vote counts by card
-		if (shouldShowAllVotes) {
-			const allVotes = await getAllUsersVotesForBoard(boardId);
-
-			// Build vote counts by card (card_id -> total_votes)
-			const voteCountsByCard: Record<string, number> = {};
-			allVotes.forEach((vote) => {
-				voteCountsByCard[vote.cardId] =
-					(voteCountsByCard[vote.cardId] || 0) + 1;
-			});
-
-			response.all_votes_by_card = voteCountsByCard;
-		}
+		// Use shared function to build complete voting response
+		const response = await buildCompleteVotingResponse(
+			boardId,
+			user.userId,
+			shouldShowAllVotes,
+		);
 
 		return json(response);
 	} catch (error) {

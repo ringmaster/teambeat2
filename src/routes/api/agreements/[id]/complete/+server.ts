@@ -11,6 +11,7 @@ import { getBoardWithDetails } from "$lib/server/repositories/board.js";
 import { getUserRoleInSeries } from "$lib/server/repositories/board-series.js";
 import { broadcastAgreementsUpdated } from "$lib/server/sse/broadcast.js";
 import { buildEnrichedAgreementsData } from "$lib/server/utils/agreements-data.js";
+import { featureTracker } from "$lib/server/analytics/feature-tracker.js";
 import type { RequestHandler } from "./$types";
 
 const completeAgreementSchema = z.object({
@@ -58,6 +59,12 @@ export const PUT: RequestHandler = async (event) => {
 			data.completed,
 			user.userId,
 		);
+
+		// Track feature usage
+		featureTracker.trackFeature('agreements', data.completed ? 'completed' : 'uncompleted', user.userId, {
+			boardId: agreement.boardId,
+			metadata: { agreementId }
+		});
 
 		// Broadcast updated agreements list to all clients
 		const agreements = await buildEnrichedAgreementsData(
