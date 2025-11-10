@@ -33,8 +33,10 @@ export async function updatePresence(
 	} catch (error: any) {
 		// Silently ignore foreign key violations (board/user doesn't exist)
 		// This can happen when a board is deleted while users are still connected
-		if (error?.cause?.code === "23503") {
-			// PostgreSQL foreign key violation
+		if (
+			error?.cause?.code === "23503" || // PostgreSQL foreign key violation
+			error?.code === "SQLITE_CONSTRAINT_FOREIGNKEY" // SQLite foreign key violation
+		) {
 			return;
 		}
 		// Re-throw other errors
