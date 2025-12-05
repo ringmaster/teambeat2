@@ -29,6 +29,7 @@ let isOpen = $state(false);
 let highlightedIndex = $state(-1);
 let inputElement: HTMLInputElement;
 let dropdownElement: HTMLDivElement;
+let valueOnFocus = $state("");  // Track value when input gained focus
 
 // Fuzzy search implementation
 function fuzzyMatch(str: string, pattern: string): number {
@@ -73,6 +74,7 @@ let filteredOptions = $derived.by(() => {
 function handleFocus() {
 	isOpen = true;
 	highlightedIndex = -1;
+	valueOnFocus = value;  // Store value when focus is gained
 }
 
 function handleBlur(e: FocusEvent) {
@@ -80,6 +82,10 @@ function handleBlur(e: FocusEvent) {
 	setTimeout(() => {
 		if (!dropdownElement?.contains(e.relatedTarget as Node)) {
 			isOpen = false;
+			// Call onSelect if the value changed (user typed without selecting from dropdown)
+			if (value !== valueOnFocus) {
+				onSelect(value);
+			}
 		}
 	}, 200);
 }
@@ -135,6 +141,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 function selectOption(optionValue: string) {
 	value = optionValue;
+	valueOnFocus = optionValue;  // Update to prevent duplicate onSelect call in handleBlur
 	onSelect(optionValue);
 	isOpen = false;
 	highlightedIndex = -1;

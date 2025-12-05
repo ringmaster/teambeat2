@@ -140,23 +140,26 @@ $effect(async () => {
 	}
 });
 
-// Load column presets when columns tab is active and user can edit
+// Load column presets when a column is selected (filtered by column title)
 $effect(async () => {
 	if (
 		activeTab === "columns" &&
+		selectedColumn?.title &&
 		board?.id &&
 		["admin", "facilitator"].includes(userRole)
 	) {
 		try {
-			const data = await boardApi.fetchColumnPresets(board.id);
+			const data = await boardApi.fetchColumnPresets(board.id, selectedColumn.title);
 			columnPresets = data.presets || [];
 		} catch (error) {
 			console.error("Failed to load column presets:", error);
-			// Fallback to presets without usage tracking
-			columnPresets = (COLUMN_PRESETS["Icebreaker"] || []).map((value) => ({
-				value,
-			}));
+			// Fallback to presets without usage tracking (only if column title matches)
+			const presets = COLUMN_PRESETS[selectedColumn.title] || [];
+			columnPresets = presets.map((value) => ({ value }));
 		}
+	} else if (activeTab === "columns" && !selectedColumn) {
+		// Clear presets when no column is selected
+		columnPresets = [];
 	}
 });
 

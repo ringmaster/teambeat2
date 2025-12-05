@@ -283,8 +283,13 @@ export async function createColumn(
 
 export async function fetchColumnPresets(
 	boardId: string,
+	columnTitle?: string,
 ): Promise<{ presets: any[] }> {
-	const response = await fetch(`/api/boards/${boardId}/column-presets`);
+	const url = new URL(`/api/boards/${boardId}/column-presets`, window.location.origin);
+	if (columnTitle) {
+		url.searchParams.set("columnTitle", columnTitle);
+	}
+	const response = await fetch(url.toString());
 	if (!response.ok) {
 		throw new Error(`Failed to fetch column presets: ${response.statusText}`);
 	}
