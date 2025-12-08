@@ -52,3 +52,7 @@ specifications/*
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Super Claude Kit (generated at runtime)
+.claude/**
+CLAUDE.md
