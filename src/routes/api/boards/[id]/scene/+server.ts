@@ -90,7 +90,8 @@ export const PUT: RequestHandler = async (event) => {
 		}
 
 		// Broadcast the scene change to all clients with full scene data
-		await broadcastSceneChanged(boardId, scene);
+		// forceReturn: true pulls users out of continuation mode when facilitator changes scene
+		await broadcastSceneChanged(boardId, scene, { forceReturn: true });
 
 		return json(responseData);
 	} catch (error) {

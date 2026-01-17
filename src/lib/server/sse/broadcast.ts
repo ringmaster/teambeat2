@@ -117,8 +117,14 @@ export function broadcastColumnsUpdated(boardId: string, columns: any[]) {
   sseManager.broadcastToBoard(boardId, message);
 }
 
-export async function broadcastSceneChanged(boardId: string, sceneData: any) {
+export async function broadcastSceneChanged(
+  boardId: string,
+  sceneData: any,
+  options?: { forceReturn?: boolean },
+) {
   try {
+    const forceReturn = options?.forceReturn ?? false;
+
     // If switching to present mode, send user-specific data
     if (sceneData.mode === "present") {
       const connectedUsers = sseManager.getConnectedUsers(boardId);
@@ -136,6 +142,7 @@ export async function broadcastSceneChanged(boardId: string, sceneData: any) {
             scene: sceneData,
             timestamp: Date.now(),
             present_mode_data: presentModeData,
+            forceReturn,
           };
           sseManager.broadcastToUser(boardId, userId, message);
         } catch (error) {
@@ -148,6 +155,7 @@ export async function broadcastSceneChanged(boardId: string, sceneData: any) {
             board_id: boardId,
             scene: sceneData,
             timestamp: Date.now(),
+            forceReturn,
           };
           sseManager.broadcastToUser(boardId, userId, fallbackMessage);
         }
@@ -159,6 +167,7 @@ export async function broadcastSceneChanged(boardId: string, sceneData: any) {
         board_id: boardId,
         scene: sceneData,
         timestamp: Date.now(),
+        forceReturn,
       };
 
       try {

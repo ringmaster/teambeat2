@@ -174,6 +174,9 @@ export const scenes = table("scenes", {
 	quadrantConfig: text("quadrant_config"), // JSON: {grid_size, x_axis_label, y_axis_label, x_axis_values, y_axis_values, template_id}
 	presentModeFilter: text("present_mode_filter"), // JSON: {type, scene_id?, quadrant_label?}
 	quadrantPhase: text("quadrant_phase").$type<"input" | "results">(), // Current phase for quadrant scenes
+	// Survey continuation configuration
+	continuationEnabled: booleanField("continuation_enabled").notNull().default(false),
+	continuationSceneId: text("continuation_scene_id"), // Scene to continue to after survey completion
 	createdAt: text("created_at")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),

@@ -795,6 +795,50 @@ let isThreeColumnMode = $derived(
                     <div class="form-section">
                         <HealthQuestionsManager sceneId={selectedScene.id} />
                     </div>
+
+                    <div class="form-section">
+                        <h3>Post-Completion Continuation</h3>
+                        <p class="help-text">
+                            Allow users who complete the survey to continue working on another scene while waiting for others to finish.
+                        </p>
+
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedScene.continuationEnabled || false}
+                                    onchange={(e) => onUpdateScene(selectedScene.id, {
+                                        continuationEnabled: e.currentTarget.checked,
+                                        // Clear continuation scene if disabling
+                                        continuationSceneId: e.currentTarget.checked ? selectedScene.continuationSceneId : null
+                                    })}
+                                />
+                                Enable post-survey continuation
+                            </label>
+                        </div>
+
+                        {#if selectedScene.continuationEnabled}
+                            <div class="form-group">
+                                <label for="continuation-scene">Continuation Scene</label>
+                                <select
+                                    id="continuation-scene"
+                                    value={selectedScene.continuationSceneId || ""}
+                                    onchange={(e) => onUpdateScene(selectedScene.id, {
+                                        continuationSceneId: e.currentTarget.value || null
+                                    })}
+                                    class="select"
+                                >
+                                    <option value="">Select a scene...</option>
+                                    {#each (board.scenes || []).filter((s) => s.mode !== 'survey' && s.id !== selectedScene.id) as scene (scene.id)}
+                                        <option value={scene.id}>{scene.title}</option>
+                                    {/each}
+                                </select>
+                                <p class="field-hint">
+                                    Users will be able to work on this scene after completing the survey. Survey scenes are excluded to prevent loops.
+                                </p>
+                            </div>
+                        {/if}
+                    </div>
                 {/if}
 
                 {#if selectedScene.mode === "static"}

@@ -137,7 +137,7 @@ describe("PUT /api/boards/[id]/scene", () => {
 		expect(data.success).toBe(true);
 		expect(data.scene.id).toBe(sceneId2);
 		expect(updateBoardScene).toHaveBeenCalledWith("board-1", sceneId2);
-		expect(broadcastSceneChanged).toHaveBeenCalledWith("board-1", mockScene);
+		expect(broadcastSceneChanged).toHaveBeenCalledWith("board-1", mockScene, { forceReturn: true });
 		expect(refreshPresenceOnBoardAction).toHaveBeenCalled();
 	});
 

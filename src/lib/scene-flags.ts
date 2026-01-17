@@ -45,7 +45,7 @@ export const SCENE_MODE_FLAGS: Record<string, SceneFlag[]> = {
 	agreements: [SCENE_FLAGS.ALLOW_ADD_CARDS],
 	scorecard: [SCENE_FLAGS.SHOW_COMMENTS, SCENE_FLAGS.ALLOW_COMMENTS],
 	static: [],
-	survey: [SCENE_FLAGS.ALLOW_ADD_CARDS],
+	survey: [],
 };
 
 // Human-readable flag labels for UI

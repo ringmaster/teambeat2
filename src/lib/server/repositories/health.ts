@@ -217,6 +217,49 @@ export async function applyHealthQuestionPreset(
 }
 
 /**
+ * Check if a user has completed all questions in a survey scene
+ * Returns completion status with question counts
+ */
+export async function checkUserSurveyCompletion(
+	sceneId: string,
+	userId: string,
+): Promise<{
+	completed: boolean;
+	totalQuestions: number;
+	answeredQuestions: number;
+}> {
+	// Get total questions for the scene
+	const questions = await db
+		.select({ id: healthQuestions.id })
+		.from(healthQuestions)
+		.where(eq(healthQuestions.sceneId, sceneId));
+
+	const totalQuestions = questions.length;
+
+	if (totalQuestions === 0) {
+		return { completed: true, totalQuestions: 0, answeredQuestions: 0 };
+	}
+
+	const questionIds = questions.map((q) => q.id);
+
+	// Get user's responses for these questions
+	const responses = await db
+		.select({ questionId: healthResponses.questionId })
+		.from(healthResponses)
+		.where(
+			and(
+				inArray(healthResponses.questionId, questionIds),
+				eq(healthResponses.userId, userId),
+			),
+		);
+
+	const answeredQuestions = responses.length;
+	const completed = answeredQuestions >= totalQuestions;
+
+	return { completed, totalQuestions, answeredQuestions };
+}
+
+/**
  * Get the most recent health check timestamp for a series
  * Returns just the createdAt timestamp string, not full records
  */

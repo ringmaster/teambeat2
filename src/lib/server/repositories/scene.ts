@@ -68,6 +68,8 @@ export async function findSceneById(sceneId: string) {
 			quadrantConfig: scenes.quadrantConfig,
 			presentModeFilter: scenes.presentModeFilter,
 			quadrantPhase: scenes.quadrantPhase,
+			continuationEnabled: scenes.continuationEnabled,
+			continuationSceneId: scenes.continuationSceneId,
 		})
 		.from(scenes)
 		.innerJoin(boards, eq(scenes.boardId, boards.id))
@@ -106,6 +108,8 @@ export async function updateScene(
 		quadrantConfig?: string | null;
 		presentModeFilter?: string | null;
 		quadrantPhase?: "input" | "results" | null;
+		continuationEnabled?: boolean;
+		continuationSceneId?: string | null;
 	},
 ) {
 	const [scene] = await db

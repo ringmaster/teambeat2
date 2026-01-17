@@ -162,6 +162,11 @@ let pendingTimerInit = $state<{
 	elapsed: number;
 } | null>(null);
 
+// Survey continuation state - allows users to work on another scene while others complete a survey
+let isInContinuation = $state(false);
+let continuationScene = $state<any>(null);
+let groupSceneId = $state<string | null>(null); // The facilitator's current scene that user will return to
+
 // Calculate if user has votes available (same value for all cards on the board)
 let hasVotes = $derived(votingAllocation?.canVote ?? false);
 
@@ -598,12 +603,22 @@ function handleSSEMessage(data: any) {
 			break;
 		case "scene_created":
 			if (board && data.scene) {
-				console.log("[+page] scene_created - adding scene:", data.scene);
-				board.scenes = [...(board.scenes || []), data.scene];
+				// Only add if scene doesn't already exist (idempotent)
+				const existingScene = (board.scenes || []).find((s: any) => s.id === data.scene.id);
+				if (!existingScene) {
+					board.scenes = [...(board.scenes || []), data.scene];
+				}
 			}
 			break;
 		case "scene_changed":
 			if (board && data.scene) {
+				// If forceReturn is set, exit continuation mode (facilitator changed scene or showed results)
+				if (data.forceReturn && isInContinuation) {
+					isInContinuation = false;
+					continuationScene = null;
+					groupSceneId = null;
+				}
+
 				// Store previous scene voting and display state
 				const previousScene = currentScene;
 				const wasVotingAllowed = previousScene?.allowVoting || false;
@@ -981,6 +996,12 @@ let currentScene = $derived(
 	board?.scenes?.find((s: any) => s.id === board.currentSceneId),
 );
 
+// Displayed scene respects continuation mode - shows continuation scene when user is in continuation
+let displayedScene = $derived(isInContinuation && continuationScene ? continuationScene : currentScene);
+
+// Check if current user is a facilitator (who should not see continuation options)
+let isFacilitator = $derived(["admin", "facilitator"].includes(userRole));
+
 // Derive selected card for Present mode - preserves object identity when card data hasn't changed
 let selectedCard = $derived(
 	cards.find((c: any) => c.id === currentScene?.selectedCardId) || null,
@@ -1034,6 +1055,40 @@ async function changeScene(sceneId: string) {
 		showSceneDropdown = false;
 	} catch (error) {
 		console.error("Failed to change scene:", error);
+	}
+}
+
+/**
+ * Enter continuation mode - allows user to work on another scene while others complete a survey
+ * This does NOT change the board's current scene - the user just views a different scene locally
+ */
+function enterContinuation(scene: any) {
+	if (!scene) return;
+
+	// Store the current scene ID so we know what to return to
+	groupSceneId = board.currentSceneId;
+	continuationScene = scene;
+	isInContinuation = true;
+
+	// Reload cards for the continuation scene if needed
+	if (scene.mode !== "present") {
+		reloadAllCards();
+	}
+}
+
+/**
+ * Exit continuation mode - return to the group's current scene
+ */
+function exitContinuation() {
+	isInContinuation = false;
+	continuationScene = null;
+	groupSceneId = null;
+
+	// Reload cards appropriate for the current scene
+	if (currentScene?.mode === "present") {
+		loadPresentModeData();
+	} else {
+		reloadAllCards();
 	}
 }
 
@@ -2227,8 +2282,7 @@ async function createScene(formData: any = null) {
 		});
 
 		if (response.ok) {
-			const data = await response.json();
-			board.scenes = [...(board.scenes || []), data.scene];
+			// Scene will be added via SSE event - don't add locally to avoid duplicates
 			return true;
 		} else {
 			const data = await response.json();
@@ -2846,6 +2900,23 @@ let dragState = $derived({
         </div>
     {/if}
 
+    <!-- Continuation banner - shown when user is viewing a different scene than the group -->
+    {#if isInContinuation && continuationScene}
+        <div class="continuation-banner">
+            <span class="continuation-message">
+                Viewing <strong>{continuationScene.title}</strong> while others complete the survey
+            </span>
+            <button
+                type="button"
+                class="return-to-group-btn"
+                onclick={exitContinuation}
+                aria-label="Return to group"
+            >
+                Return to Group
+            </button>
+        </div>
+    {/if}
+
     <!-- Main content area that grows to fill available space -->
     {#if (!(board.allColumns || board.columns) || (board.allColumns || board.columns)?.length === 0) && (!board.scenes || board.scenes.length === 0)}
         <BoardSetup
@@ -2858,10 +2929,10 @@ let dragState = $derived({
             onConfigureClick={() => (showBoardConfig = true)}
             onCloneBoard={cloneBoard}
         />
-    {:else if currentScene?.mode === "present"}
+    {:else if displayedScene?.mode === "present"}
         <PresentMode
             {board}
-            scene={currentScene}
+            scene={displayedScene}
             currentUser={user}
             {cards}
             {selectedCard}
@@ -2876,26 +2947,33 @@ let dragState = $derived({
             onEditCard={editCard}
             onReaction={addReaction}
         />
-    {:else if currentScene?.mode === "review"}
-        <ReviewScene {board} scene={currentScene} {cards} />
-    {:else if currentScene?.mode === "agreements"}
-        <AgreementsScene {board} scene={currentScene} {userRole} />
-    {:else if currentScene?.mode === "scorecard"}
+    {:else if displayedScene?.mode === "review"}
+        <ReviewScene {board} scene={displayedScene} {cards} />
+    {:else if displayedScene?.mode === "agreements"}
+        <AgreementsScene {board} scene={displayedScene} {userRole} />
+    {:else if displayedScene?.mode === "scorecard"}
         <ScorecardScene
-            sceneId={currentScene.id}
+            sceneId={displayedScene.id}
             {boardId}
             {board}
-            scene={currentScene}
+            scene={displayedScene}
             canEdit={userRole === "admin" || userRole === "facilitator"}
             {userRole}
         />
-    {:else if currentScene?.mode === "static"}
-        <StaticScene scene={currentScene} />
-    {:else if currentScene?.mode === "survey"}
-        <HealthSurvey scene={currentScene} {boardId} boardStatus={board.status} {userRole} />
-    {:else if currentScene?.mode === "quadrant"}
+    {:else if displayedScene?.mode === "static"}
+        <StaticScene scene={displayedScene} />
+    {:else if displayedScene?.mode === "survey"}
+        <HealthSurvey
+            scene={displayedScene}
+            {boardId}
+            boardStatus={board.status}
+            {userRole}
+            allScenes={board.scenes}
+            onContinue={enterContinuation}
+        />
+    {:else if displayedScene?.mode === "quadrant"}
         <QuadrantScene
-            scene={currentScene}
+            scene={displayedScene}
             {cards}
             {boardId}
             {board}
@@ -2904,11 +2982,11 @@ let dragState = $derived({
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
         />
-    {:else if currentScene?.mode === "columns"}
+    {:else if displayedScene?.mode === "columns"}
         <BoardColumns
             board={displayBoard}
             {cards}
-            {currentScene}
+            currentScene={displayedScene}
             {groupingMode}
             {selectedCards}
             dragTargetColumnId={cardDropTargetColumnId}
@@ -2943,7 +3021,7 @@ let dragState = $derived({
         <!-- Invalid scene mode -->
         <div class="error-message">
             <h3>Invalid Scene Mode</h3>
-            <p>The current scene has an invalid mode: <strong>{currentScene?.mode || 'unknown'}</strong></p>
+            <p>The current scene has an invalid mode: <strong>{displayedScene?.mode || 'unknown'}</strong></p>
             <p>Please contact an administrator to fix this scene configuration.</p>
         </div>
     {/if}
@@ -3061,6 +3139,49 @@ let dragState = $derived({
         background-color: #fed7aa;
         color: #c2410c;
         border-color: #fdba74;
+    }
+
+    .continuation-banner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg,
+            color-mix(in srgb, var(--color-secondary) 15%, transparent),
+            color-mix(in srgb, var(--color-accent) 10%, transparent)
+        );
+        border-bottom: 1px solid color-mix(in srgb, var(--color-secondary) 30%, transparent);
+        font-size: 0.9375rem;
+        color: var(--color-text-primary);
+        flex-wrap: wrap;
+    }
+
+    .continuation-message {
+        strong {
+            color: var(--color-primary);
+        }
+    }
+
+    .return-to-group-btn {
+        padding: 0.5rem 1rem;
+        background: var(--btn-secondary-bg);
+        color: var(--btn-secondary-text);
+        border: 1px solid var(--color-border);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: var(--btn-secondary-bg-hover);
+            border-color: var(--color-primary);
+        }
+
+        &:active {
+            transform: translateY(1px);
+        }
     }
 
     .error-message {

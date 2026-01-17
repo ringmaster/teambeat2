@@ -39,6 +39,8 @@ const updateSceneSchema = z.object({
 	presentModeFilter: z.string().nullish(),
 	quadrantPhase: z.enum(["input", "results"]).nullish(),
 	flags: z.array(z.string()).optional(),
+	continuationEnabled: z.boolean().optional(),
+	continuationSceneId: z.string().nullish(),
 });
 
 export const PATCH: RequestHandler = async (event) => {
@@ -61,6 +63,34 @@ export const PATCH: RequestHandler = async (event) => {
 		const userRole = await getUserRoleInSeries(user.userId, board.seriesId);
 		if (!userRole || !["admin", "facilitator"].includes(userRole)) {
 			return json({ success: false, error: "Access denied" }, { status: 403 });
+		}
+
+		// Validate continuation scene if provided
+		if (data.continuationSceneId) {
+			// Check that the continuation scene exists, belongs to the same board, and is not a survey
+			const continuationScene = board.scenes?.find(
+				(s: any) => s.id === data.continuationSceneId,
+			);
+
+			if (!continuationScene) {
+				return json(
+					{
+						success: false,
+						error: "Continuation scene not found in this board",
+					},
+					{ status: 400 },
+				);
+			}
+
+			if (continuationScene.mode === "survey") {
+				return json(
+					{
+						success: false,
+						error: "Continuation scene cannot be a survey (prevents loops)",
+					},
+					{ status: 400 },
+				);
+			}
 		}
 
 		// Update flags if provided
@@ -89,7 +119,9 @@ export const PATCH: RequestHandler = async (event) => {
 
 		// If this is the current scene for the board, broadcast the change
 		if (board.currentSceneId === sceneId) {
-			await broadcastSceneChanged(boardId, sceneWithFlags);
+			// If displayMode changed to "results", force users back from continuation
+			const forceReturn = data.displayMode === "results";
+			await broadcastSceneChanged(boardId, sceneWithFlags, { forceReturn });
 		}
 
 		return json({

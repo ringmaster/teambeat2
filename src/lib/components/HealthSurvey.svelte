@@ -14,9 +14,11 @@ interface Props {
 	boardId: string;
 	boardStatus: string;
 	userRole: string;
+	allScenes?: any[];
+	onContinue?: (scene: any) => void;
 }
 
-const { scene, boardId, boardStatus, userRole }: Props = $props();
+const { scene, boardId, boardStatus, userRole, allScenes = [], onContinue }: Props = $props();
 
 const isFacilitator = $derived(["admin", "facilitator"].includes(userRole));
 
@@ -26,6 +28,30 @@ let loading = $state(true);
 let error = $state<string | null>(null);
 
 const isDisabled = $derived(!["draft", "active"].includes(boardStatus));
+
+// Survey completion tracking
+const surveyCompleted = $derived(
+	questions.length > 0 && questions.every((q) => responses.has(q.id))
+);
+
+// Get continuation scene if available
+const continuationScene = $derived.by(() => {
+	if (!scene.continuationEnabled || !scene.continuationSceneId) return null;
+	return allScenes.find((s: any) => s.id === scene.continuationSceneId) || null;
+});
+
+// Show continuation option when: completed and continuation is configured
+const canContinue = $derived(
+	surveyCompleted &&
+	continuationScene !== null &&
+	scene.displayMode !== "results"
+);
+
+function handleContinue() {
+	if (continuationScene && onContinue) {
+		onContinue(continuationScene);
+	}
+}
 
 async function loadQuestions() {
 	try {
@@ -250,6 +276,30 @@ $effect(() => {
                         </div>
                     {/each}
                 </div>
+
+                {#if canContinue && continuationScene}
+                    <div class="survey-completed-banner">
+                        <div class="completion-message">
+                            <span class="completion-icon">&#10003;</span>
+                            <span class="completion-text">Survey complete! Continue working while others finish.</span>
+                        </div>
+                        <button
+                            type="button"
+                            class="continue-button"
+                            onclick={handleContinue}
+                            aria-label="Continue to {continuationScene.title}"
+                        >
+                            Continue to {continuationScene.title}
+                        </button>
+                    </div>
+                {:else if surveyCompleted && scene.displayMode !== "results"}
+                    <div class="survey-completed-banner completed-only">
+                        <div class="completion-message">
+                            <span class="completion-icon">&#10003;</span>
+                            <span class="completion-text">Survey complete!</span>
+                        </div>
+                    </div>
+                {/if}
             {/if}
         </div>
     {/if}
@@ -336,5 +386,73 @@ $effect(() => {
 
     .question-input {
         margin-top: 0.75rem;
+    }
+
+    .survey-completed-banner {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: linear-gradient(135deg,
+            color-mix(in srgb, var(--color-success, #22c55e) 10%, transparent),
+            color-mix(in srgb, var(--color-primary) 5%, transparent)
+        );
+        border: 1px solid var(--color-success, #22c55e);
+        border-radius: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        text-align: center;
+
+        &.completed-only {
+            background: linear-gradient(135deg,
+                color-mix(in srgb, var(--color-success, #22c55e) 8%, transparent),
+                color-mix(in srgb, var(--color-secondary) 5%, transparent)
+            );
+        }
+    }
+
+    .completion-message {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .completion-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        background-color: var(--color-success, #22c55e);
+        color: white;
+        border-radius: 50%;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .continue-button {
+        padding: 0.75rem 1.5rem;
+        background: var(--btn-primary-bg);
+        color: var(--btn-primary-text);
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
+
+        &:hover {
+            background: var(--btn-primary-bg-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
     }
 </style>
