@@ -27,6 +27,7 @@ import * as boardApi from "$lib/services/board-api";
 import { toastStore } from "$lib/stores/toast";
 import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
 import { getSceneCapability } from "$lib/utils/scene-capability";
+import { seriesIdToShortCode } from "$lib/utils/short-codes";
 
 interface Props {
 	data: {
@@ -2582,7 +2583,7 @@ async function moveSceneToEnd(draggedId: string) {
 	}
 }
 
-async function handleShareBoard() {
+async function handleShareBoardLink() {
 	// Check if board is in draft status
 	if (board.status === "draft") {
 		toastStore.draftBoardWarning(async () => {
@@ -2616,19 +2617,67 @@ async function handleShareBoard() {
 	}
 }
 
+async function handleShareSeriesLink() {
+	// Check if board is in draft status - series links should also prompt to make active
+	if (board.status === "draft") {
+		toastStore.draftBoardWarning(async () => {
+			try {
+				// Update board status to active
+				const response = await fetch(`/api/boards/${boardId}`, {
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ status: "active" }),
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					board.status = data.board.status;
+					// Now proceed with sharing series link
+					await copySeriesUrlToClipboard();
+				} else {
+					toastStore.error("Failed to make board active. Please try again.");
+				}
+			} catch (error) {
+				console.error("Error updating board status:", error);
+				toastStore.error("Error updating board. Please try again.");
+			}
+		});
+	} else {
+		await copySeriesUrlToClipboard();
+	}
+}
+
 async function copyBoardUrlToClipboard(restrictedAccess = false) {
 	try {
 		const shareUrl = window.location.href;
 		await navigator.clipboard.writeText(shareUrl);
 		if (restrictedAccess) {
 			toastStore.success(
-				"Board URL copied to clipboard! Only existing members with access to the series will be able to see this board.",
+				"Board link copied! Only existing series members can access this board.",
 			);
 		} else {
 			toastStore.success(
-				"Board URL copied to clipboard! Anyone with this link can access the board.",
+				"Board link copied! Anyone with this link can access the board.",
 			);
 		}
+	} catch (error) {
+		console.error("Error copying to clipboard:", error);
+		toastStore.error("Error copying link to clipboard. Please try again.");
+	}
+}
+
+async function copySeriesUrlToClipboard() {
+	try {
+		if (!board.seriesId) {
+			toastStore.error("Series link not available for this board.");
+			return;
+		}
+		const shortCode = seriesIdToShortCode(board.seriesId);
+		const shareUrl = `${window.location.origin}/b/${shortCode}`;
+		await navigator.clipboard.writeText(shareUrl);
+		toastStore.success(
+			"Series link copied! This link always goes to the current active board.",
+		);
 	} catch (error) {
 		console.error("Error copying to clipboard:", error);
 		toastStore.error("Error copying link to clipboard. Please try again.");
@@ -2737,7 +2786,8 @@ let dragState = $derived({
         userVoteAllocation={votingAllocation || undefined}
         votingStats={votingStats || undefined}
         onConfigureClick={() => (showBoardConfig = true)}
-        onShareClick={handleShareBoard}
+        onShareBoardLink={handleShareBoardLink}
+        onShareSeriesLink={handleShareSeriesLink}
         onSceneChange={changeScene}
         onNextScene={nextScene}
         onShowSceneDropdown={(show) => (showSceneDropdown = show)}

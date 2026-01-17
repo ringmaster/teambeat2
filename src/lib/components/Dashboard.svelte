@@ -10,6 +10,8 @@ import InputWithButton from "$lib/components/ui/InputWithButton.svelte";
 import Pill from "$lib/components/ui/Pill.svelte";
 import * as dashboardApi from "$lib/services/dashboard-api";
 import { generateBoardName } from "$lib/utils/board-name-generator";
+import { seriesIdToShortCode } from "$lib/utils/short-codes";
+import { toastStore } from "$lib/stores/toast";
 
 interface Props {
 	user: any;
@@ -244,6 +246,15 @@ function getLatestBoardForCollapsed(seriesItem: any) {
 		return null;
 	}
 
+	// Use server-computed current board ID if available
+	if (seriesItem.currentBoardId) {
+		const currentBoard = seriesItem.boards.find(
+			(b: any) => b.id === seriesItem.currentBoardId
+		);
+		if (currentBoard) return currentBoard;
+	}
+
+	// Fallback to client-side logic for backwards compatibility
 	// For admin/facilitator, show latest active or draft board
 	// For members, show only latest active board
 	let eligibleBoards = seriesItem.boards.filter((b: any) => {
@@ -278,11 +289,61 @@ function getLatestBoardForCollapsed(seriesItem: any) {
 	return sorted[0];
 }
 
+function getNextDraftBoardForCollapsed(seriesItem: any) {
+	// Only for admin/facilitator users
+	if (!["admin", "facilitator"].includes(seriesItem.role)) return null;
+	if (!seriesItem.nextDraftBoardId) return null;
+
+	// Don't show if the draft board is the same as the current board
+	if (seriesItem.nextDraftBoardId === seriesItem.currentBoardId) return null;
+
+	return seriesItem.boards.find(
+		(b: any) => b.id === seriesItem.nextDraftBoardId
+	);
+}
+
 function openRenameSeries(seriesItem: any) {
 	seriesToRename = seriesItem;
 	renameSeriesName = seriesItem.name;
 	renameSeriesError = "";
 	showRenameModal = true;
+}
+
+function splitAndSortBoardsByDate(boards: any[]) {
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+
+	const upcoming: any[] = [];
+	const past: any[] = [];
+
+	boards.forEach((board) => {
+		const boardDate = board.meetingDate
+			? new Date(board.meetingDate)
+			: new Date(board.createdAt);
+		boardDate.setHours(0, 0, 0, 0);
+
+		if (boardDate >= today) {
+			upcoming.push(board);
+		} else {
+			past.push(board);
+		}
+	});
+
+	// Sort upcoming boards in ascending order (earliest first)
+	upcoming.sort((a, b) => {
+		const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
+		const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+		return aDate.getTime() - bDate.getTime();
+	});
+
+	// Sort past boards in descending order (most recent first)
+	past.sort((a, b) => {
+		const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
+		const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+		return bDate.getTime() - aDate.getTime();
+	});
+
+	return { upcoming, past };
 }
 
 function closeRenameModal() {
@@ -314,6 +375,18 @@ async function renameSeries() {
 	} catch (error) {
 		renameSeriesError =
 			error instanceof Error ? error.message : "Failed to rename series";
+	}
+}
+
+async function copySeriesLink(seriesId: string) {
+	const shortCode = seriesIdToShortCode(seriesId);
+	const url = `${window.location.origin}/b/${shortCode}`;
+
+	try {
+		await navigator.clipboard.writeText(url);
+		toastStore.success("Series link copied to clipboard");
+	} catch {
+		toastStore.error("Failed to copy link to clipboard");
 	}
 }
 </script>
@@ -502,6 +575,17 @@ async function renameSeries() {
                                                 }}
                                             >
                                                 <button
+                                                    onclick={() => copySeriesLink(s.id)}
+                                                    class="dropdown-menu-item"
+                                                    role="menuitem"
+                                                >
+                                                    <Icon
+                                                        name="share"
+                                                        size="sm"
+                                                    />
+                                                    Copy Link
+                                                </button>
+                                                <button
                                                     onclick={() =>
                                                         openRenameSeries(s)}
                                                     class="dropdown-menu-item"
@@ -559,8 +643,9 @@ async function renameSeries() {
                                 </div>
 
                                 {#if collapsedSeries[s.id]}
-                                    <!-- Collapsed view - show only latest active/draft/completed board -->
+                                    <!-- Collapsed view - show current board + next draft for admins -->
                                     {@const latestBoard = getLatestBoardForCollapsed(s)}
+                                    {@const draftBoard = getNextDraftBoardForCollapsed(s)}
                                     <div class="collapsed-board-preview">
                                         {#if latestBoard}
                                             <BoardListingItem
@@ -590,7 +675,19 @@ async function renameSeries() {
                                                     {/if}
                                                 {/snippet}
                                             </BoardListingItem>
-                                        {:else}
+                                        {/if}
+                                        {#if draftBoard}
+                                            <div class="draft-board-secondary">
+                                                <BoardListingItem
+                                                    name={draftBoard.name}
+                                                    meetingDate={draftBoard.meetingDate}
+                                                    createdAt={draftBoard.createdAt}
+                                                    status={draftBoard.status}
+                                                    onclick={() => goto(`/board/${draftBoard.id}`)}
+                                                />
+                                            </div>
+                                        {/if}
+                                        {#if !latestBoard && !draftBoard}
                                             <div class="no-boards-message">
                                                 There are no active boards in this series.
                                             </div>
@@ -598,6 +695,8 @@ async function renameSeries() {
                                     </div>
                                 {:else}
                                     <!-- Expanded view - show all boards and create new board form -->
+                                    {@const activeDraftBoards = s.boards ? s.boards.filter((b: any) => ["active", "draft"].includes(b.status)) : []}
+                                    {@const { upcoming, past } = splitAndSortBoardsByDate(activeDraftBoards)}
                                     <!-- Create New Board -->
                                     {#if !canCreateResources()}
                                         <div class="verification-required-message">
@@ -653,24 +752,46 @@ async function renameSeries() {
 
                                     <div class="space-y-3">
                                         <!-- Active and Draft Boards -->
-                                        {#if s.boards && s.boards.filter( (b) => ["active", "draft"].includes(b.status), ).length > 0}
+                                        {#if activeDraftBoards.length > 0}
                                             <div class="board-section">
                                                 <h4 class="board-section-title">
                                                     Active & Draft Boards:
                                                 </h4>
                                                 <div class="board-list">
-                                                    {#each s.boards.filter( (b) => ["active", "draft"].includes(b.status), ) as board (board.id)}
-                                                        <BoardListingItem
-                                                            name={board.name}
-                                                            meetingDate={board.meetingDate}
-                                                            createdAt={board.createdAt}
-                                                            status={board.status}
-                                                            onclick={() =>
-                                                                goto(
-                                                                    `/board/${board.id}`,
-                                                                )}
-                                                        />
-                                                    {/each}
+                                                    {#if upcoming.length > 0}
+                                                        <div class="board-date-group">
+                                                            <span class="board-date-group-label">Upcoming</span>
+                                                            {#each upcoming as board (board.id)}
+                                                                <BoardListingItem
+                                                                    name={board.name}
+                                                                    meetingDate={board.meetingDate}
+                                                                    createdAt={board.createdAt}
+                                                                    status={board.status}
+                                                                    onclick={() =>
+                                                                        goto(
+                                                                            `/board/${board.id}`,
+                                                                        )}
+                                                                />
+                                                            {/each}
+                                                        </div>
+                                                    {/if}
+                                                    {#if past.length > 0}
+                                                        <div class="board-date-group">
+                                                            <span class="board-date-group-label">Past</span>
+                                                            {#each past as board (board.id)}
+                                                                <BoardListingItem
+                                                                    name={board.name}
+                                                                    meetingDate={board.meetingDate}
+                                                                    createdAt={board.createdAt}
+                                                                    status={board.status}
+                                                                    onclick={() =>
+                                                                        goto(
+                                                                            `/board/${board.id}`,
+                                                                        )}
+                                                                />
+                                                            {/each}
+                                                        </div>
+                                                    {/if}
                                                 </div>
                                             </div>
                                         {:else}
@@ -1324,6 +1445,13 @@ async function renameSeries() {
         padding-top: var(--spacing-3);
     }
 
+    .draft-board-secondary {
+        margin-top: var(--spacing-2);
+        opacity: 0.8;
+        border-left: 3px solid var(--color-warning);
+        padding-left: var(--spacing-2);
+    }
+
     .no-boards-message {
         padding: var(--spacing-4);
         text-align: center;
@@ -1361,6 +1489,23 @@ async function renameSeries() {
         display: flex;
         flex-direction: column;
         gap: var(--spacing-2);
+    }
+
+    .board-date-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .board-date-group-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: var(--spacing-2) 0 var(--spacing-1) 0;
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: var(--spacing-1);
     }
 
     /* Alert Styles - Replace Tailwind classes */

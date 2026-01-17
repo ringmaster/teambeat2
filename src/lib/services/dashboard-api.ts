@@ -10,6 +10,8 @@ export interface Series {
 	role: string;
 	createdAt: string;
 	updatedAt: string;
+	currentBoardId?: string | null;
+	nextDraftBoardId?: string | null;
 }
 
 export interface SeriesListResponse {

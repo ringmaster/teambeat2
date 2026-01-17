@@ -20,6 +20,8 @@ A modern, real-time collaborative retrospective tool built with SvelteKit 5 and 
 ### Authentication & Security
 - [x] **Password Authentication** - Email/password authentication with secure sessions
 - [x] **WebAuthn/Passkey Support** - Passwordless authentication with biometrics or security keys
+- [x] **Email Verification** - Email verification with token-based confirmation
+- [x] **Password Reset** - Secure password reset via email
 - [x] **Admin System** - Admin-only access controls for sensitive features
 - [x] **Rate Limiting** - Server-side rate limiting for auth and resource endpoints
 
@@ -29,6 +31,8 @@ A modern, real-time collaborative retrospective tool built with SvelteKit 5 and 
 - [x] **Data Source Management** - Configure multiple data sources per scorecard
 - [x] **Scene-based Scorecards** - Run scorecards during specific meeting phases
 - [x] **Results Tracking** - Flag and track scorecard results over time
+- [x] **Health Check Surveys** - Team health check questionnaires with preset templates
+- [x] **Quadrant Positioning** - Visual positioning tool with consensus calculation
 
 ### Performance & Administration
 - [x] **Performance Monitoring** - Real-time performance metrics and analytics dashboard
@@ -225,6 +229,11 @@ src/
 - `PUT /api/auth/change-password` - Change password
 - `DELETE /api/auth/delete-account` - Delete user account
 - `POST /api/auth/dev-login` - Development login (dev only)
+- `POST /api/auth/verify-email` - Verify email with token
+- `POST /api/auth/send-verification-email` - Send verification email
+- `POST /api/auth/request-password-reset` - Request password reset email
+- `POST /api/auth/reset-password` - Reset password with token
+- `GET /api/auth/email-config` - Get email configuration status
 
 ### WebAuthn/Passkey Authentication
 - `POST /api/auth/webauthn/register/begin` - Start passkey registration
@@ -261,7 +270,7 @@ src/
 - `GET /api/boards/[id]/present-data` - Get present mode data
 - `GET /api/boards/[id]/user-votes` - Get user's vote data
 - `GET /api/boards/[id]/user-status` - Get voting status info
-- `PUT /api/boards/[id]/share` - Update board sharing settings
+- `GET /api/boards/[id]/column-presets` - Get column presets for board
 
 ### Scenes & Columns
 - `GET /api/boards/[id]/scenes` - Get board scenes
@@ -331,6 +340,26 @@ src/
 - `GET /api/scene-scorecards/[id]/results` - Get scorecard results
 - `POST /api/scene-scorecard-results/[resultId]/flag` - Flag a result
 
+### Health Check Surveys
+- `GET /api/health-question-presets` - Get available health question presets
+- `GET /api/health-questions/[id]` - Get health question details
+- `POST /api/health-questions/[id]/copy-to-card` - Convert health question to card
+- `GET /api/health-responses` - List health responses
+- `GET /api/scenes/[sceneId]/health-questions` - Get health questions for scene
+- `PUT /api/scenes/[sceneId]/health-questions/reorder` - Reorder health questions
+- `GET /api/scenes/[sceneId]/health-responses` - Get responses for scene
+- `GET /api/scenes/[sceneId]/health-results` - Get aggregated health results
+- `POST /api/scenes/[sceneId]/apply-health-preset` - Apply health question preset
+
+### Quadrant Positioning
+- `GET /api/quadrant-positions/[id]` - Get quadrant position details
+- `POST /api/cards/[cardId]/quadrant-position` - Create/update card quadrant position
+- `GET /api/scenes/[sceneId]/quadrant/positions` - Get all quadrant positions for scene
+- `POST /api/scenes/[sceneId]/quadrant/start-input` - Start quadrant input phase
+- `POST /api/scenes/[sceneId]/quadrant/calculate-consensus` - Calculate consensus positions
+- `POST /api/scenes/[sceneId]/quadrant/facilitator-position` - Update facilitator position
+- `POST /api/scenes/[sceneId]/quadrant/reset-all-positions` - Reset all quadrant positions
+
 ### Real-time Features
 - `GET /api/sse` - Server-Side Events endpoint
 - `PUT /api/boards/[id]/presence` - Update user presence
@@ -343,6 +372,11 @@ src/
 - `POST /api/admin/performance` - Reset performance metrics (admin only)
 - `GET /api/admin/performance/history` - Get historical performance data (admin only)
 - `GET /api/admin/performance/timeseries` - Get time series data (admin only)
+- `GET /api/admin/users/[userId]` - Get user details (admin only)
+- `POST /api/admin/users/[userId]/verify` - Verify user email (admin only)
+- `POST /api/admin/users/generate-reset-token` - Generate password reset token (admin only)
+- `POST /api/admin/analytics/snapshot` - Create analytics snapshot (admin only)
+- `GET /api/admin/schema` - Get database schema introspection (admin only)
 
 ### System
 - `GET /api/health` - Health check endpoint
@@ -356,22 +390,21 @@ The application uses Server-Side Events streamed on the same port as the web app
 - `card_created` - New card added to board
 - `card_updated` - Card content or properties changed
 - `card_deleted` - Card removed from board
-- `card_moved` - Card moved between columns
-- `cards_grouped` - Multiple cards grouped together
 
 ### Voting & Comments
 - `vote_changed` - Vote count updated on card
+- `all_votes_updated` - All vote data revealed (facilitator action)
 - `comment_added` - New comment added to card
-- `comment_updated` - Comment content changed
-- `comment_deleted` - Comment removed
-- `agreement_toggled` - Agreement status changed on comment
-- `voting_stats_updated` - Facilitator voting statistics changed
+- `agreements_updated` - Agreements list updated on board
 
 ### Scene & Board State
 - `scene_changed` - Meeting phase changed
+- `scene_created` - New scene added to board
+- `scene_updated` - Scene configuration changed
 - `board_updated` - Board settings or metadata changed
 - `columns_updated` - Column configuration changed
 - `update_presentation` - Present mode display updated
+- `present_filter_changed` - Present mode filter changed
 
 ### User Presence
 - `user_joined` - User joined board
@@ -380,21 +413,26 @@ The application uses Server-Side Events streamed on the same port as the web app
 - `presence_ping` - Server ping to maintain presence
 
 ### Timer
-- `timer_update` - Timer status changed
-- `timer_started` - Timer started
-- `timer_stopped` - Timer stopped
-- `timer_vote` - Vote cast on timer extension
+- `timer_update` - Timer status changed (includes start/stop/vote data)
 
 ### Scorecard Events
 - `scorecard_data_collected` - Scorecard data collection completed
-- `scorecard_result_added` - New scorecard result available
+- `scorecard_attached` - Scorecard attached to scene
+- `scorecard_detached` - Scorecard removed from scene
+- `scorecard_result_flagged` - Scorecard result flagged
+
+### Quadrant Events
+- `quadrant_phase_changed` - Quadrant input/consensus phase changed
+- `quadrant_results_calculated` - Consensus positions calculated
+- `card_quadrant_adjusted` - Card quadrant position adjusted
+- `quadrant_facilitator_position_updated` - Facilitator adjusted card position
 
 ## Development Status
 
 ### Production-Ready Features
 
 **Core Retrospective:**
-- [x] Authentication (password + WebAuthn/passkey)
+- [x] Authentication (password + WebAuthn/passkey + email verification + password reset)
 - [x] Board series organization with role-based access
 - [x] Real-time card creation, editing, and voting
 - [x] Multi-phase meeting workflow with scene management
@@ -414,6 +452,8 @@ The application uses Server-Side Events streamed on the same port as the web app
 - [x] Multi-source data collection
 - [x] Results tracking and flagging
 - [x] Time series visualization
+- [x] Health check surveys with preset templates
+- [x] Quadrant positioning with consensus calculation
 
 **Administration:**
 - [x] Performance monitoring dashboard
@@ -421,6 +461,7 @@ The application uses Server-Side Events streamed on the same port as the web app
 - [x] Slow query detection
 - [x] Historical data retention (7 days)
 - [x] Rate limiting for auth/resource endpoints
+- [x] Admin user management and verification
 
 **Infrastructure:**
 - [x] SQLite and PostgreSQL support

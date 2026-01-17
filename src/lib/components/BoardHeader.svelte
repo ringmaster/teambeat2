@@ -1,4 +1,5 @@
 <script lang="ts">
+import { fly } from "svelte/transition";
 import { getSceneCapability } from "$lib/utils/scene-capability";
 import SceneDropdown from "./SceneDropdown.svelte";
 import Icon from "./ui/Icon.svelte";
@@ -9,6 +10,7 @@ interface Props {
 	board: {
 		id: string;
 		name: string;
+		seriesId?: string;
 		series?: string;
 		status?: string;
 		blameFreeMode?: boolean;
@@ -55,7 +57,8 @@ interface Props {
 		maxVotesPerUser: number;
 	};
 	onConfigureClick: () => void;
-	onShareClick: () => void;
+	onShareBoardLink: () => void;
+	onShareSeriesLink: () => void;
 	onSceneChange: (sceneId: string) => void;
 	onNextScene?: () => void;
 	onShowSceneDropdown: (show: boolean) => void;
@@ -78,7 +81,8 @@ let {
 	userVoteAllocation,
 	votingStats,
 	onConfigureClick,
-	onShareClick,
+	onShareBoardLink,
+	onShareSeriesLink,
 	onSceneChange,
 	onNextScene,
 	onShowSceneDropdown,
@@ -86,6 +90,63 @@ let {
 	onResetVotes,
 	onStartTimer,
 }: Props = $props();
+
+// Share dropdown state
+let shareDropdownOpen = $state(false);
+let shareDropdownContainer: HTMLDivElement | undefined = $state();
+
+// Context-aware default: active boards share series link, others share board link
+let isActiveBoard = $derived(board.status === "active");
+let hasSeriesId = $derived(!!board.seriesId);
+
+function handlePrimaryShare() {
+	if (isActiveBoard && hasSeriesId) {
+		onShareSeriesLink();
+	} else {
+		onShareBoardLink();
+	}
+}
+
+function handleShareBoardLink() {
+	onShareBoardLink();
+	closeShareDropdown();
+}
+
+function handleShareSeriesLink() {
+	onShareSeriesLink();
+	closeShareDropdown();
+}
+
+function toggleShareDropdown() {
+	shareDropdownOpen = !shareDropdownOpen;
+}
+
+function closeShareDropdown() {
+	shareDropdownOpen = false;
+}
+
+function handleClickOutside(event: MouseEvent) {
+	if (shareDropdownContainer && !shareDropdownContainer.contains(event.target as Node)) {
+		closeShareDropdown();
+	}
+}
+
+function handleKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape") {
+		closeShareDropdown();
+	}
+}
+
+$effect(() => {
+	if (shareDropdownOpen) {
+		document.addEventListener("click", handleClickOutside);
+		document.addEventListener("keydown", handleKeydown);
+		return () => {
+			document.removeEventListener("click", handleClickOutside);
+			document.removeEventListener("keydown", handleKeydown);
+		};
+	}
+});
 
 function formatDate(dateString: string | null | undefined) {
 	if (!dateString) return null;
@@ -199,14 +260,58 @@ let cloneSourceDate = $derived(
                 </button>
             {/if}
 
-            <button
-                onclick={onShareClick}
-                class="toolbar-button share-board cooltipz--bottom"
-                aria-label="Copy board URL"
-            >
-                <Icon name="share" class="icon-sm" />
-                <span>Share</span>
-            </button>
+            <!-- Split Share Button -->
+            <div class="share-split-button" class:is-open={shareDropdownOpen} bind:this={shareDropdownContainer}>
+                <button
+                    onclick={handlePrimaryShare}
+                    class="toolbar-button share-primary cooltipz--bottom"
+                    aria-label={isActiveBoard && hasSeriesId ? "Copy series link (always current board)" : "Copy board link"}
+                >
+                    <Icon name="share" size="sm" />
+                    <span>Share</span>
+                </button>
+                <button
+                    onclick={toggleShareDropdown}
+                    class="toolbar-button share-dropdown-toggle"
+                    aria-label="More share options"
+                    aria-haspopup="true"
+                    aria-expanded={shareDropdownOpen}
+                >
+                    <Icon name="chevron-down" size="sm" />
+                </button>
+                {#if shareDropdownOpen}
+                    <div
+                        class="share-dropdown-menu"
+                        role="menu"
+                        transition:fly={{ y: -10, duration: 200 }}
+                    >
+                        <button
+                            onclick={handleShareBoardLink}
+                            class="dropdown-menu-item"
+                            role="menuitem"
+                        >
+                            <Icon name="clone" size="sm" />
+                            <div class="menu-item-content">
+                                <span class="menu-item-label">Copy board link</span>
+                                <span class="menu-item-desc">Link to this specific board</span>
+                            </div>
+                        </button>
+                        {#if hasSeriesId}
+                            <button
+                                onclick={handleShareSeriesLink}
+                                class="dropdown-menu-item"
+                                role="menuitem"
+                            >
+                                <Icon name="share" size="sm" />
+                                <div class="menu-item-content">
+                                    <span class="menu-item-label">Copy series link</span>
+                                    <span class="menu-item-desc">Always goes to current board</span>
+                                </div>
+                            </button>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
         </div>
     </div>
 </div>
@@ -329,6 +434,99 @@ let cloneSourceDate = $derived(
 
         &:hover {
             background: var(--color-primary-hover);
+        }
+    }
+
+    /* Split Share Button */
+    .share-split-button {
+        display: flex;
+        position: relative;
+
+        &.is-open {
+            z-index: 10001;
+        }
+
+        .share-primary {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+        }
+
+        .share-dropdown-toggle {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            padding: var(--spacing-1) var(--spacing-2);
+            min-width: auto;
+
+            :global(svg) {
+                transition: transform var(--transition-fast);
+            }
+
+            &[aria-expanded="true"] :global(svg) {
+                transform: rotate(180deg);
+            }
+        }
+    }
+
+    .share-dropdown-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + var(--spacing-1));
+        min-width: 240px;
+        background: var(--color-bg-primary);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: var(--spacing-2);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-1);
+
+        .dropdown-menu-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-3);
+            padding: var(--spacing-3);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--color-text-primary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: left;
+            width: 100%;
+
+            :global(svg) {
+                flex-shrink: 0;
+                margin-top: 2px;
+            }
+
+            &:hover {
+                background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+            }
+
+            &:focus {
+                outline: none;
+                background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+            }
+        }
+
+        .menu-item-content {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-1);
+        }
+
+        .menu-item-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--color-text-primary);
+        }
+
+        .menu-item-desc {
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
         }
     }
 </style>

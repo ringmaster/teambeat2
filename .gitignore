@@ -56,3 +56,9 @@ specifications/*
 # Super Claude Kit (generated at runtime)
 .claude/**
 CLAUDE.md
+
+# Claude Capsule Kit (generated at runtime)
+.claude/**
+CLAUDE.md
+.mcp.json
+

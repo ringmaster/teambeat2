@@ -1,4 +1,4 @@
-import { and, count, desc, eq, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, like, lte, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db/index.js";
 import {
@@ -9,6 +9,8 @@ import {
 	users,
 } from "../db/schema.js";
 import { withTransaction } from "../db/transaction.js";
+import { shortCodeToSeriesIdPrefix } from "../../utils/short-codes.js";
+import { findCurrentActiveBoard, findNextDraftBoard } from "./board.js";
 
 export interface CreateSeriesData {
 	name: string;
@@ -73,6 +75,7 @@ export async function findSeriesWithBoardsByUser(userId: string) {
 					status: boards.status,
 					createdAt: boards.createdAt,
 					updatedAt: boards.updatedAt,
+					meetingDate: boards.meetingDate,
 				})
 				.from(boards)
 				.where(eq(boards.seriesId, series.id))
@@ -84,9 +87,17 @@ export async function findSeriesWithBoardsByUser(userId: string) {
 				? seriesBoards
 				: seriesBoards.filter((board) => board.status !== "draft");
 
+			// Compute current board IDs using repository functions
+			const currentActiveBoard = await findCurrentActiveBoard(series.id);
+			const nextDraftBoard = ["admin", "facilitator"].includes(series.role)
+				? await findNextDraftBoard(series.id)
+				: null;
+
 			return {
 				...series,
 				boards: filteredBoards,
+				currentBoardId: currentActiveBoard?.id || null,
+				nextDraftBoardId: nextDraftBoard?.id || null,
 			};
 		}),
 	);
@@ -387,5 +398,33 @@ export async function toggleAdminMembership(
 			joinedAt: new Date().toISOString(),
 		});
 		return true; // Now a member
+	}
+}
+
+/**
+ * Find a series by its short code.
+ * Decodes the short code to a series ID prefix and searches for a match.
+ */
+export async function findSeriesByShortCode(shortCode: string) {
+	try {
+		const prefix = shortCodeToSeriesIdPrefix(shortCode);
+
+		// UUIDs are stored with dashes, but we encoded without them
+		// Need to match against the raw UUID format
+		const [series] = await db
+			.select({ id: boardSeries.id })
+			.from(boardSeries)
+			.where(
+				like(
+					sql`REPLACE(${boardSeries.id}, '-', '')`,
+					`${prefix}%`,
+				),
+			)
+			.limit(1);
+
+		return series || null;
+	} catch {
+		// Invalid short code format
+		return null;
 	}
 }

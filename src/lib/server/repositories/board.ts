@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { broadcastToBoardUsers } from "$lib/server/sse/broadcast";
 import { sseManager } from "$lib/server/sse/manager";
@@ -560,4 +560,73 @@ export async function getColumnsBySeriesId(
 		.orderBy(columns.title, columns.seq);
 
 	return result;
+}
+
+/**
+ * Find the current active board for a series.
+ * Priority: earliest active board with meetingDate >= today,
+ * fallback to most recent active board by meetingDate.
+ */
+export async function findCurrentActiveBoard(seriesId: string) {
+	const today = new Date().toISOString().split("T")[0];
+
+	// Try upcoming active board first (earliest meetingDate >= today)
+	const [upcoming] = await db
+		.select({ id: boards.id })
+		.from(boards)
+		.where(
+			and(
+				eq(boards.seriesId, seriesId),
+				eq(boards.status, "active"),
+				gte(boards.meetingDate, today),
+			),
+		)
+		.orderBy(asc(boards.meetingDate))
+		.limit(1);
+
+	if (upcoming) return upcoming;
+
+	// Fallback: most recent active board by meetingDate
+	const [recent] = await db
+		.select({ id: boards.id })
+		.from(boards)
+		.where(and(eq(boards.seriesId, seriesId), eq(boards.status, "active")))
+		.orderBy(desc(boards.meetingDate))
+		.limit(1);
+
+	return recent || null;
+}
+
+/**
+ * Find the next upcoming draft board for a series.
+ * Same logic as findCurrentActiveBoard but for draft status.
+ */
+export async function findNextDraftBoard(seriesId: string) {
+	const today = new Date().toISOString().split("T")[0];
+
+	// Try upcoming draft board first (earliest meetingDate >= today)
+	const [upcoming] = await db
+		.select({ id: boards.id })
+		.from(boards)
+		.where(
+			and(
+				eq(boards.seriesId, seriesId),
+				eq(boards.status, "draft"),
+				gte(boards.meetingDate, today),
+			),
+		)
+		.orderBy(asc(boards.meetingDate))
+		.limit(1);
+
+	if (upcoming) return upcoming;
+
+	// Fallback: most recent draft board by meetingDate
+	const [recent] = await db
+		.select({ id: boards.id })
+		.from(boards)
+		.where(and(eq(boards.seriesId, seriesId), eq(boards.status, "draft")))
+		.orderBy(desc(boards.meetingDate))
+		.limit(1);
+
+	return recent || null;
 }
