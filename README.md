@@ -505,8 +505,6 @@ The application uses Server-Side Events streamed on the same port as the web app
 - [ ] Database query optimization
 - [ ] Connection pooling for PostgreSQL
 
-Built according to CLAUDE.md development guidelines emphasizing explicit over implicit code, libraries over custom solutions, and human-maintainable architecture.
-
 ## License
 
 MIT License. See `LICENSE` file for details.

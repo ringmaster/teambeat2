@@ -49,7 +49,6 @@ coverage/
 # Documentation and project files
 README.md
 DEVELOPMENT.md
-CLAUDE.md
 STYLEGUIDE.md
 LICENSE
 LICENSE.md
@@ -89,7 +88,7 @@ playwright.config.ts
 eslint.config.js
 tsconfig.json
 
-# Claude and other tool directories
+# Development tool directories
 .claude/
 .serena/
 .zed/
