@@ -70,9 +70,10 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 		// If we have data, use it; otherwise create data points with null to show the full range
 		if (snapshots.length > 0) {
 			filtered = {
+				// Use peak_concurrent_users to capture spikes between snapshots
 				concurrentUsers: snapshots.map((s) => ({
 					timestamp: s.timestamp,
-					value: s.concurrent_users,
+					value: s.peak_concurrent_users,
 				})),
 				messagesSent: snapshots.map((s) => ({
 					timestamp: s.timestamp,

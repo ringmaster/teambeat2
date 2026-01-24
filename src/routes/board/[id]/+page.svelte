@@ -989,6 +989,26 @@ function handleSSEMessage(data: any) {
 			}
 			break;
 		}
+		case "admin_kick": {
+			// Admin has kicked this user - close connection and redirect
+			console.log("Admin kick received:", data);
+			if (eventSource) {
+				eventSource.close();
+				eventSource = null;
+			}
+
+			const redirectTo = data.redirectTo || "/dashboard";
+			const message =
+				data.message || "You have been disconnected by an administrator.";
+
+			toastStore.warning(message);
+
+			// Redirect after a short delay to allow toast to display
+			setTimeout(() => {
+				goto(redirectTo);
+			}, 1500);
+			break;
+		}
 	}
 }
 

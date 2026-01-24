@@ -255,6 +255,105 @@ class SSEManager {
 		return users;
 	}
 
+	/**
+	 * Get all connected clients with their details for admin monitoring.
+	 */
+	getAllConnectedClients(): Array<{
+		clientId: string;
+		userId: string | null;
+		boardId: string | null;
+		lastSeen: number;
+		connectedAt: number;
+	}> {
+		const result: Array<{
+			clientId: string;
+			userId: string | null;
+			boardId: string | null;
+			lastSeen: number;
+			connectedAt: number;
+		}> = [];
+
+		for (const [clientId, client] of this.clients.entries()) {
+			result.push({
+				clientId,
+				userId: client.userId,
+				boardId: client.boardId,
+				lastSeen: client.lastSeen,
+				// Extract timestamp from clientId (format: sse_<timestamp>_<random>)
+				connectedAt: parseInt(clientId.split("_")[1]) || client.lastSeen,
+			});
+		}
+
+		return result;
+	}
+
+	/**
+	 * Kick a user by disconnecting all their SSE connections.
+	 * Optionally sends a redirect message before disconnecting.
+	 */
+	kickUser(userId: string, redirectTo?: string): number {
+		const userConns = this.userConnections.get(userId);
+		if (!userConns || userConns.size === 0) return 0;
+
+		const clientIds = Array.from(userConns);
+		let kickedCount = 0;
+
+		for (const clientId of clientIds) {
+			const client = this.clients.get(clientId);
+			if (client) {
+				// Send kick message before disconnecting
+				try {
+					const kickMessage: SSEMessage = {
+						type: "admin_kick",
+						board_id: client.boardId || "",
+						redirectTo: redirectTo || "/dashboard",
+						message: "You have been disconnected by an administrator.",
+					};
+					client.controller.enqueue(`data: ${JSON.stringify(kickMessage)}\n\n`);
+				} catch {
+					// Ignore send errors, we're closing anyway
+				}
+
+				// Small delay to allow message to be sent, then disconnect
+				setTimeout(() => {
+					this.removeClient(clientId);
+				}, 100);
+
+				kickedCount++;
+			}
+		}
+
+		return kickedCount;
+	}
+
+	/**
+	 * Kick a specific client connection.
+	 */
+	kickClient(clientId: string, redirectTo?: string): boolean {
+		const client = this.clients.get(clientId);
+		if (!client) return false;
+
+		// Send kick message before disconnecting
+		try {
+			const kickMessage: SSEMessage = {
+				type: "admin_kick",
+				board_id: client.boardId || "",
+				redirectTo: redirectTo || "/dashboard",
+				message: "You have been disconnected by an administrator.",
+			};
+			client.controller.enqueue(`data: ${JSON.stringify(kickMessage)}\n\n`);
+		} catch {
+			// Ignore send errors, we're closing anyway
+		}
+
+		// Small delay to allow message to be sent, then disconnect
+		setTimeout(() => {
+			this.removeClient(clientId);
+		}, 100);
+
+		return true;
+	}
+
 	sendHeartbeat(clientId: string) {
 		const client = this.clients.get(clientId);
 		if (client) {

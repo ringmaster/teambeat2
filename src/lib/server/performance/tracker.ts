@@ -59,6 +59,7 @@ class PerformanceTracker {
 		sse: {
 			concurrentUsers: 0,
 			peakConcurrentUsers: 0,
+			intervalPeakConcurrentUsers: 0, // Peak since last snapshot, reset after persistence
 			activeConnections: 0,
 			totalOperations: 0,
 			broadcasts: [] as Array<{
@@ -135,6 +136,14 @@ class PerformanceTracker {
 				this.metrics.sse.concurrentUsers > this.metrics.sse.peakConcurrentUsers
 			) {
 				this.metrics.sse.peakConcurrentUsers = this.metrics.sse.concurrentUsers;
+			}
+			// Also track interval peak (reset after each persistence snapshot)
+			if (
+				this.metrics.sse.concurrentUsers >
+				this.metrics.sse.intervalPeakConcurrentUsers
+			) {
+				this.metrics.sse.intervalPeakConcurrentUsers =
+					this.metrics.sse.concurrentUsers;
 			}
 		} else {
 			this.metrics.sse.activeConnections--;
@@ -267,6 +276,18 @@ class PerformanceTracker {
 			concurrentUsers: this.timeSeries.concurrentUsers,
 			messagesSent: this.timeSeries.messagesSent,
 		};
+	}
+
+	/**
+	 * Get the interval peak (highest concurrent users since last snapshot) and reset it.
+	 * Called by persistence layer after saving a snapshot.
+	 */
+	getAndResetIntervalPeak(): number {
+		const peak = this.metrics.sse.intervalPeakConcurrentUsers;
+		// Reset to current value so we capture any peaks in the next interval
+		this.metrics.sse.intervalPeakConcurrentUsers =
+			this.metrics.sse.concurrentUsers;
+		return peak;
 	}
 
 	reset() {

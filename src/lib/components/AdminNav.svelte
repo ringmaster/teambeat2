@@ -13,6 +13,11 @@ const navItems: NavItem[] = [
 		href: "/admin/performance",
 		path: "/admin/performance",
 	},
+	{
+		label: "Connections",
+		href: "/admin/connections",
+		path: "/admin/connections",
+	},
 	{ label: "Schema", href: "/admin/schema", path: "/admin/schema" },
 	{ label: "Series", href: "/admin/series", path: "/admin/series" },
 	{ label: "Users", href: "/admin/users", path: "/admin/users" },

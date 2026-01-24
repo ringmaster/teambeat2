@@ -31,13 +31,15 @@ class MetricsPersistence {
 	private async persistSnapshot() {
 		try {
 			const stats = performanceTracker.getStats();
+			// Get interval peak and reset it for the next interval
+			const intervalPeak = performanceTracker.getAndResetIntervalPeak();
 
 			// Save overall snapshot
 			await db.insert(metricSnapshots).values({
 				id: `ms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
 				timestamp: stats.timestamp,
 				concurrent_users: stats.sse.concurrentUsers,
-				peak_concurrent_users: stats.sse.peakConcurrentUsers,
+				peak_concurrent_users: intervalPeak, // Store interval peak, not all-time peak
 				active_connections: stats.sse.activeConnections,
 				total_operations: stats.sse.totalOperations,
 				broadcast_p95: stats.sse.broadcastPercentiles.p95,

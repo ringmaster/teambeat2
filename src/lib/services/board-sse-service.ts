@@ -529,6 +529,33 @@ export class BoardSSEService {
         }
         break;
       }
+
+      case "admin_kick": {
+        // Admin has kicked this user - close connection and redirect
+        console.log("Admin kick received:", data);
+        this.close();
+
+        // Show message and redirect
+        const redirectTo = data.redirectTo || "/dashboard";
+        const message =
+          data.message || "You have been disconnected by an administrator.";
+
+        // Use a brief delay to ensure the message displays before redirect
+        if (typeof window !== "undefined") {
+          // Dispatch event for toast notification
+          window.dispatchEvent(
+            new CustomEvent("admin_kick", {
+              detail: { message, redirectTo },
+            }),
+          );
+
+          // Redirect after a short delay
+          setTimeout(() => {
+            window.location.href = redirectTo;
+          }, 1500);
+        }
+        break;
+      }
     }
   }
 }
