@@ -17,15 +17,40 @@ interface Props {
 
 const { board, scene, cards }: Props = $props();
 
+interface SurveyQuestionResult {
+	question: {
+		id: string;
+		question: string;
+		description?: string;
+		questionType: string;
+		seq: number;
+		threadId: string;
+	};
+	average: number;
+	totalResponses: number;
+	history?: {
+		boardId: string;
+		boardName: string;
+		average: number;
+	}[];
+}
+
+interface SurveySceneResults {
+	sceneId: string;
+	sceneTitle: string;
+	results: SurveyQuestionResult[];
+}
+
 type ViewMode = "by-column" | "by-votes";
 let viewMode = $state<ViewMode>("by-column");
 let copying = $state(false);
 let allComments = $state<Comment[]>([]);
 let allAgreements = $state<any[]>([]);
+let surveyResults = $state<SurveySceneResults[]>([]);
 let loading = $state(true);
 
 onMount(async () => {
-	await Promise.all([loadComments(), loadAgreements()]);
+	await Promise.all([loadComments(), loadAgreements(), loadSurveyResults()]);
 });
 
 async function loadComments() {
@@ -53,6 +78,47 @@ async function loadAgreements() {
 		toastStore.error("Failed to load agreements");
 	} finally {
 		loading = false;
+	}
+}
+
+async function loadSurveyResults() {
+	try {
+		// Find all survey scenes in this board
+		const surveyScenes = (board.scenes || []).filter(
+			(s) => s.mode === "survey",
+		);
+
+		if (surveyScenes.length === 0) return;
+
+		// Fetch results for each survey scene
+		const results: SurveySceneResults[] = [];
+
+		for (const surveyScene of surveyScenes) {
+			try {
+				const response = await fetch(
+					`/api/scenes/${surveyScene.id}/health-results?historyDepth=1`,
+				);
+				if (response.ok) {
+					const data = await response.json();
+					if (data.success && data.results && data.results.length > 0) {
+						results.push({
+							sceneId: surveyScene.id,
+							sceneTitle: surveyScene.title,
+							results: data.results,
+						});
+					}
+				}
+			} catch (err) {
+				console.error(
+					`Failed to load results for survey scene ${surveyScene.id}:`,
+					err,
+				);
+			}
+		}
+
+		surveyResults = results;
+	} catch (error) {
+		console.error("Failed to load survey results:", error);
 	}
 }
 
@@ -338,6 +404,18 @@ function generateMarkdown(): string {
 		}
 	}
 
+	// Add survey results sections
+	for (const survey of surveyResults) {
+		md += `## Survey: ${survey.sceneTitle}\n\n`;
+
+		for (const result of survey.results) {
+			const priorAverage = result.history?.[0]?.average;
+			const changeText = formatPercentChange(result.average, priorAverage);
+			md += `- **${result.question.question}**: ${result.average.toFixed(2)}${changeText}\n`;
+		}
+		md += `\n`;
+	}
+
 	// Add agreements section if there are any
 	const agreementList = agreements();
 	if (agreementList.length > 0) {
@@ -537,6 +615,26 @@ function generateHTML(): string {
 		}
 	}
 
+	// Add survey results sections
+	for (const survey of surveyResults) {
+		html += `<h2>Survey: ${escapeHtml(survey.sceneTitle)}</h2>\n<ul>\n`;
+
+		for (const result of survey.results) {
+			const priorAverage = result.history?.[0]?.average;
+			const change = priorAverage !== undefined ? calculatePercentChange(result.average, priorAverage) : null;
+
+			let changeHtml = "";
+			if (change && change.direction !== "same") {
+				const color = change.direction === "up" ? "#22c55e" : "#ef4444";
+				const arrow = change.direction === "up" ? "↑" : "↓";
+				changeHtml = ` <span style="color: ${color};">(${arrow}${change.value.toFixed(0)}%)</span>`;
+			}
+
+			html += `<li><strong>${escapeHtml(result.question.question)}</strong>: ${result.average.toFixed(2)}${changeHtml}</li>\n`;
+		}
+		html += `</ul>\n`;
+	}
+
 	// Add agreements section if there are any
 	const agreementList = agreements();
 	if (agreementList.length > 0) {
@@ -601,6 +699,32 @@ function escapeHtml(text: string): string {
 function formatDateYYYYMMDD(dateString: string | null): string {
 	if (!dateString) return "";
 	return moment(dateString).format("YYYY-MM-DD");
+}
+
+// Calculate percent change from prior to current
+function calculatePercentChange(
+	current: number,
+	prior: number,
+): { value: number; direction: "up" | "down" | "same" } {
+	if (prior === 0) return { value: 0, direction: "same" };
+	const change = ((current - prior) / prior) * 100;
+	if (Math.abs(change) < 0.5) return { value: 0, direction: "same" };
+	return {
+		value: Math.abs(change),
+		direction: change > 0 ? "up" : "down",
+	};
+}
+
+// Format percent change for display
+function formatPercentChange(
+	current: number,
+	prior: number | undefined,
+): string {
+	if (prior === undefined) return "";
+	const change = calculatePercentChange(current, prior);
+	if (change.direction === "same") return "";
+	const arrow = change.direction === "up" ? "↑" : "↓";
+	return ` (${arrow}${change.value.toFixed(0)}%)`;
 }
 
 // Copy to clipboard
@@ -762,11 +886,40 @@ async function copyToClipboard() {
             </div>
         {/if}
 
+        {#if surveyResults.length > 0}
+            {#each surveyResults as survey (survey.sceneId)}
+                <div class="survey-section">
+                    <h2 class="section-title">Survey: {survey.sceneTitle}</h2>
+                    <div class="survey-results-list">
+                        {#each survey.results as result (result.question.id)}
+                            {@const priorAverage = result.history?.[0]?.average}
+                            {@const change = priorAverage !== undefined ? calculatePercentChange(result.average, priorAverage) : null}
+                            <div class="survey-result-item">
+                                <span class="question-text">{result.question.question}</span>
+                                <span class="result-value">
+                                    {result.average.toFixed(2)}
+                                    {#if change && change.direction !== "same"}
+                                        <span
+                                            class="change-indicator"
+                                            class:up={change.direction === "up"}
+                                            class:down={change.direction === "down"}
+                                        >
+                                            {change.direction === "up" ? "↑" : "↓"}{change.value.toFixed(0)}%
+                                        </span>
+                                    {/if}
+                                </span>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/each}
+        {/if}
+
         {#if agreements().length > 0}
             <AgreementsSection agreements={agreements()} />
         {/if}
 
-        {#if visibleCards().length === 0}
+        {#if visibleCards().length === 0 && surveyResults.length === 0}
             <div class="empty-state">
                 <p>No cards to display</p>
             </div>
@@ -930,6 +1083,69 @@ async function copyToClipboard() {
         p {
             margin: 0;
             font-size: 1.125rem;
+        }
+    }
+
+    .survey-section {
+        .page-width();
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        background-color: white;
+        border-radius: 1rem;
+        padding: var(--spacing-8);
+        box-shadow: var(--shadow-xl);
+        margin: 0 auto;
+        width: 60%;
+    }
+
+    .survey-results-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .survey-result-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background-color: var(--surface-secondary);
+        border-radius: 0.5rem;
+        gap: 1rem;
+    }
+
+    .question-text {
+        flex: 1;
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+    }
+
+    .result-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--accent-primary);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .change-indicator {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+
+        &.up {
+            color: #16a34a;
+            background-color: #dcfce7;
+        }
+
+        &.down {
+            color: #dc2626;
+            background-color: #fee2e2;
         }
     }
 </style>

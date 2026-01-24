@@ -25,7 +25,15 @@ export interface Scene {
 	boardId: string;
 	title: string;
 	description?: string;
-	mode: "columns" | "present" | "review";
+	mode:
+		| "columns"
+		| "present"
+		| "review"
+		| "agreements"
+		| "scorecard"
+		| "static"
+		| "survey"
+		| "quadrant";
 	seq: number;
 	selectedCardId?: string | null;
 	flags: string[]; // Scene capability flags
