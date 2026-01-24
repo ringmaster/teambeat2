@@ -3,6 +3,14 @@ import { SCENE_FLAGS } from "$lib/scene-flags";
 import { toastStore } from "$lib/stores/toast";
 import type { BoardStatus } from "$lib/types";
 import { getSceneCapability } from "$lib/utils/scene-capability";
+import Sparkline from "./Sparkline.svelte";
+
+interface CurrentBoard {
+	boardId: string;
+	boardName: string;
+	boardCreatedAt: string;
+	meetingDate: string | null;
+}
 
 interface Props {
 	result: any;
@@ -11,6 +19,7 @@ interface Props {
 	boardStatus: string;
 	isFacilitator: boolean;
 	sceneFlags: string[];
+	currentBoard: CurrentBoard | null;
 	onBack: () => void;
 }
 
@@ -21,6 +30,7 @@ const {
 	boardStatus,
 	isFacilitator,
 	sceneFlags,
+	currentBoard,
 	onBack,
 }: Props = $props();
 
@@ -127,6 +137,17 @@ function getDistributionLabel(questionType: string, rating: number): string {
 	return String(rating);
 }
 
+function formatDate(dateString: string): string {
+	return new Date(dateString).toLocaleDateString();
+}
+
+const hasHistoricalData = $derived(
+	(result.history && result.history.length > 0) || currentBoard !== null,
+);
+const hasUserHistory = $derived(
+	result.userHistory && result.userHistory.length > 0,
+);
+
 // Load columns when component mounts if user is facilitator and can edit cards
 $effect(() => {
 	if (isFacilitator && canAddCards && columns.length === 0) {
@@ -218,6 +239,87 @@ $effect(() => {
                 {/each}
             </div>
         </div>
+
+        {#if hasHistoricalData}
+            <div class="historical-section">
+                <h3>Historical Trends</h3>
+                <div class="trend-chart">
+                    <Sparkline
+                        data={[
+                            ...result.history.map((h: any) => ({
+                                value: h.average,
+                                label: h.boardName,
+                            })),
+                            { value: result.average, label: "Current" },
+                        ]}
+                        userdata={[
+                            ...(result.userHistory?.map((h: any) => ({
+                                value: h.rating,
+                                label: formatDate(h.boardCreatedAt),
+                            })) || []),
+                            ...(result.currentUserRating !== null
+                                ? [{ value: result.currentUserRating, label: "Current" }]
+                                : []),
+                        ]}
+                        width={250}
+                        height={100}
+                    />
+                </div>
+                <div class="trend-legend">
+                    <span class="legend-item">
+                        <span class="legend-line team"></span>
+                        Team Average
+                    </span>
+                    {#if hasUserHistory}
+                        <span class="legend-item">
+                            <span class="legend-line user"></span>
+                            Your Rating
+                        </span>
+                    {/if}
+                </div>
+                <div class="historical-list">
+                    {#each result.history as historyItem (historyItem.boardId)}
+                        <div class="history-item">
+                            <span class="history-date">
+                                {historyItem.meetingDate
+                                    ? formatDate(historyItem.meetingDate)
+                                    : formatDate(historyItem.boardCreatedAt)}
+                            </span>
+                            <span class="history-name">{historyItem.boardName}</span>
+                            <span class="history-avg">
+                                Avg: {historyItem.average.toFixed(2)}
+                            </span>
+                            {#if historyItem.userRating !== null}
+                                <span class="history-user">
+                                    You: {historyItem.userRating}
+                                </span>
+                            {/if}
+                        </div>
+                    {/each}
+                    {#if currentBoard}
+                        <div class="history-item current">
+                            <span class="history-date">
+                                {currentBoard.meetingDate
+                                    ? formatDate(currentBoard.meetingDate)
+                                    : formatDate(currentBoard.boardCreatedAt)}
+                            </span>
+                            <span class="history-name">
+                                {currentBoard.boardName}
+                                <span class="current-badge">Current</span>
+                            </span>
+                            <span class="history-avg">
+                                Avg: {result.average.toFixed(2)}
+                            </span>
+                            {#if result.currentUserRating !== null}
+                                <span class="history-user">
+                                    You: {result.currentUserRating}
+                                </span>
+                            {/if}
+                        </div>
+                    {/if}
+                </div>
+            </div>
+        {/if}
     </div>
 </div>
 
@@ -520,5 +622,129 @@ $effect(() => {
                 margin-left: auto;
             }
         }
+    }
+
+    .historical-section {
+        padding: 2rem;
+        background-color: white;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+
+        h3 {
+            margin: 0 0 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+    }
+
+    .trend-chart {
+        display: flex;
+        justify-content: center;
+        padding: 1rem;
+        background-color: var(--surface-elevated);
+        border-radius: var(--radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .trend-legend {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8125rem;
+        color: var(--color-text-secondary);
+    }
+
+    .legend-line {
+        width: 20px;
+        height: 2px;
+        border-radius: 1px;
+
+        &.team {
+            background-color: var(--color-accent);
+        }
+
+        &.user {
+            background-color: var(--color-tertiary);
+        }
+    }
+
+    .historical-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .history-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        background-color: var(--surface-elevated);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+
+        @media (max-width: 640px) {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+    }
+
+    .history-date {
+        min-width: 80px;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+    }
+
+    .history-name {
+        flex: 1;
+        color: var(--color-text-primary);
+        font-weight: 500;
+
+        @media (max-width: 640px) {
+            flex-basis: 100%;
+            order: -1;
+        }
+    }
+
+    .history-avg {
+        color: var(--color-accent);
+        font-weight: 600;
+    }
+
+    .history-user {
+        color: var(--color-tertiary);
+        font-weight: 600;
+    }
+
+    .history-item.current {
+        background: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--color-accent) 8%, var(--surface-elevated)),
+            color-mix(in srgb, var(--color-secondary) 5%, var(--surface-elevated))
+        );
+        border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+    }
+
+    .current-badge {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.5rem;
+        background-color: var(--color-accent);
+        color: white;
+        border-radius: var(--radius-sm);
     }
 </style>

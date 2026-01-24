@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getPresetById } from "$lib/presets/health-question-sets";
 import { db } from "../db/index.js";
@@ -286,4 +286,124 @@ export async function getLastHealthCheckDate(
 	}
 
 	return result[0].createdAt;
+}
+
+export interface HistoricalQuestionData {
+	questionId: string;
+	boardId: string;
+	boardName: string;
+	boardCreatedAt: string;
+	meetingDate: string | null;
+	average: number;
+	totalResponses: number;
+	userRating: number | null;
+}
+
+/**
+ * Get historical survey data for questions by their threadIds
+ * Returns data grouped by threadId, ordered from most recent to oldest
+ */
+export async function getHistoricalDataByThreadIds(
+	threadIds: string[],
+	seriesId: string,
+	currentSceneId: string,
+	userId?: string,
+	limit: number = 3,
+): Promise<Map<string, HistoricalQuestionData[]>> {
+	if (threadIds.length === 0) {
+		return new Map();
+	}
+
+	// Find all questions with matching threadIds in the same series, excluding current scene
+	const historicalQuestions = await db
+		.select({
+			questionId: healthQuestions.id,
+			threadId: healthQuestions.threadId,
+			boardId: boards.id,
+			boardName: boards.name,
+			boardCreatedAt: boards.createdAt,
+			meetingDate: boards.meetingDate,
+		})
+		.from(healthQuestions)
+		.innerJoin(scenes, eq(healthQuestions.sceneId, scenes.id))
+		.innerJoin(boards, eq(scenes.boardId, boards.id))
+		.where(
+			and(
+				inArray(healthQuestions.threadId, threadIds),
+				eq(boards.seriesId, seriesId),
+				ne(healthQuestions.sceneId, currentSceneId),
+			),
+		)
+		.orderBy(desc(boards.createdAt));
+
+	if (historicalQuestions.length === 0) {
+		return new Map();
+	}
+
+	// Get all question IDs for response lookup
+	const questionIds = historicalQuestions.map((q) => q.questionId);
+
+	// Get all responses for these questions
+	const responses = await db
+		.select({
+			questionId: healthResponses.questionId,
+			userId: healthResponses.userId,
+			rating: healthResponses.rating,
+		})
+		.from(healthResponses)
+		.where(inArray(healthResponses.questionId, questionIds));
+
+	// Build response lookup by questionId
+	const responsesByQuestion = new Map<
+		string,
+		{ userId: string; rating: number }[]
+	>();
+	for (const response of responses) {
+		const existing = responsesByQuestion.get(response.questionId) || [];
+		existing.push({ userId: response.userId, rating: response.rating });
+		responsesByQuestion.set(response.questionId, existing);
+	}
+
+	// Group by threadId and calculate aggregates
+	const resultMap = new Map<string, HistoricalQuestionData[]>();
+
+	for (const question of historicalQuestions) {
+		const questionResponses = responsesByQuestion.get(question.questionId) || [];
+		const totalResponses = questionResponses.length;
+
+		let average = 0;
+		if (totalResponses > 0) {
+			const sum = questionResponses.reduce((acc, r) => acc + r.rating, 0);
+			average = sum / totalResponses;
+		}
+
+		// Find user's own rating if userId provided
+		let userRating: number | null = null;
+		if (userId) {
+			const userResponse = questionResponses.find((r) => r.userId === userId);
+			if (userResponse) {
+				userRating = userResponse.rating;
+			}
+		}
+
+		const historyItem: HistoricalQuestionData = {
+			questionId: question.questionId,
+			boardId: question.boardId,
+			boardName: question.boardName,
+			boardCreatedAt: question.boardCreatedAt,
+			meetingDate: question.meetingDate,
+			average,
+			totalResponses,
+			userRating,
+		};
+
+		const existing = resultMap.get(question.threadId) || [];
+		// Only add if we haven't exceeded the limit for this thread
+		if (existing.length < limit) {
+			existing.push(historyItem);
+			resultMap.set(question.threadId, existing);
+		}
+	}
+
+	return resultMap;
 }

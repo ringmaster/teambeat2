@@ -22,12 +22,28 @@ Chart.register(
 	Legend,
 );
 
+interface HistoricalBoard {
+	boardId: string;
+	boardName: string;
+	boardCreatedAt: string;
+	meetingDate: string | null;
+}
+
 interface Props {
 	results: any[];
+	historicalBoards?: HistoricalBoard[];
 	onQuestionClick: (questionId: string) => void;
 }
 
-const { results, onQuestionClick }: Props = $props();
+const { results, historicalBoards = [], onQuestionClick }: Props = $props();
+
+// Format date for legend display
+function formatBoardDate(board: HistoricalBoard): string {
+	if (board.meetingDate) {
+		return new Date(board.meetingDate).toLocaleDateString();
+	}
+	return new Date(board.boardCreatedAt).toLocaleDateString();
+}
 
 let canvas: HTMLCanvasElement;
 let chart: Chart | null = null;
@@ -45,14 +61,11 @@ function createChart() {
 			? r.question.question.substring(0, 30) + "..."
 			: r.question.question,
 	);
-	const data = results.map((r) => r.average);
+	const currentData = results.map((r) => r.average);
 
 	// Get CSS variables for colors
-	const primaryColor = getComputedStyle(document.documentElement)
+	const currentColor = getComputedStyle(document.documentElement)
 		.getPropertyValue("--color-accent")
-		.trim();
-	const secondaryColor = getComputedStyle(document.documentElement)
-		.getPropertyValue("--color-secondary")
 		.trim();
 	const textColor = getComputedStyle(document.documentElement)
 		.getPropertyValue("--color-text-primary")
@@ -60,28 +73,72 @@ function createChart() {
 	const borderColor = getComputedStyle(document.documentElement)
 		.getPropertyValue("--color-border")
 		.trim();
+	const mutedColor = getComputedStyle(document.documentElement)
+		.getPropertyValue("--color-text-muted")
+		.trim();
+
+	// Build datasets array - current survey first, then historical (most recent to oldest)
+	const datasets: any[] = [];
+
+	// Add historical datasets first (so they render behind current)
+	// Reverse order so oldest is added first (renders at back)
+	const reversedBoards = [...historicalBoards].reverse();
+	reversedBoards.forEach((board, reverseIndex) => {
+		const index = historicalBoards.length - 1 - reverseIndex;
+		// Extract historical averages for this board
+		const historicalData = results.map((r) => {
+			const historyItem = r.history?.find(
+				(h: any) => h.boardId === board.boardId,
+			);
+			return historyItem?.average ?? null;
+		});
+
+		// Only add dataset if we have data
+		if (historicalData.some((d: number | null) => d !== null)) {
+			// Opacity decreases for older surveys: 0.6 for most recent, 0.35 for older
+			const opacity = Math.max(0.35, 0.6 - index * 0.25);
+
+			datasets.push({
+				label: formatBoardDate(board),
+				data: historicalData,
+				backgroundColor: `color-mix(in srgb, ${mutedColor} ${Math.round(opacity * 10)}%, transparent)`,
+				borderColor: `color-mix(in srgb, ${mutedColor} ${Math.round(opacity * 100)}%, transparent)`,
+				borderWidth: 1.5,
+				borderDash: [4, 2],
+				pointBackgroundColor: `color-mix(in srgb, ${mutedColor} ${Math.round(opacity * 100)}%, transparent)`,
+				pointBorderColor: "#fff",
+				pointBorderWidth: 1,
+				pointRadius: 3,
+				pointHoverRadius: 4,
+				spanGaps: true, // Skip null values
+			});
+		}
+	});
+
+	// Add current survey dataset (renders on top)
+	datasets.push({
+		label: "Current Survey",
+		data: currentData,
+		backgroundColor: `color-mix(in srgb, ${currentColor} 15%, transparent)`,
+		borderColor: currentColor,
+		borderWidth: 3,
+		pointBackgroundColor: currentColor,
+		pointBorderColor: "#fff",
+		pointBorderWidth: 2,
+		pointRadius: 5,
+		pointHoverBackgroundColor: "#fff",
+		pointHoverBorderColor: currentColor,
+		pointHoverRadius: 7,
+		pointHoverBorderWidth: 3,
+	});
+
+	const showLegend = historicalBoards.length > 0;
 
 	chart = new Chart(canvas, {
 		type: "radar",
 		data: {
 			labels,
-			datasets: [
-				{
-					label: "Average Rating",
-					data,
-					backgroundColor: `color-mix(in srgb, ${primaryColor} 15%, transparent)`,
-					borderColor: primaryColor,
-					borderWidth: 3,
-					pointBackgroundColor: primaryColor,
-					pointBorderColor: "#fff",
-					pointBorderWidth: 2,
-					pointRadius: 5,
-					pointHoverBackgroundColor: "#fff",
-					pointHoverBorderColor: primaryColor,
-					pointHoverRadius: 7,
-					pointHoverBorderWidth: 3,
-				},
-			],
+			datasets,
 		},
 		options: {
 			responsive: true,
@@ -121,7 +178,17 @@ function createChart() {
 			},
 			plugins: {
 				legend: {
-					display: false,
+					display: showLegend,
+					position: "bottom",
+					labels: {
+						color: textColor,
+						font: {
+							size: 12,
+						},
+						padding: 16,
+						usePointStyle: true,
+						pointStyle: "circle",
+					},
 				},
 				tooltip: {
 					backgroundColor: "rgba(255, 255, 255, 0.95)",
@@ -131,7 +198,7 @@ function createChart() {
 					borderWidth: 1,
 					padding: 12,
 					cornerRadius: 8,
-					displayColors: false,
+					displayColors: true,
 					titleFont: {
 						size: 14,
 						weight: "600",
@@ -141,8 +208,16 @@ function createChart() {
 					},
 					callbacks: {
 						label: function (context) {
-							const result = results[context.dataIndex];
-							return `Average: ${result.average.toFixed(2)} (${result.totalResponses} responses)`;
+							const datasetLabel = context.dataset.label || "";
+							const value = context.parsed.r;
+							if (value === null || value === undefined) {
+								return `${datasetLabel}: No data`;
+							}
+							if (datasetLabel === "Current Survey") {
+								const result = results[context.dataIndex];
+								return `${datasetLabel}: ${value.toFixed(2)} (${result.totalResponses} responses)`;
+							}
+							return `${datasetLabel}: ${value.toFixed(2)}`;
 						},
 					},
 				},
@@ -166,9 +241,9 @@ onMount(() => {
 	};
 });
 
-// Recreate chart when results change
+// Recreate chart when results or historical data changes
 $effect(() => {
-	if (results) {
+	if (results || historicalBoards) {
 		createChart();
 	}
 });

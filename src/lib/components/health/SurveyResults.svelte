@@ -2,6 +2,21 @@
 import { onMount } from "svelte";
 import QuestionDetail from "./QuestionDetail.svelte";
 import RadarChart from "./RadarChart.svelte";
+import Sparkline from "./Sparkline.svelte";
+
+interface HistoricalBoard {
+	boardId: string;
+	boardName: string;
+	boardCreatedAt: string;
+	meetingDate: string | null;
+}
+
+interface CurrentBoard {
+	boardId: string;
+	boardName: string;
+	boardCreatedAt: string;
+	meetingDate: string | null;
+}
 
 interface Props {
 	sceneId: string;
@@ -24,6 +39,8 @@ const {
 }: Props = $props();
 
 let results = $state<any[]>([]);
+let historicalBoards = $state<HistoricalBoard[]>([]);
+let currentBoard = $state<CurrentBoard | null>(null);
 let loading = $state(true);
 let error = $state<string | null>(null);
 
@@ -32,7 +49,9 @@ async function loadResults() {
 		loading = true;
 		error = null;
 
-		const res = await fetch(`/api/scenes/${sceneId}/health-results`);
+		const res = await fetch(
+			`/api/scenes/${sceneId}/health-results?historyDepth=3&includeUserHistory=true`,
+		);
 		const data = await res.json();
 
 		if (!data.success) {
@@ -40,6 +59,8 @@ async function loadResults() {
 		}
 
 		results = data.results;
+		historicalBoards = data.historicalBoards || [];
+		currentBoard = data.currentBoard || null;
 	} catch (err) {
 		console.error("Failed to load results:", err);
 		error = err instanceof Error ? err.message : "Failed to load results";
@@ -93,6 +114,7 @@ const focusedQuestion = $derived(
             {boardStatus}
             {isFacilitator}
             {sceneFlags}
+            {currentBoard}
             onBack={handleBackToOverview}
         />
     {:else}
@@ -100,7 +122,11 @@ const focusedQuestion = $derived(
             <h2>Survey Results Overview</h2>
 
             <div class="chart-container">
-                <RadarChart {results} onQuestionClick={handleQuestionClick} />
+                <RadarChart
+                    {results}
+                    {historicalBoards}
+                    onQuestionClick={handleQuestionClick}
+                />
             </div>
 
             <div class="questions-summary">
@@ -111,12 +137,41 @@ const focusedQuestion = $derived(
                             type="button"
                             class="question-summary-item"
                             onclick={() => handleQuestionClick(result.question.id)}
+                            aria-label="View details for: {result.question.question}"
                         >
                             <div class="question-info">
-                                <span class="question-text">{result.question.question}</span>
-                                <span class="question-average">Avg: {result.average.toFixed(2)}</span>
+                                <div class="question-header">
+                                    <span class="question-text">{result.question.question}</span>
+                                    <div class="question-stats">
+                                        <span class="question-average">Avg: {result.average.toFixed(2)}</span>
+                                        <span class="question-responses">{result.totalResponses} responses</span>
+                                    </div>
+                                </div>
+                                {#if result.history && result.history.length > 0}
+                                    <div class="question-metrics">
+                                        <Sparkline
+                                            data={[
+                                                ...result.history.map((h: any) => ({
+                                                    value: h.average,
+                                                    label: h.boardName,
+                                                })),
+                                                { value: result.average, label: "Current" },
+                                            ]}
+                                            userdata={[
+                                                ...(result.userHistory?.map((h: any) => ({
+                                                    value: h.rating,
+                                                    label: new Date(h.boardCreatedAt).toLocaleDateString(),
+                                                })) || []),
+                                                ...(result.currentUserRating !== null
+                                                    ? [{ value: result.currentUserRating, label: "Current" }]
+                                                    : []),
+                                            ]}
+                                            width={200}
+                                            height={100}
+                                        />
+                                    </div>
+                                {/if}
                             </div>
-                            <span class="question-responses">{result.totalResponses} responses</span>
                         </button>
                     {/each}
                 </div>
@@ -234,8 +289,8 @@ const focusedQuestion = $derived(
 
     .question-summary-item {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: column;
+        gap: 1rem;
         padding: 1.25rem;
         border: 1px solid var(--color-border);
         border-radius: var(--radius-lg);
@@ -284,8 +339,15 @@ const focusedQuestion = $derived(
     .question-info {
         display: flex;
         flex-direction: column;
-        gap: 0.375rem;
+        gap: 0.5rem;
         flex: 1;
+    }
+
+    .question-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
     }
 
     .question-text {
@@ -293,6 +355,21 @@ const focusedQuestion = $derived(
         font-weight: 600;
         color: var(--color-text-primary);
         line-height: 1.4;
+        flex: 1;
+    }
+
+    .question-stats {
+        display: flex;
+        gap: 1rem;
+        flex-shrink: 0;
+    }
+
+    .question-metrics {
+        display: flex;
+        justify-content: center;
+        padding: 0.5rem;
+        background-color: var(--surface-elevated);
+        border-radius: var(--radius-md);
     }
 
     .question-average {
@@ -305,7 +382,6 @@ const focusedQuestion = $derived(
         font-size: 0.8125rem;
         color: var(--color-text-secondary);
         white-space: nowrap;
-        margin-left: 1.5rem;
         font-weight: 500;
     }
 </style>
