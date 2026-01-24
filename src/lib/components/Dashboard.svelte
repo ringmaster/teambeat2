@@ -246,7 +246,7 @@ function getLatestBoardForCollapsed(seriesItem: any) {
 		return null;
 	}
 
-	// Use server-computed current board ID if available
+	// Use server-computed current board ID (soonest upcoming active) if available
 	if (seriesItem.currentBoardId) {
 		const currentBoard = seriesItem.boards.find(
 			(b: any) => b.id === seriesItem.currentBoardId
@@ -254,52 +254,75 @@ function getLatestBoardForCollapsed(seriesItem: any) {
 		if (currentBoard) return currentBoard;
 	}
 
-	// Fallback to client-side logic for backwards compatibility
-	// For admin/facilitator, show latest active or draft board
-	// For members, show only latest active board
-	let eligibleBoards = seriesItem.boards.filter((b: any) => {
-		if (seriesItem.role === "admin" || seriesItem.role === "facilitator") {
-			return b.status === "active" || b.status === "draft";
-		}
-		return b.status === "active";
-	});
+	// Fallback: find soonest upcoming active board
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
 
-	// If no active/draft boards, fall back to completed boards
-	if (eligibleBoards.length === 0) {
-		eligibleBoards = seriesItem.boards.filter(
-			(b: any) => b.status === "completed",
-		);
+	const activeBoards = seriesItem.boards.filter((b: any) => b.status === "active");
+
+	// Find soonest upcoming active board
+	const upcomingActive = activeBoards
+		.filter((b: any) => {
+			const boardDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+			boardDate.setHours(0, 0, 0, 0);
+			return boardDate >= today;
+		})
+		.sort((a: any, b: any) => {
+			const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
+			const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+			return aDate.getTime() - bDate.getTime(); // Ascending - soonest first
+		});
+
+	if (upcomingActive.length > 0) {
+		return upcomingActive[0];
 	}
 
-	if (eligibleBoards.length === 0) {
-		return null;
-	}
+	// No upcoming active board - show most recently completed instead
+	const completedBoards = seriesItem.boards
+		.filter((b: any) => b.status === "completed")
+		.sort((a: any, b: any) => {
+			const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
+			const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+			return bDate.getTime() - aDate.getTime(); // Descending - most recent first
+		});
 
-	// Sort by meeting date (descending), then by created date (descending)
-	const sorted = [...eligibleBoards].sort((a: any, b: any) => {
-		const aDate = a.meetingDate
-			? new Date(a.meetingDate)
-			: new Date(a.createdAt);
-		const bDate = b.meetingDate
-			? new Date(b.meetingDate)
-			: new Date(b.createdAt);
-		return bDate.getTime() - aDate.getTime();
-	});
-
-	return sorted[0];
+	return completedBoards.length > 0 ? completedBoards[0] : null;
 }
 
-function getNextDraftBoardForCollapsed(seriesItem: any) {
+function getNextDraftBoardForCollapsed(seriesItem: any, primaryBoard: any) {
 	// Only for admin/facilitator users
 	if (!["admin", "facilitator"].includes(seriesItem.role)) return null;
-	if (!seriesItem.nextDraftBoardId) return null;
 
-	// Don't show if the draft board is the same as the current board
-	if (seriesItem.nextDraftBoardId === seriesItem.currentBoardId) return null;
+	// Use server-computed next draft board ID if available
+	if (seriesItem.nextDraftBoardId) {
+		const draftBoard = seriesItem.boards.find(
+			(b: any) => b.id === seriesItem.nextDraftBoardId
+		);
+		// Don't show if it's the same as the primary board
+		if (draftBoard && draftBoard.id !== primaryBoard?.id) {
+			return draftBoard;
+		}
+	}
 
-	return seriesItem.boards.find(
-		(b: any) => b.id === seriesItem.nextDraftBoardId
-	);
+	// Fallback: find soonest upcoming draft board
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+
+	const upcomingDrafts = seriesItem.boards
+		.filter((b: any) => {
+			if (b.status !== "draft") return false;
+			if (b.id === primaryBoard?.id) return false; // Don't duplicate primary
+			const boardDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+			boardDate.setHours(0, 0, 0, 0);
+			return boardDate >= today;
+		})
+		.sort((a: any, b: any) => {
+			const aDate = a.meetingDate ? new Date(a.meetingDate) : new Date(a.createdAt);
+			const bDate = b.meetingDate ? new Date(b.meetingDate) : new Date(b.createdAt);
+			return aDate.getTime() - bDate.getTime(); // Ascending - soonest first
+		});
+
+	return upcomingDrafts.length > 0 ? upcomingDrafts[0] : null;
 }
 
 function openRenameSeries(seriesItem: any) {
@@ -645,7 +668,7 @@ async function copySeriesLink(seriesId: string) {
                                 {#if collapsedSeries[s.id]}
                                     <!-- Collapsed view - show current board + next draft for admins -->
                                     {@const latestBoard = getLatestBoardForCollapsed(s)}
-                                    {@const draftBoard = getNextDraftBoardForCollapsed(s)}
+                                    {@const draftBoard = getNextDraftBoardForCollapsed(s, latestBoard)}
                                     <div class="collapsed-board-preview">
                                         {#if latestBoard}
                                             <BoardListingItem

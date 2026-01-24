@@ -172,7 +172,7 @@ let hasVotes = $derived(votingAllocation?.canVote ?? false);
 
 // Load user voting data when board and user are ready (only if not already loaded from SSR)
 $effect(() => {
-	if (boardId && user?.id && !loading && !votingStats) {
+	if (boardId && user?.userId && !loading && !votingStats) {
 		loadUserVotingData();
 	}
 });
@@ -485,7 +485,7 @@ async function handlePresencePing() {
 }
 
 async function refreshPresence(reason = "scene_change") {
-	if (!boardId || !user?.id) return;
+	if (!boardId || !user?.userId) return;
 
 	try {
 		await fetch(`/api/boards/${boardId}/presence`, {
@@ -1450,7 +1450,7 @@ async function reloadAllCards() {
 }
 
 async function loadUserVotingData() {
-	if (!boardId || !user?.id) return;
+	if (!boardId || !user?.userId) return;
 
 	try {
 		const allocationData = await boardApi.fetchUserVotingData(boardId);
@@ -2978,7 +2978,7 @@ let dragState = $derived({
             {boardId}
             {board}
             {userRole}
-            currentUserId={user?.id}
+            currentUserId={user?.userId}
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
         />
@@ -3012,7 +3012,7 @@ let dragState = $derived({
             onEditCard={editCard}
             onReaction={addReaction}
             {userRole}
-            currentUserId={user?.id}
+            currentUserId={user?.userId}
             {hasVotes}
             {userVotesByCard}
             {allVotesByCard}
