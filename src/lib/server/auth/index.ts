@@ -1,5 +1,6 @@
 import type { RequestEvent } from "@sveltejs/kit";
 import { redirect } from "@sveltejs/kit";
+import { validateApiToken } from "./api-token.js";
 import type { SessionData } from "./session.js";
 import { getSession } from "./session.js";
 
@@ -41,6 +42,29 @@ export function requireUserForApi(event: RequestEvent): SessionData {
 		});
 	}
 	return user;
+}
+
+/**
+ * Auth check for v1 API routes. Accepts either a Bearer API token or a session cookie.
+ * Must be awaited — token validation is async (DB lookup).
+ */
+export async function requireApiV1Auth(
+	event: RequestEvent,
+): Promise<SessionData> {
+	const authHeader = event.request.headers.get("Authorization");
+	if (authHeader?.startsWith("Bearer ")) {
+		const rawToken = authHeader.slice(7).trim();
+		const user = await validateApiToken(rawToken);
+		if (user) return { userId: user.userId, email: user.email, expiresAt: 0 };
+	}
+
+	const sessionUser = getUser(event);
+	if (sessionUser) return sessionUser;
+
+	throw new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+		status: 401,
+		headers: { "Content-Type": "application/json" },
+	});
 }
 
 export function setSessionCookie(event: RequestEvent, sessionId: string): void {

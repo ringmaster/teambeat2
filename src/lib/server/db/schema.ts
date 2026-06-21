@@ -519,7 +519,7 @@ export const scorecardDatasources = table(
 			.references(() => scorecards.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
 		seq: integer("seq").notNull(),
-		sourceType: text("source_type").notNull().$type<"paste" | "api">(),
+		sourceType: text("source_type").notNull().$type<"paste" | "api" | "ai">(),
 		apiConfig: text("api_config"), // JSON: {url, auth_type, credentials_encrypted}
 		dataSchema: text("data_schema"), // JSON: describes expected data shape
 		rules: text("rules").notNull(), // JSON: array of rule objects
@@ -585,6 +585,27 @@ export const sceneScorecardResults = table(
 		sceneScorecardIdx: indexField(
 			"scene_scorecard_results_scene_scorecard_idx",
 		).on(table.sceneScorecardId),
+	}),
+);
+
+// API Tokens - for programmatic / AI access to the v1 REST API
+// Token hashes are SHA-256 of the raw tb_* token; raw tokens are never stored.
+export const apiTokens = table(
+	"api_tokens",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		tokenHash: text("token_hash").notNull(),
+		label: text("label").notNull(),
+		expiresAt: bigintField("expires_at").notNull(),
+		lastUsedAt: bigintField("last_used_at"),
+		createdAt: bigintField("created_at").notNull(),
+	},
+	(table) => ({
+		tokenHashUnique: unique("api_tokens_token_hash_unique").on(table.tokenHash),
+		userIdIdx: indexField("api_tokens_user_id_idx").on(table.userId),
 	}),
 );
 
@@ -793,6 +814,14 @@ export const usersRelations = relations(users, ({ many }) => ({
 	presence: many(presence),
 	authenticators: many(userAuthenticators),
 	quadrantPositions: many(quadrantPositions),
+	apiTokens: many(apiTokens),
+}));
+
+export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
+	user: one(users, {
+		fields: [apiTokens.userId],
+		references: [users.id],
+	}),
 }));
 
 export const userAuthenticatorsRelations = relations(

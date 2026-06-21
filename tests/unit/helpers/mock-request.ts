@@ -11,6 +11,7 @@ export function createMockRequestEvent(options: {
 	body?: unknown;
 	locals?: Record<string, unknown>;
 	cookies?: Map<string, string>;
+	headers?: Record<string, string>;
 }): RequestEvent {
 	const {
 		method = "GET",
@@ -19,13 +20,18 @@ export function createMockRequestEvent(options: {
 		body = null,
 		locals = {},
 		cookies = new Map(),
+		headers = {},
 	} = options;
 
 	const requestInit: RequestInit = { method };
 
+	const allHeaders: Record<string, string> = { ...headers };
 	if (body) {
 		requestInit.body = JSON.stringify(body);
-		requestInit.headers = { "Content-Type": "application/json" };
+		allHeaders["Content-Type"] = "application/json";
+	}
+	if (Object.keys(allHeaders).length > 0) {
+		requestInit.headers = allHeaders;
 	}
 
 	const request = new Request(url, requestInit);

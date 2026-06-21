@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import ApiTokenManager from "$lib/components/ApiTokenManager.svelte";
 import PasskeyManager from "$lib/components/PasskeyManager.svelte";
 import Icon from "$lib/components/ui/Icon.svelte";
 
@@ -303,6 +304,11 @@ async function resendVerificationEmail() {
                 <!-- Passkey Manager -->
                 <PasskeyManager />
 
+                <!-- API Tokens -->
+                <section class="profile-section api-tokens-section">
+                    <ApiTokenManager />
+                </section>
+
                 <!-- Delete Account -->
                 <section class="profile-section danger-section">
                     <h2 class="section-title section-title-danger">
@@ -416,6 +422,10 @@ async function resendVerificationEmail() {
     .danger-section {
         grid-column: 1 / -1;
         border: 1px solid var(--color-danger);
+    }
+
+    .api-tokens-section {
+        grid-column: 1 / -1;
     }
 
     .section-title {
