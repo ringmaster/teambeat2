@@ -309,6 +309,7 @@ $effect(() => {
             {#each questions as question (question.id)}
                 <div
                     class="question-item"
+                    role="listitem"
                     class:dragging={draggedQuestionId === question.id}
                     class:drag-over={dragOverQuestionId === question.id}
                     draggable="true"
@@ -323,6 +324,7 @@ $effect(() => {
                     </div>
                     <div
                         class="question-content"
+                        role="presentation"
                         onmousedown={(e) => e.stopPropagation()}
                     >
                         <input

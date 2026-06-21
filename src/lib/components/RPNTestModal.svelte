@@ -298,14 +298,12 @@ function formatStackValue(value: any): string {
         tabindex="-1"
         transition:fade={{ duration: 200 }}
         onclick={handleOverlayClick}
+        onkeydown={handleKeydown}
     >
         <div
             bind:this={dialogElement}
             class="rpn-modal-dialog"
-            role="document"
-            tabindex="0"
             transition:fly={{ y: -20, duration: 300, easing: cubicOut }}
-            onclick={(e) => e.stopPropagation()}
         >
             <!-- Modal Header -->
             <div class="rpn-modal-header">

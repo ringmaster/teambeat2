@@ -736,7 +736,10 @@ onMount(() => {
                             class="list-item"
                             class:selected={selectedScorecardId ===
                                 scorecard.id}
+                            role="button"
+                            tabindex="0"
                             onclick={() => selectScorecard(scorecard.id)}
+                            onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectScorecard(scorecard.id)}
                         >
                             <div class="list-item-content">
                                 <div class="list-item-title">
@@ -835,6 +838,9 @@ onMount(() => {
                                         handleDatasourceDrop(e, index)}
                                     onclick={() =>
                                         selectDatasource(datasource.id)}
+                                    role="button"
+                                    tabindex="0"
+                                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectDatasource(datasource.id); }}
                                 >
                                     {#if canEdit}
                                         <span class="drag-handle">⋮⋮</span>
@@ -976,11 +982,14 @@ onMount(() => {
                                 >
                                     <div
                                         class="rule-header"
+                                        role="button"
+                                        tabindex="0"
                                         onclick={() =>
                                             (editingRuleIndex =
                                                 editingRuleIndex === index
                                                     ? null
                                                     : index)}
+                                        onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { editingRuleIndex = editingRuleIndex === index ? null : index; } }}
                                     >
                                         <span class="rule-number"
                                             >{index + 1}</span
@@ -1036,8 +1045,9 @@ onMount(() => {
                                     {#if editingRuleIndex === index}
                                         <div class="rule-editor">
                                             <div class="form-group">
-                                                <label>Iterate Over</label>
+                                                <label for="rule-iterate-over-{index}">Iterate Over</label>
                                                 <select
+                                                    id="rule-iterate-over-{index}"
                                                     bind:value={
                                                         rule.iterate_over
                                                     }
@@ -1064,8 +1074,9 @@ onMount(() => {
                                             </div>
 
                                             <div class="form-group">
-                                                <label>Section</label>
+                                                <label for="rule-section-{index}">Section</label>
                                                 <input
+                                                    id="rule-section-{index}"
                                                     type="text"
                                                     bind:value={rule.section}
                                                     onblur={saveDatasource}
@@ -1082,11 +1093,12 @@ onMount(() => {
                                             </div>
 
                                             <div class="form-group">
-                                                <label
+                                                <label for="rule-condition-{index}"
                                                     >Condition (RPN Expression)</label
                                                 >
                                                 <div class="input-with-button">
                                                     <input
+                                                        id="rule-condition-{index}"
                                                         type="text"
                                                         bind:value={
                                                             rule.condition
@@ -1157,8 +1169,9 @@ onMount(() => {
                                             </div>
 
                                             <div class="form-group">
-                                                <label>Title Template</label>
+                                                <label for="rule-title-template-{index}">Title Template</label>
                                                 <input
+                                                    id="rule-title-template-{index}"
                                                     type="text"
                                                     bind:value={
                                                         rule.title_template
@@ -1170,10 +1183,11 @@ onMount(() => {
                                             </div>
 
                                             <div class="form-group">
-                                                <label
+                                                <label for="rule-value-template-{index}"
                                                     >Value Template (optional)</label
                                                 >
                                                 <input
+                                                    id="rule-value-template-{index}"
                                                     type="text"
                                                     bind:value={
                                                         rule.value_template
@@ -1185,8 +1199,9 @@ onMount(() => {
                                             </div>
 
                                             <div class="form-group">
-                                                <label>Base Severity</label>
+                                                <label for="rule-base-severity-{index}">Base Severity</label>
                                                 <select
+                                                    id="rule-base-severity-{index}"
                                                     bind:value={rule.severity}
                                                     onchange={saveDatasource}
                                                     disabled={!canEdit}
@@ -1208,8 +1223,8 @@ onMount(() => {
                                             </div>
 
                                             <div class="form-group">
-                                                <label
-                                                    >Threshold Rules (optional)</label
+                                                <span class="form-label"
+                                                    >Threshold Rules (optional)</span
                                                 >
                                                 <small
                                                     >Override severity based on
@@ -1287,11 +1302,12 @@ onMount(() => {
                                                                     <div
                                                                         class="form-group-inline"
                                                                     >
-                                                                        <label
+                                                                        <label for="threshold-condition-{index}-{thresholdIndex}"
                                                                             >Condition</label
                                                                         >
                                                                         <div class="input-with-button">
                                                                             <input
+                                                                                id="threshold-condition-{index}-{thresholdIndex}"
                                                                                 type="text"
                                                                                 bind:value={
                                                                                     thresholdRule.condition
@@ -1347,10 +1363,11 @@ onMount(() => {
                                                                     <div
                                                                         class="form-group-inline"
                                                                     >
-                                                                        <label
+                                                                        <label for="threshold-severity-{index}-{thresholdIndex}"
                                                                             >Severity</label
                                                                         >
                                                                         <select
+                                                                            id="threshold-severity-{index}-{thresholdIndex}"
                                                                             bind:value={
                                                                                 thresholdRule.severity
                                                                             }
@@ -1899,7 +1916,8 @@ onMount(() => {
     .form-group {
         margin-bottom: var(--spacing-4);
 
-        label {
+        label,
+        .form-label {
             display: block;
             margin-bottom: var(--spacing-1);
             font-weight: 500;

@@ -542,8 +542,8 @@ onMount(() => {
     {/if}
 
     {#if showDataDialog}
-        <div class="dialog-overlay" onclick={() => (showDataDialog = false)}>
-            <div class="dialog" onclick={(e) => e.stopPropagation()}>
+        <div class="dialog-overlay" role="button" tabindex="0" onclick={() => (showDataDialog = false)} onkeydown={(e) => e.key === 'Escape' && (showDataDialog = false)}>
+            <div class="dialog" role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
                 <div class="dialog-header">
                     <h3>Collect Data</h3>
                     {#if Object.keys(collectedDataByScorecard).length > 0}

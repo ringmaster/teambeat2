@@ -49,6 +49,10 @@ let renameSeriesName = $state("");
 let renameSeriesError = $state("");
 let openDropdownSeriesId: string | null = $state(null);
 
+function focusOnMount(node: HTMLElement) {
+	node.focus();
+}
+
 onMount(async () => {
 	try {
 		// Check if email is configured
@@ -1059,7 +1063,7 @@ async function copySeriesLink(seriesId: string) {
                         onkeydown={(e) => {
                             if (e.key === "Enter") renameSeries();
                         }}
-                        autofocus
+                        use:focusOnMount
                     />
                     {#if renameSeriesError}
                         <div class="form-error">

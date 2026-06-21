@@ -550,6 +550,7 @@ let isThreeColumnMode = $derived(
                         </button>
                     {/each}
                     <div
+                        role="list"
                         ondragover={(e) => onEndDrop("column", e)}
                         ondrop={(e) => onEndDrop("column", e)}
                         class="drop-zone {dragState.dragOverColumnEnd
@@ -606,6 +607,7 @@ let isThreeColumnMode = $derived(
                         </button>
                     {/each}
                     <div
+                        role="list"
                         ondragover={(e) => onEndDrop("scene", e)}
                         ondrop={(e) => onEndDrop("scene", e)}
                         class="drop-zone {dragState.dragOverSceneEnd
@@ -980,7 +982,7 @@ let isThreeColumnMode = $derived(
                         </div>
 
                         <div class="form-group">
-                            <label>Column Selection</label>
+                            <p class="form-label">Column Selection</p>
                             <p class="field-hint">Select which columns to include in the quadrant view (default: all columns)</p>
                             <div class="checkbox-grid">
                                 {#each board.allColumns || board.columns || [] as column (column.id)}

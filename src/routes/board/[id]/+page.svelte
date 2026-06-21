@@ -1023,6 +1023,7 @@ let displayedScene = $derived(isInContinuation && continuationScene ? continuati
 let isFacilitator = $derived(["admin", "facilitator"].includes(userRole));
 
 // Derive selected card for Present mode - preserves object identity when card data hasn't changed
+// svelte-ignore state_referenced_locally -- cards is $state; reassignments propagate correctly through $derived.by
 let selectedCard = $derived.by(
 	() => cards.find((c: any) => c.id === currentScene?.selectedCardId) || null,
 );

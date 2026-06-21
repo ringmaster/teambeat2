@@ -286,6 +286,7 @@ function shouldShowDropIndicator(
 
                 <div
                     class="card-drag-area"
+                    role="listitem"
                     in:receive={{ key: card.id }}
                     out:send={{ key: card.id }}
                     ondragover={canSequence && onCardDragOver

@@ -45,24 +45,21 @@ $effect(() => {
 <svelte:window onkeydown={handleKeydown} />
 
 {#if show}
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
     <div
         class="modal-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? "modal-title" : undefined}
-        tabindex="-1"
+        role="presentation"
         transition:fade={{ duration: 200 }}
         onclick={handleOverlayClick}
-        onkeydown={handleKeydown}
     >
         <div
             bind:this={dialogElement}
             class="modal-dialog modal-{size}"
-            role="document"
-            tabindex="0"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? "modal-title" : undefined}
+            tabindex="-1"
             transition:fly={{ y: -20, duration: 300, easing: cubicOut }}
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
         >
             <div class="modal-content band">
                 {#if title}

@@ -321,8 +321,8 @@ onMount(() => {
 </div>
 
 {#if showUserModal && selectedSeriesId}
-    <div class="modal-overlay" onclick={closeUserModal}>
-        <div class="modal-dialog" onclick={(e) => e.stopPropagation()}>
+    <div class="modal-overlay" role="presentation" onclick={closeUserModal}>
+        <div class="modal-dialog" role="dialog" aria-modal="true">
             <div class="modal-header">
                 <h2>Manage Users - {selectedSeriesName}</h2>
                 <button class="close-btn" onclick={closeUserModal}>×</button>

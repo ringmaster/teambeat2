@@ -641,6 +641,7 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 						<div class="grid-wrapper">
 							<div
 								class="quadrant-grid"
+								role="group"
 								style="--grid-cols: {gridCols}; --grid-rows: {gridRows};"
 								ondrop={handleGridDrop}
 								ondragover={handleGridDragOver}
@@ -681,6 +682,7 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 									{@const cardIndex = getCardIndex(position.card_id)}
 									<div
 										class="card-marker"
+										role="listitem"
 										style="left: {markerPos.x}%; top: {markerPos.y}%;"
 										draggable="true"
 										ondragstart={(e) => handleMarkerDragStart(e, position.card_id)}
@@ -713,6 +715,7 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 								{@const cardIndex = getCardIndex(card.id)}
 								<div
 									class="card-wrapper"
+									role="listitem"
 									class:positioned={isPositioned}
 									draggable="true"
 									ondragstart={(e) => handleCardDragStart(e, card.id)}
@@ -788,6 +791,7 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 					<div class="grid-wrapper">
 						<div
 							class="quadrant-grid"
+							role="group"
 							style="--grid-cols: {gridCols}; --grid-rows: {gridRows};"
 							ondrop={handleResultsGridDrop}
 							ondragover={handleResultsGridDragOver}
@@ -864,12 +868,15 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 									{@const cardIndex = getCardIndex(card.id)}
 									<div
 										class="card-marker consensus-marker"
+										role="button"
+										tabindex="0"
 										class:selected={selectedCardId === card.id}
 										class:draggable={isFacilitator || isAdmin}
 										style="left: {markerPos.x}%; top: {markerPos.y}%;"
 										title="{card.content} - {metadata.quadrant_label}"
 										draggable={isFacilitator || isAdmin}
 										onclick={() => handleCardSelection(card.id)}
+										onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSelection(card.id); }}
 										ondragstart={(e) => handleConsensusMarkerDragStart(e, card.id)}
 										ondragend={handleConsensusMarkerDragEnd}
 									>

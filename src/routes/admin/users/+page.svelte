@@ -303,9 +303,11 @@ async function toggleEmailVerification(
                     <button
                         type="button"
                         class="pagination-button"
+                        aria-label="Next page"
                         onclick={() => goToPage(data.page + 1)}
                         disabled={!hasNextPage}
                     >
+                        Next
                     </button>
                 </div>
             {/if}
