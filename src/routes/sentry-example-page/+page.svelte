@@ -8,9 +8,8 @@ Feel free to delete this file and the entire sentry route.
   import { onMount } from 'svelte';
   
   // Svelte Runes (requires Svelte 5)
-  // let hasSentError = $state(false);
-  let hasSentError = false;
-  let isConnected = true;
+  let hasSentError = $state(false);
+  let isConnected = $state(true);
 
   onMount(async () => {
     const result = await Sentry.diagnoseSdkConnectivity();
@@ -204,8 +203,5 @@ Feel free to delete this file and the entire sentry route.
     margin: 0;
   }
   
-  .connectivity-error a {
-    color: #FFFFFF;
-    text-decoration: underline;
-  }
+
 </style>

@@ -430,8 +430,5 @@ onDestroy(() => {
             }
         }
 
-        .actions-cell {
-            flex-direction: column;
-        }
     }
 </style>

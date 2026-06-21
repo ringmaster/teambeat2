@@ -208,25 +208,6 @@ const focusedQuestion = $derived(
             color: var(--color-text-primary);
         }
 
-        button {
-            padding: 0.625rem 1.5rem;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-lg);
-            background-color: var(--btn-secondary-bg);
-            color: var(--btn-secondary-text);
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-height: 44px;
-
-            &:hover {
-                background-color: var(--btn-secondary-bg-hover);
-                border-color: var(--color-border-hover);
-                transform: translateY(-1px);
-                box-shadow: var(--shadow-sm);
-            }
-        }
     }
 
     .results-overview {

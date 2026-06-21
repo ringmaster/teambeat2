@@ -166,22 +166,6 @@ async function handleSubmit(event: Event) {
 			line-height: 1.5;
 		}
 
-		.redirect-message {
-			color: var(--color-text-secondary);
-			font-size: 0.9rem;
-		}
-
-		.back-link {
-			display: inline-block;
-			margin-top: 1rem;
-			color: var(--color-primary);
-			text-decoration: none;
-			font-weight: 500;
-
-			&:hover {
-				text-decoration: underline;
-			}
-		}
 	}
 
 	.success-state {

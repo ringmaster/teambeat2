@@ -28,7 +28,7 @@ let {
 let isOpen = $state(false);
 let highlightedIndex = $state(-1);
 let inputElement: HTMLInputElement;
-let dropdownElement: HTMLDivElement;
+let dropdownElement: HTMLDivElement | null = $state(null);
 let valueOnFocus = $state("");  // Track value when input gained focus
 
 // Fuzzy search implementation

@@ -798,13 +798,6 @@ onDestroy(() => {
         padding: 1.5rem;
         margin-bottom: 2rem;
 
-        > h2 {
-            margin: 0 0 1.5rem 0;
-            font-size: 1.5rem;
-            color: #374151;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #e5e7eb;
-        }
     }
 
     .section-header {
@@ -901,32 +894,6 @@ onDestroy(() => {
             border-radius: 4px;
             font-size: 0.85rem;
             font-weight: 500;
-        }
-
-        .usage-bar-container {
-            position: relative;
-            width: 100%;
-            height: 24px;
-            background: #f3f4f6;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .usage-bar {
-            position: absolute;
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #2563eb);
-            transition: width 0.3s ease;
-        }
-
-        .usage-bar-label {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #374151;
         }
 
         .analytics-with-chart {

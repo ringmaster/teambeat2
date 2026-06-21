@@ -1030,22 +1030,6 @@ async function updateFacilitatorPosition(cardId: string, x: number, y: number) {
 	.setup {
 		text-align: center;
 		padding: var(--spacing-8);
-
-		h3 {
-			margin-bottom: var(--spacing-4);
-			color: var(--color-gray-800);
-		}
-
-		p {
-			margin-bottom: var(--spacing-6);
-			color: var(--color-gray-600);
-		}
-
-		.waiting-message {
-			font-style: italic;
-			color: var(--color-text-muted);
-			margin-bottom: 0;
-		}
 	}
 
 	.start-button {

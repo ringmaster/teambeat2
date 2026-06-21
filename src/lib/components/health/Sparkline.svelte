@@ -46,7 +46,7 @@ const {
 	maxValue = 5,
 }: Props = $props();
 
-let canvas: HTMLCanvasElement;
+let canvas: HTMLCanvasElement | null = $state(null);
 let chart: Chart | null = null;
 
 function createChart() {

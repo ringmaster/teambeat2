@@ -338,19 +338,6 @@ $effect(() => {
             font-size: 1.125rem;
         }
 
-        button {
-            padding: 0.5rem 1rem;
-            border: 1px solid var(--border-primary);
-            border-radius: 0.375rem;
-            background-color: var(--surface-secondary);
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            cursor: pointer;
-
-            &:hover {
-                background-color: var(--surface-tertiary);
-            }
-        }
     }
 
     .questions-list {

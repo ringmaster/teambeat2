@@ -1023,8 +1023,8 @@ let displayedScene = $derived(isInContinuation && continuationScene ? continuati
 let isFacilitator = $derived(["admin", "facilitator"].includes(userRole));
 
 // Derive selected card for Present mode - preserves object identity when card data hasn't changed
-let selectedCard = $derived(
-	cards.find((c: any) => c.id === currentScene?.selectedCardId) || null,
+let selectedCard = $derived.by(
+	() => cards.find((c: any) => c.id === currentScene?.selectedCardId) || null,
 );
 
 // Filter columns based on current scene visibility settings
