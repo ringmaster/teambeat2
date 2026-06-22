@@ -24,6 +24,20 @@ const claudeMdBlock = `## Teambeat Integration
 Base URL: ${baseUrl}
 Auth: \`Authorization: Bearer $TEAMBEAT_API_TOKEN\` on all /api/v1/ requests
 
+### Session Startup
+
+When a session begins where Teambeat work is likely, or when the user mentions
+retrospectives, boards, health checks, or scorecards:
+
+1. GET /api/v1/series — list available series (team workspaces)
+2. For each series, GET /api/v1/series/{id}/boards?limit=5 — fetch recent boards
+3. Present a compact summary: series name, most recent board name and date
+4. Ask: "Which series and board would you like to work with?"
+5. Remember the chosen series ID and board ID for the rest of the session
+
+Skip the discovery step if the user has already named a specific series or board,
+or if you already know the IDs from earlier in the session.
+
 ### Key Endpoints
 
 Series (your team workspaces):
@@ -360,6 +374,10 @@ section h2 {
 	line-height: 1.6;
 	color: #cdd6f4;
 	white-space: pre;
+	/* reset global code style that would apply a light bg box inside the dark block */
+	background: transparent;
+	padding: 0;
+	border-radius: 0;
 }
 
 .copy-btn {
@@ -441,6 +459,9 @@ section h2 {
 	color: #cdd6f4;
 	white-space: pre-wrap;
 	word-break: break-word;
+	background: transparent;
+	padding: 0;
+	border-radius: 0;
 }
 
 /* Table */
