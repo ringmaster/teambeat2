@@ -481,6 +481,33 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
 	},
 } as const;
 
+// Helper function to return serializable full template data for the v1 API
+export function getTemplateForApi(templateId?: string) {
+	const templateList = templateId
+		? [BOARD_TEMPLATES[templateId]].filter(Boolean)
+		: Object.values(BOARD_TEMPLATES);
+
+	return templateList.map((template) => ({
+		id: template.id,
+		name: template.name,
+		description: template.description,
+		columns: template.columns.map((col) => ({
+			title: col.title,
+			description: col.getDescription?.() ?? col.description ?? null,
+			seq: col.seq,
+			defaultAppearance: col.default_appearance ?? "shown",
+		})),
+		scenes: template.scenes.map((scene) => ({
+			title: scene.title,
+			mode: scene.mode,
+			seq: scene.seq,
+			flags: scene.flags,
+			visibleColumns: scene.visibleColumns ?? null,
+			description: scene.description ?? null,
+		})),
+	}));
+}
+
 // Helper function to get template list for the templates API
 export function getTemplateList() {
 	return Object.values(BOARD_TEMPLATES).map((template) => ({

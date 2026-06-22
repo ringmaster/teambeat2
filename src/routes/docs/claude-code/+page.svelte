@@ -38,6 +38,28 @@ retrospectives, boards, health checks, or scorecards:
 Skip the discovery step if the user has already named a specific series or board,
 or if you already know the IDs from earlier in the session.
 
+### Creating a New Board
+
+**WARNING: Do NOT invent board structures.**
+Teambeat boards require specific scene modes and flags to function correctly.
+A board with wrong or missing configuration will be unusable by participants.
+Never guess at column names, scene modes, or scene flags.
+
+Always follow this decision tree:
+
+1. Check for existing boards: GET /api/v1/series/{seriesId}/boards?limit=1
+2. If a board exists → CLONE it (always preferred):
+     POST /api/v1/boards/{mostRecentBoardId}/clone
+     body: { "name": "Sprint 42 Retro", "meetingDate": "YYYY-MM-DD" }
+   Cloning is the ONLY way pulse check (survey) history accumulates — survey
+   questions share a threadId across boards. Creating from scratch severs it.
+3. If no boards exist yet → use a template:
+     GET /api/v1/templates          (no auth required — lists all templates)
+     GET /api/v1/templates/{id}     (full column/scene detail for one template)
+   Then: POST /api/v1/series/{seriesId}/boards with { templateId: "..." }
+4. Custom structures (specific columns/scenes the user has spelled out explicitly)
+   are a last resort. Do not choose this path without the user directing you to.
+
 ### Key Endpoints
 
 Series (your team workspaces):
@@ -51,7 +73,12 @@ Boards (individual retrospective meetings):
   GET /api/v1/boards/{id}/cards               cards with column context
   GET /api/v1/boards/{id}/agreements          agreements (?completed=true|false)
   GET /api/v1/boards/{id}/scorecard-results   current scorecard data
-  POST /api/v1/series/{id}/boards             create a board
+  POST /api/v1/boards/{id}/clone              clone a board (preferred for new meetings)
+  POST /api/v1/series/{id}/boards             create a board from scratch or templateId
+
+Templates (board structure discovery — no auth required):
+  GET /api/v1/templates                       list all templates with full detail
+  GET /api/v1/templates/{id}                  single template detail
 
 Scorecard injection (push AI findings directly to the board):
   POST /api/v1/datasources/{id}/inject
@@ -138,6 +165,15 @@ const prompts = [
 
 		<section>
 			<h2>Setup</h2>
+
+			<div class="warning-box">
+				<strong>Do not invent board structures.</strong> Teambeat boards have specific column and scene configurations that make them functional. A board with the wrong scene modes or missing flags will be unusable by participants. Never make up column names or scene configurations without explicit direction from the user.
+				<ul>
+					<li>If the series has existing boards — <strong>clone the most recent one</strong> (<code>POST /api/v1/boards/{"{id}"}/clone</code>). This is always the correct approach for recurring meetings. Cloning also preserves the <em>threadId</em> that links pulse check (survey) questions across meetings — the only way historical health trends accumulate correctly.</li>
+					<li>If the series is new with no boards — use a template (<code>GET /api/v1/templates</code>, then pass <code>templateId</code> when creating). Read the template detail first to understand the structure.</li>
+					<li>Creating a fully custom structure from scratch requires explicit column names, scene modes, and scene flags specified by the user. Do not guess.</li>
+				</ul>
+			</div>
 
 			<div class="steps">
 				<div class="step">
@@ -239,13 +275,22 @@ const prompts = [
 				<tbody>
 					<tr><td>GET</td><td><code>/api/v1/series</code></td><td>Series you belong to with your role</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/series/{"{id}"}/boards</code></td><td>Boards in a series (paginated, filterable by status)</td></tr>
-					<tr><td>POST</td><td><code>/api/v1/series/{"{id}"}/boards</code></td><td>Create a board (optionally with columns, scenes, seed cards)</td></tr>
+					<tr><td>POST</td><td><code>/api/v1/series/{"{id}"}/boards</code></td><td>Create a board from scratch (pass <code>templateId</code> for structure — new series only)</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/series/{"{id}"}/health-summary</code></td><td>Health question history across recent boards</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/series/{"{id}"}/agreements</code></td><td>Agreements across all boards (paginated, filterable)</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/boards/{"{id}"}</code></td><td>Full board with scenes, columns, cards</td></tr>
+					<tr><td>PATCH</td><td><code>/api/v1/boards/{"{id}"}</code></td><td>Update board metadata or status (name, meetingDate, status, blameFreeMode, votingAllocation)</td></tr>
+					<tr><td>POST</td><td><code>/api/v1/boards/{"{id}"}/clone</code></td><td><strong>Clone a board into a new board in the same series</strong> — preferred for recurring meetings</td></tr>
+					<tr><td>PATCH</td><td><code>/api/v1/boards/{"{id}"}/scene</code></td><td>Change the active scene (advance the meeting)</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/boards/{"{id}"}/cards</code></td><td>Cards with column title and vote/comment counts</td></tr>
+					<tr><td>POST</td><td><code>/api/v1/boards/{"{id}"}/cards</code></td><td>Create a card</td></tr>
+					<tr><td>PATCH</td><td><code>/api/v1/cards/{"{id}"}</code></td><td>Update a card's content or notes</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/boards/{"{id}"}/agreements</code></td><td>Board-level agreements (?completed filter)</td></tr>
+					<tr><td>POST</td><td><code>/api/v1/boards/{"{id}"}/agreements</code></td><td>Create an agreement</td></tr>
+					<tr><td>PATCH</td><td><code>/api/v1/agreements/{"{id}"}</code></td><td>Update or complete an agreement</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/boards/{"{id}"}/scorecard-results</code></td><td>Processed scorecard data for the board</td></tr>
+					<tr><td>GET</td><td><code>/api/v1/templates</code></td><td>List all board templates with full column and scene detail (no auth required)</td></tr>
+					<tr><td>GET</td><td><code>/api/v1/templates/{"{id}"}</code></td><td>Single template detail by ID</td></tr>
 					<tr><td>POST</td><td><code>/api/v1/datasources/{"{id}"}/inject</code></td><td>Push AI findings to a scorecard (replaces prior AI results)</td></tr>
 					<tr><td>GET</td><td><code>/api/v1/tokens</code></td><td>List your API tokens</td></tr>
 					<tr><td>POST</td><td><code>/api/v1/tokens</code></td><td>Create a token</td></tr>
@@ -312,6 +357,25 @@ section h2 {
 .section-intro {
 	color: var(--color-text-secondary);
 	margin-bottom: 1.25rem;
+}
+
+.warning-box {
+	background: color-mix(in srgb, var(--color-warning, #f59e0b) 10%, transparent);
+	border-left: 3px solid var(--color-warning, #f59e0b);
+	border-radius: var(--radius-md);
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.5rem;
+	font-size: var(--text-sm);
+	line-height: 1.6;
+}
+
+.warning-box ul {
+	margin: 0.5rem 0 0;
+	padding-left: 1.25rem;
+}
+
+.warning-box li {
+	margin-bottom: 0.35rem;
 }
 
 /* Steps */

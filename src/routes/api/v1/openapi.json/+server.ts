@@ -130,6 +130,40 @@ export const GET: RequestHandler = () => {
 						completedByName: { type: "string", nullable: true },
 					},
 				},
+				TemplateDetail: {
+					type: "object",
+					properties: {
+						id: { type: "string" },
+						name: { type: "string" },
+						description: { type: "string" },
+						columns: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									title: { type: "string" },
+									description: { type: "string", nullable: true },
+									seq: { type: "integer" },
+									defaultAppearance: { type: "string" },
+								},
+							},
+						},
+						scenes: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									title: { type: "string" },
+									mode: { type: "string", enum: ["columns", "present", "review", "agreements", "scorecard", "static", "survey"] },
+									seq: { type: "integer" },
+									flags: { type: "array", items: { type: "string" } },
+									visibleColumns: { type: "array", items: { type: "string" }, nullable: true },
+									description: { type: "string", nullable: true },
+								},
+							},
+						},
+					},
+				},
 				ScorecardResult: {
 					type: "object",
 					properties: {
@@ -289,6 +323,61 @@ export const GET: RequestHandler = () => {
 					},
 				},
 			},
+			"/templates": {
+				get: {
+					summary: "List available board templates",
+					operationId: "listTemplates",
+					tags: ["Templates"],
+					description: "Returns all built-in board templates with full column and scene detail. No auth required. Use these to discover available structures when creating a board from scratch (new series with no existing boards).",
+					security: [],
+					responses: {
+						200: {
+							description: "Template list",
+							content: {
+								"application/json": {
+									schema: {
+										type: "object",
+										properties: {
+											success: { type: "boolean" },
+											templates: {
+												type: "array",
+												items: { "$ref": "#/components/schemas/TemplateDetail" },
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"/templates/{id}": {
+				get: {
+					summary: "Get full template detail",
+					operationId: "getTemplate",
+					tags: ["Templates"],
+					description: "Returns a single template by ID with full column and scene detail.",
+					security: [],
+					parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Template ID (e.g. kafe, leancoffee, traction, startstop, madsadglad, fourls)" }],
+					responses: {
+						200: {
+							description: "Template detail",
+							content: {
+								"application/json": {
+									schema: {
+										type: "object",
+										properties: {
+											success: { type: "boolean" },
+											template: { "$ref": "#/components/schemas/TemplateDetail" },
+										},
+									},
+								},
+							},
+						},
+						404: { description: "Template not found" },
+					},
+				},
+			},
 			"/boards/{id}": {
 				get: {
 					summary: "Get full board detail",
@@ -300,6 +389,64 @@ export const GET: RequestHandler = () => {
 						401: { description: "Unauthorized" },
 						403: { description: "Access denied" },
 						404: { description: "Board not found" },
+					},
+				},
+				patch: {
+					summary: "Update board metadata or status",
+					operationId: "patchBoard",
+					tags: ["Boards"],
+					parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										name: { type: "string", minLength: 1, maxLength: 100 },
+										meetingDate: { type: "string", format: "date", nullable: true },
+										status: { type: "string", enum: ["draft", "active", "completed", "archived"] },
+										blameFreeMode: { type: "boolean" },
+										votingAllocation: { type: "integer", minimum: 0, maximum: 20 },
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						200: { description: "Updated board" },
+						400: { description: "Validation error" },
+						401: { description: "Unauthorized" },
+						403: { description: "Access denied (facilitator or admin required)" },
+						404: { description: "Board not found" },
+					},
+				},
+			},
+			"/boards/{id}/scene": {
+				patch: {
+					summary: "Change the active scene (advance the meeting)",
+					operationId: "changeBoardScene",
+					tags: ["Boards"],
+					parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									required: ["sceneId"],
+									properties: {
+										sceneId: { type: "string", format: "uuid" },
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						200: { description: "Active scene updated, SSE broadcast sent" },
+						401: { description: "Unauthorized" },
+						403: { description: "Access denied (facilitator or admin required)" },
+						404: { description: "Board or scene not found" },
 					},
 				},
 			},
@@ -345,6 +492,117 @@ export const GET: RequestHandler = () => {
 						401: { description: "Unauthorized" },
 						403: { description: "Access denied" },
 						404: { description: "Board not found" },
+					},
+				},
+			},
+			"/boards/{id}/clone": {
+				post: {
+					summary: "Clone a board into a new board in the same series",
+					operationId: "cloneBoard",
+					tags: ["Boards"],
+					description: "Creates a new board in the same series by copying the source board's columns, scenes, scene flags, scene-column relationships, scorecards, health questions (preserving threadId for longitudinal tracking), and incomplete agreements. This is the preferred way to create a new meeting board when the series already has existing boards — it ensures survey question continuity via shared threadIds.",
+					parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Source board ID to clone from" }],
+					requestBody: {
+						required: false,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										name: { type: "string", minLength: 1, maxLength: 100, description: "Name for the new board. Defaults to the source board's name." },
+										meetingDate: { type: "string", format: "date", description: "Meeting date for the new board (YYYY-MM-DD)" },
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						200: {
+							description: "Board cloned successfully",
+							content: {
+								"application/json": {
+									schema: {
+										type: "object",
+										properties: {
+											success: { type: "boolean" },
+											board: {
+												type: "object",
+												properties: {
+													id: { type: "string", format: "uuid" },
+													name: { type: "string" },
+													seriesId: { type: "string", format: "uuid" },
+													status: { type: "string", enum: ["draft"] },
+													createdAt: { type: "string", format: "date-time" },
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						401: { description: "Unauthorized" },
+						403: { description: "Access denied" },
+						404: { description: "Board not found" },
+					},
+				},
+			},
+			"/cards/{id}": {
+				patch: {
+					summary: "Update a card's content or notes",
+					operationId: "patchCard",
+					tags: ["Cards"],
+					description: "Updates card content or notes. Requires the current scene to allow editing cards (allow_edit_cards flag).",
+					parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										content: { type: "string", minLength: 1, maxLength: 1000 },
+										notes: { type: "string", maxLength: 5000, nullable: true },
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						200: { description: "Updated card" },
+						400: { description: "Validation error" },
+						401: { description: "Unauthorized" },
+						403: { description: "Access denied or editing not allowed in current scene" },
+						404: { description: "Card not found" },
+					},
+				},
+			},
+			"/agreements/{id}": {
+				patch: {
+					summary: "Update or complete an agreement",
+					operationId: "patchAgreement",
+					tags: ["Agreements"],
+					description: "Update an agreement's content or toggle its completed state. Requires facilitator or admin role.",
+					parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										content: { type: "string", minLength: 1, maxLength: 1000 },
+										completed: { type: "boolean" },
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						200: { description: "Updated agreement" },
+						400: { description: "Validation error" },
+						401: { description: "Unauthorized" },
+						403: { description: "Access denied (facilitator or admin required)" },
+						404: { description: "Agreement not found" },
 					},
 				},
 			},
