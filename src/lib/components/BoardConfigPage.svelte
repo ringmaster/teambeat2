@@ -95,6 +95,7 @@ let columnStates = $state<Record<string, Record<string, string>>>({});
 let availableScorecards = $state<any[]>([]);
 let attachedScorecards = $state<any[]>([]);
 let loadingScorecards = $state(false);
+let scorecardError = $state("");
 
 // Display rule context modal
 let showDisplayRuleContext = $state(false);
@@ -263,6 +264,10 @@ function handleTabChange(tab: string) {
 		// Default to current scene if available, otherwise first scene
 		selectedSceneId = board.currentSceneId || board.scenes[0].id;
 		selectedColumnId = "";
+		const defaultScene = board.scenes.find((s: any) => s.id === selectedSceneId);
+		if (defaultScene?.mode === "scorecard") {
+			loadScorecardsForScene(selectedSceneId);
+		}
 	} else {
 		selectedColumnId = "";
 		selectedSceneId = "";
@@ -307,6 +312,9 @@ function updateSceneTitle(sceneId: string, title: string) {
 
 function updateSceneMode(sceneId: string, mode: string) {
 	onUpdateScene(sceneId, { mode });
+	if (mode === "scorecard") {
+		loadScorecardsForScene(sceneId);
+	}
 }
 
 function updateSceneFlags(sceneId: string, flags: string[]) {
@@ -369,24 +377,34 @@ async function updateColumnDisplay(
 
 // Scorecard handlers
 async function attachScorecard(scorecardId: string) {
+	scorecardError = "";
 	try {
-		await scorecardApi.attachScorecard(selectedSceneId, scorecardId);
-
+		const result = await scorecardApi.attachScorecard(selectedSceneId, scorecardId);
+		if (!result.success) {
+			scorecardError = (result as any).error || "Failed to attach scorecard";
+			return;
+		}
 		const attachedData = await scorecardApi.getSceneScorecards(selectedSceneId);
 		attachedScorecards = attachedData.sceneScorecards || [];
 	} catch (error) {
+		scorecardError = "Failed to attach scorecard";
 		console.error("Failed to attach scorecard:", error);
 	}
 }
 
 async function detachScorecard(sceneScorecardId: string) {
+	scorecardError = "";
 	try {
-		await scorecardApi.detachScorecard(sceneScorecardId);
-
+		const result = await scorecardApi.detachScorecard(sceneScorecardId);
+		if (!result.success) {
+			scorecardError = (result as any).error || "Failed to detach scorecard";
+			return;
+		}
 		attachedScorecards = attachedScorecards.filter(
 			(ss) => ss.id !== sceneScorecardId,
 		);
 	} catch (error) {
+		scorecardError = "Failed to detach scorecard";
 		console.error("Failed to detach scorecard:", error);
 	}
 }
@@ -1082,6 +1100,9 @@ let isThreeColumnMode = $derived(
                 {#if selectedScene.mode === "scorecard"}
                     <div class="form-section">
                         <h3>Scorecards</h3>
+                        {#if scorecardError}
+                            <p class="error-text">{scorecardError}</p>
+                        {/if}
                         {#if loadingScorecards}
                             <p>Loading scorecards...</p>
                         {:else if availableScorecards.length > 0}
@@ -1785,6 +1806,12 @@ Date:                   days_since days_since_uk</code
         color: var(--color-text-secondary);
         margin: 0;
         line-height: 1.5;
+    }
+
+    .error-text {
+        font-size: var(--text-sm);
+        color: var(--color-danger);
+        margin: 0 0 0.5rem;
     }
 
     .form-section {
