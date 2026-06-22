@@ -242,10 +242,10 @@ onMount(async () => {
 	try {
 		// Set current scene if available, checking display rules
 		// Scenes are already loaded in board.scenes from server
-		if (board.currentSceneId && board.scenes) {
-			const requestedScene = board.scenes.find(
-				(s: any) => s.id === board.currentSceneId,
-			);
+		if (board.scenes?.length > 0) {
+			const requestedScene = board.currentSceneId
+				? board.scenes.find((s: any) => s.id === board.currentSceneId)
+				: null;
 
 			// Check if the current scene should be displayed
 			if (
@@ -261,7 +261,7 @@ onMount(async () => {
 			) {
 				currentScene = requestedScene;
 			} else {
-				// Find the first valid scene
+				// Find the first valid scene (also handles null currentSceneId)
 				for (const scene of board.scenes) {
 					if (
 						evaluateDisplayRule(

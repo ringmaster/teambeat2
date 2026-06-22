@@ -165,8 +165,12 @@ export const POST: RequestHandler = async (event) => {
 		const now = new Date().toISOString();
 		const boardId = uuidv4();
 
+		// Pre-generate scene IDs so we know the first one before inserting the board
+		const sceneIds = data.scenes.map(() => uuidv4());
+		const firstSceneId = sceneIds[0] ?? null;
+
 		const result = await withTransaction(async (tx) => {
-			// Create board
+			// Create board — set currentSceneId to first scene if scenes are provided
 			await tx.insert(boards).values({
 				id: boardId,
 				seriesId,
@@ -175,6 +179,7 @@ export const POST: RequestHandler = async (event) => {
 				blameFreeMode: data.blameFreeMode,
 				votingAllocation: data.votingAllocation,
 				meetingDate: data.meetingDate ?? null,
+				currentSceneId: firstSceneId,
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -202,7 +207,7 @@ export const POST: RequestHandler = async (event) => {
 			const createdScenes = [];
 			for (let i = 0; i < data.scenes.length; i++) {
 				const scene = data.scenes[i];
-				const sceneId = uuidv4();
+				const sceneId = sceneIds[i];
 				const seq = scene.seq ?? i + 1;
 				await tx.insert(scenes).values({
 					id: sceneId,
