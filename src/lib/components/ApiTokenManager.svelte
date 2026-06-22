@@ -170,11 +170,10 @@ function isExpiringSoon(expiresAt: number) {
 		</ul>
 	{/if}
 
-	<p class="docs-link">
-		<a href="/api/v1/openapi.json" target="_blank" rel="noopener noreferrer">
-			View API documentation (OpenAPI)
-		</a>
-	</p>
+	<div class="docs-links">
+		<a href="/docs/claude-code">Configuration and Sample Prompt Usage</a>
+		<a href="/api/v1/openapi.json" target="_blank" rel="noopener noreferrer">OpenAPI spec</a>
+	</div>
 </div>
 
 <style>
@@ -319,8 +318,11 @@ h3 {
 	color: white;
 }
 
-.docs-link {
+.docs-links {
 	margin-top: 1rem;
 	font-size: 0.85rem;
+	display: flex;
+	gap: 1.25rem;
+	flex-wrap: wrap;
 }
 </style>
