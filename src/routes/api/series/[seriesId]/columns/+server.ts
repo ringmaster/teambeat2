@@ -33,9 +33,7 @@ export const GET: RequestHandler = async (event) => {
 			columns,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to fetch columns:", error);
 		return json(

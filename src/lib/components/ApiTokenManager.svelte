@@ -77,10 +77,14 @@ async function revokeToken(id: string) {
 	}
 }
 
-async function copyToken() {
+function accessUrl(token: string): string {
+	return `${window.location.origin}/api/v1/ai-setup/${token}`;
+}
+
+async function copyAccessUrl() {
 	if (!newToken) return;
 	try {
-		await navigator.clipboard.writeText(newToken);
+		await navigator.clipboard.writeText(accessUrl(newToken));
 		copied = true;
 		setTimeout(() => (copied = false), 2000);
 	} catch {
@@ -103,10 +107,10 @@ function isExpiringSoon(expiresAt: number) {
 </script>
 
 <div class="token-manager">
-	<h3>API Tokens</h3>
+	<h3>API Access</h3>
 	<p class="description">
-		Tokens let AI and automation clients access your boards. Each token lasts 90 days. The raw
-		token is shown only once — store it securely.
+		Create an API Access URL to give AI agents and automation clients access to your boards.
+		Each access URL is valid for 90 days. The URL is shown only once — copy it when it appears.
 	</p>
 
 	{#if error}
@@ -115,11 +119,12 @@ function isExpiringSoon(expiresAt: number) {
 
 	{#if newToken}
 		<div class="new-token-banner">
-			<p><strong>New token created.</strong> Copy it now — it won't be shown again.</p>
+			<p><strong>API Access URL created.</strong> Copy it now — it won't be shown again.</p>
+			<p class="access-url-hint">Give this URL to Claude Code or another AI agent and it will have everything needed to operate Teambeat.</p>
 			<div class="token-display">
-				<code>{newToken}</code>
-				<button class="btn-copy" onclick={copyToken}>
-					{copied ? "Copied!" : "Copy"}
+				<code>{accessUrl(newToken)}</code>
+				<button class="btn-copy" onclick={copyAccessUrl}>
+					{copied ? "Copied!" : "Copy URL"}
 				</button>
 			</div>
 			<button class="btn-dismiss" onclick={() => (newToken = null)}>Dismiss</button>
@@ -129,20 +134,20 @@ function isExpiringSoon(expiresAt: number) {
 	<form class="create-form" onsubmit={(e) => { e.preventDefault(); createToken(); }}>
 		<input
 			type="text"
-			placeholder="Token label (e.g. My AI agent)"
+			placeholder="Label (e.g. Claude Code, My AI agent)"
 			bind:value={newLabel}
 			maxlength="100"
 			disabled={creating}
 		/>
 		<button type="submit" disabled={creating || !newLabel.trim()}>
-			{creating ? "Creating…" : "Create token"}
+			{creating ? "Creating…" : "Create API Access URL"}
 		</button>
 	</form>
 
 	{#if loading}
-		<p class="loading">Loading tokens…</p>
+		<p class="loading">Loading…</p>
 	{:else if tokens.length === 0}
-		<p class="empty">No active tokens. Create one above.</p>
+		<p class="empty">No active access URLs. Create one above.</p>
 	{:else}
 		<ul class="token-list">
 			{#each tokens as token (token.id)}
@@ -204,6 +209,12 @@ h3 {
 	margin-bottom: 1rem;
 }
 
+.access-url-hint {
+	font-size: 0.85rem;
+	color: var(--color-text-secondary, #555);
+	margin: 0.25rem 0 0.5rem;
+}
+
 .token-display {
 	display: flex;
 	align-items: center;
@@ -212,7 +223,7 @@ h3 {
 }
 
 .token-display code {
-	font-size: 0.85rem;
+	font-size: 0.8rem;
 	background: var(--color-code-bg, #f0f0f0);
 	padding: 0.25rem 0.5rem;
 	border-radius: 4px;

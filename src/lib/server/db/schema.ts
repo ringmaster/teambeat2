@@ -95,6 +95,23 @@ export const seriesMembers = table(
 	}),
 );
 
+export const apiTokens = table(
+	"api_tokens",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+		tokenHash: text("token_hash").notNull(),
+		label: text("label").notNull(),
+		expiresAt: bigintField("expires_at").notNull(),
+		lastUsedAt: bigintField("last_used_at"),
+		createdAt: bigintField("created_at").notNull(),
+	},
+	(table) => ({
+		tokenHashUnique: unique("api_tokens_token_hash_unique").on(table.tokenHash),
+		userIdIdx: indexField("api_tokens_user_id_idx").on(table.userId),
+	}),
+);
+
 export const boards = table("boards", {
 	id: text("id").primaryKey(),
 	seriesId: text("series_id")
@@ -155,6 +172,7 @@ export const scenes = table("scenes", {
 			| "static"
 			| "survey"
 			| "quadrant"
+			| "data"
 		>(),
 	seq: integer("seq").notNull(),
 	selectedCardId: text("selected_card_id").references(() => cards.id, {
@@ -588,26 +606,29 @@ export const sceneScorecardResults = table(
 	}),
 );
 
-// API Tokens - for programmatic / AI access to the v1 REST API
-// Token hashes are SHA-256 of the raw tb_* token; raw tokens are never stored.
-export const apiTokens = table(
-	"api_tokens",
-	{
-		id: text("id").primaryKey(),
-		userId: text("user_id")
-			.notNull()
-			.references(() => users.id, { onDelete: "cascade" }),
-		tokenHash: text("token_hash").notNull(),
-		label: text("label").notNull(),
-		expiresAt: bigintField("expires_at").notNull(),
-		lastUsedAt: bigintField("last_used_at"),
-		createdAt: bigintField("created_at").notNull(),
-	},
-	(table) => ({
-		tokenHashUnique: unique("api_tokens_token_hash_unique").on(table.tokenHash),
-		userIdIdx: indexField("api_tokens_user_id_idx").on(table.userId),
-	}),
-);
+export const boardDatasets = table("board_datasets", {
+	id: text("id").primaryKey(),
+	boardId: text("board_id").notNull().unique().references(() => boards.id, { onDelete: "cascade" }),
+	data: text("data"),
+	updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
+	updatedBy: text("updated_by"),
+});
+
+export const dataSceneRules = table("data_scene_rules", {
+	id: text("id").primaryKey(),
+	sceneId: text("scene_id").notNull().references(() => scenes.id, { onDelete: "cascade" }),
+	seq: integer("seq").notNull().default(0),
+	section: text("section").notNull().default(""),
+	label: text("label").notNull().default(""),
+	query: text("query").notNull().default(""),
+	panelSize: text("panel_size").notNull().default("medium").$type<"small" | "medium" | "full">(),
+	titleTemplate: text("title_template").notNull().default(""),
+	bodyTemplate: text("body_template").notNull().default(""),
+	copyTemplate: text("copy_template"),
+	emphasisPath: text("emphasis_path"),
+	emphasisMap: text("emphasis_map"),
+	builtinTemplate: text("builtin_template"),
+});
 
 // Drizzle ORM Relations - required for relational queries with .query API
 export const boardsRelations = relations(boards, ({ one, many }) => ({
@@ -619,6 +640,10 @@ export const boardsRelations = relations(boards, ({ one, many }) => ({
 	scenes: many(scenes),
 	agreements: many(agreements),
 	presence: many(presence),
+	dataset: one(boardDatasets, {
+		fields: [boards.id],
+		references: [boardDatasets.boardId],
+	}),
 }));
 
 export const columnsRelations = relations(columns, ({ one, many }) => ({
@@ -665,6 +690,7 @@ export const scenesRelations = relations(scenes, ({ one, many }) => ({
 	healthQuestions: many(healthQuestions),
 	sceneScorecards: many(sceneScorecards),
 	quadrantPositions: many(quadrantPositions),
+	dataRules: many(dataSceneRules),
 }));
 
 export const scenesColumnsRelations = relations(scenesColumns, ({ one }) => ({
@@ -934,3 +960,11 @@ export const featureAnalyticsDaily = table(
 		),
 	}),
 );
+
+export const boardDatasetsRelations = relations(boardDatasets, ({ one }) => ({
+	board: one(boards, { fields: [boardDatasets.boardId], references: [boards.id] }),
+}));
+
+export const dataSceneRulesRelations = relations(dataSceneRules, ({ one }) => ({
+	scene: one(scenes, { fields: [dataSceneRules.sceneId], references: [scenes.id] }),
+}));

@@ -39,9 +39,7 @@ export const GET: RequestHandler = async (event) => {
 
 		return json(response);
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to fetch user voting data" },

@@ -38,6 +38,7 @@ interface TemplateScene {
 	description?: string; // Optional description/markdown content for the scene
 	mode:
 		| "columns"
+		| "data"
 		| "present"
 		| "review"
 		| "agreements"
@@ -254,11 +255,10 @@ export const BOARD_TEMPLATES: Record<string, BoardTemplate> = {
 			},
 			{
 				title: "Scorecard",
-				mode: "scorecard" as const,
+				mode: "data" as const,
 				seq: 2,
-				displayRule: "$.scene.scorecardCount 0 gt",
-				flags: [],
-				visibleColumns: [],
+				displayRule: "",
+				flags: [SCENE_FLAGS.ALLOW_ADD_CARDS],
 			},
 			{
 				title: "Issue List",

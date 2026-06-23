@@ -2,6 +2,7 @@
 import { onDestroy, onMount } from "svelte";
 import { browser } from "$app/environment";
 import { evaluateDisplayRule } from "$lib/utils/display-rule-context";
+import { toastStore } from "$lib/stores/toast";
 
 interface Props {
 	board: any;
@@ -29,12 +30,9 @@ let {
 	onNextScene,
 }: Props = $props();
 
-// Button should only be disabled if board is completed or archived
-const isButtonDisabled = $derived(false); // board.status === "completed" || board.status === "archived"
+const isButtonDisabled = $derived(false);
 
-// Check if a scene would be skipped based on its display rule
 function wouldSceneBeSkipped(scene: any): boolean {
-	// Only evaluate display rules in the browser to avoid SSR issues
 	if (!browser) return false;
 	return !evaluateDisplayRule(
 		scene,
@@ -47,14 +45,10 @@ function wouldSceneBeSkipped(scene: any): boolean {
 }
 
 function handleNextScene() {
-	if (!isButtonDisabled && onNextScene) {
-		onNextScene();
-	}
+	if (!isButtonDisabled && onNextScene) onNextScene();
 }
 
-// Keyboard shortcut handler
 function handleKeydown(e: KeyboardEvent) {
-	// Control+G or Cmd+G for Next Scene
 	if ((e.ctrlKey || e.metaKey) && e.key === "g") {
 		e.preventDefault();
 		handleNextScene();
@@ -62,16 +56,14 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 onMount(() => {
-	if (browser) {
-		window.addEventListener("keydown", handleKeydown);
-	}
+	if (browser) window.addEventListener("keydown", handleKeydown);
 });
 
 onDestroy(() => {
-	if (browser) {
-		window.removeEventListener("keydown", handleKeydown);
-	}
+	if (browser) window.removeEventListener("keydown", handleKeydown);
 });
+
+
 </script>
 
 <div class="scene-button-group">
@@ -88,22 +80,10 @@ onDestroy(() => {
         }}
         aria-label="Select a scene"
     >
-        <button
-            class="toolbar-button toolbar-button-primary toolbar-button-left"
-        >
+        <button class="toolbar-button toolbar-button-primary toolbar-button-left">
             <span>{currentScene?.title || "Scene"}</span>
-            <svg
-                class="icon-sm"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                />
+            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
         </button>
 
@@ -113,10 +93,7 @@ onDestroy(() => {
                     {@const isSkipped = wouldSceneBeSkipped(scene)}
                     {@const isActive = scene.id === currentScene?.id || scene.id === board.currentSceneId}
                     <button
-                        onclick={() => {
-                            onSceneChange(scene.id);
-                            onShowSceneDropdown(false);
-                        }}
+                        onclick={() => { onSceneChange(scene.id); onShowSceneDropdown(false); }}
                         class="scene-dropdown-item"
                         class:scene-dropdown-item-active={isActive}
                         class:scene-dropdown-item-skipped={isSkipped}
@@ -136,18 +113,8 @@ onDestroy(() => {
         aria-label="Next scene (Ctrl+G)"
         data-testid="next-scene-button"
     >
-        <svg
-            class="icon-sm"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-            />
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
     </button>
 </div>
@@ -174,6 +141,19 @@ onDestroy(() => {
     .toolbar-button-right:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    .scene-dropdown-divider {
+        height: 1px;
+        background: var(--surface-tertiary, #e5e7eb);
+        margin: var(--spacing-1, 0.25rem) 0;
+    }
+
+    .scene-dropdown-item-api {
+        display: flex;
+        align-items: center;
+        font-size: var(--text-xs, 0.75rem);
+        color: var(--text-secondary, #6b7280);
     }
 
     :global(.scene-dropdown-item-skipped) {

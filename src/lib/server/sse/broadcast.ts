@@ -632,3 +632,11 @@ export function broadcastPresentFilterChanged(
 
   sseManager.broadcastToBoard(boardId, message);
 }
+
+export function broadcastDataSourceUpdated(boardId: string) {
+  broadcastToBoardUsers(boardId, {
+    type: "data_source_updated",
+    board_id: boardId,
+    timestamp: Date.now(),
+  });
+}

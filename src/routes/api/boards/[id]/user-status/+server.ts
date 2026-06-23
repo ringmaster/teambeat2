@@ -105,9 +105,7 @@ export const GET: RequestHandler = async (event) => {
 			},
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to get user status:", error);
 		return json(

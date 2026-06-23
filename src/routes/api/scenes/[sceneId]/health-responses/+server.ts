@@ -34,9 +34,7 @@ export const GET: RequestHandler = async (event) => {
 			responses,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to fetch health responses:", error);
 		return json(

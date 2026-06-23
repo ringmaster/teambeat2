@@ -49,9 +49,7 @@ export const POST: RequestHandler = async (event) => {
 			questions,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

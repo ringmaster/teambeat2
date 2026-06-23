@@ -9,7 +9,7 @@ export const GET: RequestHandler = async (event) => {
 		const series = await findSeriesByUser(user.userId);
 		return json({ success: true, series });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to fetch series" }, { status: 500 });
 	}
 };

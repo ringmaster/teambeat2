@@ -58,9 +58,7 @@ export const PATCH: RequestHandler = async (event) => {
 			column: updatedColumn,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(
@@ -117,9 +115,7 @@ export const DELETE: RequestHandler = async (event) => {
 			success: true,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Error deleting column:", error);
 		return json(

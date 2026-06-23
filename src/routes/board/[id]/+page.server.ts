@@ -1,5 +1,6 @@
 import { error } from "@sveltejs/kit";
 import { requireUser } from "$lib/server/auth/index.js";
+
 import { refreshPresenceOnBoardAction } from "$lib/server/middleware/presence.js";
 import { findAgreementsByBoardId } from "$lib/server/repositories/agreement.js";
 import { getBoardWithDetails } from "$lib/server/repositories/board.js";

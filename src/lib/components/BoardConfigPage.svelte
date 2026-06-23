@@ -119,6 +119,144 @@ let quadrantConfigForm = $state<QuadrantConfig>({
 let showQuadrantTemplates = $state(false);
 let lastLoadedQuadrantSceneId = $state<string | null>(null);
 
+// Data scene rules state
+type DataRule = {
+	id?: string;
+	seq: number;
+	section: string;
+	label: string;
+	query: string;
+	panelSize: "small" | "medium" | "full";
+	titleTemplate: string;
+	bodyTemplate: string;
+	copyTemplate: string;
+	emphasisPath: string;
+	emphasisMap: string;
+};
+let dataRules = $state<DataRule[]>([]);
+let dataSaving = $state(false);
+let dataRulesError = $state("");
+let lastLoadedDataSceneId = $state<string | null>(null);
+let expandedRuleIndices = $state<Set<number>>(new Set());
+
+// Manual dataset state
+let datasetJson = $state<string>("");
+let datasetUpdatedAt = $state<string | null>(null);
+let datasetSaving = $state(false);
+let datasetError = $state<string | null>(null);
+let datasetSuccess = $state(false);
+
+function newDataRule(seq: number): DataRule {
+	return { seq, section: "", label: "", query: "", panelSize: "medium", titleTemplate: "", bodyTemplate: "", copyTemplate: "", emphasisPath: "", emphasisMap: "" };
+}
+
+async function loadDataRules(sceneId: string) {
+	try {
+		const res = await fetch(`/api/scenes/${sceneId}/data-rules`);
+		const json = await res.json();
+		if (json.success) {
+			dataRules = (json.rules || []).map((r: any) => ({
+				id: r.id,
+				seq: r.seq,
+				section: r.section || "",
+				label: r.label || "",
+				query: r.query || "",
+				panelSize: r.panelSize || "medium",
+				titleTemplate: r.titleTemplate || "",
+				bodyTemplate: r.bodyTemplate || "",
+				copyTemplate: r.copyTemplate || "",
+				emphasisPath: r.emphasisPath || "",
+				emphasisMap: r.emphasisMap || "",
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load data rules:", e);
+	}
+}
+
+async function saveDataRules(sceneId: string) {
+	dataSaving = true;
+	dataRulesError = "";
+	try {
+		const res = await fetch(`/api/scenes/${sceneId}/data-rules`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(dataRules.map((r, i) => ({ ...r, seq: i }))),
+		});
+		const json = await res.json();
+		if (!json.success) dataRulesError = json.error || "Save failed";
+	} catch (e) {
+		dataRulesError = "Failed to save rules";
+	} finally {
+		dataSaving = false;
+	}
+}
+
+async function loadBoardDataset(boardId: string) {
+	try {
+		const res = await fetch(`/api/boards/${boardId}/data-source`);
+		const json = await res.json();
+		if (json.success) {
+			datasetJson = json.data ? JSON.stringify(json.data, null, 2) : "";
+			datasetUpdatedAt = json.updatedAt ?? null;
+		}
+	} catch (e) {
+		console.error("Failed to load dataset:", e);
+	}
+}
+
+async function saveBoardDataset(boardId: string) {
+	datasetError = null;
+	datasetSuccess = false;
+	let parsed: any;
+	try {
+		parsed = JSON.parse(datasetJson.trim() || "{}");
+	} catch {
+		datasetError = "Invalid JSON — please fix the syntax before saving.";
+		return;
+	}
+	datasetSaving = true;
+	try {
+		const res = await fetch(`/api/boards/${boardId}/data-source`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(parsed),
+		});
+		const json = await res.json();
+		if (json.success) {
+			datasetSuccess = true;
+			datasetUpdatedAt = json.updatedAt ?? new Date().toISOString();
+			setTimeout(() => { datasetSuccess = false; }, 3000);
+		} else {
+			datasetError = json.error || "Save failed";
+		}
+	} catch (e) {
+		datasetError = "Failed to save dataset";
+	} finally {
+		datasetSaving = false;
+	}
+}
+
+async function clearBoardDataset(boardId: string) {
+	if (!confirm("Clear all data for this board? This cannot be undone.")) return;
+	datasetSaving = true;
+	datasetError = null;
+	try {
+		const res = await fetch(`/api/boards/${boardId}/data-source`, { method: "DELETE" });
+		const json = await res.json();
+		if (json.success) {
+			datasetJson = "";
+			datasetUpdatedAt = null;
+		} else {
+			datasetError = json.error || "Failed to clear dataset";
+		}
+	} catch {
+		datasetError = "Failed to clear dataset";
+	} finally {
+		datasetSaving = false;
+	}
+}
+
 // Update form when board changes
 $effect(() => {
 	if (board) {
@@ -218,6 +356,21 @@ $effect(() => {
 	}
 });
 
+// Load data rules and dataset when a data scene is selected
+$effect(() => {
+	if (selectedScene?.mode === "data" && selectedScene.id !== lastLoadedDataSceneId) {
+		lastLoadedDataSceneId = selectedScene.id;
+		loadDataRules(selectedScene.id);
+		loadBoardDataset(board.id);
+	} else if (selectedScene?.mode !== "data") {
+		lastLoadedDataSceneId = null;
+		dataRules = [];
+		datasetJson = "";
+		datasetUpdatedAt = null;
+		datasetError = null;
+	}
+});
+
 // Load column states for scenes
 async function initializeColumnStates(sceneId: string) {
 	if (!columnStates[sceneId]) {
@@ -264,6 +417,7 @@ function handleTabChange(tab: string) {
 		// Default to current scene if available, otherwise first scene
 		selectedSceneId = board.currentSceneId || board.scenes[0].id;
 		selectedColumnId = "";
+		initializeColumnStates(selectedSceneId);
 		const defaultScene = board.scenes.find((s: any) => s.id === selectedSceneId);
 		if (defaultScene?.mode === "scorecard") {
 			loadScorecardsForScene(selectedSceneId);
@@ -314,6 +468,16 @@ function updateSceneMode(sceneId: string, mode: string) {
 	onUpdateScene(sceneId, { mode });
 	if (mode === "scorecard") {
 		loadScorecardsForScene(sceneId);
+	}
+	if (mode === "data") {
+		lastLoadedDataSceneId = null;
+		loadDataRules(sceneId);
+		loadBoardDataset(board.id);
+	} else {
+		lastLoadedDataSceneId = null;
+		dataRules = [];
+		datasetJson = "";
+		datasetUpdatedAt = null;
 	}
 }
 
@@ -370,6 +534,19 @@ async function updateColumnDisplay(
 			columnStates[sceneId] = {};
 		}
 		columnStates[sceneId][columnId] = state;
+
+		// Keep board.hiddenColumnsByScene in sync so re-initialization reads current state
+		if (!board.hiddenColumnsByScene) board.hiddenColumnsByScene = {};
+		if (!board.hiddenColumnsByScene[sceneId]) board.hiddenColumnsByScene[sceneId] = [];
+		if (state === "hidden") {
+			if (!board.hiddenColumnsByScene[sceneId].includes(columnId)) {
+				board.hiddenColumnsByScene[sceneId].push(columnId);
+			}
+		} else {
+			board.hiddenColumnsByScene[sceneId] = board.hiddenColumnsByScene[sceneId].filter(
+				(id: string) => id !== columnId,
+			);
+		}
 	} catch (error) {
 		console.error("Failed to update column display:", error);
 	}
@@ -800,6 +977,7 @@ let isThreeColumnMode = $derived(
                     >
                         <option value="agreements">Agreements</option>
                         <option value="columns">Columns</option>
+                        <option value="data">Data</option>
                         <option value="present">Present</option>
                         <option value="quadrant">Quadrant</option>
                         <option value="review">Review</option>
@@ -1093,6 +1271,148 @@ let isThreeColumnMode = $derived(
                                     {column.title}
                                 </label>
                             {/each}
+                        </div>
+                    </div>
+                {/if}
+
+                {#if selectedScene.mode === "data"}
+                    <div class="form-section">
+                        <h3>Data Rules</h3>
+                        <p class="help-text">Each rule queries the series dataset and renders matching items as panels in the dashboard. Rules are displayed in order, grouped by section.</p>
+                        {#if dataRulesError}
+                            <p class="error-text">{dataRulesError}</p>
+                        {/if}
+                        {#each dataRules as rule, i}
+                            {@const expanded = expandedRuleIndices.has(i)}
+                            <div class="data-rule-card">
+                                <button
+                                    type="button"
+                                    class="data-rule-header"
+                                    onclick={() => {
+                                        const next = new Set(expandedRuleIndices);
+                                        if (next.has(i)) { next.delete(i); } else { next.add(i); }
+                                        expandedRuleIndices = next;
+                                    }}
+                                    aria-expanded={expanded}
+                                >
+                                    <span class="data-rule-summary">
+                                        <svg class="data-rule-chevron {expanded ? 'expanded' : ''}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                                        <strong>Rule {i + 1}</strong>
+                                        {#if rule.label}<span class="data-rule-label-preview">— {rule.label}</span>{/if}
+                                    </span>
+                                </button>
+                                {#if expanded}
+                                    <div class="data-rule-body">
+                                        <div class="form-group">
+                                            <label>Section heading</label>
+                                            <input type="text" class="input" bind:value={rule.section} placeholder="e.g. Aging WIP" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Label</label>
+                                            <input type="text" class="input" bind:value={rule.label} placeholder="e.g. Aged Cards" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>JMESPath query</label>
+                                            <input type="text" class="input" bind:value={rule.query} placeholder="e.g. reverse(sort_by(cards[?warn], &age))" />
+                                            <p class="field-hint">JMESPath expression against the dataset. Returns one or more items to render as panels.</p>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Panel size</label>
+                                            <select class="select" bind:value={rule.panelSize}>
+                                                <option value="small">Small (stat tile)</option>
+                                                <option value="medium">Medium (default)</option>
+                                                <option value="full">Full width</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Title template</label>
+                                            <input type="text" class="input" bind:value={rule.titleTemplate} placeholder={"e.g. {id}: {title}"} />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Body template</label>
+                                            <textarea class="input" rows="3" bind:value={rule.bodyTemplate} placeholder={"e.g. {age} days — SLE: {sle}\nAssigned: {assignee}"}></textarea>
+                                            <p class="field-hint">Use <code>{`{field.path}`}</code> to interpolate values. Supports dot-notation for nested fields.</p>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Card copy template <span class="optional">(optional)</span></label>
+                                            <input type="text" class="input" bind:value={rule.copyTemplate} placeholder="Defaults to title + body" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Emphasis field path <span class="optional">(optional)</span></label>
+                                            <input type="text" class="input" bind:value={rule.emphasisPath} placeholder="e.g. warn or severity" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Emphasis color map <span class="optional">(optional JSON)</span></label>
+                                            <input type="text" class="input" bind:value={rule.emphasisMap} placeholder={'e.g. {"true":"danger","critical":"danger","high":"warning"}'} />
+                                            <p class="field-hint">Maps field values to: <code>danger</code>, <code>warning</code>, <code>info</code>, or <code>neutral</code>.</p>
+                                        </div>
+                                        <div class="data-rule-delete-row">
+                                            <button
+                                                type="button"
+                                                class="button button-danger-outline"
+                                                onclick={() => {
+                                                    dataRules.splice(i, 1);
+                                                    dataRules = [...dataRules];
+                                                    const next = new Set(expandedRuleIndices);
+                                                    next.delete(i);
+                                                    expandedRuleIndices = next;
+                                                }}
+                                            >
+                                                Delete Rule
+                                            </button>
+                                        </div>
+                                    </div>
+                                {/if}
+                            </div>
+                        {/each}
+                        <div class="data-rule-actions">
+                            <button type="button" class="button button-secondary" onclick={() => { dataRules = [...dataRules, newDataRule(dataRules.length)]; }}>
+                                + Add Rule
+                            </button>
+                            <button type="button" class="button button-primary" disabled={dataSaving} onclick={() => saveDataRules(selectedScene.id)}>
+                                {dataSaving ? "Saving…" : "Save Rules"}
+                            </button>
+                        </div>
+                    </div>
+                {/if}
+
+                {#if selectedScene.mode === "data"}
+                    <div class="form-section">
+                        <h3>Board Dataset</h3>
+                        <p class="field-hint">Paste or edit the JSON dataset for this board. Changes here apply only to this board and do not fan out to other boards in the series.</p>
+                        {#if datasetUpdatedAt}
+                            <p class="dataset-meta">Last updated: {new Date(datasetUpdatedAt).toLocaleString()}</p>
+                        {/if}
+                        {#if datasetError}
+                            <p class="error-text">{datasetError}</p>
+                        {/if}
+                        {#if datasetSuccess}
+                            <p class="success-text">Dataset saved successfully.</p>
+                        {/if}
+                        <textarea
+                            class="input dataset-textarea"
+                            bind:value={datasetJson}
+                            placeholder={'{"cards": [{"id": "PE-1", "title": "Example card"}]}'}
+                            rows={16}
+                            spellcheck={false}
+                        ></textarea>
+                        <div class="data-rule-actions">
+                            <button
+                                type="button"
+                                class="button button-danger-outline"
+                                disabled={datasetSaving || !datasetJson}
+                                onclick={() => clearBoardDataset(board.id)}
+                            >
+                                Clear Data
+                            </button>
+                            <button
+                                type="button"
+                                class="button button-primary"
+                                disabled={datasetSaving}
+                                onclick={() => saveBoardDataset(board.id)}
+                            >
+                                {datasetSaving ? "Saving…" : "Validate & Save"}
+                            </button>
                         </div>
                     </div>
                 {/if}
@@ -2151,6 +2471,119 @@ Date:                   days_since days_since_uk</code
         .preset-description {
             font-size: 0.875rem;
             color: var(--color-gray-600);
+        }
+    }
+
+    .data-rule-card {
+        border: 1px solid var(--color-gray-200);
+        border-radius: var(--radius-md, 6px);
+        margin-bottom: 0.5rem;
+        background: var(--color-gray-50, #f9fafb);
+        overflow: hidden;
+    }
+
+    .data-rule-header {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+
+        &:hover {
+            background: var(--color-gray-100, #f3f4f6);
+        }
+    }
+
+    .data-rule-summary {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+    }
+
+    .data-rule-label-preview {
+        font-weight: 400;
+        color: var(--text-secondary, #6b7280);
+        font-size: 0.875rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .data-rule-chevron {
+        flex-shrink: 0;
+        color: var(--text-secondary, #6b7280);
+        transition: transform 0.15s ease;
+
+        &.expanded {
+            transform: rotate(90deg);
+        }
+    }
+
+    .data-rule-body {
+        padding: 0 1rem 1rem;
+        border-top: 1px solid var(--color-gray-200);
+    }
+
+    .data-rule-delete-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--color-gray-200);
+    }
+
+    .data-rule-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .error-text {
+        color: var(--color-red-600, #dc2626);
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .optional {
+        color: var(--color-gray-400, #9ca3af);
+        font-weight: 400;
+        font-size: 0.8em;
+    }
+
+    .dataset-textarea {
+        width: 100%;
+        font-family: monospace;
+        font-size: 0.82rem;
+        resize: vertical;
+    }
+
+    .dataset-meta {
+        font-size: var(--text-xs, 0.8rem);
+        color: var(--text-secondary, #6b7280);
+        margin-bottom: 0.5rem;
+    }
+
+    .success-text {
+        color: var(--color-green-600, #16a34a);
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .button-danger-outline {
+        background: none;
+        border: 1px solid var(--color-red-400, #f87171);
+        color: var(--color-red-600, #dc2626);
+        &:hover:not(:disabled) {
+            background: var(--color-red-50, #fef2f2);
+        }
+        &:disabled {
+            opacity: 0.5;
         }
     }
 </style>

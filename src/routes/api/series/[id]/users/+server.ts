@@ -44,9 +44,7 @@ export const GET: RequestHandler = async (event) => {
 			users: members,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to fetch users" },
@@ -100,9 +98,7 @@ export const POST: RequestHandler = async (event) => {
 			message: "User added successfully",
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(
@@ -162,9 +158,7 @@ export const PUT: RequestHandler = async (event) => {
 			message: "User role updated successfully",
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(
@@ -231,9 +225,7 @@ export const DELETE: RequestHandler = async (event) => {
 			message: "User removed successfully",
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to remove user" },

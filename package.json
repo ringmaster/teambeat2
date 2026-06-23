@@ -66,6 +66,7 @@
     "d3-contour": "^4.0.2",
     "drizzle-orm": "^0.44.5",
     "flatpickr": "^4.6.13",
+    "jmespath": "^0.16.0",
     "js-yaml": "^4.1.0",
     "marked": "^16.4.0",
     "moment": "^2.30.1",

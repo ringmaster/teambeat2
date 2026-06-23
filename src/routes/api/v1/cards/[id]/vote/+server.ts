@@ -103,7 +103,7 @@ export const POST: RequestHandler = async (event) => {
 
 		return json(response);
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to cast vote" }, { status: 500 });
 	}
 };

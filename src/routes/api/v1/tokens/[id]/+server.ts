@@ -12,7 +12,7 @@ export const DELETE: RequestHandler = async (event) => {
 		}
 		return json({ success: true });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to revoke token" }, { status: 500 });
 	}
 };

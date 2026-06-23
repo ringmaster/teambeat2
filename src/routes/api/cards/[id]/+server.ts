@@ -101,9 +101,7 @@ export const PUT: RequestHandler = async (event) => {
 			card: enrichedCard,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(
@@ -181,9 +179,7 @@ export const DELETE: RequestHandler = async (event) => {
 			success: true,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to delete card" },
@@ -282,9 +278,7 @@ export const PATCH: RequestHandler = async (event) => {
 			affectedCardIds,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

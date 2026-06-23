@@ -168,9 +168,7 @@ ${question.description ? `_${question.description}_\n\n` : ""}**Average:** ${ave
 			card,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

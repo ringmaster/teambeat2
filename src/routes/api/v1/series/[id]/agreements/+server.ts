@@ -73,7 +73,7 @@ export const GET: RequestHandler = async (event) => {
 			meta: { total, limit, offset },
 		});
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to fetch agreements" }, { status: 500 });
 	}
 };

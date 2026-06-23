@@ -100,9 +100,7 @@ export const GET: RequestHandler = async (event) => {
 			},
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Error getting facilitator stats:", error);
 		return json(

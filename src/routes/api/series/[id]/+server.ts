@@ -48,9 +48,7 @@ export const GET: RequestHandler = async (event) => {
 			members,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to fetch series details" },
@@ -102,9 +100,7 @@ export const PUT: RequestHandler = async (event) => {
 
 		return json({ success: true, name: trimmedName });
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to rename series:", error);
 
@@ -144,9 +140,7 @@ export const DELETE: RequestHandler = async (event) => {
 		console.log("Series deletion completed successfully");
 		return json({ success: true });
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to delete series:", error);
 

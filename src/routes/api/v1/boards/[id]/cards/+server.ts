@@ -50,7 +50,7 @@ export const GET: RequestHandler = async (event) => {
 
 		return json({ success: true, cards: result });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to fetch cards" }, { status: 500 });
 	}
 };
@@ -86,7 +86,7 @@ export const POST: RequestHandler = async (event) => {
 
 		return json({ success: true, card: enrichedCard }, { status: 201 });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to create card" }, { status: 500 });
 	}
 };

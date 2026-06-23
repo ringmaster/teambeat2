@@ -88,7 +88,7 @@ export const GET: RequestHandler = async (event) => {
 			},
 		});
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to fetch board" }, { status: 500 });
 	}
 };
