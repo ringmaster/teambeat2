@@ -21,6 +21,7 @@ let { user }: Props = $props();
 
 let series: any[] = $state([]);
 let loading = $state(true);
+let hasApiTokens = $state(false);
 let newSeriesName = $state("");
 let seriesError = $state("");
 let creatingNewSeries = $state(false);
@@ -58,6 +59,9 @@ onMount(async () => {
 		// Load series
 		const seriesData = await dashboardApi.listSeries();
 		series = seriesData.series;
+
+		// Check if user has API tokens
+		fetch("/api/v1/tokens").then(r => r.json()).then(j => { hasApiTokens = (j.tokens?.length ?? 0) > 0; }).catch(() => {});
 
 		series.forEach((s) => {
 			initializeBoardName(s.id, s.name);
@@ -401,6 +405,15 @@ async function renameSeries() {
 	}
 }
 
+async function copySeriesId(seriesId: string) {
+	try {
+		await navigator.clipboard.writeText(seriesId);
+		toastStore.success("Series ID copied to clipboard");
+	} catch {
+		toastStore.error("Failed to copy Series ID to clipboard");
+	}
+}
+
 async function copySeriesLink(seriesId: string) {
 	const shortCode = seriesIdToShortCode(seriesId);
 	const url = `${window.location.origin}/b/${shortCode}`;
@@ -608,6 +621,19 @@ async function copySeriesLink(seriesId: string) {
                                                     />
                                                     Copy Link
                                                 </button>
+                                                {#if hasApiTokens}
+                                                <button
+                                                    onclick={() => copySeriesId(s.id)}
+                                                    class="dropdown-menu-item"
+                                                    role="menuitem"
+                                                >
+                                                    <Icon
+                                                        name="copy"
+                                                        size="sm"
+                                                    />
+                                                    Copy Series ID for API use
+                                                </button>
+                                                {/if}
                                                 <button
                                                     onclick={() =>
                                                         openRenameSeries(s)}

@@ -18,7 +18,7 @@ export const GET: RequestHandler = async (event) => {
 		const tokens = await listApiTokens(user.userId);
 		return json({ success: true, tokens });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to list tokens" }, { status: 500 });
 	}
 };
@@ -35,7 +35,7 @@ export const POST: RequestHandler = async (event) => {
 			{ status: 201 },
 		);
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		if (err instanceof z.ZodError) {
 			return json(
 				{ success: false, error: "Invalid input", details: err.errors },

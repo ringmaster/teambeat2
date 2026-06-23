@@ -6,6 +6,7 @@ import { resolve } from "$app/paths";
 import { page } from "$app/stores";
 import { SSEClient } from "$lib/client/sse-client.js";
 import AgreementsScene from "$lib/components/AgreementsScene.svelte";
+import DataScene from "$lib/components/scenes/DataScene.svelte";
 import BoardColumns from "$lib/components/BoardColumns.svelte";
 import BoardConfigPage from "$lib/components/BoardConfigPage.svelte";
 import BoardHeader from "$lib/components/BoardHeader.svelte";
@@ -188,6 +189,7 @@ $effect(() => {
 
 // Templates
 let templates: any[] = $state(data.templates);
+
 
 // Process voting data hydrated from SSR immediately to avoid flash
 if (data.votingData?.user_voting_data) {
@@ -949,6 +951,14 @@ function handleSSEMessage(data: any) {
 					}),
 				);
 			}
+			break;
+		case "data_source_updated":
+			// Notify DataScene component to refresh data
+			window.dispatchEvent(
+				new CustomEvent("data_source_updated", {
+					detail: { boardId: data.board_id },
+				}),
+			);
 			break;
 		case "timer_update": {
 			const payload = data.data;
@@ -3001,6 +3011,13 @@ let dragState = $derived({
             currentUserId={user?.userId}
             isAdmin={userRole === "admin"}
             isFacilitator={userRole === "facilitator"}
+        />
+    {:else if displayedScene?.mode === "data"}
+        <DataScene
+            {board}
+            scene={displayedScene}
+            enabledColumns={visibleColumns}
+            canAddCards={getSceneCapability(displayedScene, board?.status, "allow_add_cards")}
         />
     {:else if displayedScene?.mode === "columns"}
         <BoardColumns

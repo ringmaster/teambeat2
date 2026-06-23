@@ -78,9 +78,7 @@ export const PATCH: RequestHandler = async (event) => {
 			card: enrichedCard,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

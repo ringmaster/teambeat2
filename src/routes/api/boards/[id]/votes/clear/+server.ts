@@ -84,9 +84,7 @@ export const DELETE: RequestHandler = async (event) => {
 			deletedVotes: clearResult.deletedCount,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to clear votes" },

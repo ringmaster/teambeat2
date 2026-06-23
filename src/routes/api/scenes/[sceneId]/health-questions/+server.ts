@@ -48,9 +48,7 @@ export const GET: RequestHandler = async (event) => {
 			questions,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to fetch health questions:", error);
 		return json(
@@ -108,9 +106,7 @@ export const POST: RequestHandler = async (event) => {
 			question,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

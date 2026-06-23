@@ -23,6 +23,7 @@ const updateSceneSchema = z.object({
 	mode: z
 		.enum([
 			"columns",
+			"data",
 			"present",
 			"review",
 			"agreements",
@@ -129,9 +130,7 @@ export const PATCH: RequestHandler = async (event) => {
 			scene: sceneWithFlags,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(
@@ -206,9 +205,7 @@ export const DELETE: RequestHandler = async (event) => {
 			success: true,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Error deleting scene:", error);
 		return json(

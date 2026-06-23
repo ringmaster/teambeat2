@@ -130,7 +130,7 @@ export const GET: RequestHandler = async (event) => {
 
 		return json({ success: true, series, questions });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		console.error("[v1 health-summary]", err);
 		return json({ success: false, error: "Failed to fetch health summary" }, { status: 500 });
 	}

@@ -25,14 +25,18 @@ const mockUser = { userId: "user-1", email: "test@example.com", expiresAt: 0 };
 describe("GET /api/v1/tokens", () => {
 	beforeEach(() => vi.clearAllMocks());
 
-	it("returns 401 when not authenticated", async () => {
+	it("returns 401 response when not authenticated (does not throw)", async () => {
 		vi.mocked(requireApiV1Auth).mockRejectedValue(
 			new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 }),
 		);
 
 		const event = createMockRequestEvent({ url: "http://localhost/api/v1/tokens" });
 
-		await expect(GET(event)).rejects.toBeInstanceOf(Response);
+		// Must return a 401 Response — throwing causes SvelteKit to 500
+		const response = await GET(event);
+		expect(response.status).toBe(401);
+		const data = await response.json();
+		expect(data.success).toBe(false);
 	});
 
 	it("returns token list for authenticated user", async () => {

@@ -34,9 +34,7 @@ export const GET: RequestHandler = async (event) => {
 			boards,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to fetch boards" },
@@ -89,9 +87,7 @@ export const POST: RequestHandler = async (event) => {
 			board,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

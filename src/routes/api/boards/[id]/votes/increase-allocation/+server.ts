@@ -87,9 +87,7 @@ export const POST: RequestHandler = async (event) => {
 			previousAllocation: currentAllocation,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to increase voting allocation" },

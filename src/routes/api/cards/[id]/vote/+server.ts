@@ -218,9 +218,7 @@ export const POST: RequestHandler = async (event) => {
 
 		return json(response);
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Vote casting error:", error);
 		console.error(

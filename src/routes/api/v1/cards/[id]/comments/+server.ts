@@ -116,7 +116,7 @@ export const POST: RequestHandler = async (event) => {
 
 		return json({ success: true, action: "added", comment: { ...newComment, userName: displayName } }, { status: 201 });
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		return json({ success: false, error: "Failed to create comment" }, { status: 500 });
 	}
 };

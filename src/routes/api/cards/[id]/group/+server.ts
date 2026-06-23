@@ -82,9 +82,7 @@ export const POST: RequestHandler = async (event) => {
 			groupId,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(
@@ -161,9 +159,7 @@ export const DELETE: RequestHandler = async (event) => {
 			success: true,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to ungroup card" },

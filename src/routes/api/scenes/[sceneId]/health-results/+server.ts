@@ -197,9 +197,7 @@ export const GET: RequestHandler = async (event) => {
 				: null,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Error getting health results:", error);
 		return json(

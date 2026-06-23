@@ -12,10 +12,14 @@ import {
 	columns,
 	scenes,
 	sceneFlags,
+	scenesColumns,
 } from "$lib/server/db/schema.js";
 import { withTransaction } from "$lib/server/db/transaction.js";
+import { BOARD_TEMPLATES, getTemplate } from "$lib/server/templates.js";
 import { v4 as uuidv4 } from "uuid";
 import type { RequestHandler } from "./$types";
+
+const VALID_TEMPLATE_IDS = Object.keys(BOARD_TEMPLATES);
 
 const SCENE_MODES = [
 	"columns",
@@ -30,6 +34,7 @@ const SCENE_MODES = [
 
 const createBoardSchema = z.object({
 	name: z.string().min(1).max(100),
+	templateId: z.string().optional(),
 	meetingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 	blameFreeMode: z.boolean().optional().default(false),
 	votingAllocation: z.number().int().min(0).max(10).optional().default(3),
@@ -102,9 +107,9 @@ export const GET: RequestHandler = async (event) => {
 					status: boards.status,
 					meetingDate: boards.meetingDate,
 					createdAt: boards.createdAt,
-					sceneCount: sql<number>`(SELECT COUNT(*) FROM scenes WHERE scenes.board_id = ${boards.id})`,
-					cardCount: sql<number>`(SELECT COUNT(*) FROM cards c JOIN columns col ON c.column_id = col.id WHERE col.board_id = ${boards.id})`,
-					agreementCount: sql<number>`(SELECT COUNT(*) FROM agreements WHERE agreements.board_id = ${boards.id})`,
+					sceneCount: sql<number>`(SELECT COUNT(*) FROM scenes WHERE scenes.board_id = boards.id)`,
+					cardCount: sql<number>`(SELECT COUNT(*) FROM cards c JOIN columns col ON c.column_id = col.id WHERE col.board_id = boards.id)`,
+					agreementCount: sql<number>`(SELECT COUNT(*) FROM agreements WHERE agreements.board_id = boards.id)`,
 				})
 				.from(boards)
 				.where(where)
@@ -123,7 +128,8 @@ export const GET: RequestHandler = async (event) => {
 			meta: { total, limit, offset },
 		});
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
+		console.error("[v1 GET /series/:id/boards]", err);
 		return json({ success: false, error: "Failed to fetch boards" }, { status: 500 });
 	}
 };
@@ -146,16 +152,42 @@ export const POST: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const data = createBoardSchema.parse(body);
 
-		// Validate card column references before touching the DB
+		// Resolve columns and scenes: template takes precedence over explicit arrays
+		let resolvedColumns = data.columns;
+		let resolvedScenes: Array<{ title: string; mode: string; seq: number; flags: string[]; displayRule?: string; visibleColumns?: string[] }> = data.scenes;
+		let templateUsed: string | null = null;
+
+		if (data.templateId) {
+			if (!VALID_TEMPLATE_IDS.includes(data.templateId)) {
+				return json(
+					{ success: false, error: `Unknown templateId '${data.templateId}'. Valid options: ${VALID_TEMPLATE_IDS.join(", ")}` },
+					{ status: 400 },
+				);
+			}
+			const tmpl = getTemplate(data.templateId);
+			resolvedColumns = tmpl.columns.map((c, i) => ({
+				title: c.title,
+				description: c.getDescription ? c.getDescription() : (c.description ?? undefined),
+				seq: c.seq ?? i + 1,
+			}));
+			resolvedScenes = tmpl.scenes.map((s, i) => ({
+				title: s.title,
+				mode: s.mode,
+				seq: s.seq ?? i + 1,
+				flags: [...(s.flags ?? [])],
+				displayRule: s.displayRule,
+				visibleColumns: s.visibleColumns,
+			}));
+			templateUsed = data.templateId;
+		}
+
+		// Validate card column references
 		if (data.cards.length > 0) {
-			const columnTitles = new Set(data.columns.map((c) => c.title));
+			const columnTitles = new Set(resolvedColumns.map((c) => c.title));
 			for (const card of data.cards) {
 				if (!columnTitles.has(card.columnTitle)) {
 					return json(
-						{
-							success: false,
-							error: `Card references unknown column: '${card.columnTitle}'`,
-						},
+						{ success: false, error: `Card references unknown column: '${card.columnTitle}'` },
 						{ status: 400 },
 					);
 				}
@@ -182,8 +214,8 @@ export const POST: RequestHandler = async (event) => {
 			// Create columns
 			const columnMap = new Map<string, string>(); // title → id
 			const createdColumns = [];
-			for (let i = 0; i < data.columns.length; i++) {
-				const col = data.columns[i];
+			for (let i = 0; i < resolvedColumns.length; i++) {
+				const col = resolvedColumns[i];
 				const colId = uuidv4();
 				const seq = col.seq ?? i + 1;
 				await tx.insert(columns).values({
@@ -198,12 +230,15 @@ export const POST: RequestHandler = async (event) => {
 				createdColumns.push({ id: colId, title: col.title, seq });
 			}
 
-			// Create scenes
+			// Create scenes + scene flags + scene-column visibility
 			const createdScenes = [];
-			for (let i = 0; i < data.scenes.length; i++) {
-				const scene = data.scenes[i];
+			let firstSceneId: string | null = null;
+			for (let i = 0; i < resolvedScenes.length; i++) {
+				const scene = resolvedScenes[i];
 				const sceneId = uuidv4();
 				const seq = scene.seq ?? i + 1;
+				if (!firstSceneId) firstSceneId = sceneId;
+
 				await tx.insert(scenes).values({
 					id: sceneId,
 					boardId,
@@ -213,11 +248,30 @@ export const POST: RequestHandler = async (event) => {
 					displayRule: scene.displayRule ?? null,
 					createdAt: now,
 				});
-				// Insert scene flags
+
 				for (const flag of scene.flags) {
 					await tx.insert(sceneFlags).values({ sceneId, flag });
 				}
+
+				// Scene-column visibility (from template visibleColumns, or all visible)
+				if (columnMap.size > 0) {
+					for (const [colTitle, colId] of columnMap) {
+						await tx.insert(scenesColumns).values({
+							sceneId,
+							columnId: colId,
+							state: scene.visibleColumns
+								? (scene.visibleColumns.includes(colTitle) ? "visible" : "hidden")
+								: "visible",
+						});
+					}
+				}
+
 				createdScenes.push({ id: sceneId, title: scene.title, mode: scene.mode, seq, flags: scene.flags });
+			}
+
+			// Set currentSceneId to first scene
+			if (firstSceneId) {
+				await tx.update(boards).set({ currentSceneId: firstSceneId }).where(eq(boards.id, boardId));
 			}
 
 			// Create seed cards
@@ -250,6 +304,7 @@ export const POST: RequestHandler = async (event) => {
 					name: data.name,
 					status: "draft",
 					meetingDate: data.meetingDate ?? null,
+					templateId: templateUsed,
 					columns: result.columns,
 					scenes: result.scenes,
 					cards: result.cards,
@@ -259,7 +314,7 @@ export const POST: RequestHandler = async (event) => {
 			{ status: 201 },
 		);
 	} catch (err) {
-		if (err instanceof Response) throw err;
+		if (err instanceof Response) return err as Response;
 		if (err instanceof z.ZodError) {
 			return json({ success: false, error: "Invalid input", details: err.errors }, { status: 400 });
 		}

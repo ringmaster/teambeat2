@@ -60,9 +60,7 @@ export const GET: RequestHandler = async (event) => {
 			continuationSceneTitle,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Error checking completion status:", error);
 		return json(

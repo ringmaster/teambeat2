@@ -32,9 +32,7 @@ export const GET: RequestHandler = async (event) => {
 			voting_stats,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		return json(
 			{ success: false, error: "Failed to fetch voting stats" },

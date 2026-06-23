@@ -48,9 +48,7 @@ export const PUT: RequestHandler = async (event) => {
 			success: true,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		if (error instanceof z.ZodError) {
 			return json(

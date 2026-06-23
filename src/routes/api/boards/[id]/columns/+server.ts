@@ -99,9 +99,7 @@ export const POST: RequestHandler = async (event) => {
 			column: newColumn,
 		});
 	} catch (error) {
-		if (error instanceof Response) {
-			throw error;
-		}
+		if (error instanceof Response) return error;
 
 		console.error("Failed to create column:", error);
 		return json(
