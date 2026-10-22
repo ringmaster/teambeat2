@@ -348,6 +348,60 @@ export const GET: RequestHandler = () => {
 					},
 				},
 			},
+			"/boards/{id}/review": {
+				get: {
+					summary: "Get review scenes as rendered markdown",
+					operationId: "getBoardReview",
+					tags: ["Boards"],
+					description: "Returns every review scene on the board, in scene order. Each entry has the markdown that the review scene's copy button produces, and the data that produced it. Comment authors are display names, so blame-free boards show animal names. Returns an empty array when the board has no review scenes.",
+					parameters: [
+						{ name: "id", in: "path", required: true, schema: { type: "string" } },
+						{ name: "view", in: "query", schema: { type: "string", enum: ["by-column", "by-votes"], default: "by-column", description: "by-column groups cards under their column; by-votes lists all cards by vote count" } },
+					],
+					responses: {
+						200: {
+							description: "Review scenes with markdown and source data",
+							content: {
+								"application/json": {
+									schema: {
+										type: "object",
+										properties: {
+											success: { type: "boolean" },
+											scenes: {
+												type: "array",
+												items: {
+													type: "object",
+													properties: {
+														id: { type: "string", description: "Scene id" },
+														name: { type: "string", description: "Scene title" },
+														markdown: { type: "string" },
+														data: {
+															type: "object",
+															properties: {
+																viewMode: { type: "string", enum: ["by-column", "by-votes"] },
+																blameFreeMode: { type: "boolean" },
+																columns: { type: "array", description: "Columns visible in the scene", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, seq: { type: "integer" } } } },
+																cards: { type: "array", description: "Cards in the visible columns", items: { type: "object", properties: { id: { type: "string" }, columnId: { type: "string" }, content: { type: "string" }, notes: { type: "string", nullable: true }, groupId: { type: "string", nullable: true }, isGroupLead: { type: "boolean", nullable: true }, voteCount: { type: "integer" }, reactions: { type: "object", additionalProperties: { type: "integer" } } } } },
+																comments: { type: "array", items: { type: "object", properties: { id: { type: "string" }, cardId: { type: "string" }, author: { type: "string" }, content: { type: "string" } } } },
+																agreements: { type: "array", items: { type: "object", properties: { id: { type: "string" }, source: { type: "string", enum: ["agreement", "comment"] }, content: { type: "string" }, completed: { type: "boolean" }, completedAt: { type: "string", nullable: true }, cardId: { type: "string" }, cardContent: { type: "string" } } } },
+																surveys: { type: "array", description: "Survey scenes on the board with their averages and the prior board's average", items: { type: "object", properties: { sceneId: { type: "string" }, sceneTitle: { type: "string" }, results: { type: "array", items: { type: "object", properties: { question: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, seq: { type: "integer" } } }, average: { type: "number" }, totalResponses: { type: "integer" }, history: { type: "array", items: { type: "object", properties: { boardId: { type: "string" }, boardName: { type: "string" }, average: { type: "number" } } } } } } } } } },
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						400: { description: "Invalid view parameter" },
+						401: { description: "Unauthorized" },
+						403: { description: "Access denied" },
+						404: { description: "Board not found" },
+					},
+				},
+			},
 			"/datasources/{id}/inject": {
 				post: {
 					summary: "Push AI-generated findings into a datasource",

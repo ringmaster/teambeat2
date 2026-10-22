@@ -1,5 +1,4 @@
 <script lang="ts">
-import moment from "moment";
 import { onMount } from "svelte";
 import { toastStore } from "$lib/stores/toast";
 import type { Board, Card, Column, Comment, Scene } from "$lib/types";
@@ -8,6 +7,15 @@ import AgreementsSection from "./AgreementsSection.svelte";
 import ReviewCardGroup from "./ReviewCardGroup.svelte";
 import ReviewColumn from "./ReviewColumn.svelte";
 import Icon from "./ui/Icon.svelte";
+import {
+	buildReviewMarkdown,
+	calculatePercentChange,
+	formatDateYYYYMMDD,
+	getVisibleReviewColumns,
+	groupReviewCards,
+	groupReviewCardsByColumn,
+	sortReviewGroupsByVotes,
+} from "$lib/utils/review-markdown";
 
 interface Props {
 	board: Board;
@@ -123,103 +131,32 @@ async function loadSurveyResults() {
 }
 
 // Get visible columns based on scene configuration
-const visibleColumns = $derived(() => {
-	if (!board.columns) return [];
-
-	// Get column IDs that should be visible for this scene
-	const hiddenColumnIds = board.hiddenColumnsByScene?.[scene.id] || [];
-
-	return board.columns
-		.filter((col) => !hiddenColumnIds.includes(col.id))
-		.sort((a, b) => a.seq - b.seq);
-});
+const visibleColumns = $derived.by(() =>
+	getVisibleReviewColumns(
+		board.columns || [],
+		board.hiddenColumnsByScene?.[scene.id] || [],
+	),
+);
 
 // Filter cards to only those in visible columns
-const visibleCards = $derived(() => {
-	const visibleColumnIds = new Set(visibleColumns().map((c) => c.id));
+const visibleCards = $derived.by(() => {
+	const visibleColumnIds = new Set(visibleColumns.map((c) => c.id));
 	return cards.filter((card) => visibleColumnIds.has(card.columnId));
 });
 
 // Group cards by their lead card
-interface CardGroup {
-	leadCard: Card;
-	subordinateCards: Card[];
-	columnId: string;
-	columnName: string;
-}
-
-const cardGroups = $derived((): CardGroup[] => {
-	const cardsArray = visibleCards();
-	const groups: CardGroup[] = [];
-	const processedCardIds = new Set<string>();
-
-	// Find all lead cards (cards that are group leads or have no group)
-	const leadCards = cardsArray.filter((card) => {
-		return card.isGroupLead || !card.groupId;
-	});
-
-	// For each lead card, find its subordinates
-	for (const leadCard of leadCards) {
-		if (processedCardIds.has(leadCard.id)) continue;
-
-		const subordinateCards = cardsArray.filter(
-			(card) =>
-				card.groupId === leadCard.id ||
-				(card.groupId === leadCard.groupId &&
-					leadCard.groupId &&
-					!card.isGroupLead &&
-					card.id !== leadCard.id),
-		);
-
-		// Get column info
-		const column = board.columns?.find((c) => c.id === leadCard.columnId);
-
-		groups.push({
-			leadCard,
-			subordinateCards,
-			columnId: leadCard.columnId,
-			columnName: column?.title || "Unknown Column",
-		});
-
-		processedCardIds.add(leadCard.id);
-		subordinateCards.forEach((card) => processedCardIds.add(card.id));
-	}
-
-	return groups;
-});
+const cardGroups = $derived.by(() => groupReviewCards(visibleCards, board.columns || []));
 
 // Sort groups by vote count (descending)
-const sortedGroups = $derived(() => {
-	return [...cardGroups()].sort((a, b) => {
-		const aVotes = a.leadCard.voteCount || 0;
-		const bVotes = b.leadCard.voteCount || 0;
-		return bVotes - aVotes;
-	});
-});
+const sortedGroups = $derived.by(() => sortReviewGroupsByVotes(cardGroups));
 
 // Group by column for column view
-const groupsByColumn = $derived(() => {
-	const columnMap = new Map<string, CardGroup[]>();
-
-	for (const column of visibleColumns()) {
-		const columnGroups = cardGroups()
-			.filter((group) => group.columnId === column.id)
-			.sort((a, b) => {
-				const aVotes = a.leadCard.voteCount || 0;
-				const bVotes = b.leadCard.voteCount || 0;
-				return bVotes - aVotes;
-			});
-
-		if (columnGroups.length > 0) {
-			columnMap.set(column.id, columnGroups);
-		}
-	}
-
-	return columnMap;
-});
+const groupsByColumn = $derived.by(() =>
+	groupReviewCardsByColumn(cardGroups, visibleColumns),
+);
 
 // Get agreements (both board-level and comment-based)
-const agreements = $derived(() => {
+const agreements = $derived.by(() => {
 	return allAgreements.map((agreement) => {
 		// For comment-based agreements, include card context
 		if (agreement.source === "comment" && agreement.cardId) {
@@ -237,7 +174,7 @@ const agreements = $derived(() => {
 });
 
 // Get regular comments (non-reactions, non-agreements) grouped by card
-const commentsByCardMap = $derived(() => {
+const commentsByCardMap = $derived.by(() => {
 	const map = new Map<string, Comment[]>();
 	allComments
 		.filter((comment) => !comment.isReaction && !comment.isAgreement)
@@ -250,218 +187,21 @@ const commentsByCardMap = $derived(() => {
 
 // Function to get comments for a specific card
 const getCommentsForCard = (cardId: string): Comment[] => {
-	return commentsByCardMap().get(cardId) || [];
+	return commentsByCardMap.get(cardId) || [];
 };
 
 // Generate markdown content
 function generateMarkdown(): string {
-	let md = "";
-	const isBlameFree = board.blameFreeMode || false;
-
-	if (viewMode === "by-column") {
-		// Group by column mode
-		for (const column of visibleColumns()) {
-			const groups = groupsByColumn().get(column.id);
-			if (!groups || groups.length === 0) continue;
-
-			md += `## ${column.title}\n\n`;
-
-			for (const group of groups) {
-				const voteCount = group.leadCard.voteCount || 0;
-				md += `### ${group.leadCard.content} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})\n\n`;
-
-				if (group.leadCard.notes) {
-					md += `${group.leadCard.notes}\n\n`;
-				}
-
-				// Add reactions if present
-				if (
-					group.leadCard.reactions &&
-					Object.keys(group.leadCard.reactions).length > 0
-				) {
-					const reactionTexts = Object.entries(group.leadCard.reactions).map(
-						([emoji, count]) => `(${count}×${emoji})`,
-					);
-					md += `${reactionTexts.join(" ")}\n\n`;
-				}
-
-				// Add lead card comments
-				const leadComments = getCommentsForCard(group.leadCard.id);
-				if (leadComments.length > 0) {
-					md += `**Comments:**\n\n`;
-					for (const comment of leadComments) {
-						const author = getUserDisplayName(
-							comment.userName || "Anonymous",
-							board.id,
-							isBlameFree,
-						);
-						md += `- ${author}: ${comment.content}\n`;
-					}
-					md += `\n`;
-				}
-
-				// Add subordinate cards with their details
-				for (const subCard of group.subordinateCards) {
-					md += `#### ${subCard.content}\n\n`;
-
-					if (subCard.notes) {
-						md += `${subCard.notes}\n\n`;
-					}
-
-					// Add reactions if present
-					if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
-						const reactionTexts = Object.entries(subCard.reactions).map(
-							([emoji, count]) => `(${count}×${emoji})`,
-						);
-						md += `${reactionTexts.join(" ")}\n\n`;
-					}
-
-					const subComments = getCommentsForCard(subCard.id);
-					if (subComments.length > 0) {
-						md += `**Comments:**\n\n`;
-						for (const comment of subComments) {
-							const author = getUserDisplayName(
-								comment.userName || "Anonymous",
-								board.id,
-								isBlameFree,
-							);
-							md += `- ${author}: ${comment.content}\n`;
-						}
-						md += `\n`;
-					}
-				}
-			}
-		}
-	} else {
-		// Sort all by votes mode
-		md += `## All Cards\n\n`;
-
-		for (const group of sortedGroups()) {
-			const voteCount = group.leadCard.voteCount || 0;
-			md += `### ${group.leadCard.content} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})\n\n`;
-			md += `Originally in: ${group.columnName}\n\n`;
-
-			if (group.leadCard.notes) {
-				md += `${group.leadCard.notes}\n\n`;
-			}
-
-			// Add reactions if present
-			if (
-				group.leadCard.reactions &&
-				Object.keys(group.leadCard.reactions).length > 0
-			) {
-				const reactionTexts = Object.entries(group.leadCard.reactions).map(
-					([emoji, count]) => `(${count}×${emoji})`,
-				);
-				md += `${reactionTexts.join(" ")}\n\n`;
-			}
-
-			// Add lead card comments
-			const leadComments = getCommentsForCard(group.leadCard.id);
-			if (leadComments.length > 0) {
-				md += `**Comments:**\n\n`;
-				for (const comment of leadComments) {
-					const author = getUserDisplayName(
-						comment.userName || "Anonymous",
-						board.id,
-						isBlameFree,
-					);
-					md += `- ${author}: ${comment.content}\n`;
-				}
-				md += `\n`;
-			}
-
-			// Add subordinate cards with their details
-			for (const subCard of group.subordinateCards) {
-				md += `#### ${subCard.content}\n\n`;
-
-				if (subCard.notes) {
-					md += `${subCard.notes}\n\n`;
-				}
-
-				// Add reactions if present
-				if (subCard.reactions && Object.keys(subCard.reactions).length > 0) {
-					const reactionTexts = Object.entries(subCard.reactions).map(
-						([emoji, count]) => `(${count}×${emoji})`,
-					);
-					md += `${reactionTexts.join(" ")}\n\n`;
-				}
-
-				const subComments = getCommentsForCard(subCard.id);
-				if (subComments.length > 0) {
-					md += `**Comments:**\n\n`;
-					for (const comment of subComments) {
-						const author = getUserDisplayName(
-							comment.userName || "Anonymous",
-							board.id,
-							isBlameFree,
-						);
-						md += `- ${author}: ${comment.content}\n`;
-					}
-					md += `\n`;
-				}
-			}
-		}
-	}
-
-	// Add survey results sections
-	for (const survey of surveyResults) {
-		md += `## Survey: ${survey.sceneTitle}\n\n`;
-
-		for (const result of survey.results) {
-			const priorAverage = result.history?.[0]?.average;
-			const changeText = formatPercentChange(result.average, priorAverage);
-			md += `- **${result.question.question}**: ${result.average.toFixed(2)}${changeText}\n`;
-		}
-		md += `\n`;
-	}
-
-	// Add agreements section if there are any
-	const agreementList = agreements();
-	if (agreementList.length > 0) {
-		md += `## Agreements\n\n`;
-		for (const agreement of agreementList) {
-			const source = agreement.cardTitle
-				? `from: ${agreement.cardTitle}`
-				: "board-level agreement";
-			const checkbox = agreement.completed ? "[x]" : "[ ]";
-			const completionDate =
-				agreement.completed && agreement.completedAt
-					? ` (Completed on ${formatDateYYYYMMDD(agreement.completedAt)})`
-					: "";
-
-			// Handle multi-line content with proper indentation
-			const lines = agreement.content.split("\n");
-			const firstLine = lines[0];
-			const remainingLines = lines.slice(1);
-
-			// First line with checkbox
-			md += `- ${checkbox} **${firstLine}**\n`;
-
-			// Remaining content lines, indented
-			for (let i = 0; i < remainingLines.length; i++) {
-				const line = remainingLines[i].trim();
-				if (line) {
-					// Add source info to the last non-empty line
-					if (i === remainingLines.length - 1) {
-						md += `    - ${line} (${source})${completionDate}\n`;
-					} else {
-						md += `    - ${line}\n`;
-					}
-				}
-			}
-
-			// If there were no remaining lines, add source on its own line
-			if (
-				remainingLines.length === 0 ||
-				remainingLines.every((line) => !line.trim())
-			) {
-				md += `    - (${source})${completionDate}\n`;
-			}
-		}
-	}
-
-	return md;
+	return buildReviewMarkdown({
+		boardId: board.id,
+		blameFreeMode: board.blameFreeMode || false,
+		visibleColumns: visibleColumns,
+		cards: visibleCards,
+		comments: allComments,
+		agreements: allAgreements,
+		surveys: surveyResults,
+		viewMode,
+	});
 }
 
 // Generate HTML content
@@ -471,8 +211,8 @@ function generateHTML(): string {
 
 	if (viewMode === "by-column") {
 		// Group by column mode
-		for (const column of visibleColumns()) {
-			const groups = groupsByColumn().get(column.id);
+		for (const column of visibleColumns) {
+			const groups = groupsByColumn.get(column.id);
 			if (!groups || groups.length === 0) continue;
 
 			html += `<h2>${escapeHtml(column.title)}</h2>\n`;
@@ -547,7 +287,7 @@ function generateHTML(): string {
 		// Sort all by votes mode
 		html += `<h2>All Cards</h2>\n`;
 
-		for (const group of sortedGroups()) {
+		for (const group of sortedGroups) {
 			const voteCount = group.leadCard.voteCount || 0;
 			html += `<h3>${escapeHtml(group.leadCard.content)} (${voteCount} ${voteCount === 1 ? "vote" : "votes"})</h3>\n`;
 			html += `<p><em>Originally in: ${escapeHtml(group.columnName)}</em></p>\n`;
@@ -636,7 +376,7 @@ function generateHTML(): string {
 	}
 
 	// Add agreements section if there are any
-	const agreementList = agreements();
+	const agreementList = agreements;
 	if (agreementList.length > 0) {
 		html += `<h2>Agreements</h2>\n<ul style="list-style-type: none; padding-left: 0;">\n`;
 		for (const agreement of agreementList) {
@@ -693,38 +433,6 @@ function escapeHtml(text: string): string {
 	const div = document.createElement("div");
 	div.textContent = text;
 	return div.innerHTML;
-}
-
-// Format date as yyyy-mm-dd
-function formatDateYYYYMMDD(dateString: string | null): string {
-	if (!dateString) return "";
-	return moment(dateString).format("YYYY-MM-DD");
-}
-
-// Calculate percent change from prior to current
-function calculatePercentChange(
-	current: number,
-	prior: number,
-): { value: number; direction: "up" | "down" | "same" } {
-	if (prior === 0) return { value: 0, direction: "same" };
-	const change = ((current - prior) / prior) * 100;
-	if (Math.abs(change) < 0.5) return { value: 0, direction: "same" };
-	return {
-		value: Math.abs(change),
-		direction: change > 0 ? "up" : "down",
-	};
-}
-
-// Format percent change for display
-function formatPercentChange(
-	current: number,
-	prior: number | undefined,
-): string {
-	if (prior === undefined) return "";
-	const change = calculatePercentChange(current, prior);
-	if (change.direction === "same") return "";
-	const arrow = change.direction === "up" ? "↑" : "↓";
-	return ` (${arrow}${change.value.toFixed(0)}%)`;
 }
 
 // Copy to clipboard
@@ -859,8 +567,8 @@ async function copyToClipboard() {
                 <p>Loading comments...</p>
             </div>
         {:else if viewMode === "by-column"}
-            {#each visibleColumns() as column (column.id)}
-                {@const groups = groupsByColumn().get(column.id)}
+            {#each visibleColumns as column (column.id)}
+                {@const groups = groupsByColumn.get(column.id)}
                 {#if groups && groups.length > 0}
                     <ReviewColumn
                         {column}
@@ -874,7 +582,7 @@ async function copyToClipboard() {
         {:else}
             <div class="all-cards-section">
                 <h2 class="section-title">All Cards</h2>
-                {#each sortedGroups() as group (group.leadCard.id)}
+                {#each sortedGroups as group (group.leadCard.id)}
                     <ReviewCardGroup
                         {group}
                         showColumnContext={true}
@@ -915,11 +623,11 @@ async function copyToClipboard() {
             {/each}
         {/if}
 
-        {#if agreements().length > 0}
-            <AgreementsSection agreements={agreements()} />
+        {#if agreements.length > 0}
+            <AgreementsSection agreements={agreements} />
         {/if}
 
-        {#if visibleCards().length === 0 && surveyResults.length === 0}
+        {#if visibleCards.length === 0 && surveyResults.length === 0}
             <div class="empty-state">
                 <p>No cards to display</p>
             </div>

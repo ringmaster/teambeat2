@@ -99,6 +99,7 @@ ${seriesList}
 ### Boards
   GET  ${baseUrl}/boards/{id}                         Full board (scenes, columns, cards)
   GET  ${baseUrl}/boards/{id}/cards                   Cards (?columnId= to filter)
+  GET  ${baseUrl}/boards/{id}/review                  Review scenes as markdown + source data (?view=by-column|by-votes)
 
 ### Cards
   POST   ${baseUrl}/boards/{id}/cards                 Create: { columnId, content }
