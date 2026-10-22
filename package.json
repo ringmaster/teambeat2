@@ -1,7 +1,7 @@
 {
   "name": "teambeat",
   "private": true,
-  "version": "2.13",
+  "version": "2.14",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
