@@ -1,10 +1,13 @@
 import * as Sentry from '@sentry/sveltekit';
-import { env } from '$env/dynamic/private';
+
+// Read process.env, not $env/dynamic/private: this file runs before SvelteKit
+// populates $env/dynamic/private, so that object is still empty here.
+const dsn = process.env.SENTRY_DSN;
 
 // Only initialize Sentry if SENTRY_DSN is provided
-if (env.SENTRY_DSN) {
+if (dsn) {
   Sentry.init({
-    dsn: env.SENTRY_DSN,
+    dsn,
 
     tracesSampleRate: 1.0,
 

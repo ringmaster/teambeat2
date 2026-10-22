@@ -43,6 +43,17 @@ import { createMockRequestEvent } from "../../helpers/mock-request";
 
 const mockUser = { userId: "user-1", email: "test@example.com", expiresAt: 0 };
 
+// Returns the literal SQL text of the commentCount field passed to db.select().
+// Postgres has no boolean = integer operator, so the reaction filter must not
+// compare is_reaction to 0 (that only works in SQLite).
+function getCommentCountSql(): string {
+	const selections = vi.mocked(db.select).mock.calls.map((call) => call[0] as any);
+	const fields = selections.find((s) => s?.commentCount);
+	return fields.commentCount.queryChunks
+		.map((chunk: any) => (Array.isArray(chunk?.value) ? chunk.value.join("") : ""))
+		.join("");
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // GET /api/v1/boards/:id
 // ─────────────────────────────────────────────────────────────────────
@@ -138,6 +149,37 @@ describe("GET /api/v1/boards/:id", () => {
 		expect(response.status).toBe(200);
 		expect(data.success).toBe(true);
 		expect(data.board).toBeDefined();
+
+		const commentCountSql = getCommentCountSql();
+		expect(commentCountSql).toContain("NOT comments.is_reaction");
+		expect(commentCountSql).not.toMatch(/is_reaction\s*=\s*0/);
+	});
+
+	it("returns 500 and logs the error when a query fails", async () => {
+		vi.mocked(requireApiV1Auth).mockResolvedValue(mockUser);
+		vi.mocked(getBoardSeriesForUser).mockResolvedValue({ seriesId: "series-1" });
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const queryError = new Error("operator does not exist: boolean = integer");
+		vi.mocked(db.select).mockImplementation(() => {
+			const failing = vi.fn().mockRejectedValue(queryError);
+			const where = vi.fn().mockReturnValue({ limit: failing, orderBy: failing });
+			const innerJoin = vi.fn().mockReturnValue({ where });
+			return { from: vi.fn().mockReturnValue({ where, innerJoin }) } as any;
+		});
+
+		const event = createMockRequestEvent({
+			url: "http://localhost/api/v1/boards/board-1",
+			params: { id: "board-1" },
+		});
+
+		const response = await getBoardDetail(event);
+		const data = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(data).toEqual({ success: false, error: "Failed to fetch board" });
+		expect(consoleError).toHaveBeenCalledWith("[v1 GET /boards/:id]", queryError);
+		consoleError.mockRestore();
 	});
 });
 
@@ -186,6 +228,36 @@ describe("GET /api/v1/boards/:id/cards", () => {
 		expect(response.status).toBe(200);
 		expect(data.success).toBe(true);
 		expect(data.cards).toEqual(mockCards);
+
+		const commentCountSql = getCommentCountSql();
+		expect(commentCountSql).toContain("NOT comments.is_reaction");
+		expect(commentCountSql).not.toMatch(/is_reaction\s*=\s*0/);
+	});
+
+	it("returns 500 and logs the error when the query fails", async () => {
+		vi.mocked(requireApiV1Auth).mockResolvedValue(mockUser);
+		vi.mocked(getBoardSeriesForUser).mockResolvedValue({ seriesId: "series-1" });
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const queryError = new Error("operator does not exist: boolean = integer");
+		const mockOrderBy = vi.fn().mockRejectedValue(queryError);
+		const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
+		const mockInnerJoin = vi.fn().mockReturnValue({ where: mockWhere });
+		const mockFrom = vi.fn().mockReturnValue({ innerJoin: mockInnerJoin });
+		vi.mocked(db.select).mockReturnValue({ from: mockFrom } as any);
+
+		const event = createMockRequestEvent({
+			url: "http://localhost/api/v1/boards/board-1/cards",
+			params: { id: "board-1" },
+		});
+
+		const response = await getBoardCards(event);
+		const data = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(data).toEqual({ success: false, error: "Failed to fetch cards" });
+		expect(consoleError).toHaveBeenCalledWith("[v1 GET /boards/:id/cards]", queryError);
+		consoleError.mockRestore();
 	});
 });
 

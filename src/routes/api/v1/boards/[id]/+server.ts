@@ -54,7 +54,7 @@ export const GET: RequestHandler = async (event) => {
 					content: cards.content,
 					groupId: cards.groupId,
 					voteCount: sql<number>`(SELECT COUNT(*) FROM votes WHERE votes.card_id = ${cards.id})`,
-					commentCount: sql<number>`(SELECT COUNT(*) FROM comments WHERE comments.card_id = ${cards.id} AND comments.is_reaction = 0)`,
+					commentCount: sql<number>`(SELECT COUNT(*) FROM comments WHERE comments.card_id = ${cards.id} AND NOT comments.is_reaction)`,
 					createdAt: cards.createdAt,
 				})
 				.from(cards)
@@ -89,6 +89,7 @@ export const GET: RequestHandler = async (event) => {
 		});
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		console.error("[v1 GET /boards/:id]", err);
 		return json({ success: false, error: "Failed to fetch board" }, { status: 500 });
 	}
 };
