@@ -7,6 +7,7 @@ import {
 	revokeApiToken,
 } from "$lib/server/repositories/api-tokens.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const createSchema = z.object({
 	label: z.string().min(1, "label is required").max(100),
@@ -19,6 +20,7 @@ export const GET: RequestHandler = async (event) => {
 		return json({ success: true, tokens });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /tokens]", err);
 		return json({ success: false, error: "Failed to list tokens" }, { status: 500 });
 	}
 };
@@ -42,6 +44,7 @@ export const POST: RequestHandler = async (event) => {
 				{ status: 400 },
 			);
 		}
+		reportApiError("[v1 POST /tokens]", err);
 		return json({ success: false, error: "Failed to create token" }, { status: 500 });
 	}
 };

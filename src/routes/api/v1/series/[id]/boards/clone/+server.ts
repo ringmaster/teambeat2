@@ -22,6 +22,7 @@ import {
 	findIncompleteCommentAgreementsByBoardId,
 } from "$lib/server/repositories/agreement.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const cloneSchema = z.object({
 	sourceId: z.string().uuid(),
@@ -260,6 +261,7 @@ export const POST: RequestHandler = async (event) => {
 		if (err instanceof z.ZodError) {
 			return json({ success: false, error: "Invalid input", details: err.errors }, { status: 400 });
 		}
+		reportApiError("[v1 POST /series/:id/boards/clone]", err);
 		return json({ success: false, error: "Failed to clone board" }, { status: 500 });
 	}
 };

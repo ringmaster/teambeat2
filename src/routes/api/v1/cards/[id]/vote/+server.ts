@@ -17,6 +17,7 @@ import { enrichCardWithCounts } from "$lib/server/utils/cards-data.js";
 import { buildComprehensiveVotingData } from "$lib/server/utils/voting-data.js";
 import { getSceneCapability } from "$lib/utils/scene-capability.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const voteSchema = z.object({
 	delta: z.union([z.literal(1), z.literal(-1)]),
@@ -104,6 +105,7 @@ export const POST: RequestHandler = async (event) => {
 		return json(response);
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 POST /cards/:id/vote]", err);
 		return json({ success: false, error: "Failed to cast vote" }, { status: 500 });
 	}
 };

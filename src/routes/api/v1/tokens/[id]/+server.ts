@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import { requireApiV1Auth } from "$lib/server/auth/index.js";
 import { revokeApiToken } from "$lib/server/repositories/api-tokens.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 export const DELETE: RequestHandler = async (event) => {
 	try {
@@ -13,6 +14,7 @@ export const DELETE: RequestHandler = async (event) => {
 		return json({ success: true });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 DELETE /tokens/:id]", err);
 		return json({ success: false, error: "Failed to revoke token" }, { status: 500 });
 	}
 };

@@ -11,6 +11,7 @@ import {
 	scenes,
 } from "$lib/server/db/schema.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 export const GET: RequestHandler = async (event) => {
 	try {
@@ -60,6 +61,7 @@ export const GET: RequestHandler = async (event) => {
 		return json({ success: true, results: parsedResults });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /boards/:id/scorecard-results]", err);
 		return json({ success: false, error: "Failed to fetch scorecard results" }, { status: 500 });
 	}
 };

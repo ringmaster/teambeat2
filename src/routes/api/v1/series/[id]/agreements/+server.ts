@@ -5,6 +5,7 @@ import { requireSeriesMember } from "$lib/server/api/v1-access.js";
 import { db } from "$lib/server/db/index.js";
 import { agreements, boardSeries, boards, users } from "$lib/server/db/schema.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 export const GET: RequestHandler = async (event) => {
 	try {
@@ -74,6 +75,7 @@ export const GET: RequestHandler = async (event) => {
 		});
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /series/:id/agreements]", err);
 		return json({ success: false, error: "Failed to fetch agreements" }, { status: 500 });
 	}
 };

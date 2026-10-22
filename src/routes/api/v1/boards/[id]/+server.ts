@@ -5,6 +5,7 @@ import { getBoardSeriesForUser } from "$lib/server/api/v1-access.js";
 import { db } from "$lib/server/db/index.js";
 import { boards, cards, columns, sceneFlags, scenes } from "$lib/server/db/schema.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 export const GET: RequestHandler = async (event) => {
 	try {
@@ -89,7 +90,7 @@ export const GET: RequestHandler = async (event) => {
 		});
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
-		console.error("[v1 GET /boards/:id]", err);
+		reportApiError("[v1 GET /boards/:id]", err);
 		return json({ success: false, error: "Failed to fetch board" }, { status: 500 });
 	}
 };

@@ -11,6 +11,7 @@ import { enrichCardWithCounts } from "$lib/server/utils/cards-data.js";
 import { getUserDisplayName } from "$lib/utils/animalNames.js";
 import { getCurrentScene, getSceneCapability } from "$lib/utils/scene-capability.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const createCommentSchema = z.object({
 	content: z.string().min(1).max(5000),
@@ -117,6 +118,7 @@ export const POST: RequestHandler = async (event) => {
 		return json({ success: true, action: "added", comment: { ...newComment, userName: displayName } }, { status: 201 });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 POST /cards/:id/comments]", err);
 		return json({ success: false, error: "Failed to create comment" }, { status: 500 });
 	}
 };

@@ -10,6 +10,7 @@ import { getBoardWithDetails } from "$lib/server/repositories/board.js";
 import { broadcastAgreementsUpdated } from "$lib/server/sse/broadcast.js";
 import { buildEnrichedAgreementsData } from "$lib/server/utils/agreements-data.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const createAgreementSchema = z.object({
 	content: z.string().min(1).max(1000),
@@ -52,6 +53,7 @@ export const GET: RequestHandler = async (event) => {
 		return json({ success: true, agreements: result });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /boards/:id/agreements]", err);
 		return json({ success: false, error: "Failed to fetch agreements" }, { status: 500 });
 	}
 };
@@ -89,6 +91,7 @@ export const POST: RequestHandler = async (event) => {
 		return json({ success: true, agreement }, { status: 201 });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 POST /boards/:id/agreements]", err);
 		return json({ success: false, error: "Failed to create agreement" }, { status: 500 });
 	}
 };

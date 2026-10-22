@@ -11,6 +11,7 @@ import { broadcastCardCreated } from "$lib/server/sse/broadcast.js";
 import { enrichCardWithCounts } from "$lib/server/utils/cards-data.js";
 import { getCurrentScene, getSceneCapability } from "$lib/utils/scene-capability.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const createCardSchema = z.object({
 	columnId: z.string().uuid(),
@@ -51,7 +52,7 @@ export const GET: RequestHandler = async (event) => {
 		return json({ success: true, cards: result });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
-		console.error("[v1 GET /boards/:id/cards]", err);
+		reportApiError("[v1 GET /boards/:id/cards]", err);
 		return json({ success: false, error: "Failed to fetch cards" }, { status: 500 });
 	}
 };
@@ -88,6 +89,7 @@ export const POST: RequestHandler = async (event) => {
 		return json({ success: true, card: enrichedCard }, { status: 201 });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 POST /boards/:id/cards]", err);
 		return json({ success: false, error: "Failed to create card" }, { status: 500 });
 	}
 };

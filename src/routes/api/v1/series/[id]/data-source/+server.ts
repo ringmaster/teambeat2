@@ -7,6 +7,7 @@ import { boards } from "$lib/server/db/schema.js";
 import { fanOutToSeries, getBoardDataset } from "$lib/server/repositories/board-dataset.js";
 import { broadcastDataSourceUpdated } from "$lib/server/sse/broadcast.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 async function requireFacilitator(userId: string, seriesId: string) {
 	const role = await getUserRoleInSeries(userId, seriesId);
@@ -39,6 +40,7 @@ export const GET: RequestHandler = async (event) => {
 		});
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /series/:id/data-source]", err);
 		return json({ success: false, error: "Failed to fetch data source" }, { status: 500 });
 	}
 };
@@ -64,6 +66,7 @@ export const PATCH: RequestHandler = async (event) => {
 		return json({ success: true, boardsUpdated: count, updatedAt: new Date().toISOString() });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 PATCH /series/:id/data-source]", err);
 		return json({ success: false, error: "Failed to update data source" }, { status: 500 });
 	}
 };
@@ -89,6 +92,7 @@ export const PUT: RequestHandler = async (event) => {
 		return json({ success: true, boardsUpdated: count, updatedAt: new Date().toISOString() });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 PUT /series/:id/data-source]", err);
 		return json({ success: false, error: "Failed to replace data source" }, { status: 500 });
 	}
 };
@@ -104,6 +108,7 @@ export const DELETE: RequestHandler = async (event) => {
 		return json({ success: true, boardsUpdated: count });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 DELETE /series/:id/data-source]", err);
 		return json({ success: false, error: "Failed to clear data source" }, { status: 500 });
 	}
 };

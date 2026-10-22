@@ -18,6 +18,7 @@ import { withTransaction } from "$lib/server/db/transaction.js";
 import { BOARD_TEMPLATES, getTemplate } from "$lib/server/templates.js";
 import { v4 as uuidv4 } from "uuid";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const VALID_TEMPLATE_IDS = Object.keys(BOARD_TEMPLATES);
 
@@ -129,7 +130,7 @@ export const GET: RequestHandler = async (event) => {
 		});
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
-		console.error("[v1 GET /series/:id/boards]", err);
+		reportApiError("[v1 GET /series/:id/boards]", err);
 		return json({ success: false, error: "Failed to fetch boards" }, { status: 500 });
 	}
 };
@@ -318,7 +319,7 @@ export const POST: RequestHandler = async (event) => {
 		if (err instanceof z.ZodError) {
 			return json({ success: false, error: "Invalid input", details: err.errors }, { status: 400 });
 		}
-		console.error("[v1 POST /series/:id/boards]", err);
+		reportApiError("[v1 POST /series/:id/boards]", err);
 		return json({ success: false, error: "Failed to create board" }, { status: 500 });
 	}
 };

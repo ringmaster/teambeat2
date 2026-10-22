@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import { requireApiV1Auth } from "$lib/server/auth/index.js";
 import { BOARD_TEMPLATES } from "$lib/server/templates.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 export const GET: RequestHandler = async (event) => {
 	try {
@@ -18,6 +19,7 @@ export const GET: RequestHandler = async (event) => {
 		return json({ success: true, templates });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /templates]", err);
 		return json({ success: false, error: "Failed to fetch templates" }, { status: 500 });
 	}
 };

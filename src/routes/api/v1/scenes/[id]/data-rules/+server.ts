@@ -7,6 +7,7 @@ import { db } from "$lib/server/db/index.js";
 import { scenes, boards } from "$lib/server/db/schema.js";
 import { getDataSceneRules, replaceDataSceneRules } from "$lib/server/repositories/data-scene-rules.js";
 import type { RequestHandler } from "./$types";
+import { reportApiError } from "$lib/server/api/report-error.js";
 
 const ruleSchema = z.object({
 	seq: z.number().int().optional(),
@@ -44,6 +45,7 @@ export const GET: RequestHandler = async (event) => {
 		return json({ success: true, rules });
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
+		reportApiError("[v1 GET /scenes/:id/data-rules]", err);
 		return json({ success: false, error: "Failed to fetch rules" }, { status: 500 });
 	}
 };
@@ -65,6 +67,7 @@ export const PUT: RequestHandler = async (event) => {
 	} catch (err) {
 		if (err instanceof Response) return err as Response;
 		if (err instanceof z.ZodError) return json({ success: false, error: "Invalid input", details: err.errors }, { status: 400 });
+		reportApiError("[v1 PUT /scenes/:id/data-rules]", err);
 		return json({ success: false, error: "Failed to save rules" }, { status: 500 });
 	}
 };
